@@ -1,0 +1,14 @@
+{
+    "name": "etsy-sentry",
+    "private": true,
+    "packageManager": "bun@1.2.22",
+    "workspaces": ["apps/*", "packages/*"],
+    "scripts": {
+        "dev": "bun run website:dev",
+        "build": "bun run website:build",
+        "start": "bun run website:start",
+        "website:dev": "bun run --cwd apps/website dev",
+        "website:build": "bun run --cwd apps/website build",
+        "website:start": "bun run --cwd apps/website start"
+    }
+}
