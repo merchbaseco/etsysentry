@@ -1,0 +1,27 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [main, zknicker/etsy-sentry-start]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Build and Deploy
+    runs-on: self-hosted
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build and deploy
+        working-directory: /Users/zknicker/srv/etsysentry
+        run: |
+          # Pull latest code
+          git pull --ff-only
+
+          # Build and restart
+          docker compose -p etsysentry --env-file /Users/zknicker/srv/etsysentry/.env build
+          docker compose -p etsysentry --env-file /Users/zknicker/srv/etsysentry/.env up -d --remove-orphans
+
+          # Show status
+          docker compose -p etsysentry --env-file /Users/zknicker/srv/etsysentry/.env ps
