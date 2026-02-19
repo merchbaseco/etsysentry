@@ -214,7 +214,7 @@ const logActions = [
   "monitor.retry",
   "system.health_check",
   "system.rate_limited",
-]
+] as const
 
 const logMessages = [
   "Captured snapshot for listing #1847291034",
@@ -235,7 +235,8 @@ const logMessages = [
 ]
 
 export const mockLogs: LogEntry[] = Array.from({ length: 100 }, (_, i) => {
-  const action = logActions[Math.floor(Math.random() * logActions.length)]
+  const action: (typeof logActions)[number] =
+    logActions[Math.floor(Math.random() * logActions.length)]
   const level: LogLevel = action.includes("failure") || action.includes("rate_limited")
     ? "error"
     : action.includes("retry")
@@ -250,19 +251,20 @@ export const mockLogs: LogEntry[] = Array.from({ length: 100 }, (_, i) => {
       : Math.random() > 0.05
         ? "success"
         : "pending"
+  const primitiveType: LogEntry["primitiveType"] = action.startsWith("listing")
+    ? "listing"
+    : action.startsWith("keyword")
+      ? "keyword"
+      : action.startsWith("shop")
+        ? "shop"
+        : "system"
 
   return {
     id: `log-${String(i + 1).padStart(4, "0")}`,
     time: randomDate(7),
     level,
     action,
-    primitiveType: action.startsWith("listing")
-      ? "listing"
-      : action.startsWith("keyword")
-        ? "keyword"
-        : action.startsWith("shop")
-          ? "shop"
-          : "system",
+    primitiveType,
     target: action.startsWith("system")
       ? "system"
       : action.startsWith("listing")

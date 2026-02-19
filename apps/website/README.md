@@ -1,6 +1,7 @@
 # EtsySentry Website
 
 Non-functional frontend prototype for EtsySentry dashboard workflows.
+Built with Vite + React Router.
 
 ## Scope
 
@@ -19,8 +20,7 @@ bun install
 bun run dev
 ```
 
-`bun run dev` auto-selects the first available port, starting at `3100`.
-Dev mode is forced to Webpack (`next dev --webpack`) and does not use Turbopack.
+Dev server runs on `3100` by default (or next available port if occupied).
 
 ## Build
 
@@ -28,4 +28,9 @@ Dev mode is forced to Webpack (`next dev --webpack`) and does not use Turbopack.
 bun run build
 ```
 
-Build mode is forced to Webpack (`next build --webpack`).
+## Route Map
+
+- `/` - Listings
+- `/keywords` - Keywords
+- `/shops` - Shops
+- `/logs` - Logs

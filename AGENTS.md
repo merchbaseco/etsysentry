@@ -24,6 +24,13 @@ This document guides AI coding assistants working in the EtsySentry repository.
 - Server operations: `apps/server/README.md`
 - Typed client: `packages/http-client/README.md`
 
+## Website Architecture Decision
+
+- The website stack is **Vite + React + React Router** (not Next.js).
+- Frontend source-of-truth lives under `apps/website/src`.
+- Dashboard routes are path-based (`/`, `/keywords`, `/shops`, `/logs`) via React Router.
+- Do not add or reintroduce Next.js runtime/config files (`next.config.*`, `next-env.d.ts`, App Router dirs).
+
 ## API Design Principles
 
 - All first-party APIs should be tRPC (no REST surface unless explicitly required).

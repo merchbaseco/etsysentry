@@ -13,7 +13,7 @@ EtsySentry tracks three primitives over time:
 ## Apps
 
 - `apps/server` - Fastify + tRPC API and monitoring jobs
-- `apps/website` - Next.js dashboard frontend prototype (tabbed listings/keywords/shops/logs view)
+- `apps/website` - Vite + React Router dashboard frontend prototype (tabbed listings/keywords/shops/logs views)
 
 ## Packages
 
