@@ -7,6 +7,11 @@
         "dev": "bun run website:dev",
         "build": "bun run website:build",
         "start": "bun run website:start",
+        "server:dev": "bun run --cwd apps/server dev",
+        "server:build": "bun run --cwd apps/server build",
+        "server:start": "bun run --cwd apps/server start",
+        "server:typecheck": "bun run --cwd apps/server typecheck",
+        "server:test": "bun run --cwd apps/server test",
         "website:dev": "bun run --cwd apps/website dev",
         "website:build": "bun run --cwd apps/website build",
         "website:start": "bun run --cwd apps/website start"

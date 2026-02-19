@@ -49,3 +49,17 @@ EtsySentry tracks three primitives over time:
 bun install
 bun run dev
 ```
+
+### Server (OAuth Scaffold)
+
+```bash
+bun install
+cp .env.example .env
+bun run server:dev
+```
+
+Server endpoints:
+
+- tRPC: `/api` (for `api.app.*` and `api.public.*`)
+- Etsy OAuth callback: `/auth/etsy/callback`
+- Health: `/healthz`

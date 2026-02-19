@@ -1,104 +1,88 @@
 # EtsySentry Server
 
-Fastify + tRPC API for EtsySentry's Etsy API v3 integrations and monitoring jobs.
+Fastify + tRPC API for EtsySentry Etsy API v3 integrations and monitoring jobs.
 
-## Scope
+## Current Scope
 
-- Primitive management (`keyword`, `listing`, `shop`)
-- Continuous monitoring pipeline (pg-boss spaced scheduling)
-- Etsy API v3 bridge orchestration
-- Public APIs for agent/CLI usage
-- Rich event logging for every monitor action
+Implemented scaffold:
 
-## Planned Runtime Stack
+- Fastify runtime with tRPC mounted at `/api`
+- OAuth callback endpoint at `/auth/etsy/callback`
+- Etsy OAuth PKCE flow (`api.app.etsyAuth.*`)
+- First Etsy bridge file:
+  - `apps/server/src/services/etsy/bridges/exchange-oauth-token.ts`
 
-- Bun + TypeScript
-- Fastify + tRPC
-- PostgreSQL + Drizzle ORM
-- Queue/scheduler (pg-boss)
-- Clerk (multi-tenant auth and user management)
+Planned next layers (not yet scaffolded):
 
-## Local Development (Target)
+- PostgreSQL + Drizzle persistence
+- pg-boss job orchestration
+- Clerk + tenant auth
+- Primitive and timeseries storage
+
+## Run Locally
 
 ```bash
 bun install
 cp .env.example .env
-docker compose -f apps/server/compose.yml up --build
+bun run server:dev
 ```
 
-## Core Scripts (Target)
+Useful scripts:
 
-- `bun run build` - bundle server
-- `bun run start` - run compiled server
-- `bun run dev` - development server
-- `bun run cli -- <command>` - CLI for public API
+- `bun run server:dev` - run with watch mode
+- `bun run server:build` - bundle to `apps/server/dist`
+- `bun run server:start` - run bundled server
+- `bun run server:typecheck` - TypeScript checks
+- `bun run server:test` - focused unit tests
+
+## Environment Variables
+
+See `.env.example` for the exact values required by this scaffold.
+
+Required for OAuth:
+
+- `ETSY_API_KEY`
+- `ETSY_OAUTH_REDIRECT_URI`
+
+Optional:
+
+- `ETSY_API_SHARED_SECRET`
+- `ETSY_OAUTH_SCOPES`
+- `ETSY_OAUTH_STATE_TTL_MS`
+- `ETSY_OAUTH_REFRESH_SKEW_MS`
+
+## OAuth Flow (Etsy v3)
+
+1. Client calls `api.app.etsyAuth.start` (mutation) to obtain:
+   - `authorizationUrl`
+   - `oauthSessionId`
+2. Client redirects user to Etsy authorize URL.
+3. Etsy redirects to `ETSY_OAUTH_REDIRECT_URI` (`/auth/etsy/callback`).
+4. Callback verifies `state`, exchanges `code` for tokens via the OAuth bridge, and stores token
+   state.
+5. Client calls `api.app.etsyAuth.status` / `api.app.etsyAuth.refresh` with `oauthSessionId`.
 
 ## API Structure
 
 - tRPC routes under `/api`
-- `api.public.*` - CLI/agent endpoints
+- `api.public.*` - CLI/agent endpoints (placeholder router currently)
 - `api.app.*` - dashboard/admin endpoints
 
-Initial public surface goals:
+Current app surface:
 
-- `api.public.primitive.create`
-- `api.public.primitive.list`
-- `api.public.primitive.get`
-- `api.public.series.keywordRank`
-- `api.public.series.listingMetrics`
-- `api.public.series.shopListings`
+- `api.app.etsyAuth.start`
+- `api.app.etsyAuth.status`
+- `api.app.etsyAuth.refresh`
 
-Initial app/admin surface goals:
-
-- `api.app.apiKey.create|list|revoke` (user-owned keys)
-- `api.app.logs.list|tail|export` (admin-only)
-
-## Job Topology (Initial)
-
-- Dispatcher runs continuously and enqueues due jobs through pg-boss.
-- `monitor-keywords`
-  - Fetch top 3 Etsy search result pages for each due keyword primitive.
-  - Upsert discovered listings.
-  - Write daily rank observations.
-  - Fixed daily cadence in v1.
-- `monitor-listings`
-  - Fetch listing details for each due listing.
-  - Update listing profile data.
-  - Append listing metrics snapshots.
-  - Compute `estimatedSales` via helper (reviews + views + quantity-drop + favorers signal).
-  - Adapt cadence from Etsy `updated_timestamp`:
-    - no change for 3 days => every 3 days
-    - no change for 7 days => every 7 days
-    - any change => reset to every 1 day
-  - Persist intended cadence metadata row per listing for auditability.
-- `monitor-shops`
-  - Fetch shop listing set/updates for due shop primitives.
-  - Upsert listings and shop-listing relationships.
-  - Emit change/no-change logs; cadence policy for shops can be extended later.
-  - Fixed daily cadence in v1.
-
-Every action above emits a durable event log row.
-
-## Etsy API Bridge Contract
+## Etsy Bridge Rules
 
 - Location: `apps/server/src/services/etsy/bridges`
-- Rule: one Etsy endpoint per file.
-- Rule: bridge files are thin wrappers only.
-- Rule: orchestration/retries/rate-limiting belong in higher-level services.
-
-## Data Persistence (Initial)
-
-- Primitives table(s): keyword/listing/shop + metadata
-- Listing profile table: descriptive listing metadata
-- Listing metric snapshots: append-only timeseries records
-- Listing monitor metadata: explicit intended cadence + reason per listing
-- Keyword ranking observations: append-only by date + page + position
-- Shop listing observations: append-only listing membership history
-- Monitor run records: status, latency, error metadata
-- Event logs table: one row per monitor action (for rich log UI)
+- One Etsy endpoint per bridge file
+- Thin transport mapping only
+- Retries/orchestration/persistence belong in services/jobs
 
 ## Operational Notes
 
-- Keep startup status summary current in server entrypoint as jobs/services are added.
-- Add observability early (structured logs + monitor run IDs + endpoint traces).
-- Keep `.env.example` updated whenever env vars change.
+- Startup logs include a status summary with API prefix, callback path, and OAuth scopes.
+- Keep `.env.example` updated when env vars change.
+- Do not embed Etsy HTTP calls directly in routers/jobs; add bridges instead.
