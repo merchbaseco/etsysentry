@@ -3,6 +3,7 @@ import { KeywordsTab } from '@/components/dashboard/keywords-tab';
 import { ListingsTab } from '@/components/dashboard/listings-tab';
 import { LogsTab } from '@/components/dashboard/logs-tab';
 import { ShopsTab } from '@/components/dashboard/shops-tab';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { Activity, Clock, Eye, ShoppingCart } from 'lucide-react';
 import {
     Navigate,
@@ -61,7 +62,11 @@ function DashboardShell() {
                         Monitor Dashboard
                     </span>
                 </div>
-                <StatusIndicator />
+                <div className="flex items-center gap-3">
+                    <StatusIndicator />
+                    <span className="text-border">|</span>
+                    <ThemeToggle />
+                </div>
             </header>
 
             <nav className="flex items-center border-b border-border bg-card px-2">

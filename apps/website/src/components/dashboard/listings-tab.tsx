@@ -120,7 +120,7 @@ export function ListingsTab() {
                   className={cn(
                     "border-b border-border/50 cursor-pointer transition-colors",
                     "hover:bg-accent/50",
-                    l.changedRecently && "border-l-2 border-l-primary",
+                    l.changedRecently && "border-l-[3px] border-l-primary",
                   )}
                 >
                   <td className="px-3 py-1.5 max-w-48 truncate text-foreground">{l.title}</td>

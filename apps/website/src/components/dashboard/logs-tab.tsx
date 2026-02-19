@@ -176,13 +176,13 @@ export function LogsTab() {
                     l.level === "warn" && "bg-terminal-yellow/3",
                   )}
                 >
-                  <td className="px-3 py-1 text-terminal-dim font-mono text-[10px] whitespace-nowrap">{formatLogTime(l.time)}</td>
+                  <td className="px-3 py-1 text-terminal-dim font-mono whitespace-nowrap">{formatLogTime(l.time)}</td>
                   <td className="px-2 py-1 text-center"><LogLevelBadge level={l.level} /></td>
-                  <td className="px-2 py-1 text-foreground font-mono text-[10px]">{l.action}</td>
+                  <td className="px-2 py-1 text-foreground font-mono">{l.action}</td>
                   <td className="px-2 py-1 text-center"><PrimitiveTypeBadge type={l.primitiveType} /></td>
-                  <td className="px-2 py-1 text-terminal-dim font-mono text-[10px]">{l.target}</td>
-                  <td className="px-2 py-1 max-w-64 truncate text-secondary-foreground text-[11px]">{l.message}</td>
-                  <td className="px-2 py-1 text-terminal-dim font-mono text-[10px]">{l.runId}</td>
+                  <td className="px-2 py-1 text-terminal-dim font-mono">{l.target}</td>
+                  <td className="px-2 py-1 max-w-64 truncate text-secondary-foreground">{l.message}</td>
+                  <td className="px-2 py-1 text-terminal-dim font-mono">{l.runId}</td>
                   <td className="px-2 py-1 text-center"><StatusBadge status={l.status} /></td>
                 </tr>
               ))}

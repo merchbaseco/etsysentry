@@ -115,21 +115,23 @@ export function SortableHeader({
     <button
       onClick={() => onSort(sortKey)}
       className={cn(
-        "flex items-center gap-1 text-[10px] uppercase tracking-wider font-medium cursor-pointer select-none hover:text-primary transition-colors",
+        "inline-flex items-center gap-1 text-[10px] uppercase tracking-wider font-medium cursor-pointer select-none hover:text-primary transition-colors",
         isActive ? "text-primary" : "text-muted-foreground",
         className,
       )}
     >
       {label}
-      {isActive ? (
-        currentDir === "asc" ? (
-          <ArrowUp className="size-3" />
+      <span className="inline-flex -mr-3.5">
+        {isActive ? (
+          currentDir === "asc" ? (
+            <ArrowUp className="size-3" />
+          ) : (
+            <ArrowDown className="size-3" />
+          )
         ) : (
-          <ArrowDown className="size-3" />
-        )
-      ) : (
-        <ArrowUpDown className="size-3 opacity-30" />
-      )}
+          <ArrowUpDown className="size-3 opacity-30" />
+        )}
+      </span>
     </button>
   )
 }
