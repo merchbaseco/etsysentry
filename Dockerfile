@@ -14,4 +14,4 @@ ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=build /app /app
 
 EXPOSE 3000
-CMD ["bun", "run", "--cwd", "apps/website", "start", "--", "-H", "0.0.0.0", "-p", "3000"]
+CMD ["bun", "run", "--cwd", "apps/website", "start", "--", "--host", "0.0.0.0", "--port", "3000"]
