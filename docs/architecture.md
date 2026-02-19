@@ -245,16 +245,21 @@ Helper refinement strategy:
 4. Upsert/enqueue newly observed listings.
 5. Emit event logs for additions/removals/refresh outcomes.
 
-## API Contracts (Initial)
+## API Contracts
+
+Canonical specs:
+
+- `docs/api-spec.md` (public API contract)
+- `docs/cli-spec.md` (CLI command contract)
+
+Public API and CLI intentionally share one canonical shape.
 
 ### Public API (`api.public.*`)
 
-- `primitive.create`
-- `primitive.list`
-- `primitive.get`
-- `series.keywordRank`
-- `series.listingMetrics`
-- `series.shopListings`
+- `keywords/track|list|get|pause|resume|archive`
+- `listings/track|list|get|pause|resume|archive`
+- `shops/track|list|get|pause|resume|archive`
+- `metrics/series/keywords|listings|shops`
 
 ### App API (`api.app.*`)
 
@@ -267,8 +272,10 @@ Helper refinement strategy:
 
 - CLI directly uses `@etsysentry/http-client`.
 - Command groups:
-  - `primitive add|list|get`
-  - `series keyword-rank|listing-metrics|shop-listings`
+  - `config`
+  - `keywords|listings|shops` (`products` alias for `listings`)
+  - `track` convenience aliases
+  - `metrics series keywords|listings|shops`
 - No admin functionality from CLI.
 
 ## Reliability and Observability

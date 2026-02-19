@@ -36,6 +36,8 @@ EtsySentry tracks three primitives over time:
 - `AGENTS.md` - assistant implementation rules and code style requirements
 - `docs/requirements.md` - product requirements and scope
 - `docs/architecture.md` - system architecture and module boundaries
+- `docs/cli-spec.md` - canonical CLI command shape and behavior
+- `docs/api-spec.md` - canonical `api.public.*` contract shared by CLI and HTTP client
 - `docs/log-view.md` - rich event log UX and storage specification
 - `apps/server/README.md` - server-specific runbook
 
