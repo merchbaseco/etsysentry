@@ -1,4 +1,6 @@
 :80 {
     encode zstd gzip
-    reverse_proxy website:3000
+    reverse_proxy website:3000 {
+        header_up Host localhost
+    }
 }
