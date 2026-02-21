@@ -54,6 +54,38 @@ services:
       retries: 3
       start_period: 45s
 
+  server:
+    image: etsysentry-website:local
+    container_name: etsysentry-server
+    restart: unless-stopped
+    command: ['bun', 'run', '--cwd', 'apps/server', 'start']
+    environment:
+      PORT: 8080
+      NODE_ENV: production
+      APP_ORIGIN: ${APP_ORIGIN:-https://etsysentry.merchbase.co}
+      ETSY_API_KEY: ${ETSY_API_KEY}
+      ETSY_OAUTH_REDIRECT_URI: ${ETSY_OAUTH_REDIRECT_URI}
+      ETSY_OAUTH_SCOPES: '${ETSY_OAUTH_SCOPES:-listings_r listings_w shops_r transactions_r}'
+      ETSY_OAUTH_STATE_TTL_MS: ${ETSY_OAUTH_STATE_TTL_MS:-600000}
+      ETSY_OAUTH_REFRESH_SKEW_MS: ${ETSY_OAUTH_REFRESH_SKEW_MS:-120000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - etsysentry
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'bun',
+          '-e',
+          "fetch('http://127.0.0.1:8080/healthz').then((res)=>process.exit(res.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
   caddy:
     image: caddy:alpine
     container_name: etsysentry-caddy
@@ -66,6 +98,8 @@ services:
       - caddy_config:/config
     depends_on:
       website:
+        condition: service_healthy
+      server:
         condition: service_healthy
     networks:
       - etsysentry

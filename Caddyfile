@@ -1,5 +1,9 @@
 :80 {
     encode zstd gzip
+
+    @server path /api* /auth* /healthz
+    reverse_proxy @server server:8080
+
     reverse_proxy website:3000 {
         header_up Host localhost
     }
