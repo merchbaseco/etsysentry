@@ -6,6 +6,8 @@ import { z } from 'zod';
 import { createTrpcContext } from './api/context';
 import { rootRouter } from './api/root';
 import { env } from './config/env';
+import { runMigrations } from './db/migrate';
+import { testDbConnection } from './db';
 import { completeEtsyOAuthFlow } from './services/etsy/oauth-service';
 import { renderOAuthErrorHtml, renderOAuthSuccessHtml } from './services/etsy/oauth-html';
 
@@ -132,12 +134,18 @@ export const buildServer = async (options: BuildServerOptions = {}) => {
 };
 
 if (import.meta.main) {
+    await runMigrations();
+    await testDbConnection();
+
     const server = await buildServer();
 
     server.log.info(
         {
             apiPrefix: '/api',
             callbackPath: '/auth/etsy/callback',
+            databaseHost: env.databaseHost,
+            databaseName: env.databaseName,
+            databasePort: env.databasePort,
             oauthScopes: env.etsyOAuthScopes,
             port: env.PORT
         },

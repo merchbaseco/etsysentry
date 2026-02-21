@@ -77,6 +77,10 @@ docs/
   - retry loops
   - cross-endpoint orchestration
   - monitoring job logic
+- OpenAPI contract source of truth:
+  - `https://www.etsy.com/openapi/generated/oas/3.0.0.json`
+- Bridge implementation guide:
+  - `docs/etsy-openapi-bridges.md`
 
 ### Higher-Level Services
 
