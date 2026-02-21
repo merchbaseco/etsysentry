@@ -20,6 +20,7 @@ This document guides AI coding assistants working in the EtsySentry repository.
 
 - Product requirements: `docs/requirements.md`
 - System architecture: `docs/architecture.md`
+- Etsy OpenAPI bridge guide: `docs/etsy-openapi-bridges.md`
 - Rich log UX spec: `docs/log-view.md`
 - Server operations: `apps/server/README.md`
 - Typed client: `packages/http-client/README.md`
@@ -45,6 +46,8 @@ This document guides AI coding assistants working in the EtsySentry repository.
 ## Etsy Bridge Pattern (Required)
 
 - Store Etsy API wrappers under `apps/server/src/services/etsy/bridges`.
+- OpenAPI source-of-truth for Etsy endpoints:
+  - `https://www.etsy.com/openapi/generated/oas/3.0.0.json`
 - Each Etsy API endpoint gets exactly one bridge file that:
   - Calls one Etsy endpoint.
   - Defines request/response types for that endpoint.
@@ -55,6 +58,28 @@ This document guides AI coding assistants working in the EtsySentry repository.
   - `apps/server/src/services/etsy/bridges/search-listings.ts`
   - `apps/server/src/services/etsy/bridges/get-listing.ts`
 - Orchestration, retries, batching, and persistence belong in higher-level services/jobs.
+
+## Etsy Bridge Runbook
+
+Use this checklist whenever adding or updating an Etsy bridge:
+
+1. Open Etsy OpenAPI spec (`3.0.0.json`) and locate the `operationId`.
+2. Create/update exactly one bridge file for that operation in `apps/server/src/services/etsy/bridges`.
+3. Copy path/query parameter names exactly as defined in OpenAPI.
+4. Add explicit input validation for bridge inputs.
+5. Add response parsing for the operation schema and normalize output fields for service use.
+6. Add bridge-scoped error handling that preserves HTTP status and raw body.
+7. Add/update focused bridge tests:
+   - success mapping
+   - query param serialization (if applicable)
+   - non-2xx behavior
+   - invalid input handling
+8. Keep business logic out of bridges:
+   - no DB reads/writes
+   - no orchestration/retries/scheduling
+9. Update docs when bridge surface changes:
+   - `docs/etsy-openapi-bridges.md`
+   - `apps/server/README.md` (if operational behavior changed)
 
 ## Monitoring and Data Expectations
 

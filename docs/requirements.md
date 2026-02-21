@@ -98,6 +98,8 @@ Each primitive must be creatable, listable, retrievable, and monitorable.
 ### 4) Integration Requirements
 
 - Etsy API v3 is the only external catalog/performance provider for now.
+- Etsy OpenAPI source-of-truth for endpoint contracts:
+  - `https://www.etsy.com/openapi/generated/oas/3.0.0.json`
 - Bridge pattern is mandatory:
   - each Etsy endpoint has one bridge file
   - bridge files are thin transport wrappers only

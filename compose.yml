@@ -11,6 +11,7 @@ services:
       POSTGRES_PASSWORD: ${ETSYSENTRY_DATABASE_PASSWORD:-etsysentry_local_dev_password}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./apps/server/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
       - etsysentry
     healthcheck:
@@ -68,6 +69,11 @@ services:
       ETSY_OAUTH_SCOPES: '${ETSY_OAUTH_SCOPES:-listings_r listings_w shops_r transactions_r}'
       ETSY_OAUTH_STATE_TTL_MS: ${ETSY_OAUTH_STATE_TTL_MS:-600000}
       ETSY_OAUTH_REFRESH_SKEW_MS: ${ETSY_OAUTH_REFRESH_SKEW_MS:-120000}
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_NAME: ${ETSYSENTRY_DATABASE_NAME:-etsysentry}
+      DATABASE_USER: ${ETSYSENTRY_DATABASE_USER:-etsysentry}
+      DATABASE_PASSWORD: ${ETSYSENTRY_DATABASE_PASSWORD:-etsysentry_local_dev_password}
     depends_on:
       postgres:
         condition: service_healthy

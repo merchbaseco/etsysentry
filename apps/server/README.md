@@ -9,12 +9,15 @@ Implemented scaffold:
 - Fastify runtime with tRPC mounted at `/api`
 - OAuth callback endpoint at `/auth/etsy/callback`
 - Etsy OAuth PKCE flow (`api.app.etsyAuth.*`)
+- PostgreSQL + Drizzle foundation (schema, migrations, runtime connection)
+- Tracked listings app API (`api.app.listings.list|track|refresh`)
 - First Etsy bridge file:
   - `apps/server/src/services/etsy/bridges/exchange-oauth-token.ts`
+- Listing bridge:
+  - `apps/server/src/services/etsy/bridges/get-listing.ts`
 
 Planned next layers (not yet scaffolded):
 
-- PostgreSQL + Drizzle persistence
 - pg-boss job orchestration
 - Clerk + tenant auth
 - Primitive and timeseries storage
@@ -34,6 +37,8 @@ Useful scripts:
 - `bun run server:start` - run bundled server
 - `bun run server:typecheck` - TypeScript checks
 - `bun run server:test` - focused unit tests
+- `bun run --cwd apps/server db:generate` - generate Drizzle migrations from schema
+- `bun run --cwd apps/server db:migrate` - run Drizzle migrations
 
 ## Environment Variables
 
@@ -50,6 +55,11 @@ Optional:
 - `ETSY_OAUTH_SCOPES`
 - `ETSY_OAUTH_STATE_TTL_MS`
 - `ETSY_OAUTH_REFRESH_SKEW_MS`
+- `DATABASE_HOST` (default `localhost`)
+- `DATABASE_PORT` (default `5435`)
+- `DATABASE_NAME` (default `etsysentry`)
+- `DATABASE_USER` (default `etsysentry`)
+- `DATABASE_PASSWORD` (default `etsysentry_local_dev_password`)
 
 ## OAuth Flow (Etsy v3)
 
@@ -73,6 +83,9 @@ Current app surface:
 - `api.app.etsyAuth.start`
 - `api.app.etsyAuth.status`
 - `api.app.etsyAuth.refresh`
+- `api.app.listings.list`
+- `api.app.listings.track`
+- `api.app.listings.refresh`
 
 ## Etsy Bridge Rules
 
@@ -80,6 +93,8 @@ Current app surface:
 - One Etsy endpoint per bridge file
 - Thin transport mapping only
 - Retries/orchestration/persistence belong in services/jobs
+- OpenAPI contract source: `https://www.etsy.com/openapi/generated/oas/3.0.0.json`
+- Implementation guide: `docs/etsy-openapi-bridges.md`
 
 ## Operational Notes
 

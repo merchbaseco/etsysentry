@@ -12,7 +12,7 @@ EtsySentry tracks three primitives over time:
 
 ## Apps
 
-- `apps/server` - Fastify + tRPC API and monitoring jobs
+- `apps/server` - Fastify + tRPC API, Etsy bridges, and Drizzle-backed persistence
 - `apps/website` - Vite + React Router dashboard frontend prototype (tabbed listings/keywords/shops/logs views)
 
 ## Packages
@@ -36,6 +36,7 @@ EtsySentry tracks three primitives over time:
 - `AGENTS.md` - assistant implementation rules and code style requirements
 - `docs/requirements.md` - product requirements and scope
 - `docs/architecture.md` - system architecture and module boundaries
+- `docs/etsy-openapi-bridges.md` - Etsy OpenAPI bridge implementation rules
 - `docs/cli-spec.md` - canonical CLI command shape and behavior
 - `docs/api-spec.md` - canonical `api.public.*` contract shared by CLI and HTTP client
 - `docs/log-view.md` - rich event log UX and storage specification
@@ -50,7 +51,7 @@ bun install
 bun run dev
 ```
 
-### Server (OAuth Scaffold)
+### Server (OAuth + Listings Scaffold)
 
 ```bash
 bun install
