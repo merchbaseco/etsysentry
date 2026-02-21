@@ -9,7 +9,7 @@ export const etsyAuthStatusProcedure = appProcedure
         })
     )
     .query(async ({ input }) => {
-        const status = getEtsyOAuthStatus({
+        const status = await getEtsyOAuthStatus({
             oauthSessionId: input.oauthSessionId
         });
 

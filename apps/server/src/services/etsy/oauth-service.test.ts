@@ -98,10 +98,10 @@ describe('oauth-service', () => {
         expectConnected(status);
         expect(status.scopes).toEqual(['listings_r']);
 
-        const ownStatus = service.getOAuthStatus({ oauthSessionId: 'session-1' });
+        const ownStatus = await service.getOAuthStatus({ oauthSessionId: 'session-1' });
         expect(ownStatus.connected).toBe(true);
 
-        const otherStatus = service.getOAuthStatus({ oauthSessionId: 'session-2' });
+        const otherStatus = await service.getOAuthStatus({ oauthSessionId: 'session-2' });
         expect(otherStatus).toEqual({
             connected: false,
             expiresAt: null,
@@ -163,5 +163,99 @@ describe('oauth-service', () => {
 
         expectConnected(status);
         expect(status.scopes).toEqual(['listings_r', 'shops_r']);
+    });
+
+    test('getOAuthStatus auto-refreshes when token is stale', async () => {
+        let refreshCalls = 0;
+        const { dependencies, setNowMs } = createDependencies({
+            exchangeToken: async (input) => {
+                if (input.grantType !== 'refresh_token') {
+                    throw new Error('expected refresh_token grant');
+                }
+
+                refreshCalls += 1;
+
+                return {
+                    accessToken: 'access-2',
+                    expiresInSeconds: 3600,
+                    refreshToken: 'refresh-2',
+                    scopes: ['listings_r'],
+                    tokenType: 'Bearer'
+                };
+            }
+        });
+        const service = createEtsyOAuthService(dependencies);
+
+        setNowMs(1_000_000);
+        dependencies.tokenStore.set('session-1', {
+            accessToken: 'access-1',
+            expiresAt: new Date(1_050_000),
+            refreshToken: 'refresh-1',
+            scopes: ['listings_r'],
+            tokenType: 'Bearer'
+        });
+
+        const status = await service.getOAuthStatus({
+            oauthSessionId: 'session-1'
+        });
+
+        expect(refreshCalls).toBe(1);
+        expect(status).toMatchObject({
+            connected: true,
+            needsRefresh: false,
+            scopes: ['listings_r']
+        });
+    });
+
+    test('getOAuthAccessToken auto-refreshes only when stale', async () => {
+        let refreshCalls = 0;
+        const { dependencies, setNowMs } = createDependencies({
+            exchangeToken: async (input) => {
+                if (input.grantType !== 'refresh_token') {
+                    throw new Error('expected refresh_token grant');
+                }
+
+                refreshCalls += 1;
+
+                return {
+                    accessToken: 'access-2',
+                    expiresInSeconds: 1800,
+                    refreshToken: 'refresh-2',
+                    scopes: ['listings_r', 'shops_r'],
+                    tokenType: 'Bearer'
+                };
+            }
+        });
+        const service = createEtsyOAuthService(dependencies);
+
+        setNowMs(1_000_000);
+        dependencies.tokenStore.set('session-fresh', {
+            accessToken: 'access-fresh',
+            expiresAt: new Date(1_500_000),
+            refreshToken: 'refresh-fresh',
+            scopes: ['listings_r'],
+            tokenType: 'Bearer'
+        });
+
+        const freshAccessToken = await service.getOAuthAccessToken({
+            oauthSessionId: 'session-fresh'
+        });
+        expect(freshAccessToken.accessToken).toBe('access-fresh');
+        expect(refreshCalls).toBe(0);
+
+        dependencies.tokenStore.set('session-stale', {
+            accessToken: 'access-1',
+            expiresAt: new Date(1_050_000),
+            refreshToken: 'refresh-1',
+            scopes: ['listings_r'],
+            tokenType: 'Bearer'
+        });
+
+        const staleAccessToken = await service.getOAuthAccessToken({
+            oauthSessionId: 'session-stale'
+        });
+        expect(staleAccessToken.accessToken).toBe('access-2');
+        expect(staleAccessToken.scopes).toEqual(['listings_r', 'shops_r']);
+        expect(refreshCalls).toBe(1);
     });
 });
