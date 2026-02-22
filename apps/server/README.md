@@ -55,7 +55,8 @@ Required for OAuth:
 - `ADMIN_EMAIL`
 - `ETSY_API_KEY`
 - `ETSY_API_SHARED_SECRET`
-- `ETSY_OAUTH_REDIRECT_URI`
+- `ETSY_OAUTH_REDIRECT_URI` (must be your public server URL in production, for example
+  `https://etsysentry.merchbase.co/auth/etsy/callback`)
 
 Optional:
 
@@ -73,7 +74,8 @@ Optional:
 1. Client calls `api.app.etsyAuth.start` (mutation) with Clerk bearer auth to obtain:
    - `authorizationUrl`
 2. Client redirects user to Etsy authorize URL.
-3. Etsy redirects to `ETSY_OAUTH_REDIRECT_URI` (`/auth/etsy/callback`).
+3. Etsy redirects to `ETSY_OAUTH_REDIRECT_URI` (`/auth/etsy/callback`), and this value must also be
+   registered in your Etsy app settings.
 4. Callback verifies `state`, exchanges `code` for tokens via the OAuth bridge, and stores token
    state keyed by tenant + Clerk user.
 5. Client calls `api.app.etsyAuth.status` / `api.app.etsyAuth.refresh` with Clerk bearer auth.
