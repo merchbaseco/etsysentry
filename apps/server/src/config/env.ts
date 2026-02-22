@@ -33,6 +33,32 @@ const parseOAuthScopes = (rawScopes: string): string[] => {
         .filter((scope) => scope.length > 0);
 };
 
+const validateOAuthRedirectUri = (params: {
+    nodeEnv: 'development' | 'test' | 'production';
+    redirectUri: string;
+}): void => {
+    const parsedRedirectUri = new URL(params.redirectUri);
+
+    if (parsedRedirectUri.pathname !== '/auth/etsy/callback') {
+        throw new Error(
+            `ETSY_OAUTH_REDIRECT_URI must use /auth/etsy/callback (received ${parsedRedirectUri.pathname}).`
+        );
+    }
+
+    const isLoopbackHost = ['localhost', '127.0.0.1', '::1'].includes(parsedRedirectUri.hostname);
+
+    if (params.nodeEnv === 'production' && isLoopbackHost) {
+        throw new Error(
+            'ETSY_OAUTH_REDIRECT_URI cannot use a localhost/loopback hostname in production.'
+        );
+    }
+};
+
+validateOAuthRedirectUri({
+    nodeEnv: rawEnv.NODE_ENV,
+    redirectUri: rawEnv.ETSY_OAUTH_REDIRECT_URI
+});
+
 const etsyOAuthScopes = Array.from(
     new Set([...parseOAuthScopes(rawEnv.ETSY_OAUTH_SCOPES), ...REQUIRED_ETSY_OAUTH_SCOPES])
 );

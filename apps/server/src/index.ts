@@ -145,6 +145,7 @@ if (import.meta.main) {
             adminEmail: env.ADMIN_EMAIL,
             authProvider: 'clerk',
             callbackPath: '/auth/etsy/callback',
+            callbackUrl: env.ETSY_OAUTH_REDIRECT_URI,
             databaseHost: env.databaseHost,
             databaseName: env.databaseName,
             databasePort: env.databasePort,
