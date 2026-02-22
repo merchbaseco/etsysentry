@@ -25,6 +25,7 @@ export type TrackedListingRecord = {
     shopId: string | null;
     shopName: string | null;
     tenantId: string;
+    thumbnailUrl: string | null;
     title: string;
     trackerClerkUserId: string;
     trackingState: (typeof trackedListings.$inferSelect)['trackingState'];
@@ -129,6 +130,7 @@ const toRecord = (row: typeof trackedListings.$inferSelect): TrackedListingRecor
         shopId: row.shopId,
         shopName: row.shopName,
         tenantId: row.tenantId,
+        thumbnailUrl: row.thumbnailUrl ?? null,
         title: row.title,
         trackerClerkUserId: row.trackerClerkUserId,
         trackingState: row.trackingState,
@@ -158,6 +160,7 @@ const bridgeToUpsertValues = (params: {
         shopId: params.bridgeResponse.shopId,
         shopName: params.bridgeResponse.shopName,
         tenantId: params.tenantId,
+        thumbnailUrl: params.bridgeResponse.thumbnailUrl,
         title: params.bridgeResponse.title,
         trackerClerkUserId: params.trackerClerkUserId,
         trackingState: 'active' as const,
@@ -181,6 +184,7 @@ const fetchListingFromEtsy = async (params: {
     try {
         return await getListing({
             accessToken: oauthToken.accessToken,
+            includes: ['Images'],
             listingId: params.etsyListingId
         });
     } catch (error) {

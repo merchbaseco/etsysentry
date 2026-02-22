@@ -1,0 +1,1 @@
+ALTER TABLE "tracked_listings" ADD COLUMN "thumbnail_url" text;

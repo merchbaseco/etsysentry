@@ -18,6 +18,7 @@ export type TrackedListingItem = {
     shopId: string | null;
     shopName: string | null;
     tenantId: string;
+    thumbnailUrl: string | null;
     title: string;
     trackerClerkUserId: string;
     trackingState: 'active' | 'paused' | 'error';

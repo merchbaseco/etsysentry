@@ -235,29 +235,30 @@ export function ListingsTab() {
                 ) : filtered.length === 0 ? (
                     <EmptyState message="No tracked listings yet. Add one with an Etsy URL above." />
                 ) : (
-                    <table className="w-full text-xs">
+                    <table className="w-full table-fixed text-xs">
                         <thead className="sticky top-0 z-10 bg-card">
                             <tr className="border-b border-border">
-                                <th className="px-3 py-2 text-left text-[10px] uppercase tracking-wider text-muted-foreground">
+                                <th className="w-10 px-3 py-2 text-left text-[10px] uppercase tracking-wider text-muted-foreground" />
+                                <th className="px-2 py-2 text-left text-[10px] uppercase tracking-wider text-muted-foreground">
                                     Title
                                 </th>
-                                <th className="px-2 py-2 text-left text-[10px] uppercase tracking-wider text-muted-foreground">
+                                <th className="w-[100px] px-2 py-2 text-left text-[10px] uppercase tracking-wider text-muted-foreground">
                                     Shop
                                 </th>
-                                <th className="px-2 py-2 text-right text-[10px] uppercase tracking-wider text-muted-foreground">
+                                <th className="w-[90px] px-2 py-2 text-right text-[10px] uppercase tracking-wider text-muted-foreground">
                                     Price
                                 </th>
-                                <th className="px-2 py-2 text-right text-[10px] uppercase tracking-wider text-muted-foreground">
-                                    All-time Views
+                                <th className="w-[80px] px-2 py-2 text-right text-[10px] uppercase tracking-wider text-muted-foreground">
+                                    Views
                                 </th>
-                                <th className="px-2 py-2 text-right text-[10px] uppercase tracking-wider text-muted-foreground">
-                                    All-time Favs
+                                <th className="w-[70px] px-2 py-2 text-right text-[10px] uppercase tracking-wider text-muted-foreground">
+                                    Favs
                                 </th>
-                                <th className="px-2 py-2 text-center text-[10px] uppercase tracking-wider text-muted-foreground">
+                                <th className="w-[50px] px-2 py-2 text-center text-[10px] uppercase tracking-wider text-muted-foreground">
                                     Qty
                                 </th>
-                                <th className="px-2 py-2 text-right text-[10px] uppercase tracking-wider text-muted-foreground">
-                                    Last Refreshed
+                                <th className="w-[110px] px-2 py-2 text-right text-[10px] uppercase tracking-wider text-muted-foreground">
+                                    Refreshed
                                 </th>
                             </tr>
                         </thead>
@@ -267,29 +268,42 @@ export function ListingsTab() {
 
                                 return (
                                     <tr key={item.id} className="border-b border-border/50">
-                                        <td className="max-w-56 px-3 py-1.5 text-foreground">
+                                        <td className="w-10 px-3 py-1.5">
+                                            {item.thumbnailUrl ? (
+                                                <img
+                                                    src={item.thumbnailUrl}
+                                                    alt=""
+                                                    className="size-8 rounded object-cover"
+                                                />
+                                            ) : (
+                                                <div className="size-8 rounded bg-secondary" />
+                                            )}
+                                        </td>
+                                        <td className="px-2 py-1.5 text-foreground">
                                             <a
                                                 href={item.url ?? undefined}
                                                 target="_blank"
                                                 rel="noreferrer"
-                                                className="line-clamp-2 hover:text-primary"
+                                                className="block truncate hover:text-primary"
                                             >
                                                 {item.title}
                                             </a>
                                         </td>
-                                        <td className="px-2 py-1.5">{item.shopName ?? '--'}</td>
-                                        <td className="px-2 py-1.5 text-right text-terminal-green">
+                                        <td className="truncate px-2 py-1.5">
+                                            {item.shopName ?? '--'}
+                                        </td>
+                                        <td className="whitespace-nowrap px-2 py-1.5 text-right text-terminal-green">
                                             {formatPrice(item)}
                                         </td>
-                                        <td className="px-2 py-1.5 text-right text-terminal-dim">
+                                        <td className="whitespace-nowrap px-2 py-1.5 text-right text-terminal-dim">
                                             {item.views === null ? '--' : formatNumber(item.views)}
                                         </td>
-                                        <td className="px-2 py-1.5 text-right text-terminal-dim">
+                                        <td className="whitespace-nowrap px-2 py-1.5 text-right text-terminal-dim">
                                             {item.numFavorers === null
                                                 ? '--'
                                                 : formatNumber(item.numFavorers)}
                                         </td>
-                                        <td className="px-2 py-1.5 text-center">
+                                        <td className="whitespace-nowrap px-2 py-1.5 text-center">
                                             {item.quantity === null ? '--' : item.quantity}
                                         </td>
                                         <td className="px-2 py-1.5">

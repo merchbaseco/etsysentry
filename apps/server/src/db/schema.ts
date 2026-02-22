@@ -42,6 +42,7 @@ export const trackedListings = pgTable(
         shopName: text('shop_name'),
         title: text('title').notNull(),
         url: text('url'),
+        thumbnailUrl: text('thumbnail_url'),
         trackingState: trackedListingTrackingStateEnum('tracking_state').notNull().default('active'),
         etsyState: trackedListingEtsyStateEnum('etsy_state').notNull().default('inactive'),
         priceAmount: integer('price_amount'),
