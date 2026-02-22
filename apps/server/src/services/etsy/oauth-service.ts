@@ -12,6 +12,8 @@ import { etsyOAuthStateStore, etsyOAuthTokenStore } from './oauth-runtime';
 import type { EtsyOAuthStateStore } from './oauth-state-store';
 import type { EtsyOAuthTokenStore, EtsyOAuthTokens } from './token-store';
 
+const REQUIRED_ETSY_OAUTH_SCOPES = ['listings_r'] as const;
+
 export type EtsyOAuthStatus = {
     connected: boolean;
     expiresAt: Date | null;
@@ -198,6 +200,16 @@ export const createEtsyOAuthService = (
         oauthSessionId: EtsyOAuthSessionId;
     }): Promise<EtsyOAuthAccessToken> => {
         const tokens = await ensureFreshTokens(params);
+        const missingScopes = REQUIRED_ETSY_OAUTH_SCOPES.filter(
+            (scope) => !tokens.scopes.includes(scope)
+        );
+
+        if (missingScopes.length > 0) {
+            throw new TRPCError({
+                code: 'PRECONDITION_FAILED',
+                message: `Etsy OAuth session is missing required scope(s): ${missingScopes.join(', ')}. Reconnect Etsy OAuth.`
+            });
+        }
 
         return {
             accessToken: tokens.accessToken,

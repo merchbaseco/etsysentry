@@ -50,9 +50,14 @@ const mapBridgeErrorToTrpcError = (error: EtsyGetListingBridgeError): TRPCError 
     }
 
     if (error.statusCode === 401 || error.statusCode === 403) {
+        const genericStatusMessage = `Etsy getListing failed with HTTP ${error.statusCode}.`;
+
         return new TRPCError({
             code: 'FORBIDDEN',
-            message: 'Etsy access token is invalid or missing required scope.'
+            message:
+                error.message === genericStatusMessage
+                    ? 'Etsy access token is invalid or missing required scope.'
+                    : error.message
         });
     }
 

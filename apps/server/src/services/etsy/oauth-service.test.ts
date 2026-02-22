@@ -258,4 +258,27 @@ describe('oauth-service', () => {
         expect(staleAccessToken.scopes).toEqual(['listings_r', 'shops_r']);
         expect(refreshCalls).toBe(1);
     });
+
+    test('getOAuthAccessToken rejects tokens missing listings_r scope', async () => {
+        const { dependencies } = createDependencies();
+        const service = createEtsyOAuthService(dependencies);
+
+        dependencies.tokenStore.set('session-1', {
+            accessToken: 'access-1',
+            expiresAt: new Date(2_000_000),
+            refreshToken: 'refresh-1',
+            scopes: ['shops_r'],
+            tokenType: 'Bearer'
+        });
+
+        await expect(
+            service.getOAuthAccessToken({
+                oauthSessionId: 'session-1'
+            })
+        ).rejects.toMatchObject({
+            code: 'PRECONDITION_FAILED',
+            message:
+                'Etsy OAuth session is missing required scope(s): listings_r. Reconnect Etsy OAuth.'
+        });
+    });
 });
