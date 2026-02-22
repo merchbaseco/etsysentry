@@ -122,6 +122,7 @@ export type GetListingBridgeResponse = {
     stateTimestamp: number | null;
     suggestedTitle: string | null;
     tags: string[];
+    thumbnailUrl: string | null;
     title: string;
     translations: unknown[];
     updatedTimestamp: number | null;
@@ -204,6 +205,23 @@ const buildEndpoint = (input: z.infer<typeof getListingInputSchema>): string => 
     return url.toString();
 };
 
+const extractThumbnailUrl = (images: unknown[] | null | undefined): string | null => {
+    if (!images || images.length === 0) {
+        return null;
+    }
+
+    const first = images[0];
+
+    if (typeof first !== 'object' || first === null) {
+        return null;
+    }
+
+    const record = first as Record<string, unknown>;
+    const url = record.url_170x135 ?? record.url_75x75 ?? null;
+
+    return typeof url === 'string' ? url : null;
+};
+
 const toResponse = (
     parsed: z.infer<typeof listingResponseSchema>
 ): GetListingBridgeResponse => {
@@ -243,6 +261,7 @@ const toResponse = (
         stateTimestamp: parsed.state_timestamp ?? null,
         suggestedTitle: parsed.suggested_title ?? null,
         tags: parsed.tags ?? [],
+        thumbnailUrl: extractThumbnailUrl(parsed.images),
         title: parsed.title,
         translations: parsed.translations ?? [],
         updatedTimestamp: parsed.updated_timestamp ?? null,
