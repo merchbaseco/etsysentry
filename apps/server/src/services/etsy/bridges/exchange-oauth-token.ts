@@ -79,7 +79,10 @@ const parseScopes = (scopeValue: string | undefined): string[] => {
         return [];
     }
 
-    return scopeValue.split(/\s+/).filter((scope) => scope.length > 0);
+    return scopeValue
+        .split(/[\s,]+/)
+        .map((scope) => scope.trim())
+        .filter((scope) => scope.length > 0);
 };
 
 const tryParseJson = (input: string): unknown | null => {

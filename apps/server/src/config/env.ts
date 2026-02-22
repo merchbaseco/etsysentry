@@ -22,7 +22,18 @@ const envSchema = z.object({
 
 const rawEnv = envSchema.parse(process.env);
 
-const etsyOAuthScopes = rawEnv.ETSY_OAUTH_SCOPES.split(/\s+/).filter((scope) => scope.length > 0);
+const REQUIRED_ETSY_OAUTH_SCOPES = ['listings_r'] as const;
+
+const parseOAuthScopes = (rawScopes: string): string[] => {
+    return rawScopes
+        .split(/[\s,]+/)
+        .map((scope) => scope.trim())
+        .filter((scope) => scope.length > 0);
+};
+
+const etsyOAuthScopes = Array.from(
+    new Set([...parseOAuthScopes(rawEnv.ETSY_OAUTH_SCOPES), ...REQUIRED_ETSY_OAUTH_SCOPES])
+);
 
 if (etsyOAuthScopes.length === 0) {
     throw new Error('ETSY_OAUTH_SCOPES must contain at least one OAuth scope.');

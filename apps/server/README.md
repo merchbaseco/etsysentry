@@ -52,7 +52,7 @@ Required for OAuth:
 Optional:
 
 - `ETSY_API_SHARED_SECRET`
-- `ETSY_OAUTH_SCOPES`
+- `ETSY_OAUTH_SCOPES` (space/comma-delimited; `listings_r` is always required)
 - `ETSY_OAUTH_STATE_TTL_MS`
 - `ETSY_OAUTH_REFRESH_SKEW_MS`
 - `DATABASE_HOST` (default `localhost`)

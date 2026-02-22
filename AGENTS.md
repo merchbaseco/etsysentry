@@ -119,5 +119,10 @@ Use this checklist whenever adding or updating an Etsy bridge:
 3. Keep secrets out of version control; update `.env.example` when env vars change.
 4. Prefer adding bridges/services over embedding Etsy HTTP calls directly in routers/jobs.
 5. Ask for clarification before changing auth model, billing model, or production deployment behavior.
+6. Prefer the simplest change that solves the reported issue end-to-end.
+7. Do not add new abstractions, parameters, or extension points unless at least two current call
+   sites need them right now.
+8. For bug fixes, first patch the narrow failing path; generalize only when a concrete follow-up
+   requirement exists.
 
 If requirements are ambiguous, prefer adding an explicit note in `docs/requirements.md` and ask.
