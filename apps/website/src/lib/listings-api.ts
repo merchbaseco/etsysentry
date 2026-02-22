@@ -1,4 +1,5 @@
-import { trpcMutation, trpcQuery } from './trpc-http';
+import { queryClient, trpc } from './trpc-client';
+import { toTrpcRequestError } from './trpc-http';
 
 export type TrackedListingItem = {
     etsyListingId: string;
@@ -53,18 +54,54 @@ export type RefreshTrackedListingInput = {
     trackerClerkUserId: string;
 };
 
+const executeMutation = async <TInput, TOutput>(
+    input: TInput,
+    options: {
+        mutationFn?: (nextInput: TInput) => Promise<TOutput>;
+    }
+): Promise<TOutput> => {
+    if (!options.mutationFn) {
+        throw new Error('tRPC mutation function was not configured.');
+    }
+
+    return options.mutationFn(input);
+};
+
 export const listTrackedListings = async (
     params: ListTrackedListingsInput
 ): Promise<ListTrackedListingsOutput> => {
-    return trpcQuery<typeof params, ListTrackedListingsOutput>('app.listings.list', params);
+    try {
+        const response = await queryClient.fetchQuery(trpc.app.listings.list.queryOptions(params));
+        return response as ListTrackedListingsOutput;
+    } catch (error) {
+        throw toTrpcRequestError(error);
+    }
 };
 
 export const trackListing = async (params: TrackListingInput): Promise<TrackListingOutput> => {
-    return trpcMutation<typeof params, TrackListingOutput>('app.listings.track', params);
+    try {
+        const response = await executeMutation<TrackListingInput, TrackListingOutput>(
+            params,
+            trpc.app.listings.track.mutationOptions()
+        );
+
+        return response;
+    } catch (error) {
+        throw toTrpcRequestError(error);
+    }
 };
 
 export const refreshTrackedListing = async (
     params: RefreshTrackedListingInput
 ): Promise<TrackedListingItem> => {
-    return trpcMutation<typeof params, TrackedListingItem>('app.listings.refresh', params);
+    try {
+        const response = await executeMutation<RefreshTrackedListingInput, TrackedListingItem>(
+            params,
+            trpc.app.listings.refresh.mutationOptions()
+        );
+
+        return response;
+    } catch (error) {
+        throw toTrpcRequestError(error);
+    }
 };
