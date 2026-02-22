@@ -65,6 +65,7 @@ services:
       NODE_ENV: production
       APP_ORIGIN: ${APP_ORIGIN:-https://etsysentry.merchbase.co}
       ETSY_API_KEY: ${ETSY_API_KEY}
+      ETSY_API_SHARED_SECRET: ${ETSY_API_SHARED_SECRET}
       ETSY_OAUTH_REDIRECT_URI: ${ETSY_OAUTH_REDIRECT_URI}
       ETSY_OAUTH_SCOPES: '${ETSY_OAUTH_SCOPES:-listings_r listings_w shops_r transactions_r}'
       ETSY_OAUTH_STATE_TTL_MS: ${ETSY_OAUTH_STATE_TTL_MS:-600000}
