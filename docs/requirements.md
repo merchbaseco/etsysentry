@@ -22,6 +22,8 @@ current and historical data for analysis.
   - API keys are user-owned; no role system for key ownership
   - admin-only behavior is gated by `ADMIN_EMAIL` match (RankWrangler style)
 - API organization: mirror RankWrangler tRPC organization with `api.public.*` and `api.app.*`.
+- API naming: user-intent-first names (for example: `syncRanksForKeyword`,
+  `getDailyProductRanksForKeyword`, `getKeywordRanksForProduct`).
 
 ## Primitives
 
@@ -55,8 +57,8 @@ Each primitive must be creatable, listable, retrievable, and monitorable.
   - last evaluated timestamp
 - Keyword monitoring:
   - Query Etsy search for the keyword.
-  - Capture pages 1-3 each run.
-  - Persist listing ranking observations with page and position.
+  - Capture first-page results each run.
+  - Persist listing ranking observations with a single absolute rank per listing.
   - Auto-add newly discovered listings.
 - Listing monitoring:
   - Store/update listing profile data separately from metric snapshots.

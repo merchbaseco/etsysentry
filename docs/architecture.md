@@ -89,13 +89,30 @@ docs/
 
 - `etsy-search-service.ts`:
   - calls `search-listings` bridge
-  - handles pagination and page-1..3 policy
+  - handles Etsy search query wiring (pagination optional by caller)
+- `keyword-rankings-service.ts`:
+  - calls the active listings search bridge for daily product ranks by keyword
+  - persists rank facts into `product_keyword_ranks` (append-only)
+  - updates tracked keyword refresh state/errors
 - `etsy-listing-service.ts`:
   - calls listing bridges
   - updates listing profile data
   - records listing metric snapshots
 - `etsy-shop-service.ts`:
   - calls shop + shop-listings bridges, detects listing set changes
+
+### API Naming Guidance
+
+- Name API procedures from user intent and query perspective.
+- Use `...ForKeyword` for keyword-scoped operations.
+- Use `...ForProduct` for product/listing-scoped operations.
+- Prefer explicit nouns over shorthand:
+  - use `daily product ranks`, `keyword ranks for product`
+  - avoid vague names such as `latestRanks` or `reverseKeywords`
+- Current examples:
+  - `api.app.keywords.syncRanksForKeyword`
+  - `api.app.keywords.getDailyProductRanksForKeyword`
+  - `api.app.listings.getKeywordRanksForProduct`
 
 ## Multi-Tenant and Auth Model
 
@@ -145,9 +162,9 @@ docs/
 
 ### Observation Tables
 
-- `keyword_rank_observations`
-  - `tenantId`, `keywordPrimitiveId`, `listingId`, `observedAt`, `page`, `position`,
-    `totalResults`, `queryVersion`
+- `product_keyword_ranks`
+  - purpose: append-only rank facts only (no listing metadata snapshots)
+  - `tenantId`, `trackedKeywordId`, `etsyListingId`, `observedAt`, `rank`
 - `listing_metric_snapshots`
   - `tenantId`, `listingId`, `observedAt`, `reviewCount`, `reviewAverage`, `favorerCount`,
     `price`, `currency`, `views`, `quantity`, `estimatedSales`
@@ -201,7 +218,7 @@ Cadence policy (listing `updated_timestamp` aware):
 ### `monitor-keywords`
 
 1. Load due keyword primitive.
-2. Search Etsy pages 1-3.
+2. Search Etsy first page for the tracked keyword.
 3. Persist ranking observations.
 4. Upsert discovered listings and queue listing monitoring targets.
 5. Emit event logs for each discovered listing and each ranking capture batch.

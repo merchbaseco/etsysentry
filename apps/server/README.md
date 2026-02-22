@@ -11,10 +11,16 @@ Implemented scaffold:
 - Etsy OAuth PKCE flow (`api.app.etsyAuth.*`)
 - PostgreSQL + Drizzle foundation (schema, migrations, runtime connection)
 - Tracked listings app API (`api.app.listings.list|track|refresh`)
+- Tracked keywords app API (`api.app.keywords.list|track`)
+- Keyword rank sync/read API
+  (`api.app.keywords.syncRanksForKeyword|getDailyProductRanksForKeyword`)
+- Product keyword-rank query (`api.app.listings.getKeywordRanksForProduct`)
 - First Etsy bridge file:
   - `apps/server/src/services/etsy/bridges/exchange-oauth-token.ts`
 - Listing bridge:
   - `apps/server/src/services/etsy/bridges/get-listing.ts`
+- Search listings bridge:
+  - `apps/server/src/services/etsy/bridges/find-all-listings-active.ts`
 
 Planned next layers (not yet scaffolded):
 
@@ -88,6 +94,11 @@ Current app surface:
 - `api.app.listings.list`
 - `api.app.listings.track`
 - `api.app.listings.refresh`
+- `api.app.listings.getKeywordRanksForProduct`
+- `api.app.keywords.list`
+- `api.app.keywords.track`
+- `api.app.keywords.syncRanksForKeyword`
+- `api.app.keywords.getDailyProductRanksForKeyword`
 
 ## Etsy Bridge Rules
 
