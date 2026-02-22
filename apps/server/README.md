@@ -47,11 +47,11 @@ See `.env.example` for the exact values required by this scaffold.
 Required for OAuth:
 
 - `ETSY_API_KEY`
+- `ETSY_API_SHARED_SECRET`
 - `ETSY_OAUTH_REDIRECT_URI`
 
 Optional:
 
-- `ETSY_API_SHARED_SECRET`
 - `ETSY_OAUTH_SCOPES` (space/comma-delimited; `listings_r` is always required)
 - `ETSY_OAUTH_STATE_TTL_MS`
 - `ETSY_OAUTH_REFRESH_SKEW_MS`

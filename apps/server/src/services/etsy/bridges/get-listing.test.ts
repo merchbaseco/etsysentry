@@ -1,10 +1,13 @@
 import { afterEach, describe, expect, mock, test } from 'bun:test';
+import { env } from '../../../config/env';
 import { EtsyGetListingBridgeError, getListing } from './get-listing';
 
 const originalFetch = globalThis.fetch;
+const originalEtsyApiSharedSecret = env.ETSY_API_SHARED_SECRET;
 
 afterEach(() => {
     globalThis.fetch = originalFetch;
+    env.ETSY_API_SHARED_SECRET = originalEtsyApiSharedSecret;
 });
 
 describe('get-listing bridge', () => {
@@ -97,6 +100,38 @@ describe('get-listing bridge', () => {
         expect(url.searchParams.get('language')).toBe('en');
         expect(url.searchParams.get('legacy')).toBe('true');
         expect(url.searchParams.get('allow_suggested_title')).toBe('true');
+    });
+
+    test('sends key:secret in x-api-key header when shared secret is configured', async () => {
+        env.ETSY_API_SHARED_SECRET = 'shared-secret-1';
+
+        let xApiKeyHeader: string | null = null;
+
+        globalThis.fetch = mock(async (_input, init) => {
+            xApiKeyHeader = new Headers(init?.headers).get('x-api-key');
+
+            return new Response(
+                JSON.stringify({
+                    listing_id: 1234567890,
+                    state: 'active',
+                    title: 'Sample Listing'
+                }),
+                {
+                    status: 200
+                }
+            );
+        }) as unknown as typeof fetch;
+
+        await getListing({
+            accessToken: 'token-1',
+            listingId: '1234567890'
+        });
+
+        if (typeof xApiKeyHeader !== 'string') {
+            throw new Error('x-api-key header was not sent');
+        }
+
+        expect(xApiKeyHeader === `${env.ETSY_API_KEY}:shared-secret-1`).toBe(true);
     });
 
     test('throws EtsyGetListingBridgeError for non-2xx responses', async () => {

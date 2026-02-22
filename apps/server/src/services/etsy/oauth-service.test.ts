@@ -282,6 +282,29 @@ describe('oauth-service', () => {
         });
     });
 
+    test('getOAuthAccessToken allows tokens when Etsy omits scope values', async () => {
+        const { dependencies } = createDependencies();
+        const service = createEtsyOAuthService(dependencies);
+
+        dependencies.tokenStore.set('session-1', {
+            accessToken: 'access-1',
+            expiresAt: new Date(2_000_000),
+            refreshToken: 'refresh-1',
+            scopes: [],
+            tokenType: 'Bearer'
+        });
+
+        const accessToken = await service.getOAuthAccessToken({
+            oauthSessionId: 'session-1'
+        });
+
+        expect(accessToken).toMatchObject({
+            accessToken: 'access-1',
+            scopes: [],
+            tokenType: 'Bearer'
+        });
+    });
+
     test('disconnectOAuthSession clears session tokens', async () => {
         const { dependencies } = createDependencies();
         const service = createEtsyOAuthService(dependencies);

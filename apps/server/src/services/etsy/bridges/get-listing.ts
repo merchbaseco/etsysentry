@@ -135,6 +135,14 @@ export class EtsyGetListingBridgeError extends Error {
     }
 }
 
+const getApiKeyHeaderValue = (): string => {
+    if (env.ETSY_API_SHARED_SECRET) {
+        return `${env.ETSY_API_KEY}:${env.ETSY_API_SHARED_SECRET}`;
+    }
+
+    return env.ETSY_API_KEY;
+};
+
 const tryParseJson = (input: string): unknown | null => {
     if (input.length === 0) {
         return null;
@@ -250,7 +258,7 @@ export const getListing = async (
         headers: {
             Accept: 'application/json',
             Authorization: `Bearer ${parsedInput.data.accessToken}`,
-            'x-api-key': env.ETSY_API_KEY
+            'x-api-key': getApiKeyHeaderValue()
         },
         method: 'GET'
     });

@@ -5,7 +5,7 @@ const envSchema = z.object({
     PORT: z.coerce.number().int().positive().default(8080),
     APP_ORIGIN: z.string().url().default('http://localhost:5173'),
     ETSY_API_KEY: z.string().min(1),
-    ETSY_API_SHARED_SECRET: z.string().min(1).optional(),
+    ETSY_API_SHARED_SECRET: z.string().min(1),
     ETSY_OAUTH_REDIRECT_URI: z.string().url(),
     ETSY_OAUTH_SCOPES: z.string().default('listings_r listings_w shops_r transactions_r'),
     ETSY_OAUTH_STATE_TTL_MS: z.coerce.number().int().positive().default(10 * 60 * 1000),

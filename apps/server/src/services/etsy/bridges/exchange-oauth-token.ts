@@ -85,6 +85,18 @@ const parseScopes = (scopeValue: string | undefined): string[] => {
         .filter((scope) => scope.length > 0);
 };
 
+const truncateForLog = (input: string): string => {
+    if (input.length <= 512) {
+        return input;
+    }
+
+    return `${input.slice(0, 512)}...`;
+};
+
+const logOAuthBridgeDebug = (message: string, details: Record<string, unknown>): void => {
+    console.info(`[EtsyOAuthBridge] ${message}`, details);
+};
+
 const tryParseJson = (input: string): unknown | null => {
     if (input.length === 0) {
         return null;
@@ -100,6 +112,10 @@ const tryParseJson = (input: string): unknown | null => {
 export const exchangeOAuthToken = async (
     input: EtsyOAuthTokenRequest
 ): Promise<EtsyOAuthTokenResponse> => {
+    logOAuthBridgeDebug('starting token exchange', {
+        grantType: input.grantType
+    });
+
     const response = await fetch('https://api.etsy.com/v3/public/oauth/token', {
         body: buildRequestBody(input),
         headers: {
@@ -120,6 +136,12 @@ export const exchangeOAuthToken = async (
               `Etsy OAuth token exchange failed with HTTP ${response.status}.`
             : `Etsy OAuth token exchange failed with HTTP ${response.status}.`;
 
+        logOAuthBridgeDebug('token exchange failed', {
+            grantType: input.grantType,
+            rawBodyPreview: truncateForLog(rawBody),
+            statusCode: response.status
+        });
+
         throw new EtsyOAuthBridgeError(errorMessage, response.status, rawBody);
     }
 
@@ -127,6 +149,12 @@ export const exchangeOAuthToken = async (
     const parsed = etsyOAuthSuccessResponseSchema.safeParse(jsonBody);
 
     if (!parsed.success) {
+        logOAuthBridgeDebug('token exchange response shape was invalid', {
+            grantType: input.grantType,
+            rawBodyPreview: truncateForLog(rawBody),
+            statusCode: response.status
+        });
+
         throw new EtsyOAuthBridgeError(
             'Etsy OAuth token response was missing required fields.',
             response.status,
@@ -134,11 +162,22 @@ export const exchangeOAuthToken = async (
         );
     }
 
+    const parsedScopes = parseScopes(parsed.data.scope);
+
+    logOAuthBridgeDebug('token exchange succeeded', {
+        grantType: input.grantType,
+        hasScopeField: parsed.data.scope !== undefined,
+        rawScope: parsed.data.scope ?? null,
+        scopeCount: parsedScopes.length,
+        scopes: parsedScopes,
+        statusCode: response.status
+    });
+
     return {
         accessToken: parsed.data.access_token,
         expiresInSeconds: parsed.data.expires_in,
         refreshToken: parsed.data.refresh_token,
-        scopes: parseScopes(parsed.data.scope),
+        scopes: parsedScopes,
         tokenType: parsed.data.token_type
     };
 };

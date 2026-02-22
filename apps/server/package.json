@@ -7,7 +7,7 @@
         "build": "bun build ./src/index.ts --target bun --outdir ./dist",
         "start": "bun run ./dist/index.js",
         "typecheck": "tsc --noEmit",
-        "test": "ETSY_API_KEY=test ETSY_OAUTH_REDIRECT_URI=http://localhost:8080/auth/etsy/callback bun test",
+        "test": "ETSY_API_KEY=test ETSY_API_SHARED_SECRET=test ETSY_OAUTH_REDIRECT_URI=http://localhost:8080/auth/etsy/callback bun test",
         "db:generate": "drizzle-kit generate",
         "db:migrate": "bun run ./src/db/migrate-runner.ts"
     },

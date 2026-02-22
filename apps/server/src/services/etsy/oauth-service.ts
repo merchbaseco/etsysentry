@@ -14,6 +14,18 @@ import type { EtsyOAuthTokenStore, EtsyOAuthTokens } from './token-store';
 
 const REQUIRED_ETSY_OAUTH_SCOPES = ['listings_r'] as const;
 
+const trimSessionIdForLog = (sessionId: string): string => {
+    if (sessionId.length <= 16) {
+        return sessionId;
+    }
+
+    return `${sessionId.slice(0, 8)}...${sessionId.slice(-6)}`;
+};
+
+const logOAuthDebug = (message: string, details: Record<string, unknown>): void => {
+    console.info(`[EtsyOAuth] ${message}`, details);
+};
+
 export type EtsyOAuthStatus = {
     connected: boolean;
     expiresAt: Date | null;
@@ -146,6 +158,13 @@ export const createEtsyOAuthService = (
 
         dependencies.tokenStore.set(oauthSessionId, nextTokens);
 
+        logOAuthDebug('persisted OAuth tokens', {
+            expiresAt: nextTokens.expiresAt.toISOString(),
+            oauthSessionId: trimSessionIdForLog(oauthSessionId),
+            scopeCount: nextTokens.scopes.length,
+            scopes: nextTokens.scopes
+        });
+
         return nextTokens;
     };
 
@@ -157,6 +176,12 @@ export const createEtsyOAuthService = (
             const refreshed = await dependencies.exchangeToken({
                 grantType: 'refresh_token',
                 refreshToken: params.refreshToken
+            });
+
+            logOAuthDebug('received refresh token exchange response', {
+                oauthSessionId: trimSessionIdForLog(params.oauthSessionId),
+                scopeCount: refreshed.scopes.length,
+                scopes: refreshed.scopes
             });
 
             return persistTokens(params.oauthSessionId, refreshed);
@@ -190,8 +215,19 @@ export const createEtsyOAuthService = (
         });
 
         if (!status.needsRefresh) {
+            logOAuthDebug('using existing OAuth tokens without refresh', {
+                expiresAt: tokens.expiresAt.toISOString(),
+                oauthSessionId: trimSessionIdForLog(params.oauthSessionId),
+                scopes: tokens.scopes
+            });
             return tokens;
         }
+
+        logOAuthDebug('refreshing stale OAuth tokens', {
+            expiresAt: tokens.expiresAt.toISOString(),
+            oauthSessionId: trimSessionIdForLog(params.oauthSessionId),
+            scopes: tokens.scopes
+        });
 
         return refreshTokens({
             oauthSessionId: params.oauthSessionId,
@@ -203,14 +239,27 @@ export const createEtsyOAuthService = (
         oauthSessionId: EtsyOAuthSessionId;
     }): Promise<EtsyOAuthAccessToken> => {
         const tokens = await ensureFreshTokens(params);
+        const hasExplicitScopes = tokens.scopes.length > 0;
         const missingScopes = REQUIRED_ETSY_OAUTH_SCOPES.filter(
             (scope) => !tokens.scopes.includes(scope)
         );
 
-        if (missingScopes.length > 0) {
+        if (hasExplicitScopes && missingScopes.length > 0) {
+            logOAuthDebug('required scope check failed', {
+                missingScopes,
+                oauthSessionId: trimSessionIdForLog(params.oauthSessionId),
+                scopes: tokens.scopes
+            });
+
             throw new TRPCError({
                 code: 'PRECONDITION_FAILED',
                 message: `Etsy OAuth session is missing required scope(s): ${missingScopes.join(', ')}. Reconnect Etsy OAuth.`
+            });
+        }
+
+        if (!hasExplicitScopes) {
+            logOAuthDebug('required scope check skipped because token response omitted scopes', {
+                oauthSessionId: trimSessionIdForLog(params.oauthSessionId)
             });
         }
 
@@ -254,6 +303,12 @@ export const createEtsyOAuthService = (
             oauthSessionId
         });
 
+        logOAuthDebug('issued OAuth start flow', {
+            expiresAt: stateEntry.expiresAt.toISOString(),
+            oauthSessionId: trimSessionIdForLog(oauthSessionId),
+            scopes: env.etsyOAuthScopes
+        });
+
         return {
             authorizationUrl: getAuthorizationUrl({
                 codeChallenge: pkce.codeChallenge,
@@ -271,6 +326,10 @@ export const createEtsyOAuthService = (
         const statePayload = dependencies.stateStore.consume(params.state);
 
         if (!statePayload) {
+            logOAuthDebug('OAuth callback state was invalid or expired', {
+                statePrefix: params.state.slice(0, 12)
+            });
+
             throw new TRPCError({
                 code: 'BAD_REQUEST',
                 message: 'OAuth state was invalid or expired. Start OAuth again from the dashboard.'
@@ -283,6 +342,12 @@ export const createEtsyOAuthService = (
                 codeVerifier: statePayload.codeVerifier,
                 grantType: 'authorization_code',
                 redirectUri: env.ETSY_OAUTH_REDIRECT_URI
+            });
+
+            logOAuthDebug('received auth code token exchange response', {
+                oauthSessionId: trimSessionIdForLog(statePayload.oauthSessionId),
+                scopeCount: tokenResponse.scopes.length,
+                scopes: tokenResponse.scopes
             });
 
             persistTokens(statePayload.oauthSessionId, tokenResponse);
@@ -300,6 +365,12 @@ export const createEtsyOAuthService = (
     }): Promise<EtsyOAuthStatus> => {
         const tokens = ensureConnectedTokens(params);
 
+        logOAuthDebug('manual refresh requested', {
+            expiresAt: tokens.expiresAt.toISOString(),
+            oauthSessionId: trimSessionIdForLog(params.oauthSessionId),
+            scopes: tokens.scopes
+        });
+
         await refreshTokens({
             oauthSessionId: params.oauthSessionId,
             refreshToken: tokens.refreshToken
@@ -314,6 +385,10 @@ export const createEtsyOAuthService = (
         oauthSessionId: EtsyOAuthSessionId;
     }): Promise<EtsyOAuthStatus> => {
         dependencies.tokenStore.clear(params.oauthSessionId);
+
+        logOAuthDebug('cleared OAuth session tokens', {
+            oauthSessionId: trimSessionIdForLog(params.oauthSessionId)
+        });
 
         return createStatus({
             nowMs: dependencies.nowMs(),
