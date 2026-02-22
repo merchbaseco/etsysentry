@@ -1,4 +1,15 @@
-import { index, integer, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
+import {
+    index,
+    integer,
+    pgEnum,
+    pgTable,
+    primaryKey,
+    text,
+    timestamp,
+    uniqueIndex,
+    uuid
+} from 'drizzle-orm/pg-core';
 
 export const trackedListingTrackingStateEnum = pgEnum('tracked_listing_tracking_state', [
     'active',
@@ -22,6 +33,7 @@ export const trackedListings = pgTable(
         trackerClerkUserId: text('tracker_clerk_user_id').notNull(),
         etsyListingId: text('etsy_listing_id').notNull(),
         shopId: text('shop_id'),
+        shopName: text('shop_name'),
         title: text('title').notNull(),
         url: text('url'),
         trackingState: trackedListingTrackingStateEnum('tracking_state').notNull().default('active'),
@@ -50,5 +62,31 @@ export const trackedListings = pgTable(
         ),
         trackingStateIdx: index('tracked_listings_tracking_state_idx').on(table.trackingState),
         updatedAtIdx: index('tracked_listings_updated_at_idx').on(table.updatedAt)
+    })
+);
+
+export const etsyOAuthConnections = pgTable(
+    'etsy_oauth_connections',
+    {
+        accessToken: text('access_token').notNull(),
+        clerkUserId: text('clerk_user_id').notNull(),
+        createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+        expiresAt: timestamp('expires_at', { mode: 'date' }).notNull(),
+        refreshToken: text('refresh_token').notNull(),
+        scopes: text('scopes')
+            .array()
+            .notNull()
+            .default(sql`ARRAY[]::text[]`),
+        tenantId: text('tenant_id').notNull(),
+        tokenType: text('token_type').notNull(),
+        updatedAt: timestamp('updated_at', { mode: 'date' }).notNull().defaultNow()
+    },
+    (table) => ({
+        clerkUserIdx: index('etsy_oauth_connections_clerk_user_idx').on(table.clerkUserId),
+        tenantClerkPk: primaryKey({
+            columns: [table.tenantId, table.clerkUserId],
+            name: 'etsy_oauth_connections_tenant_clerk_pk'
+        }),
+        tenantIdx: index('etsy_oauth_connections_tenant_idx').on(table.tenantId)
     })
 );

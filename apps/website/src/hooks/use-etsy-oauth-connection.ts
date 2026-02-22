@@ -8,8 +8,6 @@ import {
 } from '@/lib/etsy-auth-api';
 import { TrpcRequestError } from '@/lib/trpc-http';
 
-const OAUTH_SESSION_STORAGE_KEY = 'etsysentry.oauthSessionId';
-
 const disconnectedStatus: EtsyAuthStatus = {
     connected: false,
     expiresAt: null,
@@ -35,14 +33,6 @@ const formatErrorMessage = (error: unknown): string => {
     return 'Unexpected OAuth error. Please retry.';
 };
 
-const loadStoredSessionId = (): string | null => {
-    try {
-        return window.localStorage.getItem(OAUTH_SESSION_STORAGE_KEY);
-    } catch {
-        return null;
-    }
-};
-
 const buildPopupFeatures = (): string => {
     const popupWidth = 640;
     const popupHeight = 760;
@@ -59,21 +49,6 @@ const buildPopupFeatures = (): string => {
     ].join(',');
 };
 
-const trimSessionId = (oauthSessionId: string | null): string | null => {
-    if (!oauthSessionId) {
-        return null;
-    }
-
-    const prefix = oauthSessionId.slice(0, 8);
-    const suffix = oauthSessionId.slice(-6);
-
-    if (oauthSessionId.length <= 16) {
-        return oauthSessionId;
-    }
-
-    return `${prefix}...${suffix}`;
-};
-
 export type EtsyOAuthConnectionState = {
     checkStatus: () => Promise<void>;
     connected: boolean;
@@ -87,42 +62,25 @@ export type EtsyOAuthConnectionState = {
     isDisconnecting: boolean;
     isRefreshing: boolean;
     needsRefresh: boolean;
-    oauthSessionId: string | null;
     refreshConnection: () => Promise<void>;
     scopes: string[];
     sessionLabel: string | null;
 };
 
 export const useEtsyOAuthConnection = (): EtsyOAuthConnectionState => {
-    const [oauthSessionId, setOauthSessionId] = useState<string | null>(null);
     const [status, setStatus] = useState<EtsyAuthStatus>(disconnectedStatus);
     const [isCheckingStatus, setIsCheckingStatus] = useState(false);
     const [isConnecting, setIsConnecting] = useState(false);
     const [isDisconnecting, setIsDisconnecting] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [isPendingConnection, setIsPendingConnection] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
-    const [hasHydratedStorage, setHasHydratedStorage] = useState(false);
 
     const popupRef = useRef<Window | null>(null);
     const popupCloseWatcherRef = useRef<number | null>(null);
 
-    const persistSessionId = useCallback((nextSessionId: string | null) => {
-        setOauthSessionId(nextSessionId);
-
-        try {
-            if (nextSessionId) {
-                window.localStorage.setItem(OAUTH_SESSION_STORAGE_KEY, nextSessionId);
-            } else {
-                window.localStorage.removeItem(OAUTH_SESSION_STORAGE_KEY);
-            }
-        } catch {
-            // Ignore storage write failures.
-        }
-    }, []);
-
     const fetchStatus = useCallback(
         async (
-            sessionId: string,
             options: {
                 silent?: boolean;
             } = {}
@@ -132,12 +90,15 @@ export const useEtsyOAuthConnection = (): EtsyOAuthConnectionState => {
             }
 
             try {
-                const nextStatus = await getEtsyAuthStatus({
-                    oauthSessionId: sessionId
-                });
+                const nextStatus = await getEtsyAuthStatus();
 
                 setStatus(nextStatus);
                 setErrorMessage(null);
+
+                if (nextStatus.connected) {
+                    setIsPendingConnection(false);
+                }
+
                 return nextStatus;
             } catch (statusError) {
                 setStatus(disconnectedStatus);
@@ -159,50 +120,43 @@ export const useEtsyOAuthConnection = (): EtsyOAuthConnectionState => {
         }
     }, []);
 
-    const pollForConnection = useCallback(
-        async (sessionId: string): Promise<void> => {
-            const timeoutMs = 90_000;
-            const intervalMs = 1_500;
-            const deadline = Date.now() + timeoutMs;
+    const pollForConnection = useCallback(async (): Promise<void> => {
+        const timeoutMs = 90_000;
+        const intervalMs = 1_500;
+        const deadline = Date.now() + timeoutMs;
 
-            while (Date.now() < deadline) {
-                const nextStatus = await fetchStatus(sessionId, { silent: true });
+        while (Date.now() < deadline) {
+            const nextStatus = await fetchStatus({ silent: true });
 
-                if (nextStatus?.connected) {
-                    return;
-                }
-
-                await wait(intervalMs);
+            if (nextStatus?.connected) {
+                return;
             }
-        },
-        [fetchStatus]
-    );
 
-    const startPopupWatcher = useCallback(
-        (sessionId: string) => {
-            stopPopupWatcher();
-
-            popupCloseWatcherRef.current = window.setInterval(() => {
-                if (!popupRef.current?.closed) {
-                    return;
-                }
-
-                popupRef.current = null;
-                stopPopupWatcher();
-                void fetchStatus(sessionId, { silent: true });
-            }, 500);
-        },
-        [fetchStatus, stopPopupWatcher]
-    );
-
-    const checkStatus = useCallback(async () => {
-        if (!oauthSessionId) {
-            setStatus(disconnectedStatus);
-            return;
+            await wait(intervalMs);
         }
 
-        await fetchStatus(oauthSessionId);
-    }, [fetchStatus, oauthSessionId]);
+        setIsPendingConnection(false);
+        await fetchStatus({ silent: true });
+    }, [fetchStatus]);
+
+    const startPopupWatcher = useCallback(() => {
+        stopPopupWatcher();
+
+        popupCloseWatcherRef.current = window.setInterval(() => {
+            if (!popupRef.current?.closed) {
+                return;
+            }
+
+            popupRef.current = null;
+            stopPopupWatcher();
+            setIsPendingConnection(false);
+            void fetchStatus({ silent: true });
+        }, 500);
+    }, [fetchStatus, stopPopupWatcher]);
+
+    const checkStatus = useCallback(async () => {
+        await fetchStatus();
+    }, [fetchStatus]);
 
     const connect = useCallback(async () => {
         setIsConnecting(true);
@@ -210,14 +164,10 @@ export const useEtsyOAuthConnection = (): EtsyOAuthConnectionState => {
 
         try {
             const flow = await startEtsyAuth();
-            persistSessionId(flow.oauthSessionId);
             setStatus(disconnectedStatus);
+            setIsPendingConnection(true);
 
-            const popupWindow = window.open(
-                flow.authorizationUrl,
-                'etsy-oauth',
-                buildPopupFeatures()
-            );
+            const popupWindow = window.open(flow.authorizationUrl, 'etsy-oauth', buildPopupFeatures());
 
             if (!popupWindow) {
                 setErrorMessage('Popup was blocked. Continuing OAuth in this tab.');
@@ -227,18 +177,19 @@ export const useEtsyOAuthConnection = (): EtsyOAuthConnectionState => {
 
             popupRef.current = popupWindow;
             popupWindow.focus();
-            startPopupWatcher(flow.oauthSessionId);
-            void pollForConnection(flow.oauthSessionId);
+            startPopupWatcher();
+            void pollForConnection();
         } catch (connectError) {
             setErrorMessage(formatErrorMessage(connectError));
+            setIsPendingConnection(false);
         } finally {
             setIsConnecting(false);
         }
-    }, [persistSessionId, pollForConnection, startPopupWatcher]);
+    }, [pollForConnection, startPopupWatcher]);
 
     const refreshConnection = useCallback(async () => {
-        if (!oauthSessionId) {
-            setErrorMessage('No OAuth session is active. Connect first.');
+        if (!status.connected) {
+            setErrorMessage('Etsy OAuth is not connected. Connect first.');
             return;
         }
 
@@ -246,14 +197,14 @@ export const useEtsyOAuthConnection = (): EtsyOAuthConnectionState => {
         setErrorMessage(null);
 
         try {
-            const nextStatus = await refreshEtsyAuth({ oauthSessionId });
+            const nextStatus = await refreshEtsyAuth();
             setStatus(nextStatus);
         } catch (refreshError) {
             setErrorMessage(formatErrorMessage(refreshError));
         } finally {
             setIsRefreshing(false);
         }
-    }, [oauthSessionId]);
+    }, [status.connected]);
 
     const forgetSession = useCallback(async () => {
         if (popupRef.current && !popupRef.current.closed) {
@@ -268,41 +219,20 @@ export const useEtsyOAuthConnection = (): EtsyOAuthConnectionState => {
         let disconnectErrorMessage: string | null = null;
 
         try {
-            if (oauthSessionId) {
-                await disconnectEtsyAuth({ oauthSessionId });
-            }
+            await disconnectEtsyAuth();
         } catch (disconnectError) {
             disconnectErrorMessage = formatErrorMessage(disconnectError);
         } finally {
-            persistSessionId(null);
             setStatus(disconnectedStatus);
+            setIsPendingConnection(false);
             setErrorMessage(disconnectErrorMessage);
             setIsDisconnecting(false);
         }
-    }, [oauthSessionId, persistSessionId, stopPopupWatcher]);
+    }, [stopPopupWatcher]);
 
     useEffect(() => {
-        const storedSessionId = loadStoredSessionId();
-
-        if (storedSessionId) {
-            setOauthSessionId(storedSessionId);
-        }
-
-        setHasHydratedStorage(true);
-    }, []);
-
-    useEffect(() => {
-        if (!hasHydratedStorage) {
-            return;
-        }
-
-        if (!oauthSessionId) {
-            setStatus(disconnectedStatus);
-            return;
-        }
-
-        void fetchStatus(oauthSessionId);
-    }, [fetchStatus, hasHydratedStorage, oauthSessionId]);
+        void fetchStatus();
+    }, [fetchStatus]);
 
     useEffect(() => {
         const handleMessage = (event: MessageEvent) => {
@@ -316,11 +246,7 @@ export const useEtsyOAuthConnection = (): EtsyOAuthConnectionState => {
                 return;
             }
 
-            if (!oauthSessionId) {
-                return;
-            }
-
-            void pollForConnection(oauthSessionId);
+            void pollForConnection();
         };
 
         window.addEventListener('message', handleMessage);
@@ -328,13 +254,15 @@ export const useEtsyOAuthConnection = (): EtsyOAuthConnectionState => {
         return () => {
             window.removeEventListener('message', handleMessage);
         };
-    }, [oauthSessionId, pollForConnection]);
+    }, [pollForConnection]);
 
     useEffect(() => {
         return () => {
             stopPopupWatcher();
         };
     }, [stopPopupWatcher]);
+
+    const hasSession = status.connected || isPendingConnection;
 
     return {
         checkStatus,
@@ -343,15 +271,14 @@ export const useEtsyOAuthConnection = (): EtsyOAuthConnectionState => {
         errorMessage,
         expiresAt: status.expiresAt,
         forgetSession,
-        hasSession: oauthSessionId !== null,
+        hasSession,
         isCheckingStatus,
         isConnecting,
         isDisconnecting,
         isRefreshing,
         needsRefresh: status.needsRefresh,
-        oauthSessionId,
         refreshConnection,
         scopes: status.scopes,
-        sessionLabel: trimSessionId(oauthSessionId)
+        sessionLabel: hasSession ? 'server-managed' : null
     };
 };

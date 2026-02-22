@@ -39,9 +39,21 @@ This document guides AI coding assistants working in the EtsySentry repository.
   - `api.public.*` - agent/CLI-safe endpoints.
 - App surface:
   - `api.app.*` - authenticated dashboard/admin endpoints.
+- `api.app.*` identity/tenant scope must come from server auth context:
+  - validate Clerk bearer token in server context
+  - derive `tenantId` + `clerkUserId` server-side
+  - do not accept auth identity fields from client procedure input
 - CLI should map to `api.public.*` so there is a single canonical public contract.
 - Shared business logic belongs in utilities/services, not duplicated across routers.
 - Each tRPC procedure should live in its own file under `apps/server/src/api/public` or `apps/server/src/api/app`.
+
+## Auth and OAuth Storage Rules
+
+- Website app requests to `api.app.*` must send Clerk bearer auth in `Authorization: Bearer <token>`.
+- Etsy OAuth tokens/connections are server-managed persistence, not browser-managed state.
+- Do not store Etsy OAuth session identifiers/tokens in `localStorage`, `sessionStorage`, or client cookies.
+- Etsy OAuth connection identity is keyed by `(tenantId, clerkUserId)` and persisted in DB.
+- If auth/session architecture needs to change, ask for clarification before broad refactors.
 
 ## Etsy Bridge Pattern (Required)
 

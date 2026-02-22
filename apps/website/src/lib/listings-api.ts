@@ -16,6 +16,7 @@ export type TrackedListingItem = {
     } | null;
     quantity: number | null;
     shopId: string | null;
+    shopName: string | null;
     tenantId: string;
     title: string;
     trackerClerkUserId: string;
@@ -27,8 +28,7 @@ export type TrackedListingItem = {
 };
 
 export type ListTrackedListingsInput = {
-    tenantId: string;
-    trackerClerkUserId?: string;
+    [key: string]: never;
 };
 
 export type ListTrackedListingsOutput = {
@@ -37,9 +37,6 @@ export type ListTrackedListingsOutput = {
 
 export type TrackListingInput = {
     listing: string;
-    oauthSessionId: string;
-    tenantId: string;
-    trackerClerkUserId: string;
 };
 
 export type TrackListingOutput = {
@@ -48,10 +45,7 @@ export type TrackListingOutput = {
 };
 
 export type RefreshTrackedListingInput = {
-    oauthSessionId: string;
-    tenantId: string;
     trackedListingId: string;
-    trackerClerkUserId: string;
 };
 
 const executeMutation = async <TInput, TOutput>(
@@ -68,7 +62,7 @@ const executeMutation = async <TInput, TOutput>(
 };
 
 export const listTrackedListings = async (
-    params: ListTrackedListingsInput
+    params: ListTrackedListingsInput = {}
 ): Promise<ListTrackedListingsOutput> => {
     try {
         const response = await queryClient.fetchQuery(trpc.app.listings.list.queryOptions(params));

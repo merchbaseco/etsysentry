@@ -3,14 +3,11 @@ import { refreshEtsyOAuthAccessToken } from '../../../services/etsy/oauth-servic
 import { appProcedure } from '../../trpc';
 
 export const etsyAuthRefreshProcedure = appProcedure
-    .input(
-        z.object({
-            oauthSessionId: z.string().min(1)
-        })
-    )
-    .mutation(async ({ input }) => {
+    .input(z.object({}))
+    .mutation(async ({ ctx }) => {
         const status = await refreshEtsyOAuthAccessToken({
-            oauthSessionId: input.oauthSessionId
+            clerkUserId: ctx.user.sub,
+            tenantId: ctx.tenantId
         });
 
         return {

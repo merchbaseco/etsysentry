@@ -24,6 +24,9 @@ describe('get-listing bridge', () => {
                         divisor: 100
                     },
                     quantity: 7,
+                    shop: {
+                        shop_name: 'Needle & Oak'
+                    },
                     shop_id: 987654321,
                     state: 'active',
                     tags: ['tag-a'],
@@ -55,6 +58,7 @@ describe('get-listing bridge', () => {
             },
             quantity: 7,
             shopId: '987654321',
+            shopName: 'Needle & Oak',
             tags: ['tag-a'],
             title: 'Sample Listing',
             updatedTimestamp: 1739400000,

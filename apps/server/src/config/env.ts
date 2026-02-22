@@ -4,6 +4,8 @@ const envSchema = z.object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
     PORT: z.coerce.number().int().positive().default(8080),
     APP_ORIGIN: z.string().url().default('http://localhost:5173'),
+    CLERK_SECRET_KEY: z.string().min(1),
+    ADMIN_EMAIL: z.string().email(),
     ETSY_API_KEY: z.string().min(1),
     ETSY_API_SHARED_SECRET: z.string().min(1),
     ETSY_OAUTH_REDIRECT_URI: z.string().url(),

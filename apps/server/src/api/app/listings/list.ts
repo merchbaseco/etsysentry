@@ -3,15 +3,10 @@ import { listTrackedListings } from '../../../services/listings/tracked-listings
 import { appProcedure } from '../../trpc';
 
 export const listingsListProcedure = appProcedure
-    .input(
-        z.object({
-            tenantId: z.string().min(1),
-            trackerClerkUserId: z.string().min(1).optional()
-        })
-    )
-    .query(async ({ input }) => {
+    .input(z.object({}))
+    .query(async ({ ctx }) => {
         return listTrackedListings({
-            tenantId: input.tenantId,
-            trackerClerkUserId: input.trackerClerkUserId
+            tenantId: ctx.tenantId,
+            trackerClerkUserId: ctx.user.sub
         });
     });

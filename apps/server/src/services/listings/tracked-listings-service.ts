@@ -23,6 +23,7 @@ export type TrackedListingRecord = {
     } | null;
     quantity: number | null;
     shopId: string | null;
+    shopName: string | null;
     tenantId: string;
     title: string;
     trackerClerkUserId: string;
@@ -126,6 +127,7 @@ const toRecord = (row: typeof trackedListings.$inferSelect): TrackedListingRecor
         price,
         quantity: row.quantity,
         shopId: row.shopId,
+        shopName: row.shopName,
         tenantId: row.tenantId,
         title: row.title,
         trackerClerkUserId: row.trackerClerkUserId,
@@ -154,6 +156,7 @@ const bridgeToUpsertValues = (params: {
         priceDivisor: params.bridgeResponse.price?.divisor ?? null,
         quantity: params.bridgeResponse.quantity,
         shopId: params.bridgeResponse.shopId,
+        shopName: params.bridgeResponse.shopName,
         tenantId: params.tenantId,
         title: params.bridgeResponse.title,
         trackerClerkUserId: params.trackerClerkUserId,
@@ -166,11 +169,13 @@ const bridgeToUpsertValues = (params: {
 };
 
 const fetchListingFromEtsy = async (params: {
+    clerkUserId: string;
     etsyListingId: string;
-    oauthSessionId: string;
+    tenantId: string;
 }): Promise<GetListingBridgeResponse> => {
     const oauthToken = await getEtsyOAuthAccessToken({
-        oauthSessionId: params.oauthSessionId
+        clerkUserId: params.clerkUserId,
+        tenantId: params.tenantId
     });
 
     try {
@@ -211,7 +216,6 @@ export const listTrackedListings = async (params: {
 
 export const trackListing = async (params: {
     listingInput: string;
-    oauthSessionId: string;
     tenantId: string;
     trackerClerkUserId: string;
 }): Promise<{
@@ -241,8 +245,9 @@ export const trackListing = async (params: {
         .limit(1);
 
     const listingFromEtsy = await fetchListingFromEtsy({
+        clerkUserId: params.trackerClerkUserId,
         etsyListingId,
-        oauthSessionId: params.oauthSessionId
+        tenantId: params.tenantId
     });
 
     const now = new Date();
@@ -269,7 +274,7 @@ export const trackListing = async (params: {
 };
 
 export const refreshTrackedListing = async (params: {
-    oauthSessionId: string;
+    clerkUserId: string;
     tenantId: string;
     trackedListingId: string;
     trackerClerkUserId: string;
@@ -294,8 +299,9 @@ export const refreshTrackedListing = async (params: {
 
     try {
         const listingFromEtsy = await fetchListingFromEtsy({
+            clerkUserId: params.clerkUserId,
             etsyListingId: current.etsyListingId,
-            oauthSessionId: params.oauthSessionId
+            tenantId: params.tenantId
         });
 
         const now = new Date();

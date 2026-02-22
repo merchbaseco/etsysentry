@@ -1,41 +1,34 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { RefreshCw } from 'lucide-react';
 import {
     listTrackedListings,
     refreshTrackedListing,
     trackListing,
     type TrackedListingItem
 } from '@/lib/listings-api';
+import { Button } from '@/components/ui/button';
 import { TrpcRequestError } from '@/lib/trpc-http';
 import { cn } from '@/lib/utils';
 import {
     EmptyState,
     FilterChip,
-    StatusBadge,
     TopToolbar,
     formatNumber,
     timeAgo
 } from './shared';
-
-const OAUTH_SESSION_STORAGE_KEY = 'etsysentry.oauthSessionId';
-const DEFAULT_TENANT_ID =
-    (import.meta.env.VITE_DEFAULT_TENANT_ID as string | undefined) ?? 'tenant-local-dev';
-const DEFAULT_CLERK_USER_ID =
-    (import.meta.env.VITE_DEFAULT_CLERK_USER_ID as string | undefined) ?? 'user-local-dev';
-
-const getOauthSessionId = (): string | null => {
-    try {
-        return window.localStorage.getItem(OAUTH_SESSION_STORAGE_KEY);
-    } catch {
-        return null;
-    }
-};
 
 const formatPrice = (item: TrackedListingItem): string => {
     if (!item.price) {
         return '--';
     }
 
-    return `${item.price.currencyCode} ${(item.price.value || 0).toFixed(2)}`;
+    const value = (item.price.value || 0).toFixed(2);
+
+    if (item.price.currencyCode === 'USD') {
+        return `$${value}`;
+    }
+
+    return `${item.price.currencyCode} ${value}`;
 };
 
 const toErrorMessage = (error: unknown): string => {
@@ -82,9 +75,7 @@ export function ListingsTab() {
         setIsLoading(true);
 
         try {
-            const response = await listTrackedListings({
-                tenantId: DEFAULT_TENANT_ID
-            });
+            const response = await listTrackedListings({});
 
             setItems(response.items);
             setErrorMessage(null);
@@ -118,6 +109,7 @@ export function ListingsTab() {
             return (
                 item.title.toLowerCase().includes(query) ||
                 item.etsyListingId.includes(query) ||
+                (item.shopName ?? '').toLowerCase().includes(query) ||
                 (item.shopId ?? '').includes(query)
             );
         });
@@ -130,21 +122,11 @@ export function ListingsTab() {
             return;
         }
 
-        const oauthSessionId = getOauthSessionId();
-
-        if (!oauthSessionId) {
-            setErrorMessage('Connect Etsy API first before tracking a listing.');
-            return;
-        }
-
         setIsTracking(true);
 
         try {
             const response = await trackListing({
-                listing: listingInput,
-                oauthSessionId,
-                tenantId: DEFAULT_TENANT_ID,
-                trackerClerkUserId: DEFAULT_CLERK_USER_ID
+                listing: listingInput
             });
 
             setItems((current) => upsertById(current, response.item));
@@ -158,13 +140,6 @@ export function ListingsTab() {
     };
 
     const handleRefreshRow = async (item: TrackedListingItem) => {
-        const oauthSessionId = getOauthSessionId();
-
-        if (!oauthSessionId) {
-            setErrorMessage('Connect Etsy API first before refreshing a listing.');
-            return;
-        }
-
         setRefreshingById((current) => ({
             ...current,
             [item.id]: true
@@ -172,10 +147,7 @@ export function ListingsTab() {
 
         try {
             const refreshed = await refreshTrackedListing({
-                oauthSessionId,
-                tenantId: DEFAULT_TENANT_ID,
-                trackedListingId: item.id,
-                trackerClerkUserId: DEFAULT_CLERK_USER_ID
+                trackedListingId: item.id
             });
 
             setItems((current) => upsertById(current, refreshed));
@@ -270,34 +242,22 @@ export function ListingsTab() {
                                     Title
                                 </th>
                                 <th className="px-2 py-2 text-left text-[10px] uppercase tracking-wider text-muted-foreground">
-                                    Listing ID
-                                </th>
-                                <th className="px-2 py-2 text-left text-[10px] uppercase tracking-wider text-muted-foreground">
                                     Shop
                                 </th>
                                 <th className="px-2 py-2 text-right text-[10px] uppercase tracking-wider text-muted-foreground">
                                     Price
                                 </th>
                                 <th className="px-2 py-2 text-right text-[10px] uppercase tracking-wider text-muted-foreground">
-                                    Views
+                                    All-time Views
                                 </th>
                                 <th className="px-2 py-2 text-right text-[10px] uppercase tracking-wider text-muted-foreground">
-                                    Favs
+                                    All-time Favs
                                 </th>
                                 <th className="px-2 py-2 text-center text-[10px] uppercase tracking-wider text-muted-foreground">
                                     Qty
                                 </th>
-                                <th className="px-2 py-2 text-center text-[10px] uppercase tracking-wider text-muted-foreground">
-                                    Etsy
-                                </th>
-                                <th className="px-2 py-2 text-center text-[10px] uppercase tracking-wider text-muted-foreground">
-                                    Tracking
-                                </th>
                                 <th className="px-2 py-2 text-right text-[10px] uppercase tracking-wider text-muted-foreground">
-                                    Refreshed
-                                </th>
-                                <th className="px-2 py-2 text-right text-[10px] uppercase tracking-wider text-muted-foreground">
-                                    Action
+                                    Last Refreshed
                                 </th>
                             </tr>
                         </thead>
@@ -317,10 +277,7 @@ export function ListingsTab() {
                                                 {item.title}
                                             </a>
                                         </td>
-                                        <td className="px-2 py-1.5 font-mono text-terminal-dim">
-                                            {item.etsyListingId}
-                                        </td>
-                                        <td className="px-2 py-1.5">{item.shopId ?? '--'}</td>
+                                        <td className="px-2 py-1.5">{item.shopName ?? '--'}</td>
                                         <td className="px-2 py-1.5 text-right text-terminal-green">
                                             {formatPrice(item)}
                                         </td>
@@ -335,44 +292,37 @@ export function ListingsTab() {
                                         <td className="px-2 py-1.5 text-center">
                                             {item.quantity === null ? '--' : item.quantity}
                                         </td>
-                                        <td className="px-2 py-1.5 text-center">
-                                            <span
-                                                className={cn(
-                                                    'rounded px-1.5 py-0.5 text-[10px] uppercase tracking-wider',
-                                                    item.etsyState === 'active' &&
-                                                        'bg-terminal-green/10 text-terminal-green',
-                                                    item.etsyState === 'inactive' &&
-                                                        'bg-secondary text-terminal-dim',
-                                                    item.etsyState === 'sold_out' &&
-                                                        'bg-terminal-yellow/10 text-terminal-yellow',
-                                                    item.etsyState === 'draft' &&
-                                                        'bg-terminal-blue/10 text-terminal-blue',
-                                                    item.etsyState === 'expired' &&
-                                                        'bg-terminal-red/10 text-terminal-red'
-                                                )}
-                                            >
-                                                {item.etsyState}
-                                            </span>
-                                        </td>
-                                        <td className="px-2 py-1.5 text-center">
-                                            <StatusBadge status={item.trackingState} />
-                                        </td>
-                                        <td className="px-2 py-1.5 text-right text-[10px] text-terminal-dim">
-                                            {timeAgo(item.lastRefreshedAt)}
-                                        </td>
-                                        <td className="px-2 py-1.5 text-right">
-                                            <button
-                                                type="button"
-                                                onClick={() => void handleRefreshRow(item)}
-                                                disabled={isRefreshing}
-                                                className={cn(
-                                                    'rounded border border-border bg-secondary px-2 py-1 text-[10px] uppercase tracking-wider',
-                                                    'disabled:cursor-default disabled:opacity-50',
-                                                    'hover:text-foreground'
-                                                )}
-                                            >
-                                                {isRefreshing ? 'Refreshing' : 'Refresh'}
-                                            </button>
+                                        <td className="px-2 py-1.5">
+                                            <div className="flex items-center justify-end gap-1">
+                                                <span className="text-[10px] text-terminal-dim">
+                                                    {timeAgo(item.lastRefreshedAt)}
+                                                </span>
+                                                <Button
+                                                    type="button"
+                                                    variant="transparent"
+                                                    size="icon-sm"
+                                                    onClick={() => void handleRefreshRow(item)}
+                                                    disabled={isRefreshing}
+                                                    aria-label={
+                                                        isRefreshing
+                                                            ? `Refreshing ${item.title}`
+                                                            : `Refresh ${item.title}`
+                                                    }
+                                                    title={
+                                                        isRefreshing
+                                                            ? 'Refreshing listing'
+                                                            : 'Refresh listing'
+                                                    }
+                                                    className="size-6 text-terminal-dim hover:text-foreground"
+                                                >
+                                                    <RefreshCw
+                                                        className={cn(
+                                                            'size-3.5',
+                                                            isRefreshing && 'animate-spin'
+                                                        )}
+                                                    />
+                                                </Button>
+                                            </div>
                                         </td>
                                     </tr>
                                 );

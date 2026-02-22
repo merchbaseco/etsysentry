@@ -1,0 +1,1 @@
+ALTER TABLE "tracked_listings" ADD COLUMN "shop_name" text;

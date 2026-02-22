@@ -142,6 +142,8 @@ if (import.meta.main) {
     server.log.info(
         {
             apiPrefix: '/api',
+            adminEmail: env.ADMIN_EMAIL,
+            authProvider: 'clerk',
             callbackPath: '/auth/etsy/callback',
             databaseHost: env.databaseHost,
             databaseName: env.databaseName,
