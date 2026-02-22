@@ -1,6 +1,7 @@
 import { QueryClient } from '@tanstack/react-query';
 import { createTRPCClient, httpBatchLink } from '@trpc/client';
 import { createTRPCOptionsProxy } from '@trpc/tanstack-react-query';
+import type { RootRouter } from '../../../server/src/api/root';
 
 type TrpcAuthTokenGetter = () => Promise<string | null>;
 
@@ -22,8 +23,7 @@ const getApiBaseUrl = (): string => {
 
 export const queryClient = new QueryClient();
 
-// TODO: Replace `any` with a shared app router type once app router types are exported for website use.
-const trpcClient = createTRPCClient<any>({
+export const trpcClient = createTRPCClient<RootRouter>({
     links: [
         httpBatchLink({
             async headers() {
@@ -42,7 +42,7 @@ const trpcClient = createTRPCClient<any>({
     ]
 });
 
-export const trpc = createTRPCOptionsProxy<any>({
+export const trpc = createTRPCOptionsProxy<RootRouter>({
     client: trpcClient,
     queryClient
 });

@@ -1,77 +1,40 @@
-import { queryClient, trpc } from './trpc-client';
+import { queryClient, trpc, trpcClient } from './trpc-client';
+import {
+    type InferProcedureInput,
+    type InferProcedureOutput
+} from './trpc-inference';
 import { toTrpcRequestError } from './trpc-http';
 
-export type TrackedKeywordItem = {
-    id: string;
-    keyword: string;
-    lastRefreshError: string | null;
-    lastRefreshedAt: string;
-    normalizedKeyword: string;
-    tenantId: string;
-    trackerClerkUserId: string;
-    trackingState: 'active' | 'paused' | 'error';
-    updatedAt: string;
-};
+export type ListTrackedKeywordsInput = InferProcedureInput<typeof trpcClient.app.keywords.list.query>;
 
-export type ListTrackedKeywordsInput = {
-    [key: string]: never;
-};
+export type ListTrackedKeywordsOutput = InferProcedureOutput<typeof trpcClient.app.keywords.list.query>;
 
-export type ListTrackedKeywordsOutput = {
-    items: TrackedKeywordItem[];
-};
+export type TrackedKeywordItem = ListTrackedKeywordsOutput['items'][number];
 
-export type TrackKeywordInput = {
-    keyword: string;
-};
+export type TrackKeywordInput = InferProcedureInput<typeof trpcClient.app.keywords.track.mutate>;
 
-export type TrackKeywordOutput = {
-    created: boolean;
-    item: TrackedKeywordItem;
-};
+export type TrackKeywordOutput = InferProcedureOutput<typeof trpcClient.app.keywords.track.mutate>;
 
-export type KeywordRankResultItem = {
-    etsyListingId: string;
-    observedAt: string;
-    rank: number;
-    trackedKeywordId: string;
-};
+export type GetDailyProductRanksForKeywordInput = InferProcedureInput<
+    typeof trpcClient.app.keywords.getDailyProductRanksForKeyword.query
+>;
 
-export type DailyProductRanksForKeyword = {
-    keyword: string;
-    normalizedKeyword: string;
-    observedAt: string | null;
-    trackedKeywordId: string;
-    items: KeywordRankResultItem[];
-};
+export type DailyProductRanksForKeyword = InferProcedureOutput<
+    typeof trpcClient.app.keywords.getDailyProductRanksForKeyword.query
+>;
 
-export type GetDailyProductRanksForKeywordInput = {
-    trackedKeywordId: string;
-};
+export type KeywordRankResultItem = DailyProductRanksForKeyword['items'][number];
 
-export type SyncRanksForKeywordInput = {
-    trackedKeywordId: string;
-};
-
-const executeMutation = async <TInput, TOutput>(
-    input: TInput,
-    options: {
-        mutationFn?: (nextInput: TInput) => Promise<TOutput>;
-    }
-): Promise<TOutput> => {
-    if (!options.mutationFn) {
-        throw new Error('tRPC mutation function was not configured.');
-    }
-
-    return options.mutationFn(input);
-};
+export type SyncRanksForKeywordInput = InferProcedureInput<
+    typeof trpcClient.app.keywords.syncRanksForKeyword.mutate
+>;
 
 export const listTrackedKeywords = async (
     params: ListTrackedKeywordsInput = {}
 ): Promise<ListTrackedKeywordsOutput> => {
     try {
         const response = await queryClient.fetchQuery(trpc.app.keywords.list.queryOptions(params));
-        return response as ListTrackedKeywordsOutput;
+        return response;
     } catch (error) {
         throw toTrpcRequestError(error);
     }
@@ -79,10 +42,7 @@ export const listTrackedKeywords = async (
 
 export const trackKeyword = async (params: TrackKeywordInput): Promise<TrackKeywordOutput> => {
     try {
-        const response = await executeMutation<TrackKeywordInput, TrackKeywordOutput>(
-            params,
-            trpc.app.keywords.track.mutationOptions()
-        );
+        const response = await trpcClient.app.keywords.track.mutate(params);
 
         return response;
     } catch (error) {
@@ -97,7 +57,7 @@ export const getDailyProductRanksForKeyword = async (
         const response = await queryClient.fetchQuery(
             trpc.app.keywords.getDailyProductRanksForKeyword.queryOptions(params)
         );
-        return response as DailyProductRanksForKeyword;
+        return response;
     } catch (error) {
         throw toTrpcRequestError(error);
     }
@@ -107,10 +67,7 @@ export const syncRanksForKeyword = async (
     params: SyncRanksForKeywordInput
 ): Promise<DailyProductRanksForKeyword> => {
     try {
-        const response = await executeMutation<SyncRanksForKeywordInput, DailyProductRanksForKeyword>(
-            params,
-            trpc.app.keywords.syncRanksForKeyword.mutationOptions()
-        );
+        const response = await trpcClient.app.keywords.syncRanksForKeyword.mutate(params);
 
         return response;
     } catch (error) {
