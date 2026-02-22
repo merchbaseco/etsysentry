@@ -111,6 +111,9 @@ export const createEtsyOAuthService = (
     overrides: Partial<EtsyOAuthServiceDependencies> = {}
 ): {
     completeOAuthFlow: (params: { code: string; state: string }) => Promise<EtsyOAuthStatus>;
+    disconnectOAuthSession: (params: {
+        oauthSessionId: EtsyOAuthSessionId;
+    }) => Promise<EtsyOAuthStatus>;
     getOAuthAccessToken: (params: {
         oauthSessionId: EtsyOAuthSessionId;
     }) => Promise<EtsyOAuthAccessToken>;
@@ -307,8 +310,20 @@ export const createEtsyOAuthService = (
         });
     };
 
+    const disconnectOAuthSession = async (params: {
+        oauthSessionId: EtsyOAuthSessionId;
+    }): Promise<EtsyOAuthStatus> => {
+        dependencies.tokenStore.clear(params.oauthSessionId);
+
+        return createStatus({
+            nowMs: dependencies.nowMs(),
+            tokens: null
+        });
+    };
+
     return {
         completeOAuthFlow,
+        disconnectOAuthSession,
         getOAuthAccessToken,
         getOAuthStatus,
         refreshOAuthAccessToken,
@@ -319,6 +334,7 @@ export const createEtsyOAuthService = (
 const etsyOAuthService = createEtsyOAuthService();
 
 export const completeEtsyOAuthFlow = etsyOAuthService.completeOAuthFlow;
+export const disconnectEtsyOAuthSession = etsyOAuthService.disconnectOAuthSession;
 export const getEtsyOAuthAccessToken = etsyOAuthService.getOAuthAccessToken;
 export const getEtsyOAuthStatus = etsyOAuthService.getOAuthStatus;
 export const refreshEtsyOAuthAccessToken = etsyOAuthService.refreshOAuthAccessToken;

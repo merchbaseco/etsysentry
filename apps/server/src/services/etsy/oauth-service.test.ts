@@ -281,4 +281,37 @@ describe('oauth-service', () => {
                 'Etsy OAuth session is missing required scope(s): listings_r. Reconnect Etsy OAuth.'
         });
     });
+
+    test('disconnectOAuthSession clears session tokens', async () => {
+        const { dependencies } = createDependencies();
+        const service = createEtsyOAuthService(dependencies);
+
+        dependencies.tokenStore.set('session-1', {
+            accessToken: 'access-1',
+            expiresAt: new Date(2_000_000),
+            refreshToken: 'refresh-1',
+            scopes: ['listings_r'],
+            tokenType: 'Bearer'
+        });
+
+        const status = await service.disconnectOAuthSession({
+            oauthSessionId: 'session-1'
+        });
+
+        expect(status).toEqual({
+            connected: false,
+            expiresAt: null,
+            needsRefresh: false,
+            scopes: []
+        });
+
+        await expect(
+            service.getOAuthAccessToken({
+                oauthSessionId: 'session-1'
+            })
+        ).rejects.toMatchObject({
+            code: 'PRECONDITION_FAILED',
+            message: 'Etsy OAuth is not connected. Run the start flow first.'
+        });
+    });
 });

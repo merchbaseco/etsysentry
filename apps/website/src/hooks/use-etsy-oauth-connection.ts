@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+    disconnectEtsyAuth,
     getEtsyAuthStatus,
     refreshEtsyAuth,
     startEtsyAuth,
@@ -79,10 +80,11 @@ export type EtsyOAuthConnectionState = {
     connect: () => Promise<void>;
     errorMessage: string | null;
     expiresAt: string | null;
-    forgetSession: () => void;
+    forgetSession: () => Promise<void>;
     hasSession: boolean;
     isCheckingStatus: boolean;
     isConnecting: boolean;
+    isDisconnecting: boolean;
     isRefreshing: boolean;
     needsRefresh: boolean;
     oauthSessionId: string | null;
@@ -96,6 +98,7 @@ export const useEtsyOAuthConnection = (): EtsyOAuthConnectionState => {
     const [status, setStatus] = useState<EtsyAuthStatus>(disconnectedStatus);
     const [isCheckingStatus, setIsCheckingStatus] = useState(false);
     const [isConnecting, setIsConnecting] = useState(false);
+    const [isDisconnecting, setIsDisconnecting] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [hasHydratedStorage, setHasHydratedStorage] = useState(false);
@@ -252,17 +255,31 @@ export const useEtsyOAuthConnection = (): EtsyOAuthConnectionState => {
         }
     }, [oauthSessionId]);
 
-    const forgetSession = useCallback(() => {
+    const forgetSession = useCallback(async () => {
         if (popupRef.current && !popupRef.current.closed) {
             popupRef.current.close();
         }
 
         popupRef.current = null;
         stopPopupWatcher();
-        persistSessionId(null);
-        setStatus(disconnectedStatus);
-        setErrorMessage(null);
-    }, [persistSessionId, stopPopupWatcher]);
+
+        setIsDisconnecting(true);
+
+        let disconnectErrorMessage: string | null = null;
+
+        try {
+            if (oauthSessionId) {
+                await disconnectEtsyAuth({ oauthSessionId });
+            }
+        } catch (disconnectError) {
+            disconnectErrorMessage = formatErrorMessage(disconnectError);
+        } finally {
+            persistSessionId(null);
+            setStatus(disconnectedStatus);
+            setErrorMessage(disconnectErrorMessage);
+            setIsDisconnecting(false);
+        }
+    }, [oauthSessionId, persistSessionId, stopPopupWatcher]);
 
     useEffect(() => {
         const storedSessionId = loadStoredSessionId();
@@ -329,6 +346,7 @@ export const useEtsyOAuthConnection = (): EtsyOAuthConnectionState => {
         hasSession: oauthSessionId !== null,
         isCheckingStatus,
         isConnecting,
+        isDisconnecting,
         isRefreshing,
         needsRefresh: status.needsRefresh,
         oauthSessionId,

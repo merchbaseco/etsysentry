@@ -167,7 +167,10 @@ function GeneralSettingsPage() {
 
 function EtsyApiSettingsPage({ connection }: { connection: EtsyOAuthConnectionState }) {
     const isActionBusy =
-        connection.isCheckingStatus || connection.isConnecting || connection.isRefreshing;
+        connection.isCheckingStatus ||
+        connection.isConnecting ||
+        connection.isDisconnecting ||
+        connection.isRefreshing;
 
     const actionButtonClassName =
         'inline-flex cursor-pointer items-center gap-1.5 rounded border border-border bg-card ' +
@@ -311,7 +314,9 @@ function EtsyApiSettingsPage({ connection }: { connection: EtsyOAuthConnectionSt
                         type="button"
                         className={dangerButtonClassName}
                         disabled={isActionBusy || !connection.hasSession}
-                        onClick={connection.forgetSession}
+                        onClick={() => {
+                            void connection.forgetSession();
+                        }}
                     >
                         <Unplug className="size-3" />
                         Forget Session

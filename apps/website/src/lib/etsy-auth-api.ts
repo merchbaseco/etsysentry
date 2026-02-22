@@ -65,3 +65,18 @@ export const refreshEtsyAuth = async (params: {
         throw toTrpcRequestError(error);
     }
 };
+
+export const disconnectEtsyAuth = async (params: {
+    oauthSessionId: string;
+}): Promise<EtsyAuthStatus> => {
+    try {
+        const response = await executeMutation<typeof params, EtsyAuthStatus>(
+            params,
+            trpc.app.etsyAuth.disconnect.mutationOptions()
+        );
+
+        return response;
+    } catch (error) {
+        throw toTrpcRequestError(error);
+    }
+};

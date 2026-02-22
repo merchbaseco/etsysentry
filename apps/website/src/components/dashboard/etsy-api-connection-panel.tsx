@@ -38,7 +38,10 @@ const getStatusLabel = (connection: EtsyOAuthConnectionState): string => {
 
 export const EtsyApiConnectionPanel = ({ connection }: EtsyApiConnectionPanelProps) => {
     const isActionBusy =
-        connection.isCheckingStatus || connection.isConnecting || connection.isRefreshing;
+        connection.isCheckingStatus ||
+        connection.isConnecting ||
+        connection.isDisconnecting ||
+        connection.isRefreshing;
     const buttonClassName =
         'inline-flex cursor-pointer items-center gap-1.5 rounded border border-border bg-card ' +
         'px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider text-foreground ' +
@@ -163,7 +166,9 @@ export const EtsyApiConnectionPanel = ({ connection }: EtsyApiConnectionPanelPro
                     <button
                         className={dangerButtonClassName}
                         disabled={isActionBusy || !connection.hasSession}
-                        onClick={connection.forgetSession}
+                        onClick={() => {
+                            void connection.forgetSession();
+                        }}
                     >
                         <Unplug className="size-3" />
                         Forget Session

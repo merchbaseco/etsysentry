@@ -83,6 +83,7 @@ Current app surface:
 - `api.app.etsyAuth.start`
 - `api.app.etsyAuth.status`
 - `api.app.etsyAuth.refresh`
+- `api.app.etsyAuth.disconnect`
 - `api.app.listings.list`
 - `api.app.listings.track`
 - `api.app.listings.refresh`
