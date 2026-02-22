@@ -20,6 +20,14 @@ const moneySchema = z.object({
     divisor: z.coerce.number().int().positive()
 });
 
+const shopSchema = z
+    .object({
+        name: z.string().min(1).nullable().optional(),
+        shop_id: z.coerce.number().int().positive().nullable().optional(),
+        shop_name: z.string().min(1).nullable().optional()
+    })
+    .passthrough();
+
 const listingResponseSchema = z
     .object({
         created_timestamp: z.coerce.number().int().nullable().optional(),
@@ -38,7 +46,7 @@ const listingResponseSchema = z
         price: moneySchema.nullable().optional(),
         quantity: z.coerce.number().int().nonnegative().nullable().optional(),
         shipping_profile: z.unknown().nullable().optional(),
-        shop: z.unknown().nullable().optional(),
+        shop: shopSchema.nullable().optional(),
         shop_id: z.coerce.number().int().positive().nullable().optional(),
         skus: z.array(z.string()).nullable().optional(),
         state: listingStateSchema,
@@ -109,6 +117,7 @@ export type GetListingBridgeResponse = {
     shippingProfile: unknown | null;
     shop: unknown | null;
     shopId: string | null;
+    shopName: string | null;
     skus: string[];
     stateTimestamp: number | null;
     suggestedTitle: string | null;
@@ -198,6 +207,8 @@ const buildEndpoint = (input: z.infer<typeof getListingInputSchema>): string => 
 const toResponse = (
     parsed: z.infer<typeof listingResponseSchema>
 ): GetListingBridgeResponse => {
+    const normalizedShopId = parsed.shop_id ?? parsed.shop?.shop_id ?? null;
+
     return {
         createdTimestamp: parsed.created_timestamp ?? null,
         creationTimestamp: parsed.creation_timestamp ?? null,
@@ -224,9 +235,10 @@ const toResponse = (
         shippingProfile: parsed.shipping_profile ?? null,
         shop: parsed.shop ?? null,
         shopId:
-            parsed.shop_id !== undefined && parsed.shop_id !== null
-                ? String(parsed.shop_id)
+            normalizedShopId !== undefined && normalizedShopId !== null
+                ? String(normalizedShopId)
                 : null,
+        shopName: parsed.shop?.shop_name ?? parsed.shop?.name ?? null,
         skus: parsed.skus ?? [],
         stateTimestamp: parsed.state_timestamp ?? null,
         suggestedTitle: parsed.suggested_title ?? null,

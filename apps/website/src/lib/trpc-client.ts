@@ -2,6 +2,14 @@ import { QueryClient } from '@tanstack/react-query';
 import { createTRPCClient, httpBatchLink } from '@trpc/client';
 import { createTRPCOptionsProxy } from '@trpc/tanstack-react-query';
 
+type TrpcAuthTokenGetter = () => Promise<string | null>;
+
+let getAuthToken: TrpcAuthTokenGetter | null = null;
+
+export const configureTrpcAuthTokenGetter = (tokenGetter: TrpcAuthTokenGetter | null): void => {
+    getAuthToken = tokenGetter;
+};
+
 const getApiBaseUrl = (): string => {
     const configuredOrigin = (import.meta.env.VITE_SERVER_ORIGIN as string | undefined)?.trim();
 
@@ -18,6 +26,17 @@ export const queryClient = new QueryClient();
 const trpcClient = createTRPCClient<any>({
     links: [
         httpBatchLink({
+            async headers() {
+                const token = await getAuthToken?.();
+
+                if (!token) {
+                    return {};
+                }
+
+                return {
+                    Authorization: `Bearer ${token}`
+                };
+            },
             url: getApiBaseUrl()
         })
     ]

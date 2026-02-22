@@ -19,7 +19,6 @@ Implemented scaffold:
 Planned next layers (not yet scaffolded):
 
 - pg-boss job orchestration
-- Clerk + tenant auth
 - Primitive and timeseries storage
 
 ## Run Locally
@@ -46,6 +45,8 @@ See `.env.example` for the exact values required by this scaffold.
 
 Required for OAuth:
 
+- `CLERK_SECRET_KEY`
+- `ADMIN_EMAIL`
 - `ETSY_API_KEY`
 - `ETSY_API_SHARED_SECRET`
 - `ETSY_OAUTH_REDIRECT_URI`
@@ -63,14 +64,13 @@ Optional:
 
 ## OAuth Flow (Etsy v3)
 
-1. Client calls `api.app.etsyAuth.start` (mutation) to obtain:
+1. Client calls `api.app.etsyAuth.start` (mutation) with Clerk bearer auth to obtain:
    - `authorizationUrl`
-   - `oauthSessionId`
 2. Client redirects user to Etsy authorize URL.
 3. Etsy redirects to `ETSY_OAUTH_REDIRECT_URI` (`/auth/etsy/callback`).
 4. Callback verifies `state`, exchanges `code` for tokens via the OAuth bridge, and stores token
-   state.
-5. Client calls `api.app.etsyAuth.status` / `api.app.etsyAuth.refresh` with `oauthSessionId`.
+   state keyed by tenant + Clerk user.
+5. Client calls `api.app.etsyAuth.status` / `api.app.etsyAuth.refresh` with Clerk bearer auth.
 
 ## API Structure
 
@@ -80,6 +80,7 @@ Optional:
 
 Current app surface:
 
+- `api.app.admin.status` (admin-only)
 - `api.app.etsyAuth.start`
 - `api.app.etsyAuth.status`
 - `api.app.etsyAuth.refresh`
@@ -100,5 +101,7 @@ Current app surface:
 ## Operational Notes
 
 - Startup logs include a status summary with API prefix, callback path, and OAuth scopes.
+- `api.app.*` procedures require Clerk bearer auth (`Authorization: Bearer <token>`).
+- Admin-only app procedures require authenticated user email to match `ADMIN_EMAIL`.
 - Keep `.env.example` updated when env vars change.
 - Do not embed Etsy HTTP calls directly in routers/jobs; add bridges instead.

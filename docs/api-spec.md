@@ -1,10 +1,223 @@
-# EtsySentry Public API Spec (Draft v0.1)
+# EtsySentry API Spec (Modalities Draft v0.2)
 
 ## Scope
 
-This spec defines the canonical `api.public.*` contract for EtsySentry v1.
+This spec defines both first-party API modalities exposed by EtsySentry:
 
-This is the same contract used by:
+- Dashboard App API (`api.app.*`) authenticated by Clerk bearer tokens.
+- Public API (`api.public.*`) authenticated by API keys (CLI + HTTP client).
+
+Server transport base URL for both modalities:
+- `<origin>/api`
+
+## API Modalities
+
+### Dashboard App API (`api.app.*`)
+
+- Intended clients:
+  - EtsySentry dashboard website (`apps/website`)
+- Authentication:
+  - `Authorization: Bearer <clerk_jwt>`
+- Auth context behavior:
+  - server validates Clerk token
+  - `tenantId` and `clerkUserId` are derived from server auth context
+  - procedures must not accept auth identity fields from client input
+  - admin-only procedures require Clerk email to match `ADMIN_EMAIL`
+- Current implementation status:
+  - implemented and active
+
+### Public API (`api.public.*`)
+
+- Intended clients:
+  - CLI
+  - `@etsysentry/http-client`
+  - direct HTTP/tRPC clients
+- Authentication:
+  - required: `x-api-key: <esk_...>`
+  - optional equivalent: `authorization: Bearer <esk_...>`
+- Auth context behavior:
+  - tenant scoping comes from API key context
+- Current implementation status:
+  - router scaffold exists; detailed v1 contract below remains canonical target surface
+
+## Transport Notes
+
+- tRPC only (no parallel REST contract).
+- Dashboard procedure keys follow dotted router paths:
+  - `app.etsyAuth.start`
+  - `app.listings.list`
+- Public API contract below uses slash-style keys for the canonical CLI/http surface:
+  - `keywords/track`
+  - `listings/get`
+  - `metrics/series/listings`
+- HTTP semantics (tRPC):
+  - query -> `GET` with URL-encoded `input`
+  - mutation -> `POST` with JSON body
+
+## Dashboard App API (`api.app.*`) Procedures
+
+Current implemented procedures:
+
+### Admin
+
+`app.admin.status` (query, admin-only)
+
+Input:
+
+```ts
+{}
+```
+
+Output:
+
+```ts
+{
+  email: string | null;
+  isAdmin: true;
+  tenantId: string;
+}
+```
+
+### Etsy OAuth
+
+`app.etsyAuth.start` (mutation)
+
+Input:
+
+```ts
+{}
+```
+
+Output:
+
+```ts
+{
+  authorizationUrl: string;
+  expiresAt: string; // ISO timestamp
+}
+```
+
+`app.etsyAuth.status` (query)
+
+Input:
+
+```ts
+{}
+```
+
+Output:
+
+```ts
+{
+  connected: boolean;
+  expiresAt: string | null; // ISO timestamp
+  needsRefresh: boolean;
+  scopes: string[];
+}
+```
+
+`app.etsyAuth.refresh` (mutation)
+
+Input:
+
+```ts
+{}
+```
+
+Output:
+- same shape as `app.etsyAuth.status`
+
+`app.etsyAuth.disconnect` (mutation)
+
+Input:
+
+```ts
+{}
+```
+
+Output:
+- same shape as `app.etsyAuth.status`
+
+### Listings
+
+`app.listings.list` (query)
+
+Input:
+
+```ts
+{}
+```
+
+Output:
+
+```ts
+{
+  items: Array<{
+    id: string;
+    tenantId: string;
+    trackerClerkUserId: string;
+    etsyListingId: string;
+    title: string;
+    url: string | null;
+    trackingState: 'active' | 'paused' | 'error';
+    etsyState: 'active' | 'inactive' | 'sold_out' | 'draft' | 'expired';
+    shopId: string | null;
+    shopName: string | null;
+    price: {
+      amount: number;
+      divisor: number;
+      currencyCode: string;
+      value: number;
+    } | null;
+    quantity: number | null;
+    views: number | null;
+    numFavorers: number | null;
+    updatedTimestamp: number | null;
+    lastRefreshedAt: string; // ISO timestamp
+    lastRefreshError: string | null;
+    updatedAt: string; // ISO timestamp
+  }>;
+}
+```
+
+`app.listings.track` (mutation)
+
+Input:
+
+```ts
+{
+  listing: string; // Etsy listing id or listing URL
+}
+```
+
+Output:
+
+```ts
+{
+  created: boolean;
+  item: {
+    // same item shape as entries in app.listings.list output
+  };
+}
+```
+
+`app.listings.refresh` (mutation)
+
+Input:
+
+```ts
+{
+  trackedListingId: string; // uuid
+}
+```
+
+Output:
+- same item shape as entries in `app.listings.list` output
+
+## Public API (`api.public.*`) Canonical Contract (v1 Target)
+
+This section defines the canonical CLI/http contract shape used by:
+
 - CLI
 - `@etsysentry/http-client`
 - direct HTTP/tRPC clients
@@ -14,33 +227,14 @@ Primitives:
 - `listing` (CLI alias: `product`)
 - `shop`
 
-## Design Rules
+### Public API Design Rules
 
-- tRPC only (no parallel REST contract).
 - Slash-style procedure keys (for example `keywords/track`).
 - One CLI command maps to one public procedure.
 - Query/mutation boundaries are explicit.
 - Tenant scoping comes from API key context.
 
-## Base Transport
-
-Base URL:
-- `<origin>/api`
-
-Procedure key format:
-- `<resource>/<verb>`
-- `<resource>/<verb>/<subresource>` when needed
-
-Examples:
-- `keywords/track`
-- `listings/get`
-- `metrics/series/listings`
-
-HTTP semantics (tRPC):
-- query -> `GET` with URL-encoded `input`
-- mutation -> `POST` with JSON body
-
-## Authentication
+### Public API Authentication
 
 Required on all `api.public.*` procedures:
 - `x-api-key: <esk_...>` header
@@ -53,7 +247,7 @@ API key requirements:
 - key resolves to one tenant context
 - all data access is tenant-scoped
 
-## Response Envelope
+### Public API Response Envelope
 
 Success:
 

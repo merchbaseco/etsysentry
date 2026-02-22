@@ -284,7 +284,7 @@ function EtsyApiSettingsPage({ connection }: { connection: EtsyOAuthConnectionSt
                     <button
                         type="button"
                         className={actionButtonClassName}
-                        disabled={isActionBusy || !connection.hasSession}
+                        disabled={isActionBusy || !connection.connected}
                         onClick={() => {
                             void connection.refreshConnection();
                         }}
@@ -301,7 +301,7 @@ function EtsyApiSettingsPage({ connection }: { connection: EtsyOAuthConnectionSt
                     <button
                         type="button"
                         className={actionButtonClassName}
-                        disabled={isActionBusy || !connection.hasSession}
+                        disabled={isActionBusy}
                         onClick={() => {
                             void connection.checkStatus();
                         }}
@@ -313,7 +313,7 @@ function EtsyApiSettingsPage({ connection }: { connection: EtsyOAuthConnectionSt
                     <button
                         type="button"
                         className={dangerButtonClassName}
-                        disabled={isActionBusy || !connection.hasSession}
+                        disabled={isActionBusy || !connection.connected}
                         onClick={() => {
                             void connection.forgetSession();
                         }}

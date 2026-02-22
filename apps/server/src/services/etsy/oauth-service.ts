@@ -1,4 +1,3 @@
-import { randomBytes } from 'node:crypto';
 import { TRPCError } from '@trpc/server';
 import { env } from '../../config/env';
 import {
@@ -8,18 +7,21 @@ import {
     type EtsyOAuthTokenResponse
 } from './bridges/exchange-oauth-token';
 import { createPkcePair } from './oauth-pkce';
-import { etsyOAuthStateStore, etsyOAuthTokenStore } from './oauth-runtime';
+import { etsyOAuthConnectionStore, etsyOAuthStateStore } from './oauth-runtime';
+import type {
+    EtsyOAuthConnectionKey,
+    EtsyOAuthConnectionStore,
+    EtsyOAuthTokens
+} from './connection-store';
 import type { EtsyOAuthStateStore } from './oauth-state-store';
-import type { EtsyOAuthTokenStore, EtsyOAuthTokens } from './token-store';
 
 const REQUIRED_ETSY_OAUTH_SCOPES = ['listings_r'] as const;
 
-const trimSessionIdForLog = (sessionId: string): string => {
-    if (sessionId.length <= 16) {
-        return sessionId;
-    }
+const formatConnectionKeyForLog = (key: EtsyOAuthConnectionKey): string => {
+    const tenantPrefix = key.tenantId.slice(0, 8);
+    const userPrefix = key.clerkUserId.slice(0, 8);
 
-    return `${sessionId.slice(0, 8)}...${sessionId.slice(-6)}`;
+    return `${tenantPrefix}:${userPrefix}`;
 };
 
 const logOAuthDebug = (message: string, details: Record<string, unknown>): void => {
@@ -40,27 +42,25 @@ export type EtsyOAuthAccessToken = {
     tokenType: string;
 };
 
-export type EtsyOAuthSessionId = string;
+export type EtsyOAuthIdentity = EtsyOAuthConnectionKey;
 
 export type EtsyOAuthServiceDependencies = {
+    connectionStore: EtsyOAuthConnectionStore;
     exchangeToken: (input: EtsyOAuthTokenRequest) => Promise<EtsyOAuthTokenResponse>;
     nowMs: () => number;
     pkceFactory: () => {
         codeChallenge: string;
         codeVerifier: string;
     };
-    sessionIdFactory: () => EtsyOAuthSessionId;
     stateStore: EtsyOAuthStateStore;
-    tokenStore: EtsyOAuthTokenStore;
 };
 
 const defaultDependencies: EtsyOAuthServiceDependencies = {
+    connectionStore: etsyOAuthConnectionStore,
     exchangeToken: exchangeOAuthToken,
     nowMs: () => Date.now(),
     pkceFactory: createPkcePair,
-    sessionIdFactory: () => randomBytes(32).toString('base64url'),
-    stateStore: etsyOAuthStateStore,
-    tokenStore: etsyOAuthTokenStore
+    stateStore: etsyOAuthStateStore
 };
 
 const getAuthorizationUrl = (params: {
@@ -123,20 +123,13 @@ export const createEtsyOAuthService = (
     overrides: Partial<EtsyOAuthServiceDependencies> = {}
 ): {
     completeOAuthFlow: (params: { code: string; state: string }) => Promise<EtsyOAuthStatus>;
-    disconnectOAuthSession: (params: {
-        oauthSessionId: EtsyOAuthSessionId;
-    }) => Promise<EtsyOAuthStatus>;
-    getOAuthAccessToken: (params: {
-        oauthSessionId: EtsyOAuthSessionId;
-    }) => Promise<EtsyOAuthAccessToken>;
-    getOAuthStatus: (params: { oauthSessionId: EtsyOAuthSessionId }) => Promise<EtsyOAuthStatus>;
-    refreshOAuthAccessToken: (params: {
-        oauthSessionId: EtsyOAuthSessionId;
-    }) => Promise<EtsyOAuthStatus>;
-    startOAuthFlow: () => {
+    disconnectOAuthSession: (params: EtsyOAuthIdentity) => Promise<EtsyOAuthStatus>;
+    getOAuthAccessToken: (params: EtsyOAuthIdentity) => Promise<EtsyOAuthAccessToken>;
+    getOAuthStatus: (params: EtsyOAuthIdentity) => Promise<EtsyOAuthStatus>;
+    refreshOAuthAccessToken: (params: EtsyOAuthIdentity) => Promise<EtsyOAuthStatus>;
+    startOAuthFlow: (params: EtsyOAuthIdentity) => {
         authorizationUrl: string;
         expiresAt: Date;
-        oauthSessionId: EtsyOAuthSessionId;
     };
 } => {
     const dependencies: EtsyOAuthServiceDependencies = {
@@ -144,10 +137,10 @@ export const createEtsyOAuthService = (
         ...overrides
     };
 
-    const persistTokens = (
-        oauthSessionId: EtsyOAuthSessionId,
+    const persistTokens = async (
+        identity: EtsyOAuthIdentity,
         tokenResponse: EtsyOAuthTokenResponse
-    ): EtsyOAuthTokens => {
+    ): Promise<EtsyOAuthTokens> => {
         const nextTokens: EtsyOAuthTokens = {
             accessToken: tokenResponse.accessToken,
             expiresAt: new Date(dependencies.nowMs() + tokenResponse.expiresInSeconds * 1000),
@@ -156,11 +149,11 @@ export const createEtsyOAuthService = (
             tokenType: tokenResponse.tokenType
         };
 
-        dependencies.tokenStore.set(oauthSessionId, nextTokens);
+        await dependencies.connectionStore.set(identity, nextTokens);
 
         logOAuthDebug('persisted OAuth tokens', {
+            connectionKey: formatConnectionKeyForLog(identity),
             expiresAt: nextTokens.expiresAt.toISOString(),
-            oauthSessionId: trimSessionIdForLog(oauthSessionId),
             scopeCount: nextTokens.scopes.length,
             scopes: nextTokens.scopes
         });
@@ -169,7 +162,7 @@ export const createEtsyOAuthService = (
     };
 
     const refreshTokens = async (params: {
-        oauthSessionId: EtsyOAuthSessionId;
+        identity: EtsyOAuthIdentity;
         refreshToken: string;
     }): Promise<EtsyOAuthTokens> => {
         try {
@@ -179,21 +172,21 @@ export const createEtsyOAuthService = (
             });
 
             logOAuthDebug('received refresh token exchange response', {
-                oauthSessionId: trimSessionIdForLog(params.oauthSessionId),
+                connectionKey: formatConnectionKeyForLog(params.identity),
                 scopeCount: refreshed.scopes.length,
                 scopes: refreshed.scopes
             });
 
-            return persistTokens(params.oauthSessionId, refreshed);
+            return persistTokens(params.identity, refreshed);
         } catch (error) {
             return toInternalError(error);
         }
     };
 
-    const ensureConnectedTokens = (params: {
-        oauthSessionId: EtsyOAuthSessionId;
-    }): EtsyOAuthTokens => {
-        const tokens = dependencies.tokenStore.get(params.oauthSessionId);
+    const ensureConnectedTokens = async (params: {
+        identity: EtsyOAuthIdentity;
+    }): Promise<EtsyOAuthTokens> => {
+        const tokens = await dependencies.connectionStore.get(params.identity);
 
         if (!tokens) {
             throw new TRPCError({
@@ -206,9 +199,9 @@ export const createEtsyOAuthService = (
     };
 
     const ensureFreshTokens = async (params: {
-        oauthSessionId: EtsyOAuthSessionId;
+        identity: EtsyOAuthIdentity;
     }): Promise<EtsyOAuthTokens> => {
-        const tokens = ensureConnectedTokens(params);
+        const tokens = await ensureConnectedTokens(params);
         const status = createStatus({
             nowMs: dependencies.nowMs(),
             tokens
@@ -216,29 +209,30 @@ export const createEtsyOAuthService = (
 
         if (!status.needsRefresh) {
             logOAuthDebug('using existing OAuth tokens without refresh', {
+                connectionKey: formatConnectionKeyForLog(params.identity),
                 expiresAt: tokens.expiresAt.toISOString(),
-                oauthSessionId: trimSessionIdForLog(params.oauthSessionId),
                 scopes: tokens.scopes
             });
+
             return tokens;
         }
 
         logOAuthDebug('refreshing stale OAuth tokens', {
+            connectionKey: formatConnectionKeyForLog(params.identity),
             expiresAt: tokens.expiresAt.toISOString(),
-            oauthSessionId: trimSessionIdForLog(params.oauthSessionId),
             scopes: tokens.scopes
         });
 
         return refreshTokens({
-            oauthSessionId: params.oauthSessionId,
+            identity: params.identity,
             refreshToken: tokens.refreshToken
         });
     };
 
-    const getOAuthAccessToken = async (params: {
-        oauthSessionId: EtsyOAuthSessionId;
-    }): Promise<EtsyOAuthAccessToken> => {
-        const tokens = await ensureFreshTokens(params);
+    const getOAuthAccessToken = async (params: EtsyOAuthIdentity): Promise<EtsyOAuthAccessToken> => {
+        const tokens = await ensureFreshTokens({
+            identity: params
+        });
         const hasExplicitScopes = tokens.scopes.length > 0;
         const missingScopes = REQUIRED_ETSY_OAUTH_SCOPES.filter(
             (scope) => !tokens.scopes.includes(scope)
@@ -246,8 +240,8 @@ export const createEtsyOAuthService = (
 
         if (hasExplicitScopes && missingScopes.length > 0) {
             logOAuthDebug('required scope check failed', {
+                connectionKey: formatConnectionKeyForLog(params),
                 missingScopes,
-                oauthSessionId: trimSessionIdForLog(params.oauthSessionId),
                 scopes: tokens.scopes
             });
 
@@ -259,7 +253,7 @@ export const createEtsyOAuthService = (
 
         if (!hasExplicitScopes) {
             logOAuthDebug('required scope check skipped because token response omitted scopes', {
-                oauthSessionId: trimSessionIdForLog(params.oauthSessionId)
+                connectionKey: formatConnectionKeyForLog(params)
             });
         }
 
@@ -271,10 +265,8 @@ export const createEtsyOAuthService = (
         };
     };
 
-    const getOAuthStatus = async (params: {
-        oauthSessionId: EtsyOAuthSessionId;
-    }): Promise<EtsyOAuthStatus> => {
-        const currentTokens = dependencies.tokenStore.get(params.oauthSessionId);
+    const getOAuthStatus = async (params: EtsyOAuthIdentity): Promise<EtsyOAuthStatus> => {
+        const currentTokens = await dependencies.connectionStore.get(params);
 
         if (!currentTokens) {
             return createStatus({
@@ -283,7 +275,9 @@ export const createEtsyOAuthService = (
             });
         }
 
-        const tokens = await ensureFreshTokens(params);
+        const tokens = await ensureFreshTokens({
+            identity: params
+        });
 
         return createStatus({
             nowMs: dependencies.nowMs(),
@@ -291,21 +285,20 @@ export const createEtsyOAuthService = (
         });
     };
 
-    const startOAuthFlow = (): {
+    const startOAuthFlow = (params: EtsyOAuthIdentity): {
         authorizationUrl: string;
         expiresAt: Date;
-        oauthSessionId: EtsyOAuthSessionId;
     } => {
-        const oauthSessionId = dependencies.sessionIdFactory();
         const pkce = dependencies.pkceFactory();
         const stateEntry = dependencies.stateStore.issue({
+            clerkUserId: params.clerkUserId,
             codeVerifier: pkce.codeVerifier,
-            oauthSessionId
+            tenantId: params.tenantId
         });
 
         logOAuthDebug('issued OAuth start flow', {
+            connectionKey: formatConnectionKeyForLog(params),
             expiresAt: stateEntry.expiresAt.toISOString(),
-            oauthSessionId: trimSessionIdForLog(oauthSessionId),
             scopes: env.etsyOAuthScopes
         });
 
@@ -314,8 +307,7 @@ export const createEtsyOAuthService = (
                 codeChallenge: pkce.codeChallenge,
                 state: stateEntry.state
             }),
-            expiresAt: stateEntry.expiresAt,
-            oauthSessionId
+            expiresAt: stateEntry.expiresAt
         };
     };
 
@@ -336,6 +328,11 @@ export const createEtsyOAuthService = (
             });
         }
 
+        const identity: EtsyOAuthIdentity = {
+            clerkUserId: statePayload.clerkUserId,
+            tenantId: statePayload.tenantId
+        };
+
         try {
             const tokenResponse = await dependencies.exchangeToken({
                 code: params.code,
@@ -345,49 +342,43 @@ export const createEtsyOAuthService = (
             });
 
             logOAuthDebug('received auth code token exchange response', {
-                oauthSessionId: trimSessionIdForLog(statePayload.oauthSessionId),
+                connectionKey: formatConnectionKeyForLog(identity),
                 scopeCount: tokenResponse.scopes.length,
                 scopes: tokenResponse.scopes
             });
 
-            persistTokens(statePayload.oauthSessionId, tokenResponse);
+            await persistTokens(identity, tokenResponse);
 
-            return getOAuthStatus({
-                oauthSessionId: statePayload.oauthSessionId
-            });
+            return getOAuthStatus(identity);
         } catch (error) {
             return toInternalError(error);
         }
     };
 
-    const refreshOAuthAccessToken = async (params: {
-        oauthSessionId: EtsyOAuthSessionId;
-    }): Promise<EtsyOAuthStatus> => {
-        const tokens = ensureConnectedTokens(params);
+    const refreshOAuthAccessToken = async (params: EtsyOAuthIdentity): Promise<EtsyOAuthStatus> => {
+        const tokens = await ensureConnectedTokens({
+            identity: params
+        });
 
         logOAuthDebug('manual refresh requested', {
+            connectionKey: formatConnectionKeyForLog(params),
             expiresAt: tokens.expiresAt.toISOString(),
-            oauthSessionId: trimSessionIdForLog(params.oauthSessionId),
             scopes: tokens.scopes
         });
 
         await refreshTokens({
-            oauthSessionId: params.oauthSessionId,
+            identity: params,
             refreshToken: tokens.refreshToken
         });
 
-        return getOAuthStatus({
-            oauthSessionId: params.oauthSessionId
-        });
+        return getOAuthStatus(params);
     };
 
-    const disconnectOAuthSession = async (params: {
-        oauthSessionId: EtsyOAuthSessionId;
-    }): Promise<EtsyOAuthStatus> => {
-        dependencies.tokenStore.clear(params.oauthSessionId);
+    const disconnectOAuthSession = async (params: EtsyOAuthIdentity): Promise<EtsyOAuthStatus> => {
+        await dependencies.connectionStore.clear(params);
 
         logOAuthDebug('cleared OAuth session tokens', {
-            oauthSessionId: trimSessionIdForLog(params.oauthSessionId)
+            connectionKey: formatConnectionKeyForLog(params)
         });
 
         return createStatus({

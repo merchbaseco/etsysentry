@@ -11,7 +11,6 @@ export type EtsyAuthStatus = {
 export type EtsyAuthStartResponse = {
     authorizationUrl: string;
     expiresAt: string;
-    oauthSessionId: string;
 };
 
 const executeMutation = async <TInput, TOutput>(
@@ -40,23 +39,19 @@ export const startEtsyAuth = async (): Promise<EtsyAuthStartResponse> => {
     }
 };
 
-export const getEtsyAuthStatus = async (params: {
-    oauthSessionId: string;
-}): Promise<EtsyAuthStatus> => {
+export const getEtsyAuthStatus = async (): Promise<EtsyAuthStatus> => {
     try {
-        const response = await queryClient.fetchQuery(trpc.app.etsyAuth.status.queryOptions(params));
+        const response = await queryClient.fetchQuery(trpc.app.etsyAuth.status.queryOptions({}));
         return response as EtsyAuthStatus;
     } catch (error) {
         throw toTrpcRequestError(error);
     }
 };
 
-export const refreshEtsyAuth = async (params: {
-    oauthSessionId: string;
-}): Promise<EtsyAuthStatus> => {
+export const refreshEtsyAuth = async (): Promise<EtsyAuthStatus> => {
     try {
-        const response = await executeMutation<typeof params, EtsyAuthStatus>(
-            params,
+        const response = await executeMutation<Record<string, never>, EtsyAuthStatus>(
+            {},
             trpc.app.etsyAuth.refresh.mutationOptions()
         );
 
@@ -66,12 +61,10 @@ export const refreshEtsyAuth = async (params: {
     }
 };
 
-export const disconnectEtsyAuth = async (params: {
-    oauthSessionId: string;
-}): Promise<EtsyAuthStatus> => {
+export const disconnectEtsyAuth = async (): Promise<EtsyAuthStatus> => {
     try {
-        const response = await executeMutation<typeof params, EtsyAuthStatus>(
-            params,
+        const response = await executeMutation<Record<string, never>, EtsyAuthStatus>(
+            {},
             trpc.app.etsyAuth.disconnect.mutationOptions()
         );
 

@@ -22,7 +22,20 @@ Covered operations:
 - JSON-only output.
 - One CLI command maps to one API capability.
 - Flat command structure. Flags handle filtering.
-- CLI and HTTP API share one canonical contract (`api.public.*`).
+- CLI maps to `api.public.*` only (not `api.app.*`).
+- CLI and HTTP API share one canonical public contract (`api.public.*`).
+
+## Authentication
+
+- All non-config CLI commands require an API key.
+- CLI authenticates against `api.public.*` using API key auth:
+  - primary header: `x-api-key: <esk_...>`
+  - optional equivalent: `authorization: Bearer <esk_...>`
+- API key lookup precedence:
+  - `--api-key` flag
+  - `ETSYSENTRY_API_KEY` env var
+  - `~/.etsysentry/config.json` (`apiKey`)
+- If no API key is available, command should fail with `MISSING_CONFIG`.
 
 ## Binary and Output
 

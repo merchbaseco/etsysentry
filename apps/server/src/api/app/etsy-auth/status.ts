@@ -3,14 +3,11 @@ import { getEtsyOAuthStatus } from '../../../services/etsy/oauth-service';
 import { appProcedure } from '../../trpc';
 
 export const etsyAuthStatusProcedure = appProcedure
-    .input(
-        z.object({
-            oauthSessionId: z.string().min(1)
-        })
-    )
-    .query(async ({ input }) => {
+    .input(z.object({}))
+    .query(async ({ ctx }) => {
         const status = await getEtsyOAuthStatus({
-            oauthSessionId: input.oauthSessionId
+            clerkUserId: ctx.user.sub,
+            tenantId: ctx.tenantId
         });
 
         return {

@@ -7,11 +7,12 @@
         "build": "bun build ./src/index.ts --target bun --outdir ./dist",
         "start": "bun run ./dist/index.js",
         "typecheck": "tsc --noEmit",
-        "test": "ETSY_API_KEY=test ETSY_API_SHARED_SECRET=test ETSY_OAUTH_REDIRECT_URI=http://localhost:8080/auth/etsy/callback bun test",
+        "test": "ADMIN_EMAIL=admin@example.com CLERK_SECRET_KEY=test ETSY_API_KEY=test ETSY_API_SHARED_SECRET=test ETSY_OAUTH_REDIRECT_URI=http://localhost:8080/auth/etsy/callback bun test",
         "db:generate": "drizzle-kit generate",
         "db:migrate": "bun run ./src/db/migrate-runner.ts"
     },
     "dependencies": {
+        "@clerk/backend": "^2.32.0",
         "@fastify/cors": "^11.1.0",
         "@trpc/server": "^11.7.1",
         "drizzle-orm": "^0.44.6",

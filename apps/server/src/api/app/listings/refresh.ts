@@ -5,17 +5,14 @@ import { appProcedure } from '../../trpc';
 export const listingsRefreshProcedure = appProcedure
     .input(
         z.object({
-            oauthSessionId: z.string().min(1),
-            tenantId: z.string().min(1),
-            trackedListingId: z.string().uuid(),
-            trackerClerkUserId: z.string().min(1)
+            trackedListingId: z.string().uuid()
         })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
         return refreshTrackedListing({
-            oauthSessionId: input.oauthSessionId,
-            tenantId: input.tenantId,
+            clerkUserId: ctx.user.sub,
+            tenantId: ctx.tenantId,
             trackedListingId: input.trackedListingId,
-            trackerClerkUserId: input.trackerClerkUserId
+            trackerClerkUserId: ctx.user.sub
         });
     });

@@ -54,8 +54,11 @@ docs/
 3. PostgreSQL (Drizzle-managed schema)
 4. Etsy integration layer (bridges + client orchestration)
 5. Auth layer:
-   - Clerk for app users/tenants
-   - API key validation for CLI/public surface
+   - Clerk bearer auth for `api.app.*` users/tenants
+   - API key validation for CLI/public surface (`api.public.*`)
+6. Etsy OAuth connection persistence:
+   - server-managed OAuth token storage in PostgreSQL
+   - keyed by `(tenantId, clerkUserId)`
 
 ## Etsy Integration Layer
 
@@ -99,9 +102,15 @@ docs/
 - Tenant boundary key: `tenantId` on all tenant-owned tables.
 - Clerk user identity maps to one or more tenant memberships (no role model for regular users).
 - `api.app.*` procedures:
-  - use Clerk session auth
+  - require Clerk bearer auth (`Authorization: Bearer <token>`)
+  - derive `tenantId` and `clerkUserId` from verified token/context
+  - do not trust client-supplied auth identity fields
   - enforce tenant membership
   - enforce admin-only operations via `email === ADMIN_EMAIL`
+- Etsy OAuth connection/session model:
+  - OAuth callback exchanges code for tokens and persists connection server-side
+  - connection lookup key is `(tenantId, clerkUserId)`
+  - website does not persist OAuth tokens/session IDs in browser storage
 - API keys:
   - generated/managed via `api.app.apiKey.*`
   - hashed at rest in DB
@@ -119,6 +128,9 @@ docs/
   - `tenantId`, `clerkUserId`, `createdAt`
 - `api_keys`
   - `id`, `tenantId`, `ownerClerkUserId`, `name`, `keyPrefix`, `keyHash`, `lastUsedAt`, `revokedAt`
+- `etsy_oauth_connections`
+  - `tenantId`, `clerkUserId`, `accessToken`, `refreshToken`, `tokenType`, `scopes`, `expiresAt`,
+    `createdAt`, `updatedAt`
 - `primitives`
   - `id`, `tenantId`, `type`, `value`, `status`, `source`, `createdAt`, `updatedAt`
 - `listing_profiles`
@@ -253,10 +265,10 @@ Helper refinement strategy:
 
 Canonical specs:
 
-- `docs/api-spec.md` (public API contract)
+- `docs/api-spec.md` (API modality contract: `api.app.*` + `api.public.*`)
 - `docs/cli-spec.md` (CLI command contract)
 
-Public API and CLI intentionally share one canonical shape.
+Public API and CLI intentionally share one canonical shape for `api.public.*`.
 
 ### Public API (`api.public.*`)
 

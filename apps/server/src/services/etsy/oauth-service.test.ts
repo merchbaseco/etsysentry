@@ -1,17 +1,31 @@
 import { describe, expect, test } from 'bun:test';
 import { TRPCError } from '@trpc/server';
 import {
+    InMemoryEtsyOAuthConnectionStore,
+    type EtsyOAuthConnectionKey
+} from './connection-store';
+import {
     createEtsyOAuthService,
     type EtsyOAuthServiceDependencies,
     type EtsyOAuthStatus
 } from './oauth-service';
 import { EtsyOAuthStateStore } from './oauth-state-store';
-import { EtsyOAuthTokenStore } from './token-store';
+
+const primaryIdentity: EtsyOAuthConnectionKey = {
+    clerkUserId: 'user-1',
+    tenantId: 'tenant-1'
+};
+
+const secondaryIdentity: EtsyOAuthConnectionKey = {
+    clerkUserId: 'user-2',
+    tenantId: 'tenant-1'
+};
 
 const createDependencies = (overrides: Partial<EtsyOAuthServiceDependencies> = {}) => {
     let nowMs = 1_000_000;
 
     const base: EtsyOAuthServiceDependencies = {
+        connectionStore: new InMemoryEtsyOAuthConnectionStore(),
         exchangeToken: async () => {
             throw new Error('exchangeToken was not stubbed for this test');
         },
@@ -20,9 +34,7 @@ const createDependencies = (overrides: Partial<EtsyOAuthServiceDependencies> = {
             codeChallenge: 'challenge-1',
             codeVerifier: 'verifier-1'
         }),
-        sessionIdFactory: () => 'session-1',
-        stateStore: new EtsyOAuthStateStore(60_000),
-        tokenStore: new EtsyOAuthTokenStore()
+        stateStore: new EtsyOAuthStateStore(60_000)
     };
 
     return {
@@ -42,27 +54,27 @@ const expectConnected = (status: EtsyOAuthStatus) => {
 };
 
 describe('oauth-service', () => {
-    test('startOAuthFlow returns an authorization URL and scoped session id', () => {
+    test('startOAuthFlow returns an authorization URL and stores identity in state', () => {
         const { dependencies } = createDependencies();
         const service = createEtsyOAuthService(dependencies);
 
-        const flow = service.startOAuthFlow();
+        const flow = service.startOAuthFlow(primaryIdentity);
         const url = new URL(flow.authorizationUrl);
         const state = url.searchParams.get('state');
 
-        expect(flow.oauthSessionId).toBe('session-1');
         expect(url.origin + url.pathname).toBe('https://www.etsy.com/oauth/connect');
         expect(url.searchParams.get('code_challenge')).toBe('challenge-1');
         expect(typeof state).toBe('string');
 
         const statePayload = dependencies.stateStore.consume(state ?? '');
         expect(statePayload).toEqual({
+            clerkUserId: primaryIdentity.clerkUserId,
             codeVerifier: 'verifier-1',
-            oauthSessionId: 'session-1'
+            tenantId: primaryIdentity.tenantId
         });
     });
 
-    test('completeOAuthFlow stores tokens only for the state session', async () => {
+    test('completeOAuthFlow stores tokens for the state identity', async () => {
         let exchangeInput: unknown;
         const { dependencies, setNowMs } = createDependencies({
             exchangeToken: async (input) => {
@@ -80,8 +92,9 @@ describe('oauth-service', () => {
 
         setNowMs(2_000_000);
         const issued = dependencies.stateStore.issue({
+            clerkUserId: primaryIdentity.clerkUserId,
             codeVerifier: 'verifier-1',
-            oauthSessionId: 'session-1'
+            tenantId: primaryIdentity.tenantId
         });
 
         const status = await service.completeOAuthFlow({
@@ -98,10 +111,10 @@ describe('oauth-service', () => {
         expectConnected(status);
         expect(status.scopes).toEqual(['listings_r']);
 
-        const ownStatus = await service.getOAuthStatus({ oauthSessionId: 'session-1' });
+        const ownStatus = await service.getOAuthStatus(primaryIdentity);
         expect(ownStatus.connected).toBe(true);
 
-        const otherStatus = await service.getOAuthStatus({ oauthSessionId: 'session-2' });
+        const otherStatus = await service.getOAuthStatus(secondaryIdentity);
         expect(otherStatus).toEqual({
             connected: false,
             expiresAt: null,
@@ -124,7 +137,7 @@ describe('oauth-service', () => {
         });
     });
 
-    test('refreshOAuthAccessToken requires scoped connection and refreshes tokens', async () => {
+    test('refreshOAuthAccessToken requires connection and refreshes tokens', async () => {
         const { dependencies, setNowMs } = createDependencies({
             exchangeToken: async (input) => {
                 if (input.grantType !== 'refresh_token') {
@@ -142,13 +155,9 @@ describe('oauth-service', () => {
         });
         const service = createEtsyOAuthService(dependencies);
 
-        await expect(
-            service.refreshOAuthAccessToken({
-                oauthSessionId: 'missing-session'
-            })
-        ).rejects.toBeInstanceOf(TRPCError);
+        await expect(service.refreshOAuthAccessToken(primaryIdentity)).rejects.toBeInstanceOf(TRPCError);
 
-        dependencies.tokenStore.set('session-1', {
+        await dependencies.connectionStore.set(primaryIdentity, {
             accessToken: 'access-1',
             expiresAt: new Date(2_000_000),
             refreshToken: 'refresh-1',
@@ -157,9 +166,7 @@ describe('oauth-service', () => {
         });
 
         setNowMs(3_000_000);
-        const status = await service.refreshOAuthAccessToken({
-            oauthSessionId: 'session-1'
-        });
+        const status = await service.refreshOAuthAccessToken(primaryIdentity);
 
         expectConnected(status);
         expect(status.scopes).toEqual(['listings_r', 'shops_r']);
@@ -187,7 +194,7 @@ describe('oauth-service', () => {
         const service = createEtsyOAuthService(dependencies);
 
         setNowMs(1_000_000);
-        dependencies.tokenStore.set('session-1', {
+        await dependencies.connectionStore.set(primaryIdentity, {
             accessToken: 'access-1',
             expiresAt: new Date(1_050_000),
             refreshToken: 'refresh-1',
@@ -195,9 +202,7 @@ describe('oauth-service', () => {
             tokenType: 'Bearer'
         });
 
-        const status = await service.getOAuthStatus({
-            oauthSessionId: 'session-1'
-        });
+        const status = await service.getOAuthStatus(primaryIdentity);
 
         expect(refreshCalls).toBe(1);
         expect(status).toMatchObject({
@@ -228,8 +233,18 @@ describe('oauth-service', () => {
         });
         const service = createEtsyOAuthService(dependencies);
 
+        const freshIdentity: EtsyOAuthConnectionKey = {
+            clerkUserId: 'user-fresh',
+            tenantId: 'tenant-1'
+        };
+
+        const staleIdentity: EtsyOAuthConnectionKey = {
+            clerkUserId: 'user-stale',
+            tenantId: 'tenant-1'
+        };
+
         setNowMs(1_000_000);
-        dependencies.tokenStore.set('session-fresh', {
+        await dependencies.connectionStore.set(freshIdentity, {
             accessToken: 'access-fresh',
             expiresAt: new Date(1_500_000),
             refreshToken: 'refresh-fresh',
@@ -237,13 +252,11 @@ describe('oauth-service', () => {
             tokenType: 'Bearer'
         });
 
-        const freshAccessToken = await service.getOAuthAccessToken({
-            oauthSessionId: 'session-fresh'
-        });
+        const freshAccessToken = await service.getOAuthAccessToken(freshIdentity);
         expect(freshAccessToken.accessToken).toBe('access-fresh');
         expect(refreshCalls).toBe(0);
 
-        dependencies.tokenStore.set('session-stale', {
+        await dependencies.connectionStore.set(staleIdentity, {
             accessToken: 'access-1',
             expiresAt: new Date(1_050_000),
             refreshToken: 'refresh-1',
@@ -251,9 +264,7 @@ describe('oauth-service', () => {
             tokenType: 'Bearer'
         });
 
-        const staleAccessToken = await service.getOAuthAccessToken({
-            oauthSessionId: 'session-stale'
-        });
+        const staleAccessToken = await service.getOAuthAccessToken(staleIdentity);
         expect(staleAccessToken.accessToken).toBe('access-2');
         expect(staleAccessToken.scopes).toEqual(['listings_r', 'shops_r']);
         expect(refreshCalls).toBe(1);
@@ -263,7 +274,7 @@ describe('oauth-service', () => {
         const { dependencies } = createDependencies();
         const service = createEtsyOAuthService(dependencies);
 
-        dependencies.tokenStore.set('session-1', {
+        await dependencies.connectionStore.set(primaryIdentity, {
             accessToken: 'access-1',
             expiresAt: new Date(2_000_000),
             refreshToken: 'refresh-1',
@@ -271,11 +282,7 @@ describe('oauth-service', () => {
             tokenType: 'Bearer'
         });
 
-        await expect(
-            service.getOAuthAccessToken({
-                oauthSessionId: 'session-1'
-            })
-        ).rejects.toMatchObject({
+        await expect(service.getOAuthAccessToken(primaryIdentity)).rejects.toMatchObject({
             code: 'PRECONDITION_FAILED',
             message:
                 'Etsy OAuth session is missing required scope(s): listings_r. Reconnect Etsy OAuth.'
@@ -286,7 +293,7 @@ describe('oauth-service', () => {
         const { dependencies } = createDependencies();
         const service = createEtsyOAuthService(dependencies);
 
-        dependencies.tokenStore.set('session-1', {
+        await dependencies.connectionStore.set(primaryIdentity, {
             accessToken: 'access-1',
             expiresAt: new Date(2_000_000),
             refreshToken: 'refresh-1',
@@ -294,9 +301,7 @@ describe('oauth-service', () => {
             tokenType: 'Bearer'
         });
 
-        const accessToken = await service.getOAuthAccessToken({
-            oauthSessionId: 'session-1'
-        });
+        const accessToken = await service.getOAuthAccessToken(primaryIdentity);
 
         expect(accessToken).toMatchObject({
             accessToken: 'access-1',
@@ -305,11 +310,11 @@ describe('oauth-service', () => {
         });
     });
 
-    test('disconnectOAuthSession clears session tokens', async () => {
+    test('disconnectOAuthSession clears stored tokens', async () => {
         const { dependencies } = createDependencies();
         const service = createEtsyOAuthService(dependencies);
 
-        dependencies.tokenStore.set('session-1', {
+        await dependencies.connectionStore.set(primaryIdentity, {
             accessToken: 'access-1',
             expiresAt: new Date(2_000_000),
             refreshToken: 'refresh-1',
@@ -317,9 +322,7 @@ describe('oauth-service', () => {
             tokenType: 'Bearer'
         });
 
-        const status = await service.disconnectOAuthSession({
-            oauthSessionId: 'session-1'
-        });
+        const status = await service.disconnectOAuthSession(primaryIdentity);
 
         expect(status).toEqual({
             connected: false,
@@ -328,11 +331,7 @@ describe('oauth-service', () => {
             scopes: []
         });
 
-        await expect(
-            service.getOAuthAccessToken({
-                oauthSessionId: 'session-1'
-            })
-        ).rejects.toMatchObject({
+        await expect(service.getOAuthAccessToken(primaryIdentity)).rejects.toMatchObject({
             code: 'PRECONDITION_FAILED',
             message: 'Etsy OAuth is not connected. Run the start flow first.'
         });

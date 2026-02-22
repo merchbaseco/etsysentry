@@ -138,7 +138,7 @@ export const EtsyApiConnectionPanel = ({ connection }: EtsyApiConnectionPanelPro
 
                     <button
                         className={buttonClassName}
-                        disabled={isActionBusy || !connection.hasSession}
+                        disabled={isActionBusy || !connection.connected}
                         onClick={() => {
                             void connection.refreshConnection();
                         }}
@@ -154,7 +154,7 @@ export const EtsyApiConnectionPanel = ({ connection }: EtsyApiConnectionPanelPro
 
                     <button
                         className={buttonClassName}
-                        disabled={isActionBusy || !connection.hasSession}
+                        disabled={isActionBusy}
                         onClick={() => {
                             void connection.checkStatus();
                         }}
@@ -165,7 +165,7 @@ export const EtsyApiConnectionPanel = ({ connection }: EtsyApiConnectionPanelPro
 
                     <button
                         className={dangerButtonClassName}
-                        disabled={isActionBusy || !connection.hasSession}
+                        disabled={isActionBusy || !connection.connected}
                         onClick={() => {
                             void connection.forgetSession();
                         }}

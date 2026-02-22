@@ -3,14 +3,11 @@ import { disconnectEtsyOAuthSession } from '../../../services/etsy/oauth-service
 import { appProcedure } from '../../trpc';
 
 export const etsyAuthDisconnectProcedure = appProcedure
-    .input(
-        z.object({
-            oauthSessionId: z.string().min(1)
-        })
-    )
-    .mutation(async ({ input }) => {
+    .input(z.object({}))
+    .mutation(async ({ ctx }) => {
         const status = await disconnectEtsyOAuthSession({
-            oauthSessionId: input.oauthSessionId
+            clerkUserId: ctx.user.sub,
+            tenantId: ctx.tenantId
         });
 
         return {
