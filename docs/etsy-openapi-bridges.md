@@ -64,3 +64,20 @@ Example (`getListing`):
   - `language`
   - `legacy`
   - `allow_suggested_title`
+
+## Current OpenAPI-Aligned Search Example
+
+- Bridge: `apps/server/src/services/etsy/bridges/find-all-listings-active.ts`
+- OpenAPI operation: `findAllListingsActive`
+- Path: `/v3/application/listings/active`
+- Supported optional query params:
+  - `limit`
+  - `offset`
+  - `keywords`
+  - `sort_on`
+  - `sort_order`
+  - `min_price`
+  - `max_price`
+  - `taxonomy_id`
+  - `shop_location`
+  - `legacy`

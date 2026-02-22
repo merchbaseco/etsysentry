@@ -48,6 +48,26 @@ export type RefreshTrackedListingInput = {
     trackedListingId: string;
 };
 
+export type GetKeywordRanksForProductInput = {
+    listing: string;
+};
+
+export type KeywordRankForProduct = {
+    bestRank: number;
+    currentRank: number;
+    daysSeen: number;
+    firstObservedAt: string;
+    keyword: string;
+    latestObservedAt: string;
+    normalizedKeyword: string;
+    trackedKeywordId: string;
+};
+
+export type GetKeywordRanksForProductOutput = {
+    etsyListingId: string;
+    items: KeywordRankForProduct[];
+};
+
 const executeMutation = async <TInput, TOutput>(
     input: TInput,
     options: {
@@ -95,6 +115,19 @@ export const refreshTrackedListing = async (
         );
 
         return response;
+    } catch (error) {
+        throw toTrpcRequestError(error);
+    }
+};
+
+export const getKeywordRanksForProduct = async (
+    params: GetKeywordRanksForProductInput
+): Promise<GetKeywordRanksForProductOutput> => {
+    try {
+        const response = await queryClient.fetchQuery(
+            trpc.app.listings.getKeywordRanksForProduct.queryOptions(params)
+        );
+        return response as GetKeywordRanksForProductOutput;
     } catch (error) {
         throw toTrpcRequestError(error);
     }
