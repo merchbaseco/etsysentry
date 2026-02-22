@@ -1,4 +1,5 @@
-import { trpcMutation, trpcQuery } from './trpc-http';
+import { queryClient, trpc } from './trpc-client';
+import { toTrpcRequestError } from './trpc-http';
 
 export type EtsyAuthStatus = {
     connected: boolean;
@@ -13,18 +14,54 @@ export type EtsyAuthStartResponse = {
     oauthSessionId: string;
 };
 
+const executeMutation = async <TInput, TOutput>(
+    input: TInput,
+    options: {
+        mutationFn?: (nextInput: TInput) => Promise<TOutput>;
+    }
+): Promise<TOutput> => {
+    if (!options.mutationFn) {
+        throw new Error('tRPC mutation function was not configured.');
+    }
+
+    return options.mutationFn(input);
+};
+
 export const startEtsyAuth = async (): Promise<EtsyAuthStartResponse> => {
-    return trpcMutation<Record<string, never>, EtsyAuthStartResponse>('app.etsyAuth.start', {});
+    try {
+        const response = await executeMutation<Record<string, never>, EtsyAuthStartResponse>(
+            {},
+            trpc.app.etsyAuth.start.mutationOptions()
+        );
+
+        return response;
+    } catch (error) {
+        throw toTrpcRequestError(error);
+    }
 };
 
 export const getEtsyAuthStatus = async (params: {
     oauthSessionId: string;
 }): Promise<EtsyAuthStatus> => {
-    return trpcQuery<typeof params, EtsyAuthStatus>('app.etsyAuth.status', params);
+    try {
+        const response = await queryClient.fetchQuery(trpc.app.etsyAuth.status.queryOptions(params));
+        return response as EtsyAuthStatus;
+    } catch (error) {
+        throw toTrpcRequestError(error);
+    }
 };
 
 export const refreshEtsyAuth = async (params: {
     oauthSessionId: string;
 }): Promise<EtsyAuthStatus> => {
-    return trpcMutation<typeof params, EtsyAuthStatus>('app.etsyAuth.refresh', params);
+    try {
+        const response = await executeMutation<typeof params, EtsyAuthStatus>(
+            params,
+            trpc.app.etsyAuth.refresh.mutationOptions()
+        );
+
+        return response;
+    } catch (error) {
+        throw toTrpcRequestError(error);
+    }
 };
