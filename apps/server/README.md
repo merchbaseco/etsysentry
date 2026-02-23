@@ -22,6 +22,7 @@ Implemented scaffold:
 - Canonical listing snapshot fields (`price*`, `quantity`, `views`, `numFavorers`, `shopName`,
   `etsyState`, `updatedTimestamp`, `lastRefreshedAt`, `lastRefreshError`) are owned by listing
   sync (`track|refresh`) paths
+- User-facing event logs persisted in `event_logs` with admin listing API
 - Product keyword-rank query (`api.app.listings.getKeywordRanksForProduct`)
 - First Etsy bridge file:
   - `apps/server/src/services/etsy/bridges/exchange-oauth-token.ts`
@@ -108,6 +109,7 @@ Current app surface:
 - `api.app.keywords.list`
 - `api.app.keywords.track`
 - `api.app.keywords.getDailyProductRanksForKeyword`
+- `api.app.logs.list` (admin-only)
 
 ## Etsy Bridge Rules
 

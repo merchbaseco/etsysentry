@@ -16,6 +16,7 @@ export const syncKeywordJob = defineJob(SYNC_KEYWORD_JOB_NAME, {
 
         const syncResult = await syncRanksForKeyword({
             clerkUserId: job.data.clerkUserId,
+            monitorRunId: job.id,
             tenantId: job.data.tenantId,
             trackedKeywordId: job.data.trackedKeywordId
         });

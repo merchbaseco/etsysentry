@@ -3,10 +3,12 @@ import { adminRouter } from './admin/router';
 import { etsyAuthRouter } from './etsy-auth/router';
 import { keywordsRouter } from './keywords/router';
 import { listingsRouter } from './listings/router';
+import { logsRouter } from './logs/router';
 
 export const appRouter = router({
     admin: adminRouter,
     etsyAuth: etsyAuthRouter,
     keywords: keywordsRouter,
-    listings: listingsRouter
+    listings: listingsRouter,
+    logs: logsRouter
 });

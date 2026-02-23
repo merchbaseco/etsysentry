@@ -2,6 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { and, desc, eq } from 'drizzle-orm';
 import { db } from '../../db';
 import { trackedKeywords } from '../../db/schema';
+import { createEventLog } from '../logs/create-event-log';
 
 export type TrackedKeywordRecord = {
     id: string;
@@ -75,6 +76,7 @@ export const listTrackedKeywords = async (params: {
 
 export const trackKeyword = async (params: {
     keywordInput: string;
+    requestId?: string;
     tenantId: string;
     trackerClerkUserId: string;
 }): Promise<{
@@ -125,8 +127,30 @@ export const trackKeyword = async (params: {
         })
         .returning();
 
+    const created = existing.length === 0;
+    const item = toRecord(row);
+
+    await createEventLog({
+        action: created ? 'keyword.tracked' : 'keyword.updated',
+        category: 'keyword',
+        clerkUserId: params.trackerClerkUserId,
+        detailsJson: {
+            normalizedKeyword: item.normalizedKeyword
+        },
+        keyword: item.keyword,
+        level: 'info',
+        message: created
+            ? `Started tracking keyword "${item.keyword}".`
+            : `Updated tracked keyword "${item.keyword}".`,
+        primitiveId: item.id,
+        primitiveType: 'keyword',
+        requestId: params.requestId ?? null,
+        status: 'success',
+        tenantId: item.tenantId
+    });
+
     return {
-        created: existing.length === 0,
-        item: toRecord(row)
+        created,
+        item
     };
 };

@@ -4,12 +4,15 @@ import { LogsTab } from '@/components/dashboard/logs-tab';
 import { ShopsTab } from '@/components/dashboard/shops-tab';
 import { SettingsModal } from '@/components/settings-modal';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { useRealtimeQueryInvalidations } from '@/hooks/use-realtime-query-invalidations';
 import {
     useEtsyOAuthConnection,
     type EtsyOAuthConnectionState
 } from '@/hooks/use-etsy-oauth-connection';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@clerk/clerk-react';
 import { Activity, Clock, Eye, ShoppingCart } from 'lucide-react';
+import { useCallback } from 'react';
 import {
     Navigate,
     NavLink,
@@ -124,7 +127,12 @@ function StatusIndicator({ connection }: { connection: EtsyOAuthConnectionState 
 
 function DashboardShell() {
     const connection = useEtsyOAuthConnection();
+    const { getToken } = useAuth();
     const connectionLabel = getConnectionLabel(connection);
+    const getAuthToken = useCallback(async () => {
+        return (await getToken()) ?? null;
+    }, [getToken]);
+    const realtime = useRealtimeQueryInvalidations(getAuthToken);
 
     return (
         <div className="flex h-screen flex-col overflow-hidden bg-background">
@@ -153,7 +161,7 @@ function DashboardShell() {
                     <StatusIndicator connection={connection} />
                     <span className="text-border">|</span>
                     <ThemeToggle />
-                    <SettingsModal connection={connection} />
+                    <SettingsModal connection={connection} realtime={realtime} />
                 </div>
             </header>
 

@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import {
     index,
     integer,
+    jsonb,
     pgEnum,
     pgTable,
     primaryKey,
@@ -29,6 +30,23 @@ export const trackedListingEtsyStateEnum = pgEnum('tracked_listing_etsy_state', 
     'sold_out',
     'draft',
     'expired'
+]);
+
+export const eventLogLevelEnum = pgEnum('event_log_level', ['info', 'warn', 'error', 'debug']);
+
+export const eventLogStatusEnum = pgEnum('event_log_status', [
+    'success',
+    'failed',
+    'pending',
+    'retrying',
+    'partial'
+]);
+
+export const eventLogPrimitiveTypeEnum = pgEnum('event_log_primitive_type', [
+    'keyword',
+    'listing',
+    'shop',
+    'system'
 ]);
 
 export const trackedListings = pgTable(
@@ -139,6 +157,55 @@ export const productKeywordRanks = pgTable(
             table.tenantId,
             table.trackedKeywordId,
             table.rank
+        )
+    })
+);
+
+export const eventLogs = pgTable(
+    'event_logs',
+    {
+        id: uuid('id').primaryKey().defaultRandom(),
+        tenantId: text('tenant_id').notNull(),
+        occurredAt: timestamp('occurred_at', { mode: 'date' }).notNull().defaultNow(),
+        level: eventLogLevelEnum('level').notNull(),
+        category: text('category').notNull(),
+        action: text('action').notNull(),
+        status: eventLogStatusEnum('status').notNull(),
+        primitiveType: eventLogPrimitiveTypeEnum('primitive_type').notNull(),
+        primitiveId: text('primitive_id'),
+        listingId: text('listing_id'),
+        shopId: text('shop_id'),
+        keyword: text('keyword'),
+        message: text('message').notNull(),
+        detailsJson: jsonb('details_json').$type<Record<string, unknown>>().notNull().default({}),
+        monitorRunId: text('monitor_run_id'),
+        requestId: text('request_id'),
+        createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow()
+    },
+    (table) => ({
+        tenantOccurredAtIdx: index('event_logs_tenant_occurred_at_idx').on(
+            table.tenantId,
+            table.occurredAt
+        ),
+        tenantPrimitiveOccurredAtIdx: index('event_logs_tenant_primitive_occurred_at_idx').on(
+            table.tenantId,
+            table.primitiveType,
+            table.occurredAt
+        ),
+        tenantListingOccurredAtIdx: index('event_logs_tenant_listing_occurred_at_idx').on(
+            table.tenantId,
+            table.listingId,
+            table.occurredAt
+        ),
+        tenantShopOccurredAtIdx: index('event_logs_tenant_shop_occurred_at_idx').on(
+            table.tenantId,
+            table.shopId,
+            table.occurredAt
+        ),
+        tenantMonitorRunOccurredAtIdx: index('event_logs_tenant_monitor_run_occurred_at_idx').on(
+            table.tenantId,
+            table.monitorRunId,
+            table.occurredAt
         )
     })
 );
