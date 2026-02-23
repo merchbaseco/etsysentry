@@ -138,7 +138,7 @@ Current app surface:
 - Keyword ranks are auto-synced by `pg-boss` workers:
   - immediate enqueue when a keyword is tracked
   - daily scheduled dispatch for due tracked keywords
-- USD conversion rates are auto-synced by `pg-boss` workers every 6 hours.
+- USD conversion rates are auto-synced by `pg-boss` workers every 24 hours.
 - `api.app.*` procedures require Clerk bearer auth (`Authorization: Bearer <token>`).
 - Admin-only app procedures require authenticated user email to match `ADMIN_EMAIL`.
 - Keep `.env.example` updated when env vars change.

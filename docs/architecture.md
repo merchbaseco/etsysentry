@@ -212,7 +212,7 @@ Primitive cadence policy (v1):
 - `listing`: adaptive cadence from `updated_timestamp` rules.
 - `keyword`: fixed daily cadence.
 - `shop`: fixed daily cadence.
-- `currency rates`: fixed 6-hour refresh cadence.
+- `currency rates`: fixed 24-hour refresh cadence.
 
 Cadence policy (listing `updated_timestamp` aware):
 
