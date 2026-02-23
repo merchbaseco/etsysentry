@@ -235,3 +235,25 @@ export const etsyOAuthConnections = pgTable(
         tenantIdx: index('etsy_oauth_connections_tenant_idx').on(table.tenantId)
     })
 );
+
+export const etsyApiCallEvents = pgTable(
+    'etsy_api_call_events',
+    {
+        id: uuid('id').primaryKey().defaultRandom(),
+        tenantId: text('tenant_id').notNull(),
+        clerkUserId: text('clerk_user_id').notNull(),
+        endpoint: text('endpoint').notNull(),
+        createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow()
+    },
+    (table) => ({
+        tenantCreatedAtIdx: index('etsy_api_call_events_tenant_created_at_idx').on(
+            table.tenantId,
+            table.createdAt
+        ),
+        tenantClerkCreatedAtIdx: index('etsy_api_call_events_tenant_clerk_created_at_idx').on(
+            table.tenantId,
+            table.clerkUserId,
+            table.createdAt
+        )
+    })
+);

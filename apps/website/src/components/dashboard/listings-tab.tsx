@@ -13,12 +13,14 @@ import { queryClient, trpc } from '@/lib/trpc-client';
 import { cn } from '@/lib/utils';
 import {
     EmptyState,
-    FilterChip,
+    FilterBar,
+    FilterGroup,
     TopToolbar,
     formatNumber,
     timeAgo
 } from './shared';
 import { MouseThumbnailTooltip } from './mouse-thumbnail-tooltip';
+import { RangeFilter } from './range-filter';
 
 const trackedListingsQueryKey = trpc.app.listings.list.queryOptions({}).queryKey;
 const trackedListingsQueryKeyJson = JSON.stringify(trackedListingsQueryKey);
@@ -69,12 +71,8 @@ export function ListingsTab() {
     const initialItems = cachedTrackedListings?.items ?? [];
 
     const [search, setSearch] = useState('');
-    const [trackingStateFilter, setTrackingStateFilter] = useState<
-        'active' | 'paused' | 'error' | null
-    >(null);
-    const [etsyStateFilter, setEtsyStateFilter] = useState<
-        'active' | 'inactive' | 'sold_out' | 'draft' | 'expired' | null
-    >(null);
+    const [priceRange, setPriceRange] = useState<[number, number]>([0, 40]);
+    const [favsRange, setFavsRange] = useState<[number, number]>([0, 5000]);
     const [items, setItems] = useState<TrackedListingItem[]>(() => initialItems);
     const [isLoading, setIsLoading] = useState(() => initialItems.length === 0);
     const [isTracking, setIsTracking] = useState(false);
@@ -119,14 +117,21 @@ export function ListingsTab() {
 
     const filtered = useMemo(() => {
         const query = search.trim().toLowerCase();
+        const priceActive = priceRange[0] > 0 || priceRange[1] < 40;
+        const favsActive = favsRange[0] > 0 || favsRange[1] < 5000;
 
         return items.filter((item) => {
-            if (trackingStateFilter && item.trackingState !== trackingStateFilter) {
-                return false;
+            if (priceActive) {
+                const price = item.price?.value ?? null;
+                if (price === null || price < priceRange[0] || price > priceRange[1]) {
+                    return false;
+                }
             }
 
-            if (etsyStateFilter && item.etsyState !== etsyStateFilter) {
-                return false;
+            if (favsActive) {
+                if (item.numFavorers === null || item.numFavorers < favsRange[0] || item.numFavorers > favsRange[1]) {
+                    return false;
+                }
             }
 
             if (query.length === 0) {
@@ -140,7 +145,7 @@ export function ListingsTab() {
                 (item.shopId ?? '').includes(query)
             );
         });
-    }, [etsyStateFilter, items, search, trackingStateFilter]);
+    }, [favsRange, items, priceRange, search]);
 
     const handleTrack = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -208,38 +213,27 @@ export function ListingsTab() {
 
     return (
         <div className="flex h-full flex-col">
-            <TopToolbar search={search} onSearchChange={setSearch} onRefresh={() => void loadListings()}>
-                <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="mr-1 text-[9px] uppercase tracking-widest text-terminal-dim">
-                        Tracking
-                    </span>
-                    {(['active', 'paused', 'error'] as const).map((stateValue) => (
-                        <FilterChip
-                            key={stateValue}
-                            label={stateValue}
-                            active={trackingStateFilter === stateValue}
-                            onClick={() =>
-                                setTrackingStateFilter(
-                                    trackingStateFilter === stateValue ? null : stateValue
-                                )
-                            }
+            <TopToolbar search={search} onSearchChange={setSearch}>
+                <FilterBar>
+                    <FilterGroup label="Price">
+                        <RangeFilter
+                            value={priceRange}
+                            min={0}
+                            max={40}
+                            prefix="$"
+                            onChange={setPriceRange}
                         />
-                    ))}
-                    <span className="mx-1 text-border">|</span>
-                    <span className="mr-1 text-[9px] uppercase tracking-widest text-terminal-dim">Etsy</span>
-                    {(['active', 'inactive', 'sold_out', 'draft', 'expired'] as const).map(
-                        (stateValue) => (
-                            <FilterChip
-                                key={stateValue}
-                                label={stateValue}
-                                active={etsyStateFilter === stateValue}
-                                onClick={() =>
-                                    setEtsyStateFilter(etsyStateFilter === stateValue ? null : stateValue)
-                                }
-                            />
-                        )
-                    )}
-                </div>
+                    </FilterGroup>
+                    <FilterGroup label="Favs">
+                        <RangeFilter
+                            value={favsRange}
+                            min={0}
+                            max={5000}
+                            step={50}
+                            onChange={setFavsRange}
+                        />
+                    </FilterGroup>
+                </FilterBar>
             </TopToolbar>
 
             <form

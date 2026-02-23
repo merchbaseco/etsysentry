@@ -2,6 +2,12 @@ import { KeywordsTab } from '@/components/dashboard/keywords-tab';
 import { ListingsTab } from '@/components/dashboard/listings-tab';
 import { LogsTab } from '@/components/dashboard/logs-tab';
 import { ShopsTab } from '@/components/dashboard/shops-tab';
+import {
+    StatusIndicator,
+    formatExpirySummary,
+    getConnectionColorClass,
+    getConnectionLabel
+} from '@/components/dashboard/status-indicator';
 import { SettingsModal } from '@/components/settings-modal';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { useRealtimeQueryInvalidations } from '@/hooks/use-realtime-query-invalidations';
@@ -22,108 +28,11 @@ import {
 } from 'react-router-dom';
 
 const tabs = [
-    { id: 'listings', label: 'Listings', icon: ShoppingCart, count: 25, to: '/' },
-    { id: 'keywords', label: 'Keywords', icon: Eye, count: 20, to: '/keywords' },
-    { id: 'shops', label: 'Shops', icon: Activity, count: 10, to: '/shops' },
-    { id: 'logs', label: 'Logs', icon: Clock, count: 100, to: '/logs' }
+    { id: 'listings', label: 'Listings', icon: ShoppingCart, to: '/' },
+    { id: 'keywords', label: 'Keywords', icon: Eye, to: '/keywords' },
+    { id: 'shops', label: 'Shops', icon: Activity, to: '/shops' },
+    { id: 'logs', label: 'Logs', icon: Clock, to: '/logs' }
 ] as const;
-
-const getConnectionLabel = (connection: EtsyOAuthConnectionState): string => {
-    if (connection.isCheckingStatus) {
-        return 'Checking';
-    }
-
-    if (connection.connected && connection.needsRefresh) {
-        return 'Refresh Needed';
-    }
-
-    if (connection.connected) {
-        return 'Connected';
-    }
-
-    if (connection.hasSession) {
-        return 'Pending';
-    }
-
-    return 'Disconnected';
-};
-
-const getConnectionColorClass = (connection: EtsyOAuthConnectionState): string => {
-    if (connection.connected && !connection.needsRefresh) {
-        return 'text-terminal-green';
-    }
-
-    if (connection.connected && connection.needsRefresh) {
-        return 'text-terminal-yellow';
-    }
-
-    if (connection.hasSession) {
-        return 'text-terminal-blue';
-    }
-
-    return 'text-terminal-red';
-};
-
-const formatExpirySummary = (expiresAt: string | null): string => {
-    if (!expiresAt) {
-        return 'N/A';
-    }
-
-    const parsed = new Date(expiresAt);
-
-    if (Number.isNaN(parsed.getTime())) {
-        return 'N/A';
-    }
-
-    return parsed.toLocaleTimeString();
-};
-
-function StatusIndicator({ connection }: { connection: EtsyOAuthConnectionState }) {
-    const connectionLabel = getConnectionLabel(connection);
-    const connectionColorClass = getConnectionColorClass(connection);
-
-    return (
-        <div className="flex items-center gap-3 text-[10px]">
-            <div className="flex items-center gap-1.5">
-                <span className="relative flex size-2">
-                    <span
-                        className={cn(
-                            'absolute inline-flex size-full animate-ping rounded-full opacity-75',
-                            connection.connected ? 'bg-terminal-green' : 'bg-terminal-yellow'
-                        )}
-                    />
-                    <span
-                        className={cn(
-                            'relative inline-flex size-2 rounded-full',
-                            connection.connected ? 'bg-terminal-green' : 'bg-terminal-yellow'
-                        )}
-                    />
-                </span>
-                <span className={cn('uppercase tracking-wider', connectionColorClass)}>
-                    API {connectionLabel}
-                </span>
-            </div>
-            <span className="text-terminal-dim">|</span>
-            <span className="text-muted-foreground">
-                Session:{' '}
-                <span className="text-foreground">{connection.sessionLabel ?? 'None'}</span>
-            </span>
-            <span className="text-terminal-dim">|</span>
-            <span className="text-muted-foreground">
-                Expires:{' '}
-                <span className="text-foreground">{formatExpirySummary(connection.expiresAt)}</span>
-            </span>
-            <span className="text-terminal-dim">|</span>
-            <span className="text-muted-foreground">
-                Monitors: <span className="text-terminal-green">24</span>
-                <span className="text-terminal-dim">/</span>
-                <span className="text-terminal-yellow">3</span>
-                <span className="text-terminal-dim">/</span>
-                <span className="text-terminal-red">1</span>
-            </span>
-        </div>
-    );
-}
 
 function DashboardShell() {
     const connection = useEtsyOAuthConnection();
@@ -157,9 +66,9 @@ function DashboardShell() {
                         Monitor Dashboard
                     </span>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                     <StatusIndicator connection={connection} />
-                    <span className="text-border">|</span>
+                    <span className="mx-0.5 text-border">|</span>
                     <ThemeToggle />
                     <SettingsModal connection={connection} realtime={realtime} />
                 </div>
@@ -188,16 +97,6 @@ function DashboardShell() {
                                 <>
                                     <Icon className="size-3.5" />
                                     <span className="font-medium">{tab.label}</span>
-                                    <span
-                                        className={cn(
-                                            'rounded px-1 py-px text-[9px]',
-                                            isActive
-                                                ? 'bg-primary/15 text-primary'
-                                                : 'bg-secondary text-terminal-dim'
-                                        )}
-                                    >
-                                        {tab.count}
-                                    </span>
                                     {isActive ? (
                                         <span
                                             className="absolute inset-x-2 bottom-0 h-px bg-primary"
@@ -208,21 +107,6 @@ function DashboardShell() {
                         </NavLink>
                     );
                 })}
-
-                <div className="ml-auto flex items-center gap-4 pr-2 text-[10px]">
-                    <div className="flex items-center gap-1.5">
-                        <span className="text-terminal-dim uppercase tracking-wider">Active</span>
-                        <span className="font-bold text-terminal-green">42</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                        <span className="text-terminal-dim uppercase tracking-wider">Paused</span>
-                        <span className="font-bold text-terminal-yellow">8</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                        <span className="text-terminal-dim uppercase tracking-wider">Errors</span>
-                        <span className="font-bold text-terminal-red">3</span>
-                    </div>
-                </div>
             </nav>
 
             <main className="flex min-h-0 flex-1 flex-col overflow-hidden bg-card">

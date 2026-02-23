@@ -14,6 +14,7 @@ Implemented scaffold:
 - pg-boss keyword sync automation (dispatch + workers)
 - Tracked listings app API (`api.app.listings.list|track|refresh`)
 - Tracked keywords app API (`api.app.keywords.list|track`)
+- Dashboard summary app API (`api.app.dashboard.getSummary`)
 - Keyword rank read API (`api.app.keywords.getDailyProductRanksForKeyword`)
 - Keyword rank sync inserts a `tracked_listings` row only when a ranked listing is not already
   tracked, then inserts `product_keyword_ranks`
@@ -98,6 +99,7 @@ Optional:
 Current app surface:
 
 - `api.app.admin.status` (admin-only)
+- `api.app.dashboard.getSummary`
 - `api.app.etsyAuth.start`
 - `api.app.etsyAuth.status`
 - `api.app.etsyAuth.refresh`

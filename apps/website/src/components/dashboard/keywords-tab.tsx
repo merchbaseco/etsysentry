@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 import {
     EmptyState,
     FilterChip,
+    FilterGroup,
     StatusBadge,
     TopToolbar,
     timeAgo,
@@ -235,11 +236,8 @@ export function KeywordsTab() {
 
     return (
         <div className="flex h-full flex-col">
-            <TopToolbar search={search} onSearchChange={setSearch} onRefresh={() => void loadKeywords()}>
-                <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="mr-1 text-[9px] uppercase tracking-widest text-terminal-dim">
-                        Tracking
-                    </span>
+            <TopToolbar search={search} onSearchChange={setSearch}>
+                <FilterGroup label="Tracking">
                     {(['active', 'paused', 'error'] as const).map((stateValue) => (
                         <FilterChip
                             key={stateValue}
@@ -252,7 +250,7 @@ export function KeywordsTab() {
                             }
                         />
                     ))}
-                </div>
+                </FilterGroup>
             </TopToolbar>
 
             <form

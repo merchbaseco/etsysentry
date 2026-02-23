@@ -5952,7 +5952,7 @@ var require_indexes = __commonJS((exports, module) => {
 
 // ../../node_modules/.bun/thread-stream@4.0.0/node_modules/thread-stream/index.js
 var require_thread_stream = __commonJS((exports, module) => {
-  var __dirname = "/Users/zknicker/conductor/workspaces/etsy-sentry/minnetonka/node_modules/.bun/thread-stream@4.0.0/node_modules/thread-stream";
+  var __dirname = "/Users/zknicker/conductor/workspaces/etsysentry/bucharest/node_modules/.bun/thread-stream@4.0.0/node_modules/thread-stream";
   var { version } = require_package();
   var { EventEmitter } = __require("events");
   var { Worker } = __require("worker_threads");
@@ -6377,7 +6377,7 @@ var require_thread_stream = __commonJS((exports, module) => {
 
 // ../../node_modules/.bun/pino@10.3.1/node_modules/pino/lib/transport.js
 var require_transport = __commonJS((exports, module) => {
-  var __dirname = "/Users/zknicker/conductor/workspaces/etsy-sentry/minnetonka/node_modules/.bun/pino@10.3.1/node_modules/pino/lib";
+  var __dirname = "/Users/zknicker/conductor/workspaces/etsysentry/bucharest/node_modules/.bun/pino@10.3.1/node_modules/pino/lib";
   var { createRequire } = __require("module");
   var { existsSync } = __require("fs");
   var getCallers = require_caller();
@@ -33018,6 +33018,11289 @@ ${body}`);
   module.exports.default = fastify;
 });
 
+// ../../node_modules/.bun/cron-parser@5.5.0/node_modules/cron-parser/dist/fields/types.js
+var require_types5 = __commonJS((exports) => {
+  Object.defineProperty(exports, "__esModule", { value: true });
+});
+
+// ../../node_modules/.bun/cron-parser@5.5.0/node_modules/cron-parser/dist/fields/CronField.js
+var require_CronField = __commonJS((exports) => {
+  Object.defineProperty(exports, "__esModule", { value: true });
+  exports.CronField = undefined;
+
+  class CronField {
+    #hasLastChar = false;
+    #hasQuestionMarkChar = false;
+    #wildcard = false;
+    #values = [];
+    options = { rawValue: "" };
+    static get min() {
+      throw new Error("min must be overridden");
+    }
+    static get max() {
+      throw new Error("max must be overridden");
+    }
+    static get chars() {
+      return Object.freeze([]);
+    }
+    static get validChars() {
+      return /^[?,*\dH/-]+$|^.*H\(\d+-\d+\)\/\d+.*$|^.*H\(\d+-\d+\).*$|^.*H\/\d+.*$/;
+    }
+    static get constraints() {
+      return { min: this.min, max: this.max, chars: this.chars, validChars: this.validChars };
+    }
+    constructor(values2, options = { rawValue: "" }) {
+      if (!Array.isArray(values2)) {
+        throw new Error(`${this.constructor.name} Validation error, values is not an array`);
+      }
+      if (!(values2.length > 0)) {
+        throw new Error(`${this.constructor.name} Validation error, values contains no values`);
+      }
+      this.options = {
+        ...options,
+        rawValue: options.rawValue ?? ""
+      };
+      this.#values = values2.sort(CronField.sorter);
+      this.#wildcard = this.options.wildcard !== undefined ? this.options.wildcard : this.#isWildcardValue();
+      this.#hasLastChar = this.options.rawValue.includes("L") || values2.includes("L");
+      this.#hasQuestionMarkChar = this.options.rawValue.includes("?") || values2.includes("?");
+    }
+    get min() {
+      return this.constructor.min;
+    }
+    get max() {
+      return this.constructor.max;
+    }
+    get chars() {
+      return this.constructor.chars;
+    }
+    get hasLastChar() {
+      return this.#hasLastChar;
+    }
+    get hasQuestionMarkChar() {
+      return this.#hasQuestionMarkChar;
+    }
+    get isWildcard() {
+      return this.#wildcard;
+    }
+    get values() {
+      return this.#values;
+    }
+    static sorter(a, b2) {
+      const aIsNumber = typeof a === "number";
+      const bIsNumber = typeof b2 === "number";
+      if (aIsNumber && bIsNumber)
+        return a - b2;
+      if (!aIsNumber && !bIsNumber)
+        return a.localeCompare(b2);
+      return aIsNumber ? -1 : 1;
+    }
+    static findNearestValueInList(values2, currentValue, reverse = false) {
+      if (reverse) {
+        for (let i = values2.length - 1;i >= 0; i--) {
+          if (values2[i] < currentValue)
+            return values2[i];
+        }
+        return null;
+      }
+      for (let i = 0;i < values2.length; i++) {
+        if (values2[i] > currentValue)
+          return values2[i];
+      }
+      return null;
+    }
+    findNearestValue(currentValue, reverse = false) {
+      return this.constructor.findNearestValueInList(this.values, currentValue, reverse);
+    }
+    serialize() {
+      return {
+        wildcard: this.#wildcard,
+        values: this.#values
+      };
+    }
+    validate() {
+      let badValue;
+      const charsString = this.chars.length > 0 ? ` or chars ${this.chars.join("")}` : "";
+      const charTest = (value) => (char2) => new RegExp(`^\\d{0,2}${char2}$`).test(value);
+      const rangeTest = (value) => {
+        badValue = value;
+        return typeof value === "number" ? value >= this.min && value <= this.max : this.chars.some(charTest(value));
+      };
+      const isValidRange = this.#values.every(rangeTest);
+      if (!isValidRange) {
+        throw new Error(`${this.constructor.name} Validation error, got value ${badValue} expected range ${this.min}-${this.max}${charsString}`);
+      }
+      const duplicate = this.#values.find((value, index2) => this.#values.indexOf(value) !== index2);
+      if (duplicate) {
+        throw new Error(`${this.constructor.name} Validation error, duplicate values found: ${duplicate}`);
+      }
+    }
+    #isWildcardValue() {
+      if (this.options.rawValue.length > 0) {
+        return ["*", "?"].includes(this.options.rawValue);
+      }
+      return Array.from({ length: this.max - this.min + 1 }, (_, i) => i + this.min).every((value) => this.#values.includes(value));
+    }
+  }
+  exports.CronField = CronField;
+});
+
+// ../../node_modules/.bun/cron-parser@5.5.0/node_modules/cron-parser/dist/fields/CronDayOfMonth.js
+var require_CronDayOfMonth = __commonJS((exports) => {
+  Object.defineProperty(exports, "__esModule", { value: true });
+  exports.CronDayOfMonth = undefined;
+  var CronField_1 = require_CronField();
+  var MIN_DAY = 1;
+  var MAX_DAY = 31;
+  var DAY_CHARS = Object.freeze(["L"]);
+
+  class CronDayOfMonth extends CronField_1.CronField {
+    static get min() {
+      return MIN_DAY;
+    }
+    static get max() {
+      return MAX_DAY;
+    }
+    static get chars() {
+      return DAY_CHARS;
+    }
+    static get validChars() {
+      return /^[?,*\dLH/-]+$|^.*H\(\d+-\d+\)\/\d+.*$|^.*H\(\d+-\d+\).*$|^.*H\/\d+.*$/;
+    }
+    constructor(values2, options) {
+      super(values2, options);
+      this.validate();
+    }
+    get values() {
+      return super.values;
+    }
+  }
+  exports.CronDayOfMonth = CronDayOfMonth;
+});
+
+// ../../node_modules/.bun/cron-parser@5.5.0/node_modules/cron-parser/dist/fields/CronDayOfWeek.js
+var require_CronDayOfWeek = __commonJS((exports) => {
+  Object.defineProperty(exports, "__esModule", { value: true });
+  exports.CronDayOfWeek = undefined;
+  var CronField_1 = require_CronField();
+  var MIN_DAY = 0;
+  var MAX_DAY = 7;
+  var DAY_CHARS = Object.freeze(["L"]);
+
+  class CronDayOfWeek extends CronField_1.CronField {
+    static get min() {
+      return MIN_DAY;
+    }
+    static get max() {
+      return MAX_DAY;
+    }
+    static get chars() {
+      return DAY_CHARS;
+    }
+    static get validChars() {
+      return /^[?,*\dLH#/-]+$|^.*H\(\d+-\d+\)\/\d+.*$|^.*H\(\d+-\d+\).*$|^.*H\/\d+.*$/;
+    }
+    constructor(values2, options) {
+      super(values2, options);
+      this.validate();
+    }
+    get values() {
+      return super.values;
+    }
+    get nthDay() {
+      return this.options.nthDayOfWeek ?? 0;
+    }
+  }
+  exports.CronDayOfWeek = CronDayOfWeek;
+});
+
+// ../../node_modules/.bun/cron-parser@5.5.0/node_modules/cron-parser/dist/fields/CronHour.js
+var require_CronHour = __commonJS((exports) => {
+  Object.defineProperty(exports, "__esModule", { value: true });
+  exports.CronHour = undefined;
+  var CronField_1 = require_CronField();
+  var MIN_HOUR = 0;
+  var MAX_HOUR = 23;
+  var HOUR_CHARS = Object.freeze([]);
+
+  class CronHour extends CronField_1.CronField {
+    static get min() {
+      return MIN_HOUR;
+    }
+    static get max() {
+      return MAX_HOUR;
+    }
+    static get chars() {
+      return HOUR_CHARS;
+    }
+    constructor(values2, options) {
+      super(values2, options);
+      this.validate();
+    }
+    get values() {
+      return super.values;
+    }
+  }
+  exports.CronHour = CronHour;
+});
+
+// ../../node_modules/.bun/cron-parser@5.5.0/node_modules/cron-parser/dist/fields/CronMinute.js
+var require_CronMinute = __commonJS((exports) => {
+  Object.defineProperty(exports, "__esModule", { value: true });
+  exports.CronMinute = undefined;
+  var CronField_1 = require_CronField();
+  var MIN_MINUTE = 0;
+  var MAX_MINUTE = 59;
+  var MINUTE_CHARS = Object.freeze([]);
+
+  class CronMinute extends CronField_1.CronField {
+    static get min() {
+      return MIN_MINUTE;
+    }
+    static get max() {
+      return MAX_MINUTE;
+    }
+    static get chars() {
+      return MINUTE_CHARS;
+    }
+    constructor(values2, options) {
+      super(values2, options);
+      this.validate();
+    }
+    get values() {
+      return super.values;
+    }
+  }
+  exports.CronMinute = CronMinute;
+});
+
+// ../../node_modules/.bun/luxon@3.7.2/node_modules/luxon/build/node/luxon.js
+var require_luxon = __commonJS((exports) => {
+  Object.defineProperty(exports, "__esModule", { value: true });
+
+  class LuxonError extends Error {
+  }
+
+  class InvalidDateTimeError extends LuxonError {
+    constructor(reason) {
+      super(`Invalid DateTime: ${reason.toMessage()}`);
+    }
+  }
+
+  class InvalidIntervalError extends LuxonError {
+    constructor(reason) {
+      super(`Invalid Interval: ${reason.toMessage()}`);
+    }
+  }
+
+  class InvalidDurationError extends LuxonError {
+    constructor(reason) {
+      super(`Invalid Duration: ${reason.toMessage()}`);
+    }
+  }
+
+  class ConflictingSpecificationError extends LuxonError {
+  }
+
+  class InvalidUnitError extends LuxonError {
+    constructor(unit) {
+      super(`Invalid unit ${unit}`);
+    }
+  }
+
+  class InvalidArgumentError extends LuxonError {
+  }
+
+  class ZoneIsAbstractError extends LuxonError {
+    constructor() {
+      super("Zone is an abstract class");
+    }
+  }
+  var n = "numeric";
+  var s = "short";
+  var l = "long";
+  var DATE_SHORT = {
+    year: n,
+    month: n,
+    day: n
+  };
+  var DATE_MED = {
+    year: n,
+    month: s,
+    day: n
+  };
+  var DATE_MED_WITH_WEEKDAY = {
+    year: n,
+    month: s,
+    day: n,
+    weekday: s
+  };
+  var DATE_FULL = {
+    year: n,
+    month: l,
+    day: n
+  };
+  var DATE_HUGE = {
+    year: n,
+    month: l,
+    day: n,
+    weekday: l
+  };
+  var TIME_SIMPLE = {
+    hour: n,
+    minute: n
+  };
+  var TIME_WITH_SECONDS = {
+    hour: n,
+    minute: n,
+    second: n
+  };
+  var TIME_WITH_SHORT_OFFSET = {
+    hour: n,
+    minute: n,
+    second: n,
+    timeZoneName: s
+  };
+  var TIME_WITH_LONG_OFFSET = {
+    hour: n,
+    minute: n,
+    second: n,
+    timeZoneName: l
+  };
+  var TIME_24_SIMPLE = {
+    hour: n,
+    minute: n,
+    hourCycle: "h23"
+  };
+  var TIME_24_WITH_SECONDS = {
+    hour: n,
+    minute: n,
+    second: n,
+    hourCycle: "h23"
+  };
+  var TIME_24_WITH_SHORT_OFFSET = {
+    hour: n,
+    minute: n,
+    second: n,
+    hourCycle: "h23",
+    timeZoneName: s
+  };
+  var TIME_24_WITH_LONG_OFFSET = {
+    hour: n,
+    minute: n,
+    second: n,
+    hourCycle: "h23",
+    timeZoneName: l
+  };
+  var DATETIME_SHORT = {
+    year: n,
+    month: n,
+    day: n,
+    hour: n,
+    minute: n
+  };
+  var DATETIME_SHORT_WITH_SECONDS = {
+    year: n,
+    month: n,
+    day: n,
+    hour: n,
+    minute: n,
+    second: n
+  };
+  var DATETIME_MED = {
+    year: n,
+    month: s,
+    day: n,
+    hour: n,
+    minute: n
+  };
+  var DATETIME_MED_WITH_SECONDS = {
+    year: n,
+    month: s,
+    day: n,
+    hour: n,
+    minute: n,
+    second: n
+  };
+  var DATETIME_MED_WITH_WEEKDAY = {
+    year: n,
+    month: s,
+    day: n,
+    weekday: s,
+    hour: n,
+    minute: n
+  };
+  var DATETIME_FULL = {
+    year: n,
+    month: l,
+    day: n,
+    hour: n,
+    minute: n,
+    timeZoneName: s
+  };
+  var DATETIME_FULL_WITH_SECONDS = {
+    year: n,
+    month: l,
+    day: n,
+    hour: n,
+    minute: n,
+    second: n,
+    timeZoneName: s
+  };
+  var DATETIME_HUGE = {
+    year: n,
+    month: l,
+    day: n,
+    weekday: l,
+    hour: n,
+    minute: n,
+    timeZoneName: l
+  };
+  var DATETIME_HUGE_WITH_SECONDS = {
+    year: n,
+    month: l,
+    day: n,
+    weekday: l,
+    hour: n,
+    minute: n,
+    second: n,
+    timeZoneName: l
+  };
+
+  class Zone {
+    get type() {
+      throw new ZoneIsAbstractError;
+    }
+    get name() {
+      throw new ZoneIsAbstractError;
+    }
+    get ianaName() {
+      return this.name;
+    }
+    get isUniversal() {
+      throw new ZoneIsAbstractError;
+    }
+    offsetName(ts, opts) {
+      throw new ZoneIsAbstractError;
+    }
+    formatOffset(ts, format) {
+      throw new ZoneIsAbstractError;
+    }
+    offset(ts) {
+      throw new ZoneIsAbstractError;
+    }
+    equals(otherZone) {
+      throw new ZoneIsAbstractError;
+    }
+    get isValid() {
+      throw new ZoneIsAbstractError;
+    }
+  }
+  var singleton$1 = null;
+
+  class SystemZone extends Zone {
+    static get instance() {
+      if (singleton$1 === null) {
+        singleton$1 = new SystemZone;
+      }
+      return singleton$1;
+    }
+    get type() {
+      return "system";
+    }
+    get name() {
+      return new Intl.DateTimeFormat().resolvedOptions().timeZone;
+    }
+    get isUniversal() {
+      return false;
+    }
+    offsetName(ts, {
+      format,
+      locale
+    }) {
+      return parseZoneInfo(ts, format, locale);
+    }
+    formatOffset(ts, format) {
+      return formatOffset(this.offset(ts), format);
+    }
+    offset(ts) {
+      return -new Date(ts).getTimezoneOffset();
+    }
+    equals(otherZone) {
+      return otherZone.type === "system";
+    }
+    get isValid() {
+      return true;
+    }
+  }
+  var dtfCache = new Map;
+  function makeDTF(zoneName) {
+    let dtf = dtfCache.get(zoneName);
+    if (dtf === undefined) {
+      dtf = new Intl.DateTimeFormat("en-US", {
+        hour12: false,
+        timeZone: zoneName,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        era: "short"
+      });
+      dtfCache.set(zoneName, dtf);
+    }
+    return dtf;
+  }
+  var typeToPos = {
+    year: 0,
+    month: 1,
+    day: 2,
+    era: 3,
+    hour: 4,
+    minute: 5,
+    second: 6
+  };
+  function hackyOffset(dtf, date6) {
+    const formatted = dtf.format(date6).replace(/\u200E/g, ""), parsed = /(\d+)\/(\d+)\/(\d+) (AD|BC),? (\d+):(\d+):(\d+)/.exec(formatted), [, fMonth, fDay, fYear, fadOrBc, fHour, fMinute, fSecond] = parsed;
+    return [fYear, fMonth, fDay, fadOrBc, fHour, fMinute, fSecond];
+  }
+  function partsOffset(dtf, date6) {
+    const formatted = dtf.formatToParts(date6);
+    const filled = [];
+    for (let i = 0;i < formatted.length; i++) {
+      const {
+        type,
+        value
+      } = formatted[i];
+      const pos = typeToPos[type];
+      if (type === "era") {
+        filled[pos] = value;
+      } else if (!isUndefined(pos)) {
+        filled[pos] = parseInt(value, 10);
+      }
+    }
+    return filled;
+  }
+  var ianaZoneCache = new Map;
+
+  class IANAZone extends Zone {
+    static create(name) {
+      let zone = ianaZoneCache.get(name);
+      if (zone === undefined) {
+        ianaZoneCache.set(name, zone = new IANAZone(name));
+      }
+      return zone;
+    }
+    static resetCache() {
+      ianaZoneCache.clear();
+      dtfCache.clear();
+    }
+    static isValidSpecifier(s2) {
+      return this.isValidZone(s2);
+    }
+    static isValidZone(zone) {
+      if (!zone) {
+        return false;
+      }
+      try {
+        new Intl.DateTimeFormat("en-US", {
+          timeZone: zone
+        }).format();
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+    constructor(name) {
+      super();
+      this.zoneName = name;
+      this.valid = IANAZone.isValidZone(name);
+    }
+    get type() {
+      return "iana";
+    }
+    get name() {
+      return this.zoneName;
+    }
+    get isUniversal() {
+      return false;
+    }
+    offsetName(ts, {
+      format,
+      locale
+    }) {
+      return parseZoneInfo(ts, format, locale, this.name);
+    }
+    formatOffset(ts, format) {
+      return formatOffset(this.offset(ts), format);
+    }
+    offset(ts) {
+      if (!this.valid)
+        return NaN;
+      const date6 = new Date(ts);
+      if (isNaN(date6))
+        return NaN;
+      const dtf = makeDTF(this.name);
+      let [year, month, day, adOrBc, hour, minute, second] = dtf.formatToParts ? partsOffset(dtf, date6) : hackyOffset(dtf, date6);
+      if (adOrBc === "BC") {
+        year = -Math.abs(year) + 1;
+      }
+      const adjustedHour = hour === 24 ? 0 : hour;
+      const asUTC = objToLocalTS({
+        year,
+        month,
+        day,
+        hour: adjustedHour,
+        minute,
+        second,
+        millisecond: 0
+      });
+      let asTS = +date6;
+      const over = asTS % 1000;
+      asTS -= over >= 0 ? over : 1000 + over;
+      return (asUTC - asTS) / (60 * 1000);
+    }
+    equals(otherZone) {
+      return otherZone.type === "iana" && otherZone.name === this.name;
+    }
+    get isValid() {
+      return this.valid;
+    }
+  }
+  var intlLFCache = {};
+  function getCachedLF(locString, opts = {}) {
+    const key = JSON.stringify([locString, opts]);
+    let dtf = intlLFCache[key];
+    if (!dtf) {
+      dtf = new Intl.ListFormat(locString, opts);
+      intlLFCache[key] = dtf;
+    }
+    return dtf;
+  }
+  var intlDTCache = new Map;
+  function getCachedDTF(locString, opts = {}) {
+    const key = JSON.stringify([locString, opts]);
+    let dtf = intlDTCache.get(key);
+    if (dtf === undefined) {
+      dtf = new Intl.DateTimeFormat(locString, opts);
+      intlDTCache.set(key, dtf);
+    }
+    return dtf;
+  }
+  var intlNumCache = new Map;
+  function getCachedINF(locString, opts = {}) {
+    const key = JSON.stringify([locString, opts]);
+    let inf = intlNumCache.get(key);
+    if (inf === undefined) {
+      inf = new Intl.NumberFormat(locString, opts);
+      intlNumCache.set(key, inf);
+    }
+    return inf;
+  }
+  var intlRelCache = new Map;
+  function getCachedRTF(locString, opts = {}) {
+    const {
+      base,
+      ...cacheKeyOpts
+    } = opts;
+    const key = JSON.stringify([locString, cacheKeyOpts]);
+    let inf = intlRelCache.get(key);
+    if (inf === undefined) {
+      inf = new Intl.RelativeTimeFormat(locString, opts);
+      intlRelCache.set(key, inf);
+    }
+    return inf;
+  }
+  var sysLocaleCache = null;
+  function systemLocale() {
+    if (sysLocaleCache) {
+      return sysLocaleCache;
+    } else {
+      sysLocaleCache = new Intl.DateTimeFormat().resolvedOptions().locale;
+      return sysLocaleCache;
+    }
+  }
+  var intlResolvedOptionsCache = new Map;
+  function getCachedIntResolvedOptions(locString) {
+    let opts = intlResolvedOptionsCache.get(locString);
+    if (opts === undefined) {
+      opts = new Intl.DateTimeFormat(locString).resolvedOptions();
+      intlResolvedOptionsCache.set(locString, opts);
+    }
+    return opts;
+  }
+  var weekInfoCache = new Map;
+  function getCachedWeekInfo(locString) {
+    let data = weekInfoCache.get(locString);
+    if (!data) {
+      const locale = new Intl.Locale(locString);
+      data = "getWeekInfo" in locale ? locale.getWeekInfo() : locale.weekInfo;
+      if (!("minimalDays" in data)) {
+        data = {
+          ...fallbackWeekSettings,
+          ...data
+        };
+      }
+      weekInfoCache.set(locString, data);
+    }
+    return data;
+  }
+  function parseLocaleString(localeStr) {
+    const xIndex = localeStr.indexOf("-x-");
+    if (xIndex !== -1) {
+      localeStr = localeStr.substring(0, xIndex);
+    }
+    const uIndex = localeStr.indexOf("-u-");
+    if (uIndex === -1) {
+      return [localeStr];
+    } else {
+      let options;
+      let selectedStr;
+      try {
+        options = getCachedDTF(localeStr).resolvedOptions();
+        selectedStr = localeStr;
+      } catch (e) {
+        const smaller = localeStr.substring(0, uIndex);
+        options = getCachedDTF(smaller).resolvedOptions();
+        selectedStr = smaller;
+      }
+      const {
+        numberingSystem,
+        calendar
+      } = options;
+      return [selectedStr, numberingSystem, calendar];
+    }
+  }
+  function intlConfigString(localeStr, numberingSystem, outputCalendar) {
+    if (outputCalendar || numberingSystem) {
+      if (!localeStr.includes("-u-")) {
+        localeStr += "-u";
+      }
+      if (outputCalendar) {
+        localeStr += `-ca-${outputCalendar}`;
+      }
+      if (numberingSystem) {
+        localeStr += `-nu-${numberingSystem}`;
+      }
+      return localeStr;
+    } else {
+      return localeStr;
+    }
+  }
+  function mapMonths(f) {
+    const ms = [];
+    for (let i = 1;i <= 12; i++) {
+      const dt = DateTime.utc(2009, i, 1);
+      ms.push(f(dt));
+    }
+    return ms;
+  }
+  function mapWeekdays(f) {
+    const ms = [];
+    for (let i = 1;i <= 7; i++) {
+      const dt = DateTime.utc(2016, 11, 13 + i);
+      ms.push(f(dt));
+    }
+    return ms;
+  }
+  function listStuff(loc, length, englishFn, intlFn) {
+    const mode = loc.listingMode();
+    if (mode === "error") {
+      return null;
+    } else if (mode === "en") {
+      return englishFn(length);
+    } else {
+      return intlFn(length);
+    }
+  }
+  function supportsFastNumbers(loc) {
+    if (loc.numberingSystem && loc.numberingSystem !== "latn") {
+      return false;
+    } else {
+      return loc.numberingSystem === "latn" || !loc.locale || loc.locale.startsWith("en") || getCachedIntResolvedOptions(loc.locale).numberingSystem === "latn";
+    }
+  }
+
+  class PolyNumberFormatter {
+    constructor(intl, forceSimple, opts) {
+      this.padTo = opts.padTo || 0;
+      this.floor = opts.floor || false;
+      const {
+        padTo,
+        floor,
+        ...otherOpts
+      } = opts;
+      if (!forceSimple || Object.keys(otherOpts).length > 0) {
+        const intlOpts = {
+          useGrouping: false,
+          ...opts
+        };
+        if (opts.padTo > 0)
+          intlOpts.minimumIntegerDigits = opts.padTo;
+        this.inf = getCachedINF(intl, intlOpts);
+      }
+    }
+    format(i) {
+      if (this.inf) {
+        const fixed = this.floor ? Math.floor(i) : i;
+        return this.inf.format(fixed);
+      } else {
+        const fixed = this.floor ? Math.floor(i) : roundTo(i, 3);
+        return padStart(fixed, this.padTo);
+      }
+    }
+  }
+
+  class PolyDateFormatter {
+    constructor(dt, intl, opts) {
+      this.opts = opts;
+      this.originalZone = undefined;
+      let z2 = undefined;
+      if (this.opts.timeZone) {
+        this.dt = dt;
+      } else if (dt.zone.type === "fixed") {
+        const gmtOffset = -1 * (dt.offset / 60);
+        const offsetZ = gmtOffset >= 0 ? `Etc/GMT+${gmtOffset}` : `Etc/GMT${gmtOffset}`;
+        if (dt.offset !== 0 && IANAZone.create(offsetZ).valid) {
+          z2 = offsetZ;
+          this.dt = dt;
+        } else {
+          z2 = "UTC";
+          this.dt = dt.offset === 0 ? dt : dt.setZone("UTC").plus({
+            minutes: dt.offset
+          });
+          this.originalZone = dt.zone;
+        }
+      } else if (dt.zone.type === "system") {
+        this.dt = dt;
+      } else if (dt.zone.type === "iana") {
+        this.dt = dt;
+        z2 = dt.zone.name;
+      } else {
+        z2 = "UTC";
+        this.dt = dt.setZone("UTC").plus({
+          minutes: dt.offset
+        });
+        this.originalZone = dt.zone;
+      }
+      const intlOpts = {
+        ...this.opts
+      };
+      intlOpts.timeZone = intlOpts.timeZone || z2;
+      this.dtf = getCachedDTF(intl, intlOpts);
+    }
+    format() {
+      if (this.originalZone) {
+        return this.formatToParts().map(({
+          value
+        }) => value).join("");
+      }
+      return this.dtf.format(this.dt.toJSDate());
+    }
+    formatToParts() {
+      const parts = this.dtf.formatToParts(this.dt.toJSDate());
+      if (this.originalZone) {
+        return parts.map((part) => {
+          if (part.type === "timeZoneName") {
+            const offsetName = this.originalZone.offsetName(this.dt.ts, {
+              locale: this.dt.locale,
+              format: this.opts.timeZoneName
+            });
+            return {
+              ...part,
+              value: offsetName
+            };
+          } else {
+            return part;
+          }
+        });
+      }
+      return parts;
+    }
+    resolvedOptions() {
+      return this.dtf.resolvedOptions();
+    }
+  }
+
+  class PolyRelFormatter {
+    constructor(intl, isEnglish, opts) {
+      this.opts = {
+        style: "long",
+        ...opts
+      };
+      if (!isEnglish && hasRelative()) {
+        this.rtf = getCachedRTF(intl, opts);
+      }
+    }
+    format(count, unit) {
+      if (this.rtf) {
+        return this.rtf.format(count, unit);
+      } else {
+        return formatRelativeTime(unit, count, this.opts.numeric, this.opts.style !== "long");
+      }
+    }
+    formatToParts(count, unit) {
+      if (this.rtf) {
+        return this.rtf.formatToParts(count, unit);
+      } else {
+        return [];
+      }
+    }
+  }
+  var fallbackWeekSettings = {
+    firstDay: 1,
+    minimalDays: 4,
+    weekend: [6, 7]
+  };
+
+  class Locale {
+    static fromOpts(opts) {
+      return Locale.create(opts.locale, opts.numberingSystem, opts.outputCalendar, opts.weekSettings, opts.defaultToEN);
+    }
+    static create(locale, numberingSystem, outputCalendar, weekSettings, defaultToEN = false) {
+      const specifiedLocale = locale || Settings.defaultLocale;
+      const localeR = specifiedLocale || (defaultToEN ? "en-US" : systemLocale());
+      const numberingSystemR = numberingSystem || Settings.defaultNumberingSystem;
+      const outputCalendarR = outputCalendar || Settings.defaultOutputCalendar;
+      const weekSettingsR = validateWeekSettings(weekSettings) || Settings.defaultWeekSettings;
+      return new Locale(localeR, numberingSystemR, outputCalendarR, weekSettingsR, specifiedLocale);
+    }
+    static resetCache() {
+      sysLocaleCache = null;
+      intlDTCache.clear();
+      intlNumCache.clear();
+      intlRelCache.clear();
+      intlResolvedOptionsCache.clear();
+      weekInfoCache.clear();
+    }
+    static fromObject({
+      locale,
+      numberingSystem,
+      outputCalendar,
+      weekSettings
+    } = {}) {
+      return Locale.create(locale, numberingSystem, outputCalendar, weekSettings);
+    }
+    constructor(locale, numbering, outputCalendar, weekSettings, specifiedLocale) {
+      const [parsedLocale, parsedNumberingSystem, parsedOutputCalendar] = parseLocaleString(locale);
+      this.locale = parsedLocale;
+      this.numberingSystem = numbering || parsedNumberingSystem || null;
+      this.outputCalendar = outputCalendar || parsedOutputCalendar || null;
+      this.weekSettings = weekSettings;
+      this.intl = intlConfigString(this.locale, this.numberingSystem, this.outputCalendar);
+      this.weekdaysCache = {
+        format: {},
+        standalone: {}
+      };
+      this.monthsCache = {
+        format: {},
+        standalone: {}
+      };
+      this.meridiemCache = null;
+      this.eraCache = {};
+      this.specifiedLocale = specifiedLocale;
+      this.fastNumbersCached = null;
+    }
+    get fastNumbers() {
+      if (this.fastNumbersCached == null) {
+        this.fastNumbersCached = supportsFastNumbers(this);
+      }
+      return this.fastNumbersCached;
+    }
+    listingMode() {
+      const isActuallyEn = this.isEnglish();
+      const hasNoWeirdness = (this.numberingSystem === null || this.numberingSystem === "latn") && (this.outputCalendar === null || this.outputCalendar === "gregory");
+      return isActuallyEn && hasNoWeirdness ? "en" : "intl";
+    }
+    clone(alts) {
+      if (!alts || Object.getOwnPropertyNames(alts).length === 0) {
+        return this;
+      } else {
+        return Locale.create(alts.locale || this.specifiedLocale, alts.numberingSystem || this.numberingSystem, alts.outputCalendar || this.outputCalendar, validateWeekSettings(alts.weekSettings) || this.weekSettings, alts.defaultToEN || false);
+      }
+    }
+    redefaultToEN(alts = {}) {
+      return this.clone({
+        ...alts,
+        defaultToEN: true
+      });
+    }
+    redefaultToSystem(alts = {}) {
+      return this.clone({
+        ...alts,
+        defaultToEN: false
+      });
+    }
+    months(length, format = false) {
+      return listStuff(this, length, months, () => {
+        const monthSpecialCase = this.intl === "ja" || this.intl.startsWith("ja-");
+        format &= !monthSpecialCase;
+        const intl = format ? {
+          month: length,
+          day: "numeric"
+        } : {
+          month: length
+        }, formatStr = format ? "format" : "standalone";
+        if (!this.monthsCache[formatStr][length]) {
+          const mapper = !monthSpecialCase ? (dt) => this.extract(dt, intl, "month") : (dt) => this.dtFormatter(dt, intl).format();
+          this.monthsCache[formatStr][length] = mapMonths(mapper);
+        }
+        return this.monthsCache[formatStr][length];
+      });
+    }
+    weekdays(length, format = false) {
+      return listStuff(this, length, weekdays, () => {
+        const intl = format ? {
+          weekday: length,
+          year: "numeric",
+          month: "long",
+          day: "numeric"
+        } : {
+          weekday: length
+        }, formatStr = format ? "format" : "standalone";
+        if (!this.weekdaysCache[formatStr][length]) {
+          this.weekdaysCache[formatStr][length] = mapWeekdays((dt) => this.extract(dt, intl, "weekday"));
+        }
+        return this.weekdaysCache[formatStr][length];
+      });
+    }
+    meridiems() {
+      return listStuff(this, undefined, () => meridiems, () => {
+        if (!this.meridiemCache) {
+          const intl = {
+            hour: "numeric",
+            hourCycle: "h12"
+          };
+          this.meridiemCache = [DateTime.utc(2016, 11, 13, 9), DateTime.utc(2016, 11, 13, 19)].map((dt) => this.extract(dt, intl, "dayperiod"));
+        }
+        return this.meridiemCache;
+      });
+    }
+    eras(length) {
+      return listStuff(this, length, eras, () => {
+        const intl = {
+          era: length
+        };
+        if (!this.eraCache[length]) {
+          this.eraCache[length] = [DateTime.utc(-40, 1, 1), DateTime.utc(2017, 1, 1)].map((dt) => this.extract(dt, intl, "era"));
+        }
+        return this.eraCache[length];
+      });
+    }
+    extract(dt, intlOpts, field) {
+      const df = this.dtFormatter(dt, intlOpts), results = df.formatToParts(), matching = results.find((m) => m.type.toLowerCase() === field);
+      return matching ? matching.value : null;
+    }
+    numberFormatter(opts = {}) {
+      return new PolyNumberFormatter(this.intl, opts.forceSimple || this.fastNumbers, opts);
+    }
+    dtFormatter(dt, intlOpts = {}) {
+      return new PolyDateFormatter(dt, this.intl, intlOpts);
+    }
+    relFormatter(opts = {}) {
+      return new PolyRelFormatter(this.intl, this.isEnglish(), opts);
+    }
+    listFormatter(opts = {}) {
+      return getCachedLF(this.intl, opts);
+    }
+    isEnglish() {
+      return this.locale === "en" || this.locale.toLowerCase() === "en-us" || getCachedIntResolvedOptions(this.intl).locale.startsWith("en-us");
+    }
+    getWeekSettings() {
+      if (this.weekSettings) {
+        return this.weekSettings;
+      } else if (!hasLocaleWeekInfo()) {
+        return fallbackWeekSettings;
+      } else {
+        return getCachedWeekInfo(this.locale);
+      }
+    }
+    getStartOfWeek() {
+      return this.getWeekSettings().firstDay;
+    }
+    getMinDaysInFirstWeek() {
+      return this.getWeekSettings().minimalDays;
+    }
+    getWeekendDays() {
+      return this.getWeekSettings().weekend;
+    }
+    equals(other) {
+      return this.locale === other.locale && this.numberingSystem === other.numberingSystem && this.outputCalendar === other.outputCalendar;
+    }
+    toString() {
+      return `Locale(${this.locale}, ${this.numberingSystem}, ${this.outputCalendar})`;
+    }
+  }
+  var singleton = null;
+
+  class FixedOffsetZone extends Zone {
+    static get utcInstance() {
+      if (singleton === null) {
+        singleton = new FixedOffsetZone(0);
+      }
+      return singleton;
+    }
+    static instance(offset2) {
+      return offset2 === 0 ? FixedOffsetZone.utcInstance : new FixedOffsetZone(offset2);
+    }
+    static parseSpecifier(s2) {
+      if (s2) {
+        const r = s2.match(/^utc(?:([+-]\d{1,2})(?::(\d{2}))?)?$/i);
+        if (r) {
+          return new FixedOffsetZone(signedOffset(r[1], r[2]));
+        }
+      }
+      return null;
+    }
+    constructor(offset2) {
+      super();
+      this.fixed = offset2;
+    }
+    get type() {
+      return "fixed";
+    }
+    get name() {
+      return this.fixed === 0 ? "UTC" : `UTC${formatOffset(this.fixed, "narrow")}`;
+    }
+    get ianaName() {
+      if (this.fixed === 0) {
+        return "Etc/UTC";
+      } else {
+        return `Etc/GMT${formatOffset(-this.fixed, "narrow")}`;
+      }
+    }
+    offsetName() {
+      return this.name;
+    }
+    formatOffset(ts, format) {
+      return formatOffset(this.fixed, format);
+    }
+    get isUniversal() {
+      return true;
+    }
+    offset() {
+      return this.fixed;
+    }
+    equals(otherZone) {
+      return otherZone.type === "fixed" && otherZone.fixed === this.fixed;
+    }
+    get isValid() {
+      return true;
+    }
+  }
+
+  class InvalidZone extends Zone {
+    constructor(zoneName) {
+      super();
+      this.zoneName = zoneName;
+    }
+    get type() {
+      return "invalid";
+    }
+    get name() {
+      return this.zoneName;
+    }
+    get isUniversal() {
+      return false;
+    }
+    offsetName() {
+      return null;
+    }
+    formatOffset() {
+      return "";
+    }
+    offset() {
+      return NaN;
+    }
+    equals() {
+      return false;
+    }
+    get isValid() {
+      return false;
+    }
+  }
+  function normalizeZone(input, defaultZone2) {
+    if (isUndefined(input) || input === null) {
+      return defaultZone2;
+    } else if (input instanceof Zone) {
+      return input;
+    } else if (isString(input)) {
+      const lowered = input.toLowerCase();
+      if (lowered === "default")
+        return defaultZone2;
+      else if (lowered === "local" || lowered === "system")
+        return SystemZone.instance;
+      else if (lowered === "utc" || lowered === "gmt")
+        return FixedOffsetZone.utcInstance;
+      else
+        return FixedOffsetZone.parseSpecifier(lowered) || IANAZone.create(input);
+    } else if (isNumber(input)) {
+      return FixedOffsetZone.instance(input);
+    } else if (typeof input === "object" && "offset" in input && typeof input.offset === "function") {
+      return input;
+    } else {
+      return new InvalidZone(input);
+    }
+  }
+  var numberingSystems = {
+    arab: "[\u0660-\u0669]",
+    arabext: "[\u06F0-\u06F9]",
+    bali: "[\u1B50-\u1B59]",
+    beng: "[\u09E6-\u09EF]",
+    deva: "[\u0966-\u096F]",
+    fullwide: "[\uFF10-\uFF19]",
+    gujr: "[\u0AE6-\u0AEF]",
+    hanidec: "[\u3007|\u4E00|\u4E8C|\u4E09|\u56DB|\u4E94|\u516D|\u4E03|\u516B|\u4E5D]",
+    khmr: "[\u17E0-\u17E9]",
+    knda: "[\u0CE6-\u0CEF]",
+    laoo: "[\u0ED0-\u0ED9]",
+    limb: "[\u1946-\u194F]",
+    mlym: "[\u0D66-\u0D6F]",
+    mong: "[\u1810-\u1819]",
+    mymr: "[\u1040-\u1049]",
+    orya: "[\u0B66-\u0B6F]",
+    tamldec: "[\u0BE6-\u0BEF]",
+    telu: "[\u0C66-\u0C6F]",
+    thai: "[\u0E50-\u0E59]",
+    tibt: "[\u0F20-\u0F29]",
+    latn: "\\d"
+  };
+  var numberingSystemsUTF16 = {
+    arab: [1632, 1641],
+    arabext: [1776, 1785],
+    bali: [6992, 7001],
+    beng: [2534, 2543],
+    deva: [2406, 2415],
+    fullwide: [65296, 65303],
+    gujr: [2790, 2799],
+    khmr: [6112, 6121],
+    knda: [3302, 3311],
+    laoo: [3792, 3801],
+    limb: [6470, 6479],
+    mlym: [3430, 3439],
+    mong: [6160, 6169],
+    mymr: [4160, 4169],
+    orya: [2918, 2927],
+    tamldec: [3046, 3055],
+    telu: [3174, 3183],
+    thai: [3664, 3673],
+    tibt: [3872, 3881]
+  };
+  var hanidecChars = numberingSystems.hanidec.replace(/[\[|\]]/g, "").split("");
+  function parseDigits(str) {
+    let value = parseInt(str, 10);
+    if (isNaN(value)) {
+      value = "";
+      for (let i = 0;i < str.length; i++) {
+        const code = str.charCodeAt(i);
+        if (str[i].search(numberingSystems.hanidec) !== -1) {
+          value += hanidecChars.indexOf(str[i]);
+        } else {
+          for (const key in numberingSystemsUTF16) {
+            const [min, max] = numberingSystemsUTF16[key];
+            if (code >= min && code <= max) {
+              value += code - min;
+            }
+          }
+        }
+      }
+      return parseInt(value, 10);
+    } else {
+      return value;
+    }
+  }
+  var digitRegexCache = new Map;
+  function resetDigitRegexCache() {
+    digitRegexCache.clear();
+  }
+  function digitRegex({
+    numberingSystem
+  }, append = "") {
+    const ns = numberingSystem || "latn";
+    let appendCache = digitRegexCache.get(ns);
+    if (appendCache === undefined) {
+      appendCache = new Map;
+      digitRegexCache.set(ns, appendCache);
+    }
+    let regex = appendCache.get(append);
+    if (regex === undefined) {
+      regex = new RegExp(`${numberingSystems[ns]}${append}`);
+      appendCache.set(append, regex);
+    }
+    return regex;
+  }
+  var now = () => Date.now();
+  var defaultZone = "system";
+  var defaultLocale = null;
+  var defaultNumberingSystem = null;
+  var defaultOutputCalendar = null;
+  var twoDigitCutoffYear = 60;
+  var throwOnInvalid;
+  var defaultWeekSettings = null;
+
+  class Settings {
+    static get now() {
+      return now;
+    }
+    static set now(n2) {
+      now = n2;
+    }
+    static set defaultZone(zone) {
+      defaultZone = zone;
+    }
+    static get defaultZone() {
+      return normalizeZone(defaultZone, SystemZone.instance);
+    }
+    static get defaultLocale() {
+      return defaultLocale;
+    }
+    static set defaultLocale(locale) {
+      defaultLocale = locale;
+    }
+    static get defaultNumberingSystem() {
+      return defaultNumberingSystem;
+    }
+    static set defaultNumberingSystem(numberingSystem) {
+      defaultNumberingSystem = numberingSystem;
+    }
+    static get defaultOutputCalendar() {
+      return defaultOutputCalendar;
+    }
+    static set defaultOutputCalendar(outputCalendar) {
+      defaultOutputCalendar = outputCalendar;
+    }
+    static get defaultWeekSettings() {
+      return defaultWeekSettings;
+    }
+    static set defaultWeekSettings(weekSettings) {
+      defaultWeekSettings = validateWeekSettings(weekSettings);
+    }
+    static get twoDigitCutoffYear() {
+      return twoDigitCutoffYear;
+    }
+    static set twoDigitCutoffYear(cutoffYear) {
+      twoDigitCutoffYear = cutoffYear % 100;
+    }
+    static get throwOnInvalid() {
+      return throwOnInvalid;
+    }
+    static set throwOnInvalid(t2) {
+      throwOnInvalid = t2;
+    }
+    static resetCaches() {
+      Locale.resetCache();
+      IANAZone.resetCache();
+      DateTime.resetCache();
+      resetDigitRegexCache();
+    }
+  }
+
+  class Invalid {
+    constructor(reason, explanation) {
+      this.reason = reason;
+      this.explanation = explanation;
+    }
+    toMessage() {
+      if (this.explanation) {
+        return `${this.reason}: ${this.explanation}`;
+      } else {
+        return this.reason;
+      }
+    }
+  }
+  var nonLeapLadder = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+  var leapLadder = [0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335];
+  function unitOutOfRange(unit, value) {
+    return new Invalid("unit out of range", `you specified ${value} (of type ${typeof value}) as a ${unit}, which is invalid`);
+  }
+  function dayOfWeek(year, month, day) {
+    const d = new Date(Date.UTC(year, month - 1, day));
+    if (year < 100 && year >= 0) {
+      d.setUTCFullYear(d.getUTCFullYear() - 1900);
+    }
+    const js = d.getUTCDay();
+    return js === 0 ? 7 : js;
+  }
+  function computeOrdinal(year, month, day) {
+    return day + (isLeapYear(year) ? leapLadder : nonLeapLadder)[month - 1];
+  }
+  function uncomputeOrdinal(year, ordinal) {
+    const table = isLeapYear(year) ? leapLadder : nonLeapLadder, month0 = table.findIndex((i) => i < ordinal), day = ordinal - table[month0];
+    return {
+      month: month0 + 1,
+      day
+    };
+  }
+  function isoWeekdayToLocal(isoWeekday, startOfWeek) {
+    return (isoWeekday - startOfWeek + 7) % 7 + 1;
+  }
+  function gregorianToWeek(gregObj, minDaysInFirstWeek = 4, startOfWeek = 1) {
+    const {
+      year,
+      month,
+      day
+    } = gregObj, ordinal = computeOrdinal(year, month, day), weekday = isoWeekdayToLocal(dayOfWeek(year, month, day), startOfWeek);
+    let weekNumber = Math.floor((ordinal - weekday + 14 - minDaysInFirstWeek) / 7), weekYear;
+    if (weekNumber < 1) {
+      weekYear = year - 1;
+      weekNumber = weeksInWeekYear(weekYear, minDaysInFirstWeek, startOfWeek);
+    } else if (weekNumber > weeksInWeekYear(year, minDaysInFirstWeek, startOfWeek)) {
+      weekYear = year + 1;
+      weekNumber = 1;
+    } else {
+      weekYear = year;
+    }
+    return {
+      weekYear,
+      weekNumber,
+      weekday,
+      ...timeObject(gregObj)
+    };
+  }
+  function weekToGregorian(weekData, minDaysInFirstWeek = 4, startOfWeek = 1) {
+    const {
+      weekYear,
+      weekNumber,
+      weekday
+    } = weekData, weekdayOfJan4 = isoWeekdayToLocal(dayOfWeek(weekYear, 1, minDaysInFirstWeek), startOfWeek), yearInDays = daysInYear(weekYear);
+    let ordinal = weekNumber * 7 + weekday - weekdayOfJan4 - 7 + minDaysInFirstWeek, year;
+    if (ordinal < 1) {
+      year = weekYear - 1;
+      ordinal += daysInYear(year);
+    } else if (ordinal > yearInDays) {
+      year = weekYear + 1;
+      ordinal -= daysInYear(weekYear);
+    } else {
+      year = weekYear;
+    }
+    const {
+      month,
+      day
+    } = uncomputeOrdinal(year, ordinal);
+    return {
+      year,
+      month,
+      day,
+      ...timeObject(weekData)
+    };
+  }
+  function gregorianToOrdinal(gregData) {
+    const {
+      year,
+      month,
+      day
+    } = gregData;
+    const ordinal = computeOrdinal(year, month, day);
+    return {
+      year,
+      ordinal,
+      ...timeObject(gregData)
+    };
+  }
+  function ordinalToGregorian(ordinalData) {
+    const {
+      year,
+      ordinal
+    } = ordinalData;
+    const {
+      month,
+      day
+    } = uncomputeOrdinal(year, ordinal);
+    return {
+      year,
+      month,
+      day,
+      ...timeObject(ordinalData)
+    };
+  }
+  function usesLocalWeekValues(obj, loc) {
+    const hasLocaleWeekData = !isUndefined(obj.localWeekday) || !isUndefined(obj.localWeekNumber) || !isUndefined(obj.localWeekYear);
+    if (hasLocaleWeekData) {
+      const hasIsoWeekData = !isUndefined(obj.weekday) || !isUndefined(obj.weekNumber) || !isUndefined(obj.weekYear);
+      if (hasIsoWeekData) {
+        throw new ConflictingSpecificationError("Cannot mix locale-based week fields with ISO-based week fields");
+      }
+      if (!isUndefined(obj.localWeekday))
+        obj.weekday = obj.localWeekday;
+      if (!isUndefined(obj.localWeekNumber))
+        obj.weekNumber = obj.localWeekNumber;
+      if (!isUndefined(obj.localWeekYear))
+        obj.weekYear = obj.localWeekYear;
+      delete obj.localWeekday;
+      delete obj.localWeekNumber;
+      delete obj.localWeekYear;
+      return {
+        minDaysInFirstWeek: loc.getMinDaysInFirstWeek(),
+        startOfWeek: loc.getStartOfWeek()
+      };
+    } else {
+      return {
+        minDaysInFirstWeek: 4,
+        startOfWeek: 1
+      };
+    }
+  }
+  function hasInvalidWeekData(obj, minDaysInFirstWeek = 4, startOfWeek = 1) {
+    const validYear = isInteger(obj.weekYear), validWeek = integerBetween(obj.weekNumber, 1, weeksInWeekYear(obj.weekYear, minDaysInFirstWeek, startOfWeek)), validWeekday = integerBetween(obj.weekday, 1, 7);
+    if (!validYear) {
+      return unitOutOfRange("weekYear", obj.weekYear);
+    } else if (!validWeek) {
+      return unitOutOfRange("week", obj.weekNumber);
+    } else if (!validWeekday) {
+      return unitOutOfRange("weekday", obj.weekday);
+    } else
+      return false;
+  }
+  function hasInvalidOrdinalData(obj) {
+    const validYear = isInteger(obj.year), validOrdinal = integerBetween(obj.ordinal, 1, daysInYear(obj.year));
+    if (!validYear) {
+      return unitOutOfRange("year", obj.year);
+    } else if (!validOrdinal) {
+      return unitOutOfRange("ordinal", obj.ordinal);
+    } else
+      return false;
+  }
+  function hasInvalidGregorianData(obj) {
+    const validYear = isInteger(obj.year), validMonth = integerBetween(obj.month, 1, 12), validDay = integerBetween(obj.day, 1, daysInMonth(obj.year, obj.month));
+    if (!validYear) {
+      return unitOutOfRange("year", obj.year);
+    } else if (!validMonth) {
+      return unitOutOfRange("month", obj.month);
+    } else if (!validDay) {
+      return unitOutOfRange("day", obj.day);
+    } else
+      return false;
+  }
+  function hasInvalidTimeData(obj) {
+    const {
+      hour,
+      minute,
+      second,
+      millisecond
+    } = obj;
+    const validHour = integerBetween(hour, 0, 23) || hour === 24 && minute === 0 && second === 0 && millisecond === 0, validMinute = integerBetween(minute, 0, 59), validSecond = integerBetween(second, 0, 59), validMillisecond = integerBetween(millisecond, 0, 999);
+    if (!validHour) {
+      return unitOutOfRange("hour", hour);
+    } else if (!validMinute) {
+      return unitOutOfRange("minute", minute);
+    } else if (!validSecond) {
+      return unitOutOfRange("second", second);
+    } else if (!validMillisecond) {
+      return unitOutOfRange("millisecond", millisecond);
+    } else
+      return false;
+  }
+  function isUndefined(o) {
+    return typeof o === "undefined";
+  }
+  function isNumber(o) {
+    return typeof o === "number";
+  }
+  function isInteger(o) {
+    return typeof o === "number" && o % 1 === 0;
+  }
+  function isString(o) {
+    return typeof o === "string";
+  }
+  function isDate(o) {
+    return Object.prototype.toString.call(o) === "[object Date]";
+  }
+  function hasRelative() {
+    try {
+      return typeof Intl !== "undefined" && !!Intl.RelativeTimeFormat;
+    } catch (e) {
+      return false;
+    }
+  }
+  function hasLocaleWeekInfo() {
+    try {
+      return typeof Intl !== "undefined" && !!Intl.Locale && (("weekInfo" in Intl.Locale.prototype) || ("getWeekInfo" in Intl.Locale.prototype));
+    } catch (e) {
+      return false;
+    }
+  }
+  function maybeArray(thing) {
+    return Array.isArray(thing) ? thing : [thing];
+  }
+  function bestBy(arr, by, compare) {
+    if (arr.length === 0) {
+      return;
+    }
+    return arr.reduce((best, next2) => {
+      const pair = [by(next2), next2];
+      if (!best) {
+        return pair;
+      } else if (compare(best[0], pair[0]) === best[0]) {
+        return best;
+      } else {
+        return pair;
+      }
+    }, null)[1];
+  }
+  function pick2(obj, keys) {
+    return keys.reduce((a, k) => {
+      a[k] = obj[k];
+      return a;
+    }, {});
+  }
+  function hasOwnProperty(obj, prop) {
+    return Object.prototype.hasOwnProperty.call(obj, prop);
+  }
+  function validateWeekSettings(settings) {
+    if (settings == null) {
+      return null;
+    } else if (typeof settings !== "object") {
+      throw new InvalidArgumentError("Week settings must be an object");
+    } else {
+      if (!integerBetween(settings.firstDay, 1, 7) || !integerBetween(settings.minimalDays, 1, 7) || !Array.isArray(settings.weekend) || settings.weekend.some((v) => !integerBetween(v, 1, 7))) {
+        throw new InvalidArgumentError("Invalid week settings");
+      }
+      return {
+        firstDay: settings.firstDay,
+        minimalDays: settings.minimalDays,
+        weekend: Array.from(settings.weekend)
+      };
+    }
+  }
+  function integerBetween(thing, bottom, top) {
+    return isInteger(thing) && thing >= bottom && thing <= top;
+  }
+  function floorMod(x, n2) {
+    return x - n2 * Math.floor(x / n2);
+  }
+  function padStart(input, n2 = 2) {
+    const isNeg = input < 0;
+    let padded;
+    if (isNeg) {
+      padded = "-" + ("" + -input).padStart(n2, "0");
+    } else {
+      padded = ("" + input).padStart(n2, "0");
+    }
+    return padded;
+  }
+  function parseInteger(string4) {
+    if (isUndefined(string4) || string4 === null || string4 === "") {
+      return;
+    } else {
+      return parseInt(string4, 10);
+    }
+  }
+  function parseFloating(string4) {
+    if (isUndefined(string4) || string4 === null || string4 === "") {
+      return;
+    } else {
+      return parseFloat(string4);
+    }
+  }
+  function parseMillis(fraction) {
+    if (isUndefined(fraction) || fraction === null || fraction === "") {
+      return;
+    } else {
+      const f = parseFloat("0." + fraction) * 1000;
+      return Math.floor(f);
+    }
+  }
+  function roundTo(number4, digits, rounding = "round") {
+    const factor = 10 ** digits;
+    switch (rounding) {
+      case "expand":
+        return number4 > 0 ? Math.ceil(number4 * factor) / factor : Math.floor(number4 * factor) / factor;
+      case "trunc":
+        return Math.trunc(number4 * factor) / factor;
+      case "round":
+        return Math.round(number4 * factor) / factor;
+      case "floor":
+        return Math.floor(number4 * factor) / factor;
+      case "ceil":
+        return Math.ceil(number4 * factor) / factor;
+      default:
+        throw new RangeError(`Value rounding ${rounding} is out of range`);
+    }
+  }
+  function isLeapYear(year) {
+    return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  }
+  function daysInYear(year) {
+    return isLeapYear(year) ? 366 : 365;
+  }
+  function daysInMonth(year, month) {
+    const modMonth = floorMod(month - 1, 12) + 1, modYear = year + (month - modMonth) / 12;
+    if (modMonth === 2) {
+      return isLeapYear(modYear) ? 29 : 28;
+    } else {
+      return [31, null, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][modMonth - 1];
+    }
+  }
+  function objToLocalTS(obj) {
+    let d = Date.UTC(obj.year, obj.month - 1, obj.day, obj.hour, obj.minute, obj.second, obj.millisecond);
+    if (obj.year < 100 && obj.year >= 0) {
+      d = new Date(d);
+      d.setUTCFullYear(obj.year, obj.month - 1, obj.day);
+    }
+    return +d;
+  }
+  function firstWeekOffset(year, minDaysInFirstWeek, startOfWeek) {
+    const fwdlw = isoWeekdayToLocal(dayOfWeek(year, 1, minDaysInFirstWeek), startOfWeek);
+    return -fwdlw + minDaysInFirstWeek - 1;
+  }
+  function weeksInWeekYear(weekYear, minDaysInFirstWeek = 4, startOfWeek = 1) {
+    const weekOffset = firstWeekOffset(weekYear, minDaysInFirstWeek, startOfWeek);
+    const weekOffsetNext = firstWeekOffset(weekYear + 1, minDaysInFirstWeek, startOfWeek);
+    return (daysInYear(weekYear) - weekOffset + weekOffsetNext) / 7;
+  }
+  function untruncateYear(year) {
+    if (year > 99) {
+      return year;
+    } else
+      return year > Settings.twoDigitCutoffYear ? 1900 + year : 2000 + year;
+  }
+  function parseZoneInfo(ts, offsetFormat, locale, timeZone = null) {
+    const date6 = new Date(ts), intlOpts = {
+      hourCycle: "h23",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit"
+    };
+    if (timeZone) {
+      intlOpts.timeZone = timeZone;
+    }
+    const modified = {
+      timeZoneName: offsetFormat,
+      ...intlOpts
+    };
+    const parsed = new Intl.DateTimeFormat(locale, modified).formatToParts(date6).find((m) => m.type.toLowerCase() === "timezonename");
+    return parsed ? parsed.value : null;
+  }
+  function signedOffset(offHourStr, offMinuteStr) {
+    let offHour = parseInt(offHourStr, 10);
+    if (Number.isNaN(offHour)) {
+      offHour = 0;
+    }
+    const offMin = parseInt(offMinuteStr, 10) || 0, offMinSigned = offHour < 0 || Object.is(offHour, -0) ? -offMin : offMin;
+    return offHour * 60 + offMinSigned;
+  }
+  function asNumber(value) {
+    const numericValue = Number(value);
+    if (typeof value === "boolean" || value === "" || !Number.isFinite(numericValue))
+      throw new InvalidArgumentError(`Invalid unit value ${value}`);
+    return numericValue;
+  }
+  function normalizeObject(obj, normalizer) {
+    const normalized = {};
+    for (const u in obj) {
+      if (hasOwnProperty(obj, u)) {
+        const v = obj[u];
+        if (v === undefined || v === null)
+          continue;
+        normalized[normalizer(u)] = asNumber(v);
+      }
+    }
+    return normalized;
+  }
+  function formatOffset(offset2, format) {
+    const hours = Math.trunc(Math.abs(offset2 / 60)), minutes = Math.trunc(Math.abs(offset2 % 60)), sign = offset2 >= 0 ? "+" : "-";
+    switch (format) {
+      case "short":
+        return `${sign}${padStart(hours, 2)}:${padStart(minutes, 2)}`;
+      case "narrow":
+        return `${sign}${hours}${minutes > 0 ? `:${minutes}` : ""}`;
+      case "techie":
+        return `${sign}${padStart(hours, 2)}${padStart(minutes, 2)}`;
+      default:
+        throw new RangeError(`Value format ${format} is out of range for property format`);
+    }
+  }
+  function timeObject(obj) {
+    return pick2(obj, ["hour", "minute", "second", "millisecond"]);
+  }
+  var monthsLong = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  var monthsShort = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  var monthsNarrow = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
+  function months(length) {
+    switch (length) {
+      case "narrow":
+        return [...monthsNarrow];
+      case "short":
+        return [...monthsShort];
+      case "long":
+        return [...monthsLong];
+      case "numeric":
+        return ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"];
+      case "2-digit":
+        return ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"];
+      default:
+        return null;
+    }
+  }
+  var weekdaysLong = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  var weekdaysShort = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  var weekdaysNarrow = ["M", "T", "W", "T", "F", "S", "S"];
+  function weekdays(length) {
+    switch (length) {
+      case "narrow":
+        return [...weekdaysNarrow];
+      case "short":
+        return [...weekdaysShort];
+      case "long":
+        return [...weekdaysLong];
+      case "numeric":
+        return ["1", "2", "3", "4", "5", "6", "7"];
+      default:
+        return null;
+    }
+  }
+  var meridiems = ["AM", "PM"];
+  var erasLong = ["Before Christ", "Anno Domini"];
+  var erasShort = ["BC", "AD"];
+  var erasNarrow = ["B", "A"];
+  function eras(length) {
+    switch (length) {
+      case "narrow":
+        return [...erasNarrow];
+      case "short":
+        return [...erasShort];
+      case "long":
+        return [...erasLong];
+      default:
+        return null;
+    }
+  }
+  function meridiemForDateTime(dt) {
+    return meridiems[dt.hour < 12 ? 0 : 1];
+  }
+  function weekdayForDateTime(dt, length) {
+    return weekdays(length)[dt.weekday - 1];
+  }
+  function monthForDateTime(dt, length) {
+    return months(length)[dt.month - 1];
+  }
+  function eraForDateTime(dt, length) {
+    return eras(length)[dt.year < 0 ? 0 : 1];
+  }
+  function formatRelativeTime(unit, count, numeric2 = "always", narrow = false) {
+    const units = {
+      years: ["year", "yr."],
+      quarters: ["quarter", "qtr."],
+      months: ["month", "mo."],
+      weeks: ["week", "wk."],
+      days: ["day", "day", "days"],
+      hours: ["hour", "hr."],
+      minutes: ["minute", "min."],
+      seconds: ["second", "sec."]
+    };
+    const lastable = ["hours", "minutes", "seconds"].indexOf(unit) === -1;
+    if (numeric2 === "auto" && lastable) {
+      const isDay = unit === "days";
+      switch (count) {
+        case 1:
+          return isDay ? "tomorrow" : `next ${units[unit][0]}`;
+        case -1:
+          return isDay ? "yesterday" : `last ${units[unit][0]}`;
+        case 0:
+          return isDay ? "today" : `this ${units[unit][0]}`;
+      }
+    }
+    const isInPast = Object.is(count, -0) || count < 0, fmtValue = Math.abs(count), singular = fmtValue === 1, lilUnits = units[unit], fmtUnit = narrow ? singular ? lilUnits[1] : lilUnits[2] || lilUnits[1] : singular ? units[unit][0] : unit;
+    return isInPast ? `${fmtValue} ${fmtUnit} ago` : `in ${fmtValue} ${fmtUnit}`;
+  }
+  function stringifyTokens(splits, tokenToString) {
+    let s2 = "";
+    for (const token of splits) {
+      if (token.literal) {
+        s2 += token.val;
+      } else {
+        s2 += tokenToString(token.val);
+      }
+    }
+    return s2;
+  }
+  var macroTokenToFormatOpts = {
+    D: DATE_SHORT,
+    DD: DATE_MED,
+    DDD: DATE_FULL,
+    DDDD: DATE_HUGE,
+    t: TIME_SIMPLE,
+    tt: TIME_WITH_SECONDS,
+    ttt: TIME_WITH_SHORT_OFFSET,
+    tttt: TIME_WITH_LONG_OFFSET,
+    T: TIME_24_SIMPLE,
+    TT: TIME_24_WITH_SECONDS,
+    TTT: TIME_24_WITH_SHORT_OFFSET,
+    TTTT: TIME_24_WITH_LONG_OFFSET,
+    f: DATETIME_SHORT,
+    ff: DATETIME_MED,
+    fff: DATETIME_FULL,
+    ffff: DATETIME_HUGE,
+    F: DATETIME_SHORT_WITH_SECONDS,
+    FF: DATETIME_MED_WITH_SECONDS,
+    FFF: DATETIME_FULL_WITH_SECONDS,
+    FFFF: DATETIME_HUGE_WITH_SECONDS
+  };
+
+  class Formatter {
+    static create(locale, opts = {}) {
+      return new Formatter(locale, opts);
+    }
+    static parseFormat(fmt) {
+      let current = null, currentFull = "", bracketed = false;
+      const splits = [];
+      for (let i = 0;i < fmt.length; i++) {
+        const c = fmt.charAt(i);
+        if (c === "'") {
+          if (currentFull.length > 0 || bracketed) {
+            splits.push({
+              literal: bracketed || /^\s+$/.test(currentFull),
+              val: currentFull === "" ? "'" : currentFull
+            });
+          }
+          current = null;
+          currentFull = "";
+          bracketed = !bracketed;
+        } else if (bracketed) {
+          currentFull += c;
+        } else if (c === current) {
+          currentFull += c;
+        } else {
+          if (currentFull.length > 0) {
+            splits.push({
+              literal: /^\s+$/.test(currentFull),
+              val: currentFull
+            });
+          }
+          currentFull = c;
+          current = c;
+        }
+      }
+      if (currentFull.length > 0) {
+        splits.push({
+          literal: bracketed || /^\s+$/.test(currentFull),
+          val: currentFull
+        });
+      }
+      return splits;
+    }
+    static macroTokenToFormatOpts(token) {
+      return macroTokenToFormatOpts[token];
+    }
+    constructor(locale, formatOpts) {
+      this.opts = formatOpts;
+      this.loc = locale;
+      this.systemLoc = null;
+    }
+    formatWithSystemDefault(dt, opts) {
+      if (this.systemLoc === null) {
+        this.systemLoc = this.loc.redefaultToSystem();
+      }
+      const df = this.systemLoc.dtFormatter(dt, {
+        ...this.opts,
+        ...opts
+      });
+      return df.format();
+    }
+    dtFormatter(dt, opts = {}) {
+      return this.loc.dtFormatter(dt, {
+        ...this.opts,
+        ...opts
+      });
+    }
+    formatDateTime(dt, opts) {
+      return this.dtFormatter(dt, opts).format();
+    }
+    formatDateTimeParts(dt, opts) {
+      return this.dtFormatter(dt, opts).formatToParts();
+    }
+    formatInterval(interval2, opts) {
+      const df = this.dtFormatter(interval2.start, opts);
+      return df.dtf.formatRange(interval2.start.toJSDate(), interval2.end.toJSDate());
+    }
+    resolvedOptions(dt, opts) {
+      return this.dtFormatter(dt, opts).resolvedOptions();
+    }
+    num(n2, p = 0, signDisplay = undefined) {
+      if (this.opts.forceSimple) {
+        return padStart(n2, p);
+      }
+      const opts = {
+        ...this.opts
+      };
+      if (p > 0) {
+        opts.padTo = p;
+      }
+      if (signDisplay) {
+        opts.signDisplay = signDisplay;
+      }
+      return this.loc.numberFormatter(opts).format(n2);
+    }
+    formatDateTimeFromString(dt, fmt) {
+      const knownEnglish = this.loc.listingMode() === "en", useDateTimeFormatter = this.loc.outputCalendar && this.loc.outputCalendar !== "gregory", string4 = (opts, extract) => this.loc.extract(dt, opts, extract), formatOffset2 = (opts) => {
+        if (dt.isOffsetFixed && dt.offset === 0 && opts.allowZ) {
+          return "Z";
+        }
+        return dt.isValid ? dt.zone.formatOffset(dt.ts, opts.format) : "";
+      }, meridiem = () => knownEnglish ? meridiemForDateTime(dt) : string4({
+        hour: "numeric",
+        hourCycle: "h12"
+      }, "dayperiod"), month = (length, standalone) => knownEnglish ? monthForDateTime(dt, length) : string4(standalone ? {
+        month: length
+      } : {
+        month: length,
+        day: "numeric"
+      }, "month"), weekday = (length, standalone) => knownEnglish ? weekdayForDateTime(dt, length) : string4(standalone ? {
+        weekday: length
+      } : {
+        weekday: length,
+        month: "long",
+        day: "numeric"
+      }, "weekday"), maybeMacro = (token) => {
+        const formatOpts = Formatter.macroTokenToFormatOpts(token);
+        if (formatOpts) {
+          return this.formatWithSystemDefault(dt, formatOpts);
+        } else {
+          return token;
+        }
+      }, era = (length) => knownEnglish ? eraForDateTime(dt, length) : string4({
+        era: length
+      }, "era"), tokenToString = (token) => {
+        switch (token) {
+          case "S":
+            return this.num(dt.millisecond);
+          case "u":
+          case "SSS":
+            return this.num(dt.millisecond, 3);
+          case "s":
+            return this.num(dt.second);
+          case "ss":
+            return this.num(dt.second, 2);
+          case "uu":
+            return this.num(Math.floor(dt.millisecond / 10), 2);
+          case "uuu":
+            return this.num(Math.floor(dt.millisecond / 100));
+          case "m":
+            return this.num(dt.minute);
+          case "mm":
+            return this.num(dt.minute, 2);
+          case "h":
+            return this.num(dt.hour % 12 === 0 ? 12 : dt.hour % 12);
+          case "hh":
+            return this.num(dt.hour % 12 === 0 ? 12 : dt.hour % 12, 2);
+          case "H":
+            return this.num(dt.hour);
+          case "HH":
+            return this.num(dt.hour, 2);
+          case "Z":
+            return formatOffset2({
+              format: "narrow",
+              allowZ: this.opts.allowZ
+            });
+          case "ZZ":
+            return formatOffset2({
+              format: "short",
+              allowZ: this.opts.allowZ
+            });
+          case "ZZZ":
+            return formatOffset2({
+              format: "techie",
+              allowZ: this.opts.allowZ
+            });
+          case "ZZZZ":
+            return dt.zone.offsetName(dt.ts, {
+              format: "short",
+              locale: this.loc.locale
+            });
+          case "ZZZZZ":
+            return dt.zone.offsetName(dt.ts, {
+              format: "long",
+              locale: this.loc.locale
+            });
+          case "z":
+            return dt.zoneName;
+          case "a":
+            return meridiem();
+          case "d":
+            return useDateTimeFormatter ? string4({
+              day: "numeric"
+            }, "day") : this.num(dt.day);
+          case "dd":
+            return useDateTimeFormatter ? string4({
+              day: "2-digit"
+            }, "day") : this.num(dt.day, 2);
+          case "c":
+            return this.num(dt.weekday);
+          case "ccc":
+            return weekday("short", true);
+          case "cccc":
+            return weekday("long", true);
+          case "ccccc":
+            return weekday("narrow", true);
+          case "E":
+            return this.num(dt.weekday);
+          case "EEE":
+            return weekday("short", false);
+          case "EEEE":
+            return weekday("long", false);
+          case "EEEEE":
+            return weekday("narrow", false);
+          case "L":
+            return useDateTimeFormatter ? string4({
+              month: "numeric",
+              day: "numeric"
+            }, "month") : this.num(dt.month);
+          case "LL":
+            return useDateTimeFormatter ? string4({
+              month: "2-digit",
+              day: "numeric"
+            }, "month") : this.num(dt.month, 2);
+          case "LLL":
+            return month("short", true);
+          case "LLLL":
+            return month("long", true);
+          case "LLLLL":
+            return month("narrow", true);
+          case "M":
+            return useDateTimeFormatter ? string4({
+              month: "numeric"
+            }, "month") : this.num(dt.month);
+          case "MM":
+            return useDateTimeFormatter ? string4({
+              month: "2-digit"
+            }, "month") : this.num(dt.month, 2);
+          case "MMM":
+            return month("short", false);
+          case "MMMM":
+            return month("long", false);
+          case "MMMMM":
+            return month("narrow", false);
+          case "y":
+            return useDateTimeFormatter ? string4({
+              year: "numeric"
+            }, "year") : this.num(dt.year);
+          case "yy":
+            return useDateTimeFormatter ? string4({
+              year: "2-digit"
+            }, "year") : this.num(dt.year.toString().slice(-2), 2);
+          case "yyyy":
+            return useDateTimeFormatter ? string4({
+              year: "numeric"
+            }, "year") : this.num(dt.year, 4);
+          case "yyyyyy":
+            return useDateTimeFormatter ? string4({
+              year: "numeric"
+            }, "year") : this.num(dt.year, 6);
+          case "G":
+            return era("short");
+          case "GG":
+            return era("long");
+          case "GGGGG":
+            return era("narrow");
+          case "kk":
+            return this.num(dt.weekYear.toString().slice(-2), 2);
+          case "kkkk":
+            return this.num(dt.weekYear, 4);
+          case "W":
+            return this.num(dt.weekNumber);
+          case "WW":
+            return this.num(dt.weekNumber, 2);
+          case "n":
+            return this.num(dt.localWeekNumber);
+          case "nn":
+            return this.num(dt.localWeekNumber, 2);
+          case "ii":
+            return this.num(dt.localWeekYear.toString().slice(-2), 2);
+          case "iiii":
+            return this.num(dt.localWeekYear, 4);
+          case "o":
+            return this.num(dt.ordinal);
+          case "ooo":
+            return this.num(dt.ordinal, 3);
+          case "q":
+            return this.num(dt.quarter);
+          case "qq":
+            return this.num(dt.quarter, 2);
+          case "X":
+            return this.num(Math.floor(dt.ts / 1000));
+          case "x":
+            return this.num(dt.ts);
+          default:
+            return maybeMacro(token);
+        }
+      };
+      return stringifyTokens(Formatter.parseFormat(fmt), tokenToString);
+    }
+    formatDurationFromString(dur, fmt) {
+      const invertLargest = this.opts.signMode === "negativeLargestOnly" ? -1 : 1;
+      const tokenToField = (token) => {
+        switch (token[0]) {
+          case "S":
+            return "milliseconds";
+          case "s":
+            return "seconds";
+          case "m":
+            return "minutes";
+          case "h":
+            return "hours";
+          case "d":
+            return "days";
+          case "w":
+            return "weeks";
+          case "M":
+            return "months";
+          case "y":
+            return "years";
+          default:
+            return null;
+        }
+      }, tokenToString = (lildur, info) => (token) => {
+        const mapped = tokenToField(token);
+        if (mapped) {
+          const inversionFactor = info.isNegativeDuration && mapped !== info.largestUnit ? invertLargest : 1;
+          let signDisplay;
+          if (this.opts.signMode === "negativeLargestOnly" && mapped !== info.largestUnit) {
+            signDisplay = "never";
+          } else if (this.opts.signMode === "all") {
+            signDisplay = "always";
+          } else {
+            signDisplay = "auto";
+          }
+          return this.num(lildur.get(mapped) * inversionFactor, token.length, signDisplay);
+        } else {
+          return token;
+        }
+      }, tokens = Formatter.parseFormat(fmt), realTokens = tokens.reduce((found, {
+        literal: literal2,
+        val
+      }) => literal2 ? found : found.concat(val), []), collapsed = dur.shiftTo(...realTokens.map(tokenToField).filter((t2) => t2)), durationInfo = {
+        isNegativeDuration: collapsed < 0,
+        largestUnit: Object.keys(collapsed.values)[0]
+      };
+      return stringifyTokens(tokens, tokenToString(collapsed, durationInfo));
+    }
+  }
+  var ianaRegex = /[A-Za-z_+-]{1,256}(?::?\/[A-Za-z0-9_+-]{1,256}(?:\/[A-Za-z0-9_+-]{1,256})?)?/;
+  function combineRegexes(...regexes) {
+    const full = regexes.reduce((f, r) => f + r.source, "");
+    return RegExp(`^${full}$`);
+  }
+  function combineExtractors(...extractors) {
+    return (m) => extractors.reduce(([mergedVals, mergedZone, cursor], ex) => {
+      const [val, zone, next2] = ex(m, cursor);
+      return [{
+        ...mergedVals,
+        ...val
+      }, zone || mergedZone, next2];
+    }, [{}, null, 1]).slice(0, 2);
+  }
+  function parse7(s2, ...patterns) {
+    if (s2 == null) {
+      return [null, null];
+    }
+    for (const [regex, extractor] of patterns) {
+      const m = regex.exec(s2);
+      if (m) {
+        return extractor(m);
+      }
+    }
+    return [null, null];
+  }
+  function simpleParse(...keys) {
+    return (match3, cursor) => {
+      const ret = {};
+      let i;
+      for (i = 0;i < keys.length; i++) {
+        ret[keys[i]] = parseInteger(match3[cursor + i]);
+      }
+      return [ret, null, cursor + i];
+    };
+  }
+  var offsetRegex = /(?:([Zz])|([+-]\d\d)(?::?(\d\d))?)/;
+  var isoExtendedZone = `(?:${offsetRegex.source}?(?:\\[(${ianaRegex.source})\\])?)?`;
+  var isoTimeBaseRegex = /(\d\d)(?::?(\d\d)(?::?(\d\d)(?:[.,](\d{1,30}))?)?)?/;
+  var isoTimeRegex = RegExp(`${isoTimeBaseRegex.source}${isoExtendedZone}`);
+  var isoTimeExtensionRegex = RegExp(`(?:[Tt]${isoTimeRegex.source})?`);
+  var isoYmdRegex = /([+-]\d{6}|\d{4})(?:-?(\d\d)(?:-?(\d\d))?)?/;
+  var isoWeekRegex = /(\d{4})-?W(\d\d)(?:-?(\d))?/;
+  var isoOrdinalRegex = /(\d{4})-?(\d{3})/;
+  var extractISOWeekData = simpleParse("weekYear", "weekNumber", "weekDay");
+  var extractISOOrdinalData = simpleParse("year", "ordinal");
+  var sqlYmdRegex = /(\d{4})-(\d\d)-(\d\d)/;
+  var sqlTimeRegex = RegExp(`${isoTimeBaseRegex.source} ?(?:${offsetRegex.source}|(${ianaRegex.source}))?`);
+  var sqlTimeExtensionRegex = RegExp(`(?: ${sqlTimeRegex.source})?`);
+  function int2(match3, pos, fallback) {
+    const m = match3[pos];
+    return isUndefined(m) ? fallback : parseInteger(m);
+  }
+  function extractISOYmd(match3, cursor) {
+    const item = {
+      year: int2(match3, cursor),
+      month: int2(match3, cursor + 1, 1),
+      day: int2(match3, cursor + 2, 1)
+    };
+    return [item, null, cursor + 3];
+  }
+  function extractISOTime(match3, cursor) {
+    const item = {
+      hours: int2(match3, cursor, 0),
+      minutes: int2(match3, cursor + 1, 0),
+      seconds: int2(match3, cursor + 2, 0),
+      milliseconds: parseMillis(match3[cursor + 3])
+    };
+    return [item, null, cursor + 4];
+  }
+  function extractISOOffset(match3, cursor) {
+    const local = !match3[cursor] && !match3[cursor + 1], fullOffset = signedOffset(match3[cursor + 1], match3[cursor + 2]), zone = local ? null : FixedOffsetZone.instance(fullOffset);
+    return [{}, zone, cursor + 3];
+  }
+  function extractIANAZone(match3, cursor) {
+    const zone = match3[cursor] ? IANAZone.create(match3[cursor]) : null;
+    return [{}, zone, cursor + 1];
+  }
+  var isoTimeOnly = RegExp(`^T?${isoTimeBaseRegex.source}$`);
+  var isoDuration = /^-?P(?:(?:(-?\d{1,20}(?:\.\d{1,20})?)Y)?(?:(-?\d{1,20}(?:\.\d{1,20})?)M)?(?:(-?\d{1,20}(?:\.\d{1,20})?)W)?(?:(-?\d{1,20}(?:\.\d{1,20})?)D)?(?:T(?:(-?\d{1,20}(?:\.\d{1,20})?)H)?(?:(-?\d{1,20}(?:\.\d{1,20})?)M)?(?:(-?\d{1,20})(?:[.,](-?\d{1,20}))?S)?)?)$/;
+  function extractISODuration(match3) {
+    const [s2, yearStr, monthStr, weekStr, dayStr, hourStr, minuteStr, secondStr, millisecondsStr] = match3;
+    const hasNegativePrefix = s2[0] === "-";
+    const negativeSeconds = secondStr && secondStr[0] === "-";
+    const maybeNegate = (num, force = false) => num !== undefined && (force || num && hasNegativePrefix) ? -num : num;
+    return [{
+      years: maybeNegate(parseFloating(yearStr)),
+      months: maybeNegate(parseFloating(monthStr)),
+      weeks: maybeNegate(parseFloating(weekStr)),
+      days: maybeNegate(parseFloating(dayStr)),
+      hours: maybeNegate(parseFloating(hourStr)),
+      minutes: maybeNegate(parseFloating(minuteStr)),
+      seconds: maybeNegate(parseFloating(secondStr), secondStr === "-0"),
+      milliseconds: maybeNegate(parseMillis(millisecondsStr), negativeSeconds)
+    }];
+  }
+  var obsOffsets = {
+    GMT: 0,
+    EDT: -4 * 60,
+    EST: -5 * 60,
+    CDT: -5 * 60,
+    CST: -6 * 60,
+    MDT: -6 * 60,
+    MST: -7 * 60,
+    PDT: -7 * 60,
+    PST: -8 * 60
+  };
+  function fromStrings(weekdayStr, yearStr, monthStr, dayStr, hourStr, minuteStr, secondStr) {
+    const result = {
+      year: yearStr.length === 2 ? untruncateYear(parseInteger(yearStr)) : parseInteger(yearStr),
+      month: monthsShort.indexOf(monthStr) + 1,
+      day: parseInteger(dayStr),
+      hour: parseInteger(hourStr),
+      minute: parseInteger(minuteStr)
+    };
+    if (secondStr)
+      result.second = parseInteger(secondStr);
+    if (weekdayStr) {
+      result.weekday = weekdayStr.length > 3 ? weekdaysLong.indexOf(weekdayStr) + 1 : weekdaysShort.indexOf(weekdayStr) + 1;
+    }
+    return result;
+  }
+  var rfc2822 = /^(?:(Mon|Tue|Wed|Thu|Fri|Sat|Sun),\s)?(\d{1,2})\s(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s(\d{2,4})\s(\d\d):(\d\d)(?::(\d\d))?\s(?:(UT|GMT|[ECMP][SD]T)|([Zz])|(?:([+-]\d\d)(\d\d)))$/;
+  function extractRFC2822(match3) {
+    const [, weekdayStr, dayStr, monthStr, yearStr, hourStr, minuteStr, secondStr, obsOffset, milOffset, offHourStr, offMinuteStr] = match3, result = fromStrings(weekdayStr, yearStr, monthStr, dayStr, hourStr, minuteStr, secondStr);
+    let offset2;
+    if (obsOffset) {
+      offset2 = obsOffsets[obsOffset];
+    } else if (milOffset) {
+      offset2 = 0;
+    } else {
+      offset2 = signedOffset(offHourStr, offMinuteStr);
+    }
+    return [result, new FixedOffsetZone(offset2)];
+  }
+  function preprocessRFC2822(s2) {
+    return s2.replace(/\([^()]*\)|[\n\t]/g, " ").replace(/(\s\s+)/g, " ").trim();
+  }
+  var rfc1123 = /^(Mon|Tue|Wed|Thu|Fri|Sat|Sun), (\d\d) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (\d{4}) (\d\d):(\d\d):(\d\d) GMT$/;
+  var rfc850 = /^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday), (\d\d)-(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)-(\d\d) (\d\d):(\d\d):(\d\d) GMT$/;
+  var ascii = /^(Mon|Tue|Wed|Thu|Fri|Sat|Sun) (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) ( \d|\d\d) (\d\d):(\d\d):(\d\d) (\d{4})$/;
+  function extractRFC1123Or850(match3) {
+    const [, weekdayStr, dayStr, monthStr, yearStr, hourStr, minuteStr, secondStr] = match3, result = fromStrings(weekdayStr, yearStr, monthStr, dayStr, hourStr, minuteStr, secondStr);
+    return [result, FixedOffsetZone.utcInstance];
+  }
+  function extractASCII(match3) {
+    const [, weekdayStr, monthStr, dayStr, hourStr, minuteStr, secondStr, yearStr] = match3, result = fromStrings(weekdayStr, yearStr, monthStr, dayStr, hourStr, minuteStr, secondStr);
+    return [result, FixedOffsetZone.utcInstance];
+  }
+  var isoYmdWithTimeExtensionRegex = combineRegexes(isoYmdRegex, isoTimeExtensionRegex);
+  var isoWeekWithTimeExtensionRegex = combineRegexes(isoWeekRegex, isoTimeExtensionRegex);
+  var isoOrdinalWithTimeExtensionRegex = combineRegexes(isoOrdinalRegex, isoTimeExtensionRegex);
+  var isoTimeCombinedRegex = combineRegexes(isoTimeRegex);
+  var extractISOYmdTimeAndOffset = combineExtractors(extractISOYmd, extractISOTime, extractISOOffset, extractIANAZone);
+  var extractISOWeekTimeAndOffset = combineExtractors(extractISOWeekData, extractISOTime, extractISOOffset, extractIANAZone);
+  var extractISOOrdinalDateAndTime = combineExtractors(extractISOOrdinalData, extractISOTime, extractISOOffset, extractIANAZone);
+  var extractISOTimeAndOffset = combineExtractors(extractISOTime, extractISOOffset, extractIANAZone);
+  function parseISODate(s2) {
+    return parse7(s2, [isoYmdWithTimeExtensionRegex, extractISOYmdTimeAndOffset], [isoWeekWithTimeExtensionRegex, extractISOWeekTimeAndOffset], [isoOrdinalWithTimeExtensionRegex, extractISOOrdinalDateAndTime], [isoTimeCombinedRegex, extractISOTimeAndOffset]);
+  }
+  function parseRFC2822Date(s2) {
+    return parse7(preprocessRFC2822(s2), [rfc2822, extractRFC2822]);
+  }
+  function parseHTTPDate(s2) {
+    return parse7(s2, [rfc1123, extractRFC1123Or850], [rfc850, extractRFC1123Or850], [ascii, extractASCII]);
+  }
+  function parseISODuration(s2) {
+    return parse7(s2, [isoDuration, extractISODuration]);
+  }
+  var extractISOTimeOnly = combineExtractors(extractISOTime);
+  function parseISOTimeOnly(s2) {
+    return parse7(s2, [isoTimeOnly, extractISOTimeOnly]);
+  }
+  var sqlYmdWithTimeExtensionRegex = combineRegexes(sqlYmdRegex, sqlTimeExtensionRegex);
+  var sqlTimeCombinedRegex = combineRegexes(sqlTimeRegex);
+  var extractISOTimeOffsetAndIANAZone = combineExtractors(extractISOTime, extractISOOffset, extractIANAZone);
+  function parseSQL(s2) {
+    return parse7(s2, [sqlYmdWithTimeExtensionRegex, extractISOYmdTimeAndOffset], [sqlTimeCombinedRegex, extractISOTimeOffsetAndIANAZone]);
+  }
+  var INVALID$2 = "Invalid Duration";
+  var lowOrderMatrix = {
+    weeks: {
+      days: 7,
+      hours: 7 * 24,
+      minutes: 7 * 24 * 60,
+      seconds: 7 * 24 * 60 * 60,
+      milliseconds: 7 * 24 * 60 * 60 * 1000
+    },
+    days: {
+      hours: 24,
+      minutes: 24 * 60,
+      seconds: 24 * 60 * 60,
+      milliseconds: 24 * 60 * 60 * 1000
+    },
+    hours: {
+      minutes: 60,
+      seconds: 60 * 60,
+      milliseconds: 60 * 60 * 1000
+    },
+    minutes: {
+      seconds: 60,
+      milliseconds: 60 * 1000
+    },
+    seconds: {
+      milliseconds: 1000
+    }
+  };
+  var casualMatrix = {
+    years: {
+      quarters: 4,
+      months: 12,
+      weeks: 52,
+      days: 365,
+      hours: 365 * 24,
+      minutes: 365 * 24 * 60,
+      seconds: 365 * 24 * 60 * 60,
+      milliseconds: 365 * 24 * 60 * 60 * 1000
+    },
+    quarters: {
+      months: 3,
+      weeks: 13,
+      days: 91,
+      hours: 91 * 24,
+      minutes: 91 * 24 * 60,
+      seconds: 91 * 24 * 60 * 60,
+      milliseconds: 91 * 24 * 60 * 60 * 1000
+    },
+    months: {
+      weeks: 4,
+      days: 30,
+      hours: 30 * 24,
+      minutes: 30 * 24 * 60,
+      seconds: 30 * 24 * 60 * 60,
+      milliseconds: 30 * 24 * 60 * 60 * 1000
+    },
+    ...lowOrderMatrix
+  };
+  var daysInYearAccurate = 146097 / 400;
+  var daysInMonthAccurate = 146097 / 4800;
+  var accurateMatrix = {
+    years: {
+      quarters: 4,
+      months: 12,
+      weeks: daysInYearAccurate / 7,
+      days: daysInYearAccurate,
+      hours: daysInYearAccurate * 24,
+      minutes: daysInYearAccurate * 24 * 60,
+      seconds: daysInYearAccurate * 24 * 60 * 60,
+      milliseconds: daysInYearAccurate * 24 * 60 * 60 * 1000
+    },
+    quarters: {
+      months: 3,
+      weeks: daysInYearAccurate / 28,
+      days: daysInYearAccurate / 4,
+      hours: daysInYearAccurate * 24 / 4,
+      minutes: daysInYearAccurate * 24 * 60 / 4,
+      seconds: daysInYearAccurate * 24 * 60 * 60 / 4,
+      milliseconds: daysInYearAccurate * 24 * 60 * 60 * 1000 / 4
+    },
+    months: {
+      weeks: daysInMonthAccurate / 7,
+      days: daysInMonthAccurate,
+      hours: daysInMonthAccurate * 24,
+      minutes: daysInMonthAccurate * 24 * 60,
+      seconds: daysInMonthAccurate * 24 * 60 * 60,
+      milliseconds: daysInMonthAccurate * 24 * 60 * 60 * 1000
+    },
+    ...lowOrderMatrix
+  };
+  var orderedUnits$1 = ["years", "quarters", "months", "weeks", "days", "hours", "minutes", "seconds", "milliseconds"];
+  var reverseUnits = orderedUnits$1.slice(0).reverse();
+  function clone$1(dur, alts, clear = false) {
+    const conf = {
+      values: clear ? alts.values : {
+        ...dur.values,
+        ...alts.values || {}
+      },
+      loc: dur.loc.clone(alts.loc),
+      conversionAccuracy: alts.conversionAccuracy || dur.conversionAccuracy,
+      matrix: alts.matrix || dur.matrix
+    };
+    return new Duration(conf);
+  }
+  function durationToMillis(matrix, vals) {
+    var _vals$milliseconds;
+    let sum = (_vals$milliseconds = vals.milliseconds) != null ? _vals$milliseconds : 0;
+    for (const unit of reverseUnits.slice(1)) {
+      if (vals[unit]) {
+        sum += vals[unit] * matrix[unit]["milliseconds"];
+      }
+    }
+    return sum;
+  }
+  function normalizeValues(matrix, vals) {
+    const factor = durationToMillis(matrix, vals) < 0 ? -1 : 1;
+    orderedUnits$1.reduceRight((previous, current) => {
+      if (!isUndefined(vals[current])) {
+        if (previous) {
+          const previousVal = vals[previous] * factor;
+          const conv = matrix[current][previous];
+          const rollUp = Math.floor(previousVal / conv);
+          vals[current] += rollUp * factor;
+          vals[previous] -= rollUp * conv * factor;
+        }
+        return current;
+      } else {
+        return previous;
+      }
+    }, null);
+    orderedUnits$1.reduce((previous, current) => {
+      if (!isUndefined(vals[current])) {
+        if (previous) {
+          const fraction = vals[previous] % 1;
+          vals[previous] -= fraction;
+          vals[current] += fraction * matrix[previous][current];
+        }
+        return current;
+      } else {
+        return previous;
+      }
+    }, null);
+  }
+  function removeZeroes(vals) {
+    const newVals = {};
+    for (const [key, value] of Object.entries(vals)) {
+      if (value !== 0) {
+        newVals[key] = value;
+      }
+    }
+    return newVals;
+  }
+
+  class Duration {
+    constructor(config2) {
+      const accurate = config2.conversionAccuracy === "longterm" || false;
+      let matrix = accurate ? accurateMatrix : casualMatrix;
+      if (config2.matrix) {
+        matrix = config2.matrix;
+      }
+      this.values = config2.values;
+      this.loc = config2.loc || Locale.create();
+      this.conversionAccuracy = accurate ? "longterm" : "casual";
+      this.invalid = config2.invalid || null;
+      this.matrix = matrix;
+      this.isLuxonDuration = true;
+    }
+    static fromMillis(count, opts) {
+      return Duration.fromObject({
+        milliseconds: count
+      }, opts);
+    }
+    static fromObject(obj, opts = {}) {
+      if (obj == null || typeof obj !== "object") {
+        throw new InvalidArgumentError(`Duration.fromObject: argument expected to be an object, got ${obj === null ? "null" : typeof obj}`);
+      }
+      return new Duration({
+        values: normalizeObject(obj, Duration.normalizeUnit),
+        loc: Locale.fromObject(opts),
+        conversionAccuracy: opts.conversionAccuracy,
+        matrix: opts.matrix
+      });
+    }
+    static fromDurationLike(durationLike) {
+      if (isNumber(durationLike)) {
+        return Duration.fromMillis(durationLike);
+      } else if (Duration.isDuration(durationLike)) {
+        return durationLike;
+      } else if (typeof durationLike === "object") {
+        return Duration.fromObject(durationLike);
+      } else {
+        throw new InvalidArgumentError(`Unknown duration argument ${durationLike} of type ${typeof durationLike}`);
+      }
+    }
+    static fromISO(text2, opts) {
+      const [parsed] = parseISODuration(text2);
+      if (parsed) {
+        return Duration.fromObject(parsed, opts);
+      } else {
+        return Duration.invalid("unparsable", `the input "${text2}" can't be parsed as ISO 8601`);
+      }
+    }
+    static fromISOTime(text2, opts) {
+      const [parsed] = parseISOTimeOnly(text2);
+      if (parsed) {
+        return Duration.fromObject(parsed, opts);
+      } else {
+        return Duration.invalid("unparsable", `the input "${text2}" can't be parsed as ISO 8601`);
+      }
+    }
+    static invalid(reason, explanation = null) {
+      if (!reason) {
+        throw new InvalidArgumentError("need to specify a reason the Duration is invalid");
+      }
+      const invalid = reason instanceof Invalid ? reason : new Invalid(reason, explanation);
+      if (Settings.throwOnInvalid) {
+        throw new InvalidDurationError(invalid);
+      } else {
+        return new Duration({
+          invalid
+        });
+      }
+    }
+    static normalizeUnit(unit) {
+      const normalized = {
+        year: "years",
+        years: "years",
+        quarter: "quarters",
+        quarters: "quarters",
+        month: "months",
+        months: "months",
+        week: "weeks",
+        weeks: "weeks",
+        day: "days",
+        days: "days",
+        hour: "hours",
+        hours: "hours",
+        minute: "minutes",
+        minutes: "minutes",
+        second: "seconds",
+        seconds: "seconds",
+        millisecond: "milliseconds",
+        milliseconds: "milliseconds"
+      }[unit ? unit.toLowerCase() : unit];
+      if (!normalized)
+        throw new InvalidUnitError(unit);
+      return normalized;
+    }
+    static isDuration(o) {
+      return o && o.isLuxonDuration || false;
+    }
+    get locale() {
+      return this.isValid ? this.loc.locale : null;
+    }
+    get numberingSystem() {
+      return this.isValid ? this.loc.numberingSystem : null;
+    }
+    toFormat(fmt, opts = {}) {
+      const fmtOpts = {
+        ...opts,
+        floor: opts.round !== false && opts.floor !== false
+      };
+      return this.isValid ? Formatter.create(this.loc, fmtOpts).formatDurationFromString(this, fmt) : INVALID$2;
+    }
+    toHuman(opts = {}) {
+      if (!this.isValid)
+        return INVALID$2;
+      const showZeros = opts.showZeros !== false;
+      const l2 = orderedUnits$1.map((unit) => {
+        const val = this.values[unit];
+        if (isUndefined(val) || val === 0 && !showZeros) {
+          return null;
+        }
+        return this.loc.numberFormatter({
+          style: "unit",
+          unitDisplay: "long",
+          ...opts,
+          unit: unit.slice(0, -1)
+        }).format(val);
+      }).filter((n2) => n2);
+      return this.loc.listFormatter({
+        type: "conjunction",
+        style: opts.listStyle || "narrow",
+        ...opts
+      }).format(l2);
+    }
+    toObject() {
+      if (!this.isValid)
+        return {};
+      return {
+        ...this.values
+      };
+    }
+    toISO() {
+      if (!this.isValid)
+        return null;
+      let s2 = "P";
+      if (this.years !== 0)
+        s2 += this.years + "Y";
+      if (this.months !== 0 || this.quarters !== 0)
+        s2 += this.months + this.quarters * 3 + "M";
+      if (this.weeks !== 0)
+        s2 += this.weeks + "W";
+      if (this.days !== 0)
+        s2 += this.days + "D";
+      if (this.hours !== 0 || this.minutes !== 0 || this.seconds !== 0 || this.milliseconds !== 0)
+        s2 += "T";
+      if (this.hours !== 0)
+        s2 += this.hours + "H";
+      if (this.minutes !== 0)
+        s2 += this.minutes + "M";
+      if (this.seconds !== 0 || this.milliseconds !== 0)
+        s2 += roundTo(this.seconds + this.milliseconds / 1000, 3) + "S";
+      if (s2 === "P")
+        s2 += "T0S";
+      return s2;
+    }
+    toISOTime(opts = {}) {
+      if (!this.isValid)
+        return null;
+      const millis = this.toMillis();
+      if (millis < 0 || millis >= 86400000)
+        return null;
+      opts = {
+        suppressMilliseconds: false,
+        suppressSeconds: false,
+        includePrefix: false,
+        format: "extended",
+        ...opts,
+        includeOffset: false
+      };
+      const dateTime = DateTime.fromMillis(millis, {
+        zone: "UTC"
+      });
+      return dateTime.toISOTime(opts);
+    }
+    toJSON() {
+      return this.toISO();
+    }
+    toString() {
+      return this.toISO();
+    }
+    [Symbol.for("nodejs.util.inspect.custom")]() {
+      if (this.isValid) {
+        return `Duration { values: ${JSON.stringify(this.values)} }`;
+      } else {
+        return `Duration { Invalid, reason: ${this.invalidReason} }`;
+      }
+    }
+    toMillis() {
+      if (!this.isValid)
+        return NaN;
+      return durationToMillis(this.matrix, this.values);
+    }
+    valueOf() {
+      return this.toMillis();
+    }
+    plus(duration3) {
+      if (!this.isValid)
+        return this;
+      const dur = Duration.fromDurationLike(duration3), result = {};
+      for (const k of orderedUnits$1) {
+        if (hasOwnProperty(dur.values, k) || hasOwnProperty(this.values, k)) {
+          result[k] = dur.get(k) + this.get(k);
+        }
+      }
+      return clone$1(this, {
+        values: result
+      }, true);
+    }
+    minus(duration3) {
+      if (!this.isValid)
+        return this;
+      const dur = Duration.fromDurationLike(duration3);
+      return this.plus(dur.negate());
+    }
+    mapUnits(fn) {
+      if (!this.isValid)
+        return this;
+      const result = {};
+      for (const k of Object.keys(this.values)) {
+        result[k] = asNumber(fn(this.values[k], k));
+      }
+      return clone$1(this, {
+        values: result
+      }, true);
+    }
+    get(unit) {
+      return this[Duration.normalizeUnit(unit)];
+    }
+    set(values2) {
+      if (!this.isValid)
+        return this;
+      const mixed = {
+        ...this.values,
+        ...normalizeObject(values2, Duration.normalizeUnit)
+      };
+      return clone$1(this, {
+        values: mixed
+      });
+    }
+    reconfigure({
+      locale,
+      numberingSystem,
+      conversionAccuracy,
+      matrix
+    } = {}) {
+      const loc = this.loc.clone({
+        locale,
+        numberingSystem
+      });
+      const opts = {
+        loc,
+        matrix,
+        conversionAccuracy
+      };
+      return clone$1(this, opts);
+    }
+    as(unit) {
+      return this.isValid ? this.shiftTo(unit).get(unit) : NaN;
+    }
+    normalize() {
+      if (!this.isValid)
+        return this;
+      const vals = this.toObject();
+      normalizeValues(this.matrix, vals);
+      return clone$1(this, {
+        values: vals
+      }, true);
+    }
+    rescale() {
+      if (!this.isValid)
+        return this;
+      const vals = removeZeroes(this.normalize().shiftToAll().toObject());
+      return clone$1(this, {
+        values: vals
+      }, true);
+    }
+    shiftTo(...units) {
+      if (!this.isValid)
+        return this;
+      if (units.length === 0) {
+        return this;
+      }
+      units = units.map((u) => Duration.normalizeUnit(u));
+      const built = {}, accumulated = {}, vals = this.toObject();
+      let lastUnit;
+      for (const k of orderedUnits$1) {
+        if (units.indexOf(k) >= 0) {
+          lastUnit = k;
+          let own = 0;
+          for (const ak in accumulated) {
+            own += this.matrix[ak][k] * accumulated[ak];
+            accumulated[ak] = 0;
+          }
+          if (isNumber(vals[k])) {
+            own += vals[k];
+          }
+          const i = Math.trunc(own);
+          built[k] = i;
+          accumulated[k] = (own * 1000 - i * 1000) / 1000;
+        } else if (isNumber(vals[k])) {
+          accumulated[k] = vals[k];
+        }
+      }
+      for (const key in accumulated) {
+        if (accumulated[key] !== 0) {
+          built[lastUnit] += key === lastUnit ? accumulated[key] : accumulated[key] / this.matrix[lastUnit][key];
+        }
+      }
+      normalizeValues(this.matrix, built);
+      return clone$1(this, {
+        values: built
+      }, true);
+    }
+    shiftToAll() {
+      if (!this.isValid)
+        return this;
+      return this.shiftTo("years", "months", "weeks", "days", "hours", "minutes", "seconds", "milliseconds");
+    }
+    negate() {
+      if (!this.isValid)
+        return this;
+      const negated = {};
+      for (const k of Object.keys(this.values)) {
+        negated[k] = this.values[k] === 0 ? 0 : -this.values[k];
+      }
+      return clone$1(this, {
+        values: negated
+      }, true);
+    }
+    removeZeros() {
+      if (!this.isValid)
+        return this;
+      const vals = removeZeroes(this.values);
+      return clone$1(this, {
+        values: vals
+      }, true);
+    }
+    get years() {
+      return this.isValid ? this.values.years || 0 : NaN;
+    }
+    get quarters() {
+      return this.isValid ? this.values.quarters || 0 : NaN;
+    }
+    get months() {
+      return this.isValid ? this.values.months || 0 : NaN;
+    }
+    get weeks() {
+      return this.isValid ? this.values.weeks || 0 : NaN;
+    }
+    get days() {
+      return this.isValid ? this.values.days || 0 : NaN;
+    }
+    get hours() {
+      return this.isValid ? this.values.hours || 0 : NaN;
+    }
+    get minutes() {
+      return this.isValid ? this.values.minutes || 0 : NaN;
+    }
+    get seconds() {
+      return this.isValid ? this.values.seconds || 0 : NaN;
+    }
+    get milliseconds() {
+      return this.isValid ? this.values.milliseconds || 0 : NaN;
+    }
+    get isValid() {
+      return this.invalid === null;
+    }
+    get invalidReason() {
+      return this.invalid ? this.invalid.reason : null;
+    }
+    get invalidExplanation() {
+      return this.invalid ? this.invalid.explanation : null;
+    }
+    equals(other) {
+      if (!this.isValid || !other.isValid) {
+        return false;
+      }
+      if (!this.loc.equals(other.loc)) {
+        return false;
+      }
+      function eq2(v1, v2) {
+        if (v1 === undefined || v1 === 0)
+          return v2 === undefined || v2 === 0;
+        return v1 === v2;
+      }
+      for (const u of orderedUnits$1) {
+        if (!eq2(this.values[u], other.values[u])) {
+          return false;
+        }
+      }
+      return true;
+    }
+  }
+  var INVALID$1 = "Invalid Interval";
+  function validateStartEnd(start, end) {
+    if (!start || !start.isValid) {
+      return Interval.invalid("missing or invalid start");
+    } else if (!end || !end.isValid) {
+      return Interval.invalid("missing or invalid end");
+    } else if (end < start) {
+      return Interval.invalid("end before start", `The end of an interval must be after its start, but you had start=${start.toISO()} and end=${end.toISO()}`);
+    } else {
+      return null;
+    }
+  }
+
+  class Interval {
+    constructor(config2) {
+      this.s = config2.start;
+      this.e = config2.end;
+      this.invalid = config2.invalid || null;
+      this.isLuxonInterval = true;
+    }
+    static invalid(reason, explanation = null) {
+      if (!reason) {
+        throw new InvalidArgumentError("need to specify a reason the Interval is invalid");
+      }
+      const invalid = reason instanceof Invalid ? reason : new Invalid(reason, explanation);
+      if (Settings.throwOnInvalid) {
+        throw new InvalidIntervalError(invalid);
+      } else {
+        return new Interval({
+          invalid
+        });
+      }
+    }
+    static fromDateTimes(start, end) {
+      const builtStart = friendlyDateTime(start), builtEnd = friendlyDateTime(end);
+      const validateError = validateStartEnd(builtStart, builtEnd);
+      if (validateError == null) {
+        return new Interval({
+          start: builtStart,
+          end: builtEnd
+        });
+      } else {
+        return validateError;
+      }
+    }
+    static after(start, duration3) {
+      const dur = Duration.fromDurationLike(duration3), dt = friendlyDateTime(start);
+      return Interval.fromDateTimes(dt, dt.plus(dur));
+    }
+    static before(end, duration3) {
+      const dur = Duration.fromDurationLike(duration3), dt = friendlyDateTime(end);
+      return Interval.fromDateTimes(dt.minus(dur), dt);
+    }
+    static fromISO(text2, opts) {
+      const [s2, e] = (text2 || "").split("/", 2);
+      if (s2 && e) {
+        let start, startIsValid;
+        try {
+          start = DateTime.fromISO(s2, opts);
+          startIsValid = start.isValid;
+        } catch (e2) {
+          startIsValid = false;
+        }
+        let end, endIsValid;
+        try {
+          end = DateTime.fromISO(e, opts);
+          endIsValid = end.isValid;
+        } catch (e2) {
+          endIsValid = false;
+        }
+        if (startIsValid && endIsValid) {
+          return Interval.fromDateTimes(start, end);
+        }
+        if (startIsValid) {
+          const dur = Duration.fromISO(e, opts);
+          if (dur.isValid) {
+            return Interval.after(start, dur);
+          }
+        } else if (endIsValid) {
+          const dur = Duration.fromISO(s2, opts);
+          if (dur.isValid) {
+            return Interval.before(end, dur);
+          }
+        }
+      }
+      return Interval.invalid("unparsable", `the input "${text2}" can't be parsed as ISO 8601`);
+    }
+    static isInterval(o) {
+      return o && o.isLuxonInterval || false;
+    }
+    get start() {
+      return this.isValid ? this.s : null;
+    }
+    get end() {
+      return this.isValid ? this.e : null;
+    }
+    get lastDateTime() {
+      return this.isValid ? this.e ? this.e.minus(1) : null : null;
+    }
+    get isValid() {
+      return this.invalidReason === null;
+    }
+    get invalidReason() {
+      return this.invalid ? this.invalid.reason : null;
+    }
+    get invalidExplanation() {
+      return this.invalid ? this.invalid.explanation : null;
+    }
+    length(unit = "milliseconds") {
+      return this.isValid ? this.toDuration(...[unit]).get(unit) : NaN;
+    }
+    count(unit = "milliseconds", opts) {
+      if (!this.isValid)
+        return NaN;
+      const start = this.start.startOf(unit, opts);
+      let end;
+      if (opts != null && opts.useLocaleWeeks) {
+        end = this.end.reconfigure({
+          locale: start.locale
+        });
+      } else {
+        end = this.end;
+      }
+      end = end.startOf(unit, opts);
+      return Math.floor(end.diff(start, unit).get(unit)) + (end.valueOf() !== this.end.valueOf());
+    }
+    hasSame(unit) {
+      return this.isValid ? this.isEmpty() || this.e.minus(1).hasSame(this.s, unit) : false;
+    }
+    isEmpty() {
+      return this.s.valueOf() === this.e.valueOf();
+    }
+    isAfter(dateTime) {
+      if (!this.isValid)
+        return false;
+      return this.s > dateTime;
+    }
+    isBefore(dateTime) {
+      if (!this.isValid)
+        return false;
+      return this.e <= dateTime;
+    }
+    contains(dateTime) {
+      if (!this.isValid)
+        return false;
+      return this.s <= dateTime && this.e > dateTime;
+    }
+    set({
+      start,
+      end
+    } = {}) {
+      if (!this.isValid)
+        return this;
+      return Interval.fromDateTimes(start || this.s, end || this.e);
+    }
+    splitAt(...dateTimes) {
+      if (!this.isValid)
+        return [];
+      const sorted = dateTimes.map(friendlyDateTime).filter((d) => this.contains(d)).sort((a, b2) => a.toMillis() - b2.toMillis()), results = [];
+      let {
+        s: s2
+      } = this, i = 0;
+      while (s2 < this.e) {
+        const added = sorted[i] || this.e, next2 = +added > +this.e ? this.e : added;
+        results.push(Interval.fromDateTimes(s2, next2));
+        s2 = next2;
+        i += 1;
+      }
+      return results;
+    }
+    splitBy(duration3) {
+      const dur = Duration.fromDurationLike(duration3);
+      if (!this.isValid || !dur.isValid || dur.as("milliseconds") === 0) {
+        return [];
+      }
+      let {
+        s: s2
+      } = this, idx = 1, next2;
+      const results = [];
+      while (s2 < this.e) {
+        const added = this.start.plus(dur.mapUnits((x) => x * idx));
+        next2 = +added > +this.e ? this.e : added;
+        results.push(Interval.fromDateTimes(s2, next2));
+        s2 = next2;
+        idx += 1;
+      }
+      return results;
+    }
+    divideEqually(numberOfParts) {
+      if (!this.isValid)
+        return [];
+      return this.splitBy(this.length() / numberOfParts).slice(0, numberOfParts);
+    }
+    overlaps(other) {
+      return this.e > other.s && this.s < other.e;
+    }
+    abutsStart(other) {
+      if (!this.isValid)
+        return false;
+      return +this.e === +other.s;
+    }
+    abutsEnd(other) {
+      if (!this.isValid)
+        return false;
+      return +other.e === +this.s;
+    }
+    engulfs(other) {
+      if (!this.isValid)
+        return false;
+      return this.s <= other.s && this.e >= other.e;
+    }
+    equals(other) {
+      if (!this.isValid || !other.isValid) {
+        return false;
+      }
+      return this.s.equals(other.s) && this.e.equals(other.e);
+    }
+    intersection(other) {
+      if (!this.isValid)
+        return this;
+      const s2 = this.s > other.s ? this.s : other.s, e = this.e < other.e ? this.e : other.e;
+      if (s2 >= e) {
+        return null;
+      } else {
+        return Interval.fromDateTimes(s2, e);
+      }
+    }
+    union(other) {
+      if (!this.isValid)
+        return this;
+      const s2 = this.s < other.s ? this.s : other.s, e = this.e > other.e ? this.e : other.e;
+      return Interval.fromDateTimes(s2, e);
+    }
+    static merge(intervals) {
+      const [found, final] = intervals.sort((a, b2) => a.s - b2.s).reduce(([sofar, current], item) => {
+        if (!current) {
+          return [sofar, item];
+        } else if (current.overlaps(item) || current.abutsStart(item)) {
+          return [sofar, current.union(item)];
+        } else {
+          return [sofar.concat([current]), item];
+        }
+      }, [[], null]);
+      if (final) {
+        found.push(final);
+      }
+      return found;
+    }
+    static xor(intervals) {
+      let start = null, currentCount = 0;
+      const results = [], ends = intervals.map((i) => [{
+        time: i.s,
+        type: "s"
+      }, {
+        time: i.e,
+        type: "e"
+      }]), flattened = Array.prototype.concat(...ends), arr = flattened.sort((a, b2) => a.time - b2.time);
+      for (const i of arr) {
+        currentCount += i.type === "s" ? 1 : -1;
+        if (currentCount === 1) {
+          start = i.time;
+        } else {
+          if (start && +start !== +i.time) {
+            results.push(Interval.fromDateTimes(start, i.time));
+          }
+          start = null;
+        }
+      }
+      return Interval.merge(results);
+    }
+    difference(...intervals) {
+      return Interval.xor([this].concat(intervals)).map((i) => this.intersection(i)).filter((i) => i && !i.isEmpty());
+    }
+    toString() {
+      if (!this.isValid)
+        return INVALID$1;
+      return `[${this.s.toISO()} \u2013 ${this.e.toISO()})`;
+    }
+    [Symbol.for("nodejs.util.inspect.custom")]() {
+      if (this.isValid) {
+        return `Interval { start: ${this.s.toISO()}, end: ${this.e.toISO()} }`;
+      } else {
+        return `Interval { Invalid, reason: ${this.invalidReason} }`;
+      }
+    }
+    toLocaleString(formatOpts = DATE_SHORT, opts = {}) {
+      return this.isValid ? Formatter.create(this.s.loc.clone(opts), formatOpts).formatInterval(this) : INVALID$1;
+    }
+    toISO(opts) {
+      if (!this.isValid)
+        return INVALID$1;
+      return `${this.s.toISO(opts)}/${this.e.toISO(opts)}`;
+    }
+    toISODate() {
+      if (!this.isValid)
+        return INVALID$1;
+      return `${this.s.toISODate()}/${this.e.toISODate()}`;
+    }
+    toISOTime(opts) {
+      if (!this.isValid)
+        return INVALID$1;
+      return `${this.s.toISOTime(opts)}/${this.e.toISOTime(opts)}`;
+    }
+    toFormat(dateFormat, {
+      separator = " \u2013 "
+    } = {}) {
+      if (!this.isValid)
+        return INVALID$1;
+      return `${this.s.toFormat(dateFormat)}${separator}${this.e.toFormat(dateFormat)}`;
+    }
+    toDuration(unit, opts) {
+      if (!this.isValid) {
+        return Duration.invalid(this.invalidReason);
+      }
+      return this.e.diff(this.s, unit, opts);
+    }
+    mapEndpoints(mapFn) {
+      return Interval.fromDateTimes(mapFn(this.s), mapFn(this.e));
+    }
+  }
+
+  class Info {
+    static hasDST(zone = Settings.defaultZone) {
+      const proto = DateTime.now().setZone(zone).set({
+        month: 12
+      });
+      return !zone.isUniversal && proto.offset !== proto.set({
+        month: 6
+      }).offset;
+    }
+    static isValidIANAZone(zone) {
+      return IANAZone.isValidZone(zone);
+    }
+    static normalizeZone(input) {
+      return normalizeZone(input, Settings.defaultZone);
+    }
+    static getStartOfWeek({
+      locale = null,
+      locObj = null
+    } = {}) {
+      return (locObj || Locale.create(locale)).getStartOfWeek();
+    }
+    static getMinimumDaysInFirstWeek({
+      locale = null,
+      locObj = null
+    } = {}) {
+      return (locObj || Locale.create(locale)).getMinDaysInFirstWeek();
+    }
+    static getWeekendWeekdays({
+      locale = null,
+      locObj = null
+    } = {}) {
+      return (locObj || Locale.create(locale)).getWeekendDays().slice();
+    }
+    static months(length = "long", {
+      locale = null,
+      numberingSystem = null,
+      locObj = null,
+      outputCalendar = "gregory"
+    } = {}) {
+      return (locObj || Locale.create(locale, numberingSystem, outputCalendar)).months(length);
+    }
+    static monthsFormat(length = "long", {
+      locale = null,
+      numberingSystem = null,
+      locObj = null,
+      outputCalendar = "gregory"
+    } = {}) {
+      return (locObj || Locale.create(locale, numberingSystem, outputCalendar)).months(length, true);
+    }
+    static weekdays(length = "long", {
+      locale = null,
+      numberingSystem = null,
+      locObj = null
+    } = {}) {
+      return (locObj || Locale.create(locale, numberingSystem, null)).weekdays(length);
+    }
+    static weekdaysFormat(length = "long", {
+      locale = null,
+      numberingSystem = null,
+      locObj = null
+    } = {}) {
+      return (locObj || Locale.create(locale, numberingSystem, null)).weekdays(length, true);
+    }
+    static meridiems({
+      locale = null
+    } = {}) {
+      return Locale.create(locale).meridiems();
+    }
+    static eras(length = "short", {
+      locale = null
+    } = {}) {
+      return Locale.create(locale, null, "gregory").eras(length);
+    }
+    static features() {
+      return {
+        relative: hasRelative(),
+        localeWeek: hasLocaleWeekInfo()
+      };
+    }
+  }
+  function dayDiff(earlier, later) {
+    const utcDayStart = (dt) => dt.toUTC(0, {
+      keepLocalTime: true
+    }).startOf("day").valueOf(), ms = utcDayStart(later) - utcDayStart(earlier);
+    return Math.floor(Duration.fromMillis(ms).as("days"));
+  }
+  function highOrderDiffs(cursor, later, units) {
+    const differs = [["years", (a, b2) => b2.year - a.year], ["quarters", (a, b2) => b2.quarter - a.quarter + (b2.year - a.year) * 4], ["months", (a, b2) => b2.month - a.month + (b2.year - a.year) * 12], ["weeks", (a, b2) => {
+      const days = dayDiff(a, b2);
+      return (days - days % 7) / 7;
+    }], ["days", dayDiff]];
+    const results = {};
+    const earlier = cursor;
+    let lowestOrder, highWater;
+    for (const [unit, differ] of differs) {
+      if (units.indexOf(unit) >= 0) {
+        lowestOrder = unit;
+        results[unit] = differ(cursor, later);
+        highWater = earlier.plus(results);
+        if (highWater > later) {
+          results[unit]--;
+          cursor = earlier.plus(results);
+          if (cursor > later) {
+            highWater = cursor;
+            results[unit]--;
+            cursor = earlier.plus(results);
+          }
+        } else {
+          cursor = highWater;
+        }
+      }
+    }
+    return [cursor, results, highWater, lowestOrder];
+  }
+  function diff(earlier, later, units, opts) {
+    let [cursor, results, highWater, lowestOrder] = highOrderDiffs(earlier, later, units);
+    const remainingMillis = later - cursor;
+    const lowerOrderUnits = units.filter((u) => ["hours", "minutes", "seconds", "milliseconds"].indexOf(u) >= 0);
+    if (lowerOrderUnits.length === 0) {
+      if (highWater < later) {
+        highWater = cursor.plus({
+          [lowestOrder]: 1
+        });
+      }
+      if (highWater !== cursor) {
+        results[lowestOrder] = (results[lowestOrder] || 0) + remainingMillis / (highWater - cursor);
+      }
+    }
+    const duration3 = Duration.fromObject(results, opts);
+    if (lowerOrderUnits.length > 0) {
+      return Duration.fromMillis(remainingMillis, opts).shiftTo(...lowerOrderUnits).plus(duration3);
+    } else {
+      return duration3;
+    }
+  }
+  var MISSING_FTP = "missing Intl.DateTimeFormat.formatToParts support";
+  function intUnit(regex, post = (i) => i) {
+    return {
+      regex,
+      deser: ([s2]) => post(parseDigits(s2))
+    };
+  }
+  var NBSP = String.fromCharCode(160);
+  var spaceOrNBSP = `[ ${NBSP}]`;
+  var spaceOrNBSPRegExp = new RegExp(spaceOrNBSP, "g");
+  function fixListRegex(s2) {
+    return s2.replace(/\./g, "\\.?").replace(spaceOrNBSPRegExp, spaceOrNBSP);
+  }
+  function stripInsensitivities(s2) {
+    return s2.replace(/\./g, "").replace(spaceOrNBSPRegExp, " ").toLowerCase();
+  }
+  function oneOf(strings, startIndex) {
+    if (strings === null) {
+      return null;
+    } else {
+      return {
+        regex: RegExp(strings.map(fixListRegex).join("|")),
+        deser: ([s2]) => strings.findIndex((i) => stripInsensitivities(s2) === stripInsensitivities(i)) + startIndex
+      };
+    }
+  }
+  function offset(regex, groups) {
+    return {
+      regex,
+      deser: ([, h, m]) => signedOffset(h, m),
+      groups
+    };
+  }
+  function simple(regex) {
+    return {
+      regex,
+      deser: ([s2]) => s2
+    };
+  }
+  function escapeToken(value) {
+    return value.replace(/[\-\[\]{}()*+?.,\\\^$|#\s]/g, "\\$&");
+  }
+  function unitForToken(token, loc) {
+    const one = digitRegex(loc), two = digitRegex(loc, "{2}"), three = digitRegex(loc, "{3}"), four = digitRegex(loc, "{4}"), six = digitRegex(loc, "{6}"), oneOrTwo = digitRegex(loc, "{1,2}"), oneToThree = digitRegex(loc, "{1,3}"), oneToSix = digitRegex(loc, "{1,6}"), oneToNine = digitRegex(loc, "{1,9}"), twoToFour = digitRegex(loc, "{2,4}"), fourToSix = digitRegex(loc, "{4,6}"), literal2 = (t2) => ({
+      regex: RegExp(escapeToken(t2.val)),
+      deser: ([s2]) => s2,
+      literal: true
+    }), unitate = (t2) => {
+      if (token.literal) {
+        return literal2(t2);
+      }
+      switch (t2.val) {
+        case "G":
+          return oneOf(loc.eras("short"), 0);
+        case "GG":
+          return oneOf(loc.eras("long"), 0);
+        case "y":
+          return intUnit(oneToSix);
+        case "yy":
+          return intUnit(twoToFour, untruncateYear);
+        case "yyyy":
+          return intUnit(four);
+        case "yyyyy":
+          return intUnit(fourToSix);
+        case "yyyyyy":
+          return intUnit(six);
+        case "M":
+          return intUnit(oneOrTwo);
+        case "MM":
+          return intUnit(two);
+        case "MMM":
+          return oneOf(loc.months("short", true), 1);
+        case "MMMM":
+          return oneOf(loc.months("long", true), 1);
+        case "L":
+          return intUnit(oneOrTwo);
+        case "LL":
+          return intUnit(two);
+        case "LLL":
+          return oneOf(loc.months("short", false), 1);
+        case "LLLL":
+          return oneOf(loc.months("long", false), 1);
+        case "d":
+          return intUnit(oneOrTwo);
+        case "dd":
+          return intUnit(two);
+        case "o":
+          return intUnit(oneToThree);
+        case "ooo":
+          return intUnit(three);
+        case "HH":
+          return intUnit(two);
+        case "H":
+          return intUnit(oneOrTwo);
+        case "hh":
+          return intUnit(two);
+        case "h":
+          return intUnit(oneOrTwo);
+        case "mm":
+          return intUnit(two);
+        case "m":
+          return intUnit(oneOrTwo);
+        case "q":
+          return intUnit(oneOrTwo);
+        case "qq":
+          return intUnit(two);
+        case "s":
+          return intUnit(oneOrTwo);
+        case "ss":
+          return intUnit(two);
+        case "S":
+          return intUnit(oneToThree);
+        case "SSS":
+          return intUnit(three);
+        case "u":
+          return simple(oneToNine);
+        case "uu":
+          return simple(oneOrTwo);
+        case "uuu":
+          return intUnit(one);
+        case "a":
+          return oneOf(loc.meridiems(), 0);
+        case "kkkk":
+          return intUnit(four);
+        case "kk":
+          return intUnit(twoToFour, untruncateYear);
+        case "W":
+          return intUnit(oneOrTwo);
+        case "WW":
+          return intUnit(two);
+        case "E":
+        case "c":
+          return intUnit(one);
+        case "EEE":
+          return oneOf(loc.weekdays("short", false), 1);
+        case "EEEE":
+          return oneOf(loc.weekdays("long", false), 1);
+        case "ccc":
+          return oneOf(loc.weekdays("short", true), 1);
+        case "cccc":
+          return oneOf(loc.weekdays("long", true), 1);
+        case "Z":
+        case "ZZ":
+          return offset(new RegExp(`([+-]${oneOrTwo.source})(?::(${two.source}))?`), 2);
+        case "ZZZ":
+          return offset(new RegExp(`([+-]${oneOrTwo.source})(${two.source})?`), 2);
+        case "z":
+          return simple(/[a-z_+-/]{1,256}?/i);
+        case " ":
+          return simple(/[^\S\n\r]/);
+        default:
+          return literal2(t2);
+      }
+    };
+    const unit = unitate(token) || {
+      invalidReason: MISSING_FTP
+    };
+    unit.token = token;
+    return unit;
+  }
+  var partTypeStyleToTokenVal = {
+    year: {
+      "2-digit": "yy",
+      numeric: "yyyyy"
+    },
+    month: {
+      numeric: "M",
+      "2-digit": "MM",
+      short: "MMM",
+      long: "MMMM"
+    },
+    day: {
+      numeric: "d",
+      "2-digit": "dd"
+    },
+    weekday: {
+      short: "EEE",
+      long: "EEEE"
+    },
+    dayperiod: "a",
+    dayPeriod: "a",
+    hour12: {
+      numeric: "h",
+      "2-digit": "hh"
+    },
+    hour24: {
+      numeric: "H",
+      "2-digit": "HH"
+    },
+    minute: {
+      numeric: "m",
+      "2-digit": "mm"
+    },
+    second: {
+      numeric: "s",
+      "2-digit": "ss"
+    },
+    timeZoneName: {
+      long: "ZZZZZ",
+      short: "ZZZ"
+    }
+  };
+  function tokenForPart(part, formatOpts, resolvedOpts) {
+    const {
+      type,
+      value
+    } = part;
+    if (type === "literal") {
+      const isSpace = /^\s+$/.test(value);
+      return {
+        literal: !isSpace,
+        val: isSpace ? " " : value
+      };
+    }
+    const style = formatOpts[type];
+    let actualType = type;
+    if (type === "hour") {
+      if (formatOpts.hour12 != null) {
+        actualType = formatOpts.hour12 ? "hour12" : "hour24";
+      } else if (formatOpts.hourCycle != null) {
+        if (formatOpts.hourCycle === "h11" || formatOpts.hourCycle === "h12") {
+          actualType = "hour12";
+        } else {
+          actualType = "hour24";
+        }
+      } else {
+        actualType = resolvedOpts.hour12 ? "hour12" : "hour24";
+      }
+    }
+    let val = partTypeStyleToTokenVal[actualType];
+    if (typeof val === "object") {
+      val = val[style];
+    }
+    if (val) {
+      return {
+        literal: false,
+        val
+      };
+    }
+    return;
+  }
+  function buildRegex(units) {
+    const re = units.map((u) => u.regex).reduce((f, r) => `${f}(${r.source})`, "");
+    return [`^${re}$`, units];
+  }
+  function match2(input, regex, handlers2) {
+    const matches = input.match(regex);
+    if (matches) {
+      const all = {};
+      let matchIndex = 1;
+      for (const i in handlers2) {
+        if (hasOwnProperty(handlers2, i)) {
+          const h = handlers2[i], groups = h.groups ? h.groups + 1 : 1;
+          if (!h.literal && h.token) {
+            all[h.token.val[0]] = h.deser(matches.slice(matchIndex, matchIndex + groups));
+          }
+          matchIndex += groups;
+        }
+      }
+      return [matches, all];
+    } else {
+      return [matches, {}];
+    }
+  }
+  function dateTimeFromMatches(matches) {
+    const toField = (token) => {
+      switch (token) {
+        case "S":
+          return "millisecond";
+        case "s":
+          return "second";
+        case "m":
+          return "minute";
+        case "h":
+        case "H":
+          return "hour";
+        case "d":
+          return "day";
+        case "o":
+          return "ordinal";
+        case "L":
+        case "M":
+          return "month";
+        case "y":
+          return "year";
+        case "E":
+        case "c":
+          return "weekday";
+        case "W":
+          return "weekNumber";
+        case "k":
+          return "weekYear";
+        case "q":
+          return "quarter";
+        default:
+          return null;
+      }
+    };
+    let zone = null;
+    let specificOffset;
+    if (!isUndefined(matches.z)) {
+      zone = IANAZone.create(matches.z);
+    }
+    if (!isUndefined(matches.Z)) {
+      if (!zone) {
+        zone = new FixedOffsetZone(matches.Z);
+      }
+      specificOffset = matches.Z;
+    }
+    if (!isUndefined(matches.q)) {
+      matches.M = (matches.q - 1) * 3 + 1;
+    }
+    if (!isUndefined(matches.h)) {
+      if (matches.h < 12 && matches.a === 1) {
+        matches.h += 12;
+      } else if (matches.h === 12 && matches.a === 0) {
+        matches.h = 0;
+      }
+    }
+    if (matches.G === 0 && matches.y) {
+      matches.y = -matches.y;
+    }
+    if (!isUndefined(matches.u)) {
+      matches.S = parseMillis(matches.u);
+    }
+    const vals = Object.keys(matches).reduce((r, k) => {
+      const f = toField(k);
+      if (f) {
+        r[f] = matches[k];
+      }
+      return r;
+    }, {});
+    return [vals, zone, specificOffset];
+  }
+  var dummyDateTimeCache = null;
+  function getDummyDateTime() {
+    if (!dummyDateTimeCache) {
+      dummyDateTimeCache = DateTime.fromMillis(1555555555555);
+    }
+    return dummyDateTimeCache;
+  }
+  function maybeExpandMacroToken(token, locale) {
+    if (token.literal) {
+      return token;
+    }
+    const formatOpts = Formatter.macroTokenToFormatOpts(token.val);
+    const tokens = formatOptsToTokens(formatOpts, locale);
+    if (tokens == null || tokens.includes(undefined)) {
+      return token;
+    }
+    return tokens;
+  }
+  function expandMacroTokens(tokens, locale) {
+    return Array.prototype.concat(...tokens.map((t2) => maybeExpandMacroToken(t2, locale)));
+  }
+
+  class TokenParser {
+    constructor(locale, format) {
+      this.locale = locale;
+      this.format = format;
+      this.tokens = expandMacroTokens(Formatter.parseFormat(format), locale);
+      this.units = this.tokens.map((t2) => unitForToken(t2, locale));
+      this.disqualifyingUnit = this.units.find((t2) => t2.invalidReason);
+      if (!this.disqualifyingUnit) {
+        const [regexString, handlers2] = buildRegex(this.units);
+        this.regex = RegExp(regexString, "i");
+        this.handlers = handlers2;
+      }
+    }
+    explainFromTokens(input) {
+      if (!this.isValid) {
+        return {
+          input,
+          tokens: this.tokens,
+          invalidReason: this.invalidReason
+        };
+      } else {
+        const [rawMatches, matches] = match2(input, this.regex, this.handlers), [result, zone, specificOffset] = matches ? dateTimeFromMatches(matches) : [null, null, undefined];
+        if (hasOwnProperty(matches, "a") && hasOwnProperty(matches, "H")) {
+          throw new ConflictingSpecificationError("Can't include meridiem when specifying 24-hour format");
+        }
+        return {
+          input,
+          tokens: this.tokens,
+          regex: this.regex,
+          rawMatches,
+          matches,
+          result,
+          zone,
+          specificOffset
+        };
+      }
+    }
+    get isValid() {
+      return !this.disqualifyingUnit;
+    }
+    get invalidReason() {
+      return this.disqualifyingUnit ? this.disqualifyingUnit.invalidReason : null;
+    }
+  }
+  function explainFromTokens(locale, input, format) {
+    const parser = new TokenParser(locale, format);
+    return parser.explainFromTokens(input);
+  }
+  function parseFromTokens(locale, input, format) {
+    const {
+      result,
+      zone,
+      specificOffset,
+      invalidReason
+    } = explainFromTokens(locale, input, format);
+    return [result, zone, specificOffset, invalidReason];
+  }
+  function formatOptsToTokens(formatOpts, locale) {
+    if (!formatOpts) {
+      return null;
+    }
+    const formatter = Formatter.create(locale, formatOpts);
+    const df = formatter.dtFormatter(getDummyDateTime());
+    const parts = df.formatToParts();
+    const resolvedOpts = df.resolvedOptions();
+    return parts.map((p) => tokenForPart(p, formatOpts, resolvedOpts));
+  }
+  var INVALID = "Invalid DateTime";
+  var MAX_DATE = 8640000000000000;
+  function unsupportedZone(zone) {
+    return new Invalid("unsupported zone", `the zone "${zone.name}" is not supported`);
+  }
+  function possiblyCachedWeekData(dt) {
+    if (dt.weekData === null) {
+      dt.weekData = gregorianToWeek(dt.c);
+    }
+    return dt.weekData;
+  }
+  function possiblyCachedLocalWeekData(dt) {
+    if (dt.localWeekData === null) {
+      dt.localWeekData = gregorianToWeek(dt.c, dt.loc.getMinDaysInFirstWeek(), dt.loc.getStartOfWeek());
+    }
+    return dt.localWeekData;
+  }
+  function clone2(inst, alts) {
+    const current = {
+      ts: inst.ts,
+      zone: inst.zone,
+      c: inst.c,
+      o: inst.o,
+      loc: inst.loc,
+      invalid: inst.invalid
+    };
+    return new DateTime({
+      ...current,
+      ...alts,
+      old: current
+    });
+  }
+  function fixOffset(localTS, o, tz) {
+    let utcGuess = localTS - o * 60 * 1000;
+    const o2 = tz.offset(utcGuess);
+    if (o === o2) {
+      return [utcGuess, o];
+    }
+    utcGuess -= (o2 - o) * 60 * 1000;
+    const o3 = tz.offset(utcGuess);
+    if (o2 === o3) {
+      return [utcGuess, o2];
+    }
+    return [localTS - Math.min(o2, o3) * 60 * 1000, Math.max(o2, o3)];
+  }
+  function tsToObj(ts, offset2) {
+    ts += offset2 * 60 * 1000;
+    const d = new Date(ts);
+    return {
+      year: d.getUTCFullYear(),
+      month: d.getUTCMonth() + 1,
+      day: d.getUTCDate(),
+      hour: d.getUTCHours(),
+      minute: d.getUTCMinutes(),
+      second: d.getUTCSeconds(),
+      millisecond: d.getUTCMilliseconds()
+    };
+  }
+  function objToTS(obj, offset2, zone) {
+    return fixOffset(objToLocalTS(obj), offset2, zone);
+  }
+  function adjustTime(inst, dur) {
+    const oPre = inst.o, year = inst.c.year + Math.trunc(dur.years), month = inst.c.month + Math.trunc(dur.months) + Math.trunc(dur.quarters) * 3, c = {
+      ...inst.c,
+      year,
+      month,
+      day: Math.min(inst.c.day, daysInMonth(year, month)) + Math.trunc(dur.days) + Math.trunc(dur.weeks) * 7
+    }, millisToAdd = Duration.fromObject({
+      years: dur.years - Math.trunc(dur.years),
+      quarters: dur.quarters - Math.trunc(dur.quarters),
+      months: dur.months - Math.trunc(dur.months),
+      weeks: dur.weeks - Math.trunc(dur.weeks),
+      days: dur.days - Math.trunc(dur.days),
+      hours: dur.hours,
+      minutes: dur.minutes,
+      seconds: dur.seconds,
+      milliseconds: dur.milliseconds
+    }).as("milliseconds"), localTS = objToLocalTS(c);
+    let [ts, o] = fixOffset(localTS, oPre, inst.zone);
+    if (millisToAdd !== 0) {
+      ts += millisToAdd;
+      o = inst.zone.offset(ts);
+    }
+    return {
+      ts,
+      o
+    };
+  }
+  function parseDataToDateTime(parsed, parsedZone, opts, format, text2, specificOffset) {
+    const {
+      setZone,
+      zone
+    } = opts;
+    if (parsed && Object.keys(parsed).length !== 0 || parsedZone) {
+      const interpretationZone = parsedZone || zone, inst = DateTime.fromObject(parsed, {
+        ...opts,
+        zone: interpretationZone,
+        specificOffset
+      });
+      return setZone ? inst : inst.setZone(zone);
+    } else {
+      return DateTime.invalid(new Invalid("unparsable", `the input "${text2}" can't be parsed as ${format}`));
+    }
+  }
+  function toTechFormat(dt, format, allowZ = true) {
+    return dt.isValid ? Formatter.create(Locale.create("en-US"), {
+      allowZ,
+      forceSimple: true
+    }).formatDateTimeFromString(dt, format) : null;
+  }
+  function toISODate(o, extended, precision) {
+    const longFormat = o.c.year > 9999 || o.c.year < 0;
+    let c = "";
+    if (longFormat && o.c.year >= 0)
+      c += "+";
+    c += padStart(o.c.year, longFormat ? 6 : 4);
+    if (precision === "year")
+      return c;
+    if (extended) {
+      c += "-";
+      c += padStart(o.c.month);
+      if (precision === "month")
+        return c;
+      c += "-";
+    } else {
+      c += padStart(o.c.month);
+      if (precision === "month")
+        return c;
+    }
+    c += padStart(o.c.day);
+    return c;
+  }
+  function toISOTime(o, extended, suppressSeconds, suppressMilliseconds, includeOffset, extendedZone, precision) {
+    let showSeconds = !suppressSeconds || o.c.millisecond !== 0 || o.c.second !== 0, c = "";
+    switch (precision) {
+      case "day":
+      case "month":
+      case "year":
+        break;
+      default:
+        c += padStart(o.c.hour);
+        if (precision === "hour")
+          break;
+        if (extended) {
+          c += ":";
+          c += padStart(o.c.minute);
+          if (precision === "minute")
+            break;
+          if (showSeconds) {
+            c += ":";
+            c += padStart(o.c.second);
+          }
+        } else {
+          c += padStart(o.c.minute);
+          if (precision === "minute")
+            break;
+          if (showSeconds) {
+            c += padStart(o.c.second);
+          }
+        }
+        if (precision === "second")
+          break;
+        if (showSeconds && (!suppressMilliseconds || o.c.millisecond !== 0)) {
+          c += ".";
+          c += padStart(o.c.millisecond, 3);
+        }
+    }
+    if (includeOffset) {
+      if (o.isOffsetFixed && o.offset === 0 && !extendedZone) {
+        c += "Z";
+      } else if (o.o < 0) {
+        c += "-";
+        c += padStart(Math.trunc(-o.o / 60));
+        c += ":";
+        c += padStart(Math.trunc(-o.o % 60));
+      } else {
+        c += "+";
+        c += padStart(Math.trunc(o.o / 60));
+        c += ":";
+        c += padStart(Math.trunc(o.o % 60));
+      }
+    }
+    if (extendedZone) {
+      c += "[" + o.zone.ianaName + "]";
+    }
+    return c;
+  }
+  var defaultUnitValues = {
+    month: 1,
+    day: 1,
+    hour: 0,
+    minute: 0,
+    second: 0,
+    millisecond: 0
+  };
+  var defaultWeekUnitValues = {
+    weekNumber: 1,
+    weekday: 1,
+    hour: 0,
+    minute: 0,
+    second: 0,
+    millisecond: 0
+  };
+  var defaultOrdinalUnitValues = {
+    ordinal: 1,
+    hour: 0,
+    minute: 0,
+    second: 0,
+    millisecond: 0
+  };
+  var orderedUnits = ["year", "month", "day", "hour", "minute", "second", "millisecond"];
+  var orderedWeekUnits = ["weekYear", "weekNumber", "weekday", "hour", "minute", "second", "millisecond"];
+  var orderedOrdinalUnits = ["year", "ordinal", "hour", "minute", "second", "millisecond"];
+  function normalizeUnit(unit) {
+    const normalized = {
+      year: "year",
+      years: "year",
+      month: "month",
+      months: "month",
+      day: "day",
+      days: "day",
+      hour: "hour",
+      hours: "hour",
+      minute: "minute",
+      minutes: "minute",
+      quarter: "quarter",
+      quarters: "quarter",
+      second: "second",
+      seconds: "second",
+      millisecond: "millisecond",
+      milliseconds: "millisecond",
+      weekday: "weekday",
+      weekdays: "weekday",
+      weeknumber: "weekNumber",
+      weeksnumber: "weekNumber",
+      weeknumbers: "weekNumber",
+      weekyear: "weekYear",
+      weekyears: "weekYear",
+      ordinal: "ordinal"
+    }[unit.toLowerCase()];
+    if (!normalized)
+      throw new InvalidUnitError(unit);
+    return normalized;
+  }
+  function normalizeUnitWithLocalWeeks(unit) {
+    switch (unit.toLowerCase()) {
+      case "localweekday":
+      case "localweekdays":
+        return "localWeekday";
+      case "localweeknumber":
+      case "localweeknumbers":
+        return "localWeekNumber";
+      case "localweekyear":
+      case "localweekyears":
+        return "localWeekYear";
+      default:
+        return normalizeUnit(unit);
+    }
+  }
+  function guessOffsetForZone(zone) {
+    if (zoneOffsetTs === undefined) {
+      zoneOffsetTs = Settings.now();
+    }
+    if (zone.type !== "iana") {
+      return zone.offset(zoneOffsetTs);
+    }
+    const zoneName = zone.name;
+    let offsetGuess = zoneOffsetGuessCache.get(zoneName);
+    if (offsetGuess === undefined) {
+      offsetGuess = zone.offset(zoneOffsetTs);
+      zoneOffsetGuessCache.set(zoneName, offsetGuess);
+    }
+    return offsetGuess;
+  }
+  function quickDT(obj, opts) {
+    const zone = normalizeZone(opts.zone, Settings.defaultZone);
+    if (!zone.isValid) {
+      return DateTime.invalid(unsupportedZone(zone));
+    }
+    const loc = Locale.fromObject(opts);
+    let ts, o;
+    if (!isUndefined(obj.year)) {
+      for (const u of orderedUnits) {
+        if (isUndefined(obj[u])) {
+          obj[u] = defaultUnitValues[u];
+        }
+      }
+      const invalid = hasInvalidGregorianData(obj) || hasInvalidTimeData(obj);
+      if (invalid) {
+        return DateTime.invalid(invalid);
+      }
+      const offsetProvis = guessOffsetForZone(zone);
+      [ts, o] = objToTS(obj, offsetProvis, zone);
+    } else {
+      ts = Settings.now();
+    }
+    return new DateTime({
+      ts,
+      zone,
+      loc,
+      o
+    });
+  }
+  function diffRelative(start, end, opts) {
+    const round = isUndefined(opts.round) ? true : opts.round, rounding = isUndefined(opts.rounding) ? "trunc" : opts.rounding, format = (c, unit) => {
+      c = roundTo(c, round || opts.calendary ? 0 : 2, opts.calendary ? "round" : rounding);
+      const formatter = end.loc.clone(opts).relFormatter(opts);
+      return formatter.format(c, unit);
+    }, differ = (unit) => {
+      if (opts.calendary) {
+        if (!end.hasSame(start, unit)) {
+          return end.startOf(unit).diff(start.startOf(unit), unit).get(unit);
+        } else
+          return 0;
+      } else {
+        return end.diff(start, unit).get(unit);
+      }
+    };
+    if (opts.unit) {
+      return format(differ(opts.unit), opts.unit);
+    }
+    for (const unit of opts.units) {
+      const count = differ(unit);
+      if (Math.abs(count) >= 1) {
+        return format(count, unit);
+      }
+    }
+    return format(start > end ? -0 : 0, opts.units[opts.units.length - 1]);
+  }
+  function lastOpts(argList) {
+    let opts = {}, args;
+    if (argList.length > 0 && typeof argList[argList.length - 1] === "object") {
+      opts = argList[argList.length - 1];
+      args = Array.from(argList).slice(0, argList.length - 1);
+    } else {
+      args = Array.from(argList);
+    }
+    return [opts, args];
+  }
+  var zoneOffsetTs;
+  var zoneOffsetGuessCache = new Map;
+
+  class DateTime {
+    constructor(config2) {
+      const zone = config2.zone || Settings.defaultZone;
+      let invalid = config2.invalid || (Number.isNaN(config2.ts) ? new Invalid("invalid input") : null) || (!zone.isValid ? unsupportedZone(zone) : null);
+      this.ts = isUndefined(config2.ts) ? Settings.now() : config2.ts;
+      let c = null, o = null;
+      if (!invalid) {
+        const unchanged = config2.old && config2.old.ts === this.ts && config2.old.zone.equals(zone);
+        if (unchanged) {
+          [c, o] = [config2.old.c, config2.old.o];
+        } else {
+          const ot = isNumber(config2.o) && !config2.old ? config2.o : zone.offset(this.ts);
+          c = tsToObj(this.ts, ot);
+          invalid = Number.isNaN(c.year) ? new Invalid("invalid input") : null;
+          c = invalid ? null : c;
+          o = invalid ? null : ot;
+        }
+      }
+      this._zone = zone;
+      this.loc = config2.loc || Locale.create();
+      this.invalid = invalid;
+      this.weekData = null;
+      this.localWeekData = null;
+      this.c = c;
+      this.o = o;
+      this.isLuxonDateTime = true;
+    }
+    static now() {
+      return new DateTime({});
+    }
+    static local() {
+      const [opts, args] = lastOpts(arguments), [year, month, day, hour, minute, second, millisecond] = args;
+      return quickDT({
+        year,
+        month,
+        day,
+        hour,
+        minute,
+        second,
+        millisecond
+      }, opts);
+    }
+    static utc() {
+      const [opts, args] = lastOpts(arguments), [year, month, day, hour, minute, second, millisecond] = args;
+      opts.zone = FixedOffsetZone.utcInstance;
+      return quickDT({
+        year,
+        month,
+        day,
+        hour,
+        minute,
+        second,
+        millisecond
+      }, opts);
+    }
+    static fromJSDate(date6, options = {}) {
+      const ts = isDate(date6) ? date6.valueOf() : NaN;
+      if (Number.isNaN(ts)) {
+        return DateTime.invalid("invalid input");
+      }
+      const zoneToUse = normalizeZone(options.zone, Settings.defaultZone);
+      if (!zoneToUse.isValid) {
+        return DateTime.invalid(unsupportedZone(zoneToUse));
+      }
+      return new DateTime({
+        ts,
+        zone: zoneToUse,
+        loc: Locale.fromObject(options)
+      });
+    }
+    static fromMillis(milliseconds, options = {}) {
+      if (!isNumber(milliseconds)) {
+        throw new InvalidArgumentError(`fromMillis requires a numerical input, but received a ${typeof milliseconds} with value ${milliseconds}`);
+      } else if (milliseconds < -MAX_DATE || milliseconds > MAX_DATE) {
+        return DateTime.invalid("Timestamp out of range");
+      } else {
+        return new DateTime({
+          ts: milliseconds,
+          zone: normalizeZone(options.zone, Settings.defaultZone),
+          loc: Locale.fromObject(options)
+        });
+      }
+    }
+    static fromSeconds(seconds, options = {}) {
+      if (!isNumber(seconds)) {
+        throw new InvalidArgumentError("fromSeconds requires a numerical input");
+      } else {
+        return new DateTime({
+          ts: seconds * 1000,
+          zone: normalizeZone(options.zone, Settings.defaultZone),
+          loc: Locale.fromObject(options)
+        });
+      }
+    }
+    static fromObject(obj, opts = {}) {
+      obj = obj || {};
+      const zoneToUse = normalizeZone(opts.zone, Settings.defaultZone);
+      if (!zoneToUse.isValid) {
+        return DateTime.invalid(unsupportedZone(zoneToUse));
+      }
+      const loc = Locale.fromObject(opts);
+      const normalized = normalizeObject(obj, normalizeUnitWithLocalWeeks);
+      const {
+        minDaysInFirstWeek,
+        startOfWeek
+      } = usesLocalWeekValues(normalized, loc);
+      const tsNow = Settings.now(), offsetProvis = !isUndefined(opts.specificOffset) ? opts.specificOffset : zoneToUse.offset(tsNow), containsOrdinal = !isUndefined(normalized.ordinal), containsGregorYear = !isUndefined(normalized.year), containsGregorMD = !isUndefined(normalized.month) || !isUndefined(normalized.day), containsGregor = containsGregorYear || containsGregorMD, definiteWeekDef = normalized.weekYear || normalized.weekNumber;
+      if ((containsGregor || containsOrdinal) && definiteWeekDef) {
+        throw new ConflictingSpecificationError("Can't mix weekYear/weekNumber units with year/month/day or ordinals");
+      }
+      if (containsGregorMD && containsOrdinal) {
+        throw new ConflictingSpecificationError("Can't mix ordinal dates with month/day");
+      }
+      const useWeekData = definiteWeekDef || normalized.weekday && !containsGregor;
+      let units, defaultValues, objNow = tsToObj(tsNow, offsetProvis);
+      if (useWeekData) {
+        units = orderedWeekUnits;
+        defaultValues = defaultWeekUnitValues;
+        objNow = gregorianToWeek(objNow, minDaysInFirstWeek, startOfWeek);
+      } else if (containsOrdinal) {
+        units = orderedOrdinalUnits;
+        defaultValues = defaultOrdinalUnitValues;
+        objNow = gregorianToOrdinal(objNow);
+      } else {
+        units = orderedUnits;
+        defaultValues = defaultUnitValues;
+      }
+      let foundFirst = false;
+      for (const u of units) {
+        const v = normalized[u];
+        if (!isUndefined(v)) {
+          foundFirst = true;
+        } else if (foundFirst) {
+          normalized[u] = defaultValues[u];
+        } else {
+          normalized[u] = objNow[u];
+        }
+      }
+      const higherOrderInvalid = useWeekData ? hasInvalidWeekData(normalized, minDaysInFirstWeek, startOfWeek) : containsOrdinal ? hasInvalidOrdinalData(normalized) : hasInvalidGregorianData(normalized), invalid = higherOrderInvalid || hasInvalidTimeData(normalized);
+      if (invalid) {
+        return DateTime.invalid(invalid);
+      }
+      const gregorian = useWeekData ? weekToGregorian(normalized, minDaysInFirstWeek, startOfWeek) : containsOrdinal ? ordinalToGregorian(normalized) : normalized, [tsFinal, offsetFinal] = objToTS(gregorian, offsetProvis, zoneToUse), inst = new DateTime({
+        ts: tsFinal,
+        zone: zoneToUse,
+        o: offsetFinal,
+        loc
+      });
+      if (normalized.weekday && containsGregor && obj.weekday !== inst.weekday) {
+        return DateTime.invalid("mismatched weekday", `you can't specify both a weekday of ${normalized.weekday} and a date of ${inst.toISO()}`);
+      }
+      if (!inst.isValid) {
+        return DateTime.invalid(inst.invalid);
+      }
+      return inst;
+    }
+    static fromISO(text2, opts = {}) {
+      const [vals, parsedZone] = parseISODate(text2);
+      return parseDataToDateTime(vals, parsedZone, opts, "ISO 8601", text2);
+    }
+    static fromRFC2822(text2, opts = {}) {
+      const [vals, parsedZone] = parseRFC2822Date(text2);
+      return parseDataToDateTime(vals, parsedZone, opts, "RFC 2822", text2);
+    }
+    static fromHTTP(text2, opts = {}) {
+      const [vals, parsedZone] = parseHTTPDate(text2);
+      return parseDataToDateTime(vals, parsedZone, opts, "HTTP", opts);
+    }
+    static fromFormat(text2, fmt, opts = {}) {
+      if (isUndefined(text2) || isUndefined(fmt)) {
+        throw new InvalidArgumentError("fromFormat requires an input string and a format");
+      }
+      const {
+        locale = null,
+        numberingSystem = null
+      } = opts, localeToUse = Locale.fromOpts({
+        locale,
+        numberingSystem,
+        defaultToEN: true
+      }), [vals, parsedZone, specificOffset, invalid] = parseFromTokens(localeToUse, text2, fmt);
+      if (invalid) {
+        return DateTime.invalid(invalid);
+      } else {
+        return parseDataToDateTime(vals, parsedZone, opts, `format ${fmt}`, text2, specificOffset);
+      }
+    }
+    static fromString(text2, fmt, opts = {}) {
+      return DateTime.fromFormat(text2, fmt, opts);
+    }
+    static fromSQL(text2, opts = {}) {
+      const [vals, parsedZone] = parseSQL(text2);
+      return parseDataToDateTime(vals, parsedZone, opts, "SQL", text2);
+    }
+    static invalid(reason, explanation = null) {
+      if (!reason) {
+        throw new InvalidArgumentError("need to specify a reason the DateTime is invalid");
+      }
+      const invalid = reason instanceof Invalid ? reason : new Invalid(reason, explanation);
+      if (Settings.throwOnInvalid) {
+        throw new InvalidDateTimeError(invalid);
+      } else {
+        return new DateTime({
+          invalid
+        });
+      }
+    }
+    static isDateTime(o) {
+      return o && o.isLuxonDateTime || false;
+    }
+    static parseFormatForOpts(formatOpts, localeOpts = {}) {
+      const tokenList = formatOptsToTokens(formatOpts, Locale.fromObject(localeOpts));
+      return !tokenList ? null : tokenList.map((t2) => t2 ? t2.val : null).join("");
+    }
+    static expandFormat(fmt, localeOpts = {}) {
+      const expanded = expandMacroTokens(Formatter.parseFormat(fmt), Locale.fromObject(localeOpts));
+      return expanded.map((t2) => t2.val).join("");
+    }
+    static resetCache() {
+      zoneOffsetTs = undefined;
+      zoneOffsetGuessCache.clear();
+    }
+    get(unit) {
+      return this[unit];
+    }
+    get isValid() {
+      return this.invalid === null;
+    }
+    get invalidReason() {
+      return this.invalid ? this.invalid.reason : null;
+    }
+    get invalidExplanation() {
+      return this.invalid ? this.invalid.explanation : null;
+    }
+    get locale() {
+      return this.isValid ? this.loc.locale : null;
+    }
+    get numberingSystem() {
+      return this.isValid ? this.loc.numberingSystem : null;
+    }
+    get outputCalendar() {
+      return this.isValid ? this.loc.outputCalendar : null;
+    }
+    get zone() {
+      return this._zone;
+    }
+    get zoneName() {
+      return this.isValid ? this.zone.name : null;
+    }
+    get year() {
+      return this.isValid ? this.c.year : NaN;
+    }
+    get quarter() {
+      return this.isValid ? Math.ceil(this.c.month / 3) : NaN;
+    }
+    get month() {
+      return this.isValid ? this.c.month : NaN;
+    }
+    get day() {
+      return this.isValid ? this.c.day : NaN;
+    }
+    get hour() {
+      return this.isValid ? this.c.hour : NaN;
+    }
+    get minute() {
+      return this.isValid ? this.c.minute : NaN;
+    }
+    get second() {
+      return this.isValid ? this.c.second : NaN;
+    }
+    get millisecond() {
+      return this.isValid ? this.c.millisecond : NaN;
+    }
+    get weekYear() {
+      return this.isValid ? possiblyCachedWeekData(this).weekYear : NaN;
+    }
+    get weekNumber() {
+      return this.isValid ? possiblyCachedWeekData(this).weekNumber : NaN;
+    }
+    get weekday() {
+      return this.isValid ? possiblyCachedWeekData(this).weekday : NaN;
+    }
+    get isWeekend() {
+      return this.isValid && this.loc.getWeekendDays().includes(this.weekday);
+    }
+    get localWeekday() {
+      return this.isValid ? possiblyCachedLocalWeekData(this).weekday : NaN;
+    }
+    get localWeekNumber() {
+      return this.isValid ? possiblyCachedLocalWeekData(this).weekNumber : NaN;
+    }
+    get localWeekYear() {
+      return this.isValid ? possiblyCachedLocalWeekData(this).weekYear : NaN;
+    }
+    get ordinal() {
+      return this.isValid ? gregorianToOrdinal(this.c).ordinal : NaN;
+    }
+    get monthShort() {
+      return this.isValid ? Info.months("short", {
+        locObj: this.loc
+      })[this.month - 1] : null;
+    }
+    get monthLong() {
+      return this.isValid ? Info.months("long", {
+        locObj: this.loc
+      })[this.month - 1] : null;
+    }
+    get weekdayShort() {
+      return this.isValid ? Info.weekdays("short", {
+        locObj: this.loc
+      })[this.weekday - 1] : null;
+    }
+    get weekdayLong() {
+      return this.isValid ? Info.weekdays("long", {
+        locObj: this.loc
+      })[this.weekday - 1] : null;
+    }
+    get offset() {
+      return this.isValid ? +this.o : NaN;
+    }
+    get offsetNameShort() {
+      if (this.isValid) {
+        return this.zone.offsetName(this.ts, {
+          format: "short",
+          locale: this.locale
+        });
+      } else {
+        return null;
+      }
+    }
+    get offsetNameLong() {
+      if (this.isValid) {
+        return this.zone.offsetName(this.ts, {
+          format: "long",
+          locale: this.locale
+        });
+      } else {
+        return null;
+      }
+    }
+    get isOffsetFixed() {
+      return this.isValid ? this.zone.isUniversal : null;
+    }
+    get isInDST() {
+      if (this.isOffsetFixed) {
+        return false;
+      } else {
+        return this.offset > this.set({
+          month: 1,
+          day: 1
+        }).offset || this.offset > this.set({
+          month: 5
+        }).offset;
+      }
+    }
+    getPossibleOffsets() {
+      if (!this.isValid || this.isOffsetFixed) {
+        return [this];
+      }
+      const dayMs = 86400000;
+      const minuteMs = 60000;
+      const localTS = objToLocalTS(this.c);
+      const oEarlier = this.zone.offset(localTS - dayMs);
+      const oLater = this.zone.offset(localTS + dayMs);
+      const o1 = this.zone.offset(localTS - oEarlier * minuteMs);
+      const o2 = this.zone.offset(localTS - oLater * minuteMs);
+      if (o1 === o2) {
+        return [this];
+      }
+      const ts1 = localTS - o1 * minuteMs;
+      const ts2 = localTS - o2 * minuteMs;
+      const c1 = tsToObj(ts1, o1);
+      const c2 = tsToObj(ts2, o2);
+      if (c1.hour === c2.hour && c1.minute === c2.minute && c1.second === c2.second && c1.millisecond === c2.millisecond) {
+        return [clone2(this, {
+          ts: ts1
+        }), clone2(this, {
+          ts: ts2
+        })];
+      }
+      return [this];
+    }
+    get isInLeapYear() {
+      return isLeapYear(this.year);
+    }
+    get daysInMonth() {
+      return daysInMonth(this.year, this.month);
+    }
+    get daysInYear() {
+      return this.isValid ? daysInYear(this.year) : NaN;
+    }
+    get weeksInWeekYear() {
+      return this.isValid ? weeksInWeekYear(this.weekYear) : NaN;
+    }
+    get weeksInLocalWeekYear() {
+      return this.isValid ? weeksInWeekYear(this.localWeekYear, this.loc.getMinDaysInFirstWeek(), this.loc.getStartOfWeek()) : NaN;
+    }
+    resolvedLocaleOptions(opts = {}) {
+      const {
+        locale,
+        numberingSystem,
+        calendar
+      } = Formatter.create(this.loc.clone(opts), opts).resolvedOptions(this);
+      return {
+        locale,
+        numberingSystem,
+        outputCalendar: calendar
+      };
+    }
+    toUTC(offset2 = 0, opts = {}) {
+      return this.setZone(FixedOffsetZone.instance(offset2), opts);
+    }
+    toLocal() {
+      return this.setZone(Settings.defaultZone);
+    }
+    setZone(zone, {
+      keepLocalTime = false,
+      keepCalendarTime = false
+    } = {}) {
+      zone = normalizeZone(zone, Settings.defaultZone);
+      if (zone.equals(this.zone)) {
+        return this;
+      } else if (!zone.isValid) {
+        return DateTime.invalid(unsupportedZone(zone));
+      } else {
+        let newTS = this.ts;
+        if (keepLocalTime || keepCalendarTime) {
+          const offsetGuess = zone.offset(this.ts);
+          const asObj = this.toObject();
+          [newTS] = objToTS(asObj, offsetGuess, zone);
+        }
+        return clone2(this, {
+          ts: newTS,
+          zone
+        });
+      }
+    }
+    reconfigure({
+      locale,
+      numberingSystem,
+      outputCalendar
+    } = {}) {
+      const loc = this.loc.clone({
+        locale,
+        numberingSystem,
+        outputCalendar
+      });
+      return clone2(this, {
+        loc
+      });
+    }
+    setLocale(locale) {
+      return this.reconfigure({
+        locale
+      });
+    }
+    set(values2) {
+      if (!this.isValid)
+        return this;
+      const normalized = normalizeObject(values2, normalizeUnitWithLocalWeeks);
+      const {
+        minDaysInFirstWeek,
+        startOfWeek
+      } = usesLocalWeekValues(normalized, this.loc);
+      const settingWeekStuff = !isUndefined(normalized.weekYear) || !isUndefined(normalized.weekNumber) || !isUndefined(normalized.weekday), containsOrdinal = !isUndefined(normalized.ordinal), containsGregorYear = !isUndefined(normalized.year), containsGregorMD = !isUndefined(normalized.month) || !isUndefined(normalized.day), containsGregor = containsGregorYear || containsGregorMD, definiteWeekDef = normalized.weekYear || normalized.weekNumber;
+      if ((containsGregor || containsOrdinal) && definiteWeekDef) {
+        throw new ConflictingSpecificationError("Can't mix weekYear/weekNumber units with year/month/day or ordinals");
+      }
+      if (containsGregorMD && containsOrdinal) {
+        throw new ConflictingSpecificationError("Can't mix ordinal dates with month/day");
+      }
+      let mixed;
+      if (settingWeekStuff) {
+        mixed = weekToGregorian({
+          ...gregorianToWeek(this.c, minDaysInFirstWeek, startOfWeek),
+          ...normalized
+        }, minDaysInFirstWeek, startOfWeek);
+      } else if (!isUndefined(normalized.ordinal)) {
+        mixed = ordinalToGregorian({
+          ...gregorianToOrdinal(this.c),
+          ...normalized
+        });
+      } else {
+        mixed = {
+          ...this.toObject(),
+          ...normalized
+        };
+        if (isUndefined(normalized.day)) {
+          mixed.day = Math.min(daysInMonth(mixed.year, mixed.month), mixed.day);
+        }
+      }
+      const [ts, o] = objToTS(mixed, this.o, this.zone);
+      return clone2(this, {
+        ts,
+        o
+      });
+    }
+    plus(duration3) {
+      if (!this.isValid)
+        return this;
+      const dur = Duration.fromDurationLike(duration3);
+      return clone2(this, adjustTime(this, dur));
+    }
+    minus(duration3) {
+      if (!this.isValid)
+        return this;
+      const dur = Duration.fromDurationLike(duration3).negate();
+      return clone2(this, adjustTime(this, dur));
+    }
+    startOf(unit, {
+      useLocaleWeeks = false
+    } = {}) {
+      if (!this.isValid)
+        return this;
+      const o = {}, normalizedUnit = Duration.normalizeUnit(unit);
+      switch (normalizedUnit) {
+        case "years":
+          o.month = 1;
+        case "quarters":
+        case "months":
+          o.day = 1;
+        case "weeks":
+        case "days":
+          o.hour = 0;
+        case "hours":
+          o.minute = 0;
+        case "minutes":
+          o.second = 0;
+        case "seconds":
+          o.millisecond = 0;
+          break;
+      }
+      if (normalizedUnit === "weeks") {
+        if (useLocaleWeeks) {
+          const startOfWeek = this.loc.getStartOfWeek();
+          const {
+            weekday
+          } = this;
+          if (weekday < startOfWeek) {
+            o.weekNumber = this.weekNumber - 1;
+          }
+          o.weekday = startOfWeek;
+        } else {
+          o.weekday = 1;
+        }
+      }
+      if (normalizedUnit === "quarters") {
+        const q = Math.ceil(this.month / 3);
+        o.month = (q - 1) * 3 + 1;
+      }
+      return this.set(o);
+    }
+    endOf(unit, opts) {
+      return this.isValid ? this.plus({
+        [unit]: 1
+      }).startOf(unit, opts).minus(1) : this;
+    }
+    toFormat(fmt, opts = {}) {
+      return this.isValid ? Formatter.create(this.loc.redefaultToEN(opts)).formatDateTimeFromString(this, fmt) : INVALID;
+    }
+    toLocaleString(formatOpts = DATE_SHORT, opts = {}) {
+      return this.isValid ? Formatter.create(this.loc.clone(opts), formatOpts).formatDateTime(this) : INVALID;
+    }
+    toLocaleParts(opts = {}) {
+      return this.isValid ? Formatter.create(this.loc.clone(opts), opts).formatDateTimeParts(this) : [];
+    }
+    toISO({
+      format = "extended",
+      suppressSeconds = false,
+      suppressMilliseconds = false,
+      includeOffset = true,
+      extendedZone = false,
+      precision = "milliseconds"
+    } = {}) {
+      if (!this.isValid) {
+        return null;
+      }
+      precision = normalizeUnit(precision);
+      const ext = format === "extended";
+      let c = toISODate(this, ext, precision);
+      if (orderedUnits.indexOf(precision) >= 3)
+        c += "T";
+      c += toISOTime(this, ext, suppressSeconds, suppressMilliseconds, includeOffset, extendedZone, precision);
+      return c;
+    }
+    toISODate({
+      format = "extended",
+      precision = "day"
+    } = {}) {
+      if (!this.isValid) {
+        return null;
+      }
+      return toISODate(this, format === "extended", normalizeUnit(precision));
+    }
+    toISOWeekDate() {
+      return toTechFormat(this, "kkkk-'W'WW-c");
+    }
+    toISOTime({
+      suppressMilliseconds = false,
+      suppressSeconds = false,
+      includeOffset = true,
+      includePrefix = false,
+      extendedZone = false,
+      format = "extended",
+      precision = "milliseconds"
+    } = {}) {
+      if (!this.isValid) {
+        return null;
+      }
+      precision = normalizeUnit(precision);
+      let c = includePrefix && orderedUnits.indexOf(precision) >= 3 ? "T" : "";
+      return c + toISOTime(this, format === "extended", suppressSeconds, suppressMilliseconds, includeOffset, extendedZone, precision);
+    }
+    toRFC2822() {
+      return toTechFormat(this, "EEE, dd LLL yyyy HH:mm:ss ZZZ", false);
+    }
+    toHTTP() {
+      return toTechFormat(this.toUTC(), "EEE, dd LLL yyyy HH:mm:ss 'GMT'");
+    }
+    toSQLDate() {
+      if (!this.isValid) {
+        return null;
+      }
+      return toISODate(this, true);
+    }
+    toSQLTime({
+      includeOffset = true,
+      includeZone = false,
+      includeOffsetSpace = true
+    } = {}) {
+      let fmt = "HH:mm:ss.SSS";
+      if (includeZone || includeOffset) {
+        if (includeOffsetSpace) {
+          fmt += " ";
+        }
+        if (includeZone) {
+          fmt += "z";
+        } else if (includeOffset) {
+          fmt += "ZZ";
+        }
+      }
+      return toTechFormat(this, fmt, true);
+    }
+    toSQL(opts = {}) {
+      if (!this.isValid) {
+        return null;
+      }
+      return `${this.toSQLDate()} ${this.toSQLTime(opts)}`;
+    }
+    toString() {
+      return this.isValid ? this.toISO() : INVALID;
+    }
+    [Symbol.for("nodejs.util.inspect.custom")]() {
+      if (this.isValid) {
+        return `DateTime { ts: ${this.toISO()}, zone: ${this.zone.name}, locale: ${this.locale} }`;
+      } else {
+        return `DateTime { Invalid, reason: ${this.invalidReason} }`;
+      }
+    }
+    valueOf() {
+      return this.toMillis();
+    }
+    toMillis() {
+      return this.isValid ? this.ts : NaN;
+    }
+    toSeconds() {
+      return this.isValid ? this.ts / 1000 : NaN;
+    }
+    toUnixInteger() {
+      return this.isValid ? Math.floor(this.ts / 1000) : NaN;
+    }
+    toJSON() {
+      return this.toISO();
+    }
+    toBSON() {
+      return this.toJSDate();
+    }
+    toObject(opts = {}) {
+      if (!this.isValid)
+        return {};
+      const base = {
+        ...this.c
+      };
+      if (opts.includeConfig) {
+        base.outputCalendar = this.outputCalendar;
+        base.numberingSystem = this.loc.numberingSystem;
+        base.locale = this.loc.locale;
+      }
+      return base;
+    }
+    toJSDate() {
+      return new Date(this.isValid ? this.ts : NaN);
+    }
+    diff(otherDateTime, unit = "milliseconds", opts = {}) {
+      if (!this.isValid || !otherDateTime.isValid) {
+        return Duration.invalid("created by diffing an invalid DateTime");
+      }
+      const durOpts = {
+        locale: this.locale,
+        numberingSystem: this.numberingSystem,
+        ...opts
+      };
+      const units = maybeArray(unit).map(Duration.normalizeUnit), otherIsLater = otherDateTime.valueOf() > this.valueOf(), earlier = otherIsLater ? this : otherDateTime, later = otherIsLater ? otherDateTime : this, diffed = diff(earlier, later, units, durOpts);
+      return otherIsLater ? diffed.negate() : diffed;
+    }
+    diffNow(unit = "milliseconds", opts = {}) {
+      return this.diff(DateTime.now(), unit, opts);
+    }
+    until(otherDateTime) {
+      return this.isValid ? Interval.fromDateTimes(this, otherDateTime) : this;
+    }
+    hasSame(otherDateTime, unit, opts) {
+      if (!this.isValid)
+        return false;
+      const inputMs = otherDateTime.valueOf();
+      const adjustedToZone = this.setZone(otherDateTime.zone, {
+        keepLocalTime: true
+      });
+      return adjustedToZone.startOf(unit, opts) <= inputMs && inputMs <= adjustedToZone.endOf(unit, opts);
+    }
+    equals(other) {
+      return this.isValid && other.isValid && this.valueOf() === other.valueOf() && this.zone.equals(other.zone) && this.loc.equals(other.loc);
+    }
+    toRelative(options = {}) {
+      if (!this.isValid)
+        return null;
+      const base = options.base || DateTime.fromObject({}, {
+        zone: this.zone
+      }), padding = options.padding ? this < base ? -options.padding : options.padding : 0;
+      let units = ["years", "months", "days", "hours", "minutes", "seconds"];
+      let unit = options.unit;
+      if (Array.isArray(options.unit)) {
+        units = options.unit;
+        unit = undefined;
+      }
+      return diffRelative(base, this.plus(padding), {
+        ...options,
+        numeric: "always",
+        units,
+        unit
+      });
+    }
+    toRelativeCalendar(options = {}) {
+      if (!this.isValid)
+        return null;
+      return diffRelative(options.base || DateTime.fromObject({}, {
+        zone: this.zone
+      }), this, {
+        ...options,
+        numeric: "auto",
+        units: ["years", "months", "days"],
+        calendary: true
+      });
+    }
+    static min(...dateTimes) {
+      if (!dateTimes.every(DateTime.isDateTime)) {
+        throw new InvalidArgumentError("min requires all arguments be DateTimes");
+      }
+      return bestBy(dateTimes, (i) => i.valueOf(), Math.min);
+    }
+    static max(...dateTimes) {
+      if (!dateTimes.every(DateTime.isDateTime)) {
+        throw new InvalidArgumentError("max requires all arguments be DateTimes");
+      }
+      return bestBy(dateTimes, (i) => i.valueOf(), Math.max);
+    }
+    static fromFormatExplain(text2, fmt, options = {}) {
+      const {
+        locale = null,
+        numberingSystem = null
+      } = options, localeToUse = Locale.fromOpts({
+        locale,
+        numberingSystem,
+        defaultToEN: true
+      });
+      return explainFromTokens(localeToUse, text2, fmt);
+    }
+    static fromStringExplain(text2, fmt, options = {}) {
+      return DateTime.fromFormatExplain(text2, fmt, options);
+    }
+    static buildFormatParser(fmt, options = {}) {
+      const {
+        locale = null,
+        numberingSystem = null
+      } = options, localeToUse = Locale.fromOpts({
+        locale,
+        numberingSystem,
+        defaultToEN: true
+      });
+      return new TokenParser(localeToUse, fmt);
+    }
+    static fromFormatParser(text2, formatParser, opts = {}) {
+      if (isUndefined(text2) || isUndefined(formatParser)) {
+        throw new InvalidArgumentError("fromFormatParser requires an input string and a format parser");
+      }
+      const {
+        locale = null,
+        numberingSystem = null
+      } = opts, localeToUse = Locale.fromOpts({
+        locale,
+        numberingSystem,
+        defaultToEN: true
+      });
+      if (!localeToUse.equals(formatParser.locale)) {
+        throw new InvalidArgumentError(`fromFormatParser called with a locale of ${localeToUse}, ` + `but the format parser was created for ${formatParser.locale}`);
+      }
+      const {
+        result,
+        zone,
+        specificOffset,
+        invalidReason
+      } = formatParser.explainFromTokens(text2);
+      if (invalidReason) {
+        return DateTime.invalid(invalidReason);
+      } else {
+        return parseDataToDateTime(result, zone, opts, `format ${formatParser.format}`, text2, specificOffset);
+      }
+    }
+    static get DATE_SHORT() {
+      return DATE_SHORT;
+    }
+    static get DATE_MED() {
+      return DATE_MED;
+    }
+    static get DATE_MED_WITH_WEEKDAY() {
+      return DATE_MED_WITH_WEEKDAY;
+    }
+    static get DATE_FULL() {
+      return DATE_FULL;
+    }
+    static get DATE_HUGE() {
+      return DATE_HUGE;
+    }
+    static get TIME_SIMPLE() {
+      return TIME_SIMPLE;
+    }
+    static get TIME_WITH_SECONDS() {
+      return TIME_WITH_SECONDS;
+    }
+    static get TIME_WITH_SHORT_OFFSET() {
+      return TIME_WITH_SHORT_OFFSET;
+    }
+    static get TIME_WITH_LONG_OFFSET() {
+      return TIME_WITH_LONG_OFFSET;
+    }
+    static get TIME_24_SIMPLE() {
+      return TIME_24_SIMPLE;
+    }
+    static get TIME_24_WITH_SECONDS() {
+      return TIME_24_WITH_SECONDS;
+    }
+    static get TIME_24_WITH_SHORT_OFFSET() {
+      return TIME_24_WITH_SHORT_OFFSET;
+    }
+    static get TIME_24_WITH_LONG_OFFSET() {
+      return TIME_24_WITH_LONG_OFFSET;
+    }
+    static get DATETIME_SHORT() {
+      return DATETIME_SHORT;
+    }
+    static get DATETIME_SHORT_WITH_SECONDS() {
+      return DATETIME_SHORT_WITH_SECONDS;
+    }
+    static get DATETIME_MED() {
+      return DATETIME_MED;
+    }
+    static get DATETIME_MED_WITH_SECONDS() {
+      return DATETIME_MED_WITH_SECONDS;
+    }
+    static get DATETIME_MED_WITH_WEEKDAY() {
+      return DATETIME_MED_WITH_WEEKDAY;
+    }
+    static get DATETIME_FULL() {
+      return DATETIME_FULL;
+    }
+    static get DATETIME_FULL_WITH_SECONDS() {
+      return DATETIME_FULL_WITH_SECONDS;
+    }
+    static get DATETIME_HUGE() {
+      return DATETIME_HUGE;
+    }
+    static get DATETIME_HUGE_WITH_SECONDS() {
+      return DATETIME_HUGE_WITH_SECONDS;
+    }
+  }
+  function friendlyDateTime(dateTimeish) {
+    if (DateTime.isDateTime(dateTimeish)) {
+      return dateTimeish;
+    } else if (dateTimeish && dateTimeish.valueOf && isNumber(dateTimeish.valueOf())) {
+      return DateTime.fromJSDate(dateTimeish);
+    } else if (dateTimeish && typeof dateTimeish === "object") {
+      return DateTime.fromObject(dateTimeish);
+    } else {
+      throw new InvalidArgumentError(`Unknown datetime argument: ${dateTimeish}, of type ${typeof dateTimeish}`);
+    }
+  }
+  var VERSION = "3.7.2";
+  exports.DateTime = DateTime;
+  exports.Duration = Duration;
+  exports.FixedOffsetZone = FixedOffsetZone;
+  exports.IANAZone = IANAZone;
+  exports.Info = Info;
+  exports.Interval = Interval;
+  exports.InvalidZone = InvalidZone;
+  exports.Settings = Settings;
+  exports.SystemZone = SystemZone;
+  exports.VERSION = VERSION;
+  exports.Zone = Zone;
+});
+
+// ../../node_modules/.bun/cron-parser@5.5.0/node_modules/cron-parser/dist/CronDate.js
+var require_CronDate = __commonJS((exports) => {
+  Object.defineProperty(exports, "__esModule", { value: true });
+  exports.CronDate = exports.DAYS_IN_MONTH = exports.DateMathOp = exports.TimeUnit = undefined;
+  var luxon_1 = require_luxon();
+  var TimeUnit;
+  (function(TimeUnit2) {
+    TimeUnit2["Second"] = "Second";
+    TimeUnit2["Minute"] = "Minute";
+    TimeUnit2["Hour"] = "Hour";
+    TimeUnit2["Day"] = "Day";
+    TimeUnit2["Month"] = "Month";
+    TimeUnit2["Year"] = "Year";
+  })(TimeUnit || (exports.TimeUnit = TimeUnit = {}));
+  var DateMathOp;
+  (function(DateMathOp2) {
+    DateMathOp2["Add"] = "Add";
+    DateMathOp2["Subtract"] = "Subtract";
+  })(DateMathOp || (exports.DateMathOp = DateMathOp = {}));
+  exports.DAYS_IN_MONTH = Object.freeze([31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]);
+
+  class CronDate {
+    #date;
+    #dstStart = null;
+    #dstEnd = null;
+    #verbMap = {
+      add: {
+        [TimeUnit.Year]: this.addYear.bind(this),
+        [TimeUnit.Month]: this.addMonth.bind(this),
+        [TimeUnit.Day]: this.addDay.bind(this),
+        [TimeUnit.Hour]: this.addHour.bind(this),
+        [TimeUnit.Minute]: this.addMinute.bind(this),
+        [TimeUnit.Second]: this.addSecond.bind(this)
+      },
+      subtract: {
+        [TimeUnit.Year]: this.subtractYear.bind(this),
+        [TimeUnit.Month]: this.subtractMonth.bind(this),
+        [TimeUnit.Day]: this.subtractDay.bind(this),
+        [TimeUnit.Hour]: this.subtractHour.bind(this),
+        [TimeUnit.Minute]: this.subtractMinute.bind(this),
+        [TimeUnit.Second]: this.subtractSecond.bind(this)
+      }
+    };
+    constructor(timestamp2, tz) {
+      const dateOpts = { zone: tz };
+      if (!timestamp2) {
+        this.#date = luxon_1.DateTime.local();
+      } else if (timestamp2 instanceof CronDate) {
+        this.#date = timestamp2.#date;
+        this.#dstStart = timestamp2.#dstStart;
+        this.#dstEnd = timestamp2.#dstEnd;
+      } else if (timestamp2 instanceof Date) {
+        this.#date = luxon_1.DateTime.fromJSDate(timestamp2, dateOpts);
+      } else if (typeof timestamp2 === "number") {
+        this.#date = luxon_1.DateTime.fromMillis(timestamp2, dateOpts);
+      } else {
+        this.#date = luxon_1.DateTime.fromISO(timestamp2, dateOpts);
+        this.#date.isValid || (this.#date = luxon_1.DateTime.fromRFC2822(timestamp2, dateOpts));
+        this.#date.isValid || (this.#date = luxon_1.DateTime.fromSQL(timestamp2, dateOpts));
+        this.#date.isValid || (this.#date = luxon_1.DateTime.fromFormat(timestamp2, "EEE, d MMM yyyy HH:mm:ss", dateOpts));
+      }
+      if (!this.#date.isValid) {
+        throw new Error(`CronDate: unhandled timestamp: ${timestamp2}`);
+      }
+      if (tz && tz !== this.#date.zoneName) {
+        this.#date = this.#date.setZone(tz);
+      }
+    }
+    static #isLeapYear(year) {
+      return year % 4 === 0 && year % 100 !== 0 || year % 400 === 0;
+    }
+    get dstStart() {
+      return this.#dstStart;
+    }
+    set dstStart(value) {
+      this.#dstStart = value;
+    }
+    get dstEnd() {
+      return this.#dstEnd;
+    }
+    set dstEnd(value) {
+      this.#dstEnd = value;
+    }
+    addYear() {
+      this.#date = this.#date.plus({ years: 1 });
+    }
+    addMonth() {
+      this.#date = this.#date.plus({ months: 1 }).startOf("month");
+    }
+    addDay() {
+      this.#date = this.#date.plus({ days: 1 }).startOf("day");
+    }
+    addHour() {
+      this.#date = this.#date.plus({ hours: 1 }).startOf("hour");
+    }
+    addMinute() {
+      this.#date = this.#date.plus({ minutes: 1 }).startOf("minute");
+    }
+    addSecond() {
+      this.#date = this.#date.plus({ seconds: 1 });
+    }
+    subtractYear() {
+      this.#date = this.#date.minus({ years: 1 });
+    }
+    subtractMonth() {
+      this.#date = this.#date.minus({ months: 1 }).endOf("month").startOf("second");
+    }
+    subtractDay() {
+      this.#date = this.#date.minus({ days: 1 }).endOf("day").startOf("second");
+    }
+    subtractHour() {
+      this.#date = this.#date.minus({ hours: 1 }).endOf("hour").startOf("second");
+    }
+    subtractMinute() {
+      this.#date = this.#date.minus({ minutes: 1 }).endOf("minute").startOf("second");
+    }
+    subtractSecond() {
+      this.#date = this.#date.minus({ seconds: 1 });
+    }
+    addUnit(unit) {
+      this.#verbMap.add[unit]();
+    }
+    subtractUnit(unit) {
+      this.#verbMap.subtract[unit]();
+    }
+    invokeDateOperation(verb, unit) {
+      if (verb === DateMathOp.Add) {
+        this.addUnit(unit);
+        return;
+      }
+      if (verb === DateMathOp.Subtract) {
+        this.subtractUnit(unit);
+        return;
+      }
+      throw new Error(`Invalid verb: ${verb}`);
+    }
+    getDate() {
+      return this.#date.day;
+    }
+    getFullYear() {
+      return this.#date.year;
+    }
+    getDay() {
+      const weekday = this.#date.weekday;
+      return weekday === 7 ? 0 : weekday;
+    }
+    getMonth() {
+      return this.#date.month - 1;
+    }
+    getHours() {
+      return this.#date.hour;
+    }
+    getMinutes() {
+      return this.#date.minute;
+    }
+    getSeconds() {
+      return this.#date.second;
+    }
+    getMilliseconds() {
+      return this.#date.millisecond;
+    }
+    getUTCOffset() {
+      return this.#date.offset;
+    }
+    setStartOfDay() {
+      this.#date = this.#date.startOf("day");
+    }
+    setEndOfDay() {
+      this.#date = this.#date.endOf("day");
+    }
+    getTime() {
+      return this.#date.valueOf();
+    }
+    getUTCDate() {
+      return this.#getUTC().day;
+    }
+    getUTCFullYear() {
+      return this.#getUTC().year;
+    }
+    getUTCDay() {
+      const weekday = this.#getUTC().weekday;
+      return weekday === 7 ? 0 : weekday;
+    }
+    getUTCMonth() {
+      return this.#getUTC().month - 1;
+    }
+    getUTCHours() {
+      return this.#getUTC().hour;
+    }
+    getUTCMinutes() {
+      return this.#getUTC().minute;
+    }
+    getUTCSeconds() {
+      return this.#getUTC().second;
+    }
+    toISOString() {
+      return this.#date.toUTC().toISO();
+    }
+    toJSON() {
+      return this.#date.toJSON();
+    }
+    setDate(d) {
+      this.#date = this.#date.set({ day: d });
+    }
+    setFullYear(y) {
+      this.#date = this.#date.set({ year: y });
+    }
+    setDay(d) {
+      this.#date = this.#date.set({ weekday: d });
+    }
+    setMonth(m) {
+      this.#date = this.#date.set({ month: m + 1 });
+    }
+    setHours(h) {
+      this.#date = this.#date.set({ hour: h });
+    }
+    setMinutes(m) {
+      this.#date = this.#date.set({ minute: m });
+    }
+    setSeconds(s) {
+      this.#date = this.#date.set({ second: s });
+    }
+    setMilliseconds(s) {
+      this.#date = this.#date.set({ millisecond: s });
+    }
+    toString() {
+      return this.toDate().toString();
+    }
+    toDate() {
+      return this.#date.toJSDate();
+    }
+    isLastDayOfMonth() {
+      const { day, month } = this.#date;
+      if (month === 2) {
+        const isLeap = CronDate.#isLeapYear(this.#date.year);
+        return day === exports.DAYS_IN_MONTH[month - 1] - (isLeap ? 0 : 1);
+      }
+      return day === exports.DAYS_IN_MONTH[month - 1];
+    }
+    isLastWeekdayOfMonth() {
+      const { day, month } = this.#date;
+      let lastDay;
+      if (month === 2) {
+        lastDay = exports.DAYS_IN_MONTH[month - 1] - (CronDate.#isLeapYear(this.#date.year) ? 0 : 1);
+      } else {
+        lastDay = exports.DAYS_IN_MONTH[month - 1];
+      }
+      return day > lastDay - 7;
+    }
+    applyDateOperation(op, unit, hoursLength) {
+      if (unit === TimeUnit.Month || unit === TimeUnit.Day) {
+        this.invokeDateOperation(op, unit);
+        return;
+      }
+      const previousHour = this.getHours();
+      this.invokeDateOperation(op, unit);
+      const currentHour = this.getHours();
+      const diff = currentHour - previousHour;
+      if (diff === 2) {
+        if (hoursLength !== 24) {
+          this.dstStart = currentHour;
+        }
+      } else if (diff === 0 && this.getMinutes() === 0 && this.getSeconds() === 0) {
+        if (hoursLength !== 24) {
+          this.dstEnd = currentHour;
+        }
+      }
+    }
+    #getUTC() {
+      return this.#date.toUTC();
+    }
+  }
+  exports.CronDate = CronDate;
+  exports.default = CronDate;
+});
+
+// ../../node_modules/.bun/cron-parser@5.5.0/node_modules/cron-parser/dist/fields/CronMonth.js
+var require_CronMonth = __commonJS((exports) => {
+  Object.defineProperty(exports, "__esModule", { value: true });
+  exports.CronMonth = undefined;
+  var CronDate_1 = require_CronDate();
+  var CronField_1 = require_CronField();
+  var MIN_MONTH = 1;
+  var MAX_MONTH = 12;
+  var MONTH_CHARS = Object.freeze([]);
+
+  class CronMonth extends CronField_1.CronField {
+    static get min() {
+      return MIN_MONTH;
+    }
+    static get max() {
+      return MAX_MONTH;
+    }
+    static get chars() {
+      return MONTH_CHARS;
+    }
+    static get daysInMonth() {
+      return CronDate_1.DAYS_IN_MONTH;
+    }
+    constructor(values2, options) {
+      super(values2, options);
+      this.validate();
+    }
+    get values() {
+      return super.values;
+    }
+  }
+  exports.CronMonth = CronMonth;
+});
+
+// ../../node_modules/.bun/cron-parser@5.5.0/node_modules/cron-parser/dist/fields/CronSecond.js
+var require_CronSecond = __commonJS((exports) => {
+  Object.defineProperty(exports, "__esModule", { value: true });
+  exports.CronSecond = undefined;
+  var CronField_1 = require_CronField();
+  var MIN_SECOND = 0;
+  var MAX_SECOND = 59;
+  var SECOND_CHARS = Object.freeze([]);
+
+  class CronSecond extends CronField_1.CronField {
+    static get min() {
+      return MIN_SECOND;
+    }
+    static get max() {
+      return MAX_SECOND;
+    }
+    static get chars() {
+      return SECOND_CHARS;
+    }
+    constructor(values2, options) {
+      super(values2, options);
+      this.validate();
+    }
+    get values() {
+      return super.values;
+    }
+  }
+  exports.CronSecond = CronSecond;
+});
+
+// ../../node_modules/.bun/cron-parser@5.5.0/node_modules/cron-parser/dist/fields/index.js
+var require_fields = __commonJS((exports) => {
+  var __createBinding = exports && exports.__createBinding || (Object.create ? function(o, m, k, k2) {
+    if (k2 === undefined)
+      k2 = k;
+    var desc2 = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc2 || ("get" in desc2 ? !m.__esModule : desc2.writable || desc2.configurable)) {
+      desc2 = { enumerable: true, get: function() {
+        return m[k];
+      } };
+    }
+    Object.defineProperty(o, k2, desc2);
+  } : function(o, m, k, k2) {
+    if (k2 === undefined)
+      k2 = k;
+    o[k2] = m[k];
+  });
+  var __exportStar = exports && exports.__exportStar || function(m, exports2) {
+    for (var p in m)
+      if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports2, p))
+        __createBinding(exports2, m, p);
+  };
+  Object.defineProperty(exports, "__esModule", { value: true });
+  __exportStar(require_types5(), exports);
+  __exportStar(require_CronDayOfMonth(), exports);
+  __exportStar(require_CronDayOfWeek(), exports);
+  __exportStar(require_CronField(), exports);
+  __exportStar(require_CronHour(), exports);
+  __exportStar(require_CronMinute(), exports);
+  __exportStar(require_CronMonth(), exports);
+  __exportStar(require_CronSecond(), exports);
+});
+
+// ../../node_modules/.bun/cron-parser@5.5.0/node_modules/cron-parser/dist/CronFieldCollection.js
+var require_CronFieldCollection = __commonJS((exports) => {
+  Object.defineProperty(exports, "__esModule", { value: true });
+  exports.CronFieldCollection = undefined;
+  var fields_1 = require_fields();
+
+  class CronFieldCollection {
+    #second;
+    #minute;
+    #hour;
+    #dayOfMonth;
+    #month;
+    #dayOfWeek;
+    static from(base, fields) {
+      return new CronFieldCollection({
+        second: this.resolveField(fields_1.CronSecond, base.second, fields.second),
+        minute: this.resolveField(fields_1.CronMinute, base.minute, fields.minute),
+        hour: this.resolveField(fields_1.CronHour, base.hour, fields.hour),
+        dayOfMonth: this.resolveField(fields_1.CronDayOfMonth, base.dayOfMonth, fields.dayOfMonth),
+        month: this.resolveField(fields_1.CronMonth, base.month, fields.month),
+        dayOfWeek: this.resolveField(fields_1.CronDayOfWeek, base.dayOfWeek, fields.dayOfWeek)
+      });
+    }
+    static resolveField(constructor, baseField, fieldValue) {
+      if (!fieldValue) {
+        return baseField;
+      }
+      if (fieldValue instanceof fields_1.CronField) {
+        return fieldValue;
+      }
+      return new constructor(fieldValue);
+    }
+    constructor({ second, minute, hour, dayOfMonth, month, dayOfWeek }) {
+      if (!second) {
+        throw new Error("Validation error, Field second is missing");
+      }
+      if (!minute) {
+        throw new Error("Validation error, Field minute is missing");
+      }
+      if (!hour) {
+        throw new Error("Validation error, Field hour is missing");
+      }
+      if (!dayOfMonth) {
+        throw new Error("Validation error, Field dayOfMonth is missing");
+      }
+      if (!month) {
+        throw new Error("Validation error, Field month is missing");
+      }
+      if (!dayOfWeek) {
+        throw new Error("Validation error, Field dayOfWeek is missing");
+      }
+      if (month.values.length === 1 && !dayOfMonth.hasLastChar) {
+        if (!(parseInt(dayOfMonth.values[0], 10) <= fields_1.CronMonth.daysInMonth[month.values[0] - 1])) {
+          throw new Error("Invalid explicit day of month definition");
+        }
+      }
+      this.#second = second;
+      this.#minute = minute;
+      this.#hour = hour;
+      this.#month = month;
+      this.#dayOfWeek = dayOfWeek;
+      this.#dayOfMonth = dayOfMonth;
+    }
+    get second() {
+      return this.#second;
+    }
+    get minute() {
+      return this.#minute;
+    }
+    get hour() {
+      return this.#hour;
+    }
+    get dayOfMonth() {
+      return this.#dayOfMonth;
+    }
+    get month() {
+      return this.#month;
+    }
+    get dayOfWeek() {
+      return this.#dayOfWeek;
+    }
+    static compactField(input) {
+      if (input.length === 0) {
+        return [];
+      }
+      const output = [];
+      let current = undefined;
+      input.forEach((item, i, arr) => {
+        if (current === undefined) {
+          current = { start: item, count: 1 };
+          return;
+        }
+        const prevItem = arr[i - 1] || current.start;
+        const nextItem = arr[i + 1];
+        if (item === "L" || item === "W") {
+          output.push(current);
+          output.push({ start: item, count: 1 });
+          current = undefined;
+          return;
+        }
+        if (current.step === undefined && nextItem !== undefined) {
+          const step = item - prevItem;
+          const nextStep = nextItem - item;
+          if (step <= nextStep) {
+            current = { ...current, count: 2, end: item, step };
+            return;
+          }
+          current.step = 1;
+        }
+        if (item - (current.end ?? 0) === current.step) {
+          current.count++;
+          current.end = item;
+        } else {
+          if (current.count === 1) {
+            output.push({ start: current.start, count: 1 });
+          } else if (current.count === 2) {
+            output.push({ start: current.start, count: 1 });
+            output.push({
+              start: current.end ?? prevItem,
+              count: 1
+            });
+          } else {
+            output.push(current);
+          }
+          current = { start: item, count: 1 };
+        }
+      });
+      if (current) {
+        output.push(current);
+      }
+      return output;
+    }
+    static #handleSingleRange(field, range, max) {
+      const step = range.step;
+      if (!step) {
+        return null;
+      }
+      if (step === 1 && range.start === field.min && range.end && range.end >= max) {
+        return field.hasQuestionMarkChar ? "?" : "*";
+      }
+      if (step !== 1 && range.start === field.min && range.end && range.end >= max - step + 1) {
+        return `*/${step}`;
+      }
+      return null;
+    }
+    static #handleMultipleRanges(range, max) {
+      const step = range.step;
+      if (step === 1) {
+        return `${range.start}-${range.end}`;
+      }
+      const multiplier = range.start === 0 ? range.count - 1 : range.count;
+      if (!step) {
+        throw new Error("Unexpected range step");
+      }
+      if (!range.end) {
+        throw new Error("Unexpected range end");
+      }
+      if (step * multiplier > range.end) {
+        const mapFn = (_, index2) => {
+          if (typeof range.start !== "number") {
+            throw new Error("Unexpected range start");
+          }
+          return index2 % step === 0 ? range.start + index2 : null;
+        };
+        if (typeof range.start !== "number") {
+          throw new Error("Unexpected range start");
+        }
+        const seed = { length: range.end - range.start + 1 };
+        return Array.from(seed, mapFn).filter((value) => value !== null).join(",");
+      }
+      return range.end === max - step + 1 ? `${range.start}/${step}` : `${range.start}-${range.end}/${step}`;
+    }
+    stringifyField(field) {
+      let max = field.max;
+      let values2 = field.values;
+      if (field instanceof fields_1.CronDayOfWeek) {
+        max = 6;
+        const dayOfWeek = this.#dayOfWeek.values;
+        values2 = dayOfWeek[dayOfWeek.length - 1] === 7 ? dayOfWeek.slice(0, -1) : dayOfWeek;
+      }
+      if (field instanceof fields_1.CronDayOfMonth) {
+        max = this.#month.values.length === 1 ? fields_1.CronMonth.daysInMonth[this.#month.values[0] - 1] : field.max;
+      }
+      const ranges = CronFieldCollection.compactField(values2);
+      if (ranges.length === 1) {
+        const singleRangeResult = CronFieldCollection.#handleSingleRange(field, ranges[0], max);
+        if (singleRangeResult) {
+          return singleRangeResult;
+        }
+      }
+      return ranges.map((range) => {
+        const value = range.count === 1 ? range.start.toString() : CronFieldCollection.#handleMultipleRanges(range, max);
+        if (field instanceof fields_1.CronDayOfWeek && field.nthDay > 0) {
+          return `${value}#${field.nthDay}`;
+        }
+        return value;
+      }).join(",");
+    }
+    stringify(includeSeconds = false) {
+      const arr = [];
+      if (includeSeconds) {
+        arr.push(this.stringifyField(this.#second));
+      }
+      arr.push(this.stringifyField(this.#minute), this.stringifyField(this.#hour), this.stringifyField(this.#dayOfMonth), this.stringifyField(this.#month), this.stringifyField(this.#dayOfWeek));
+      return arr.join(" ");
+    }
+    serialize() {
+      return {
+        second: this.#second.serialize(),
+        minute: this.#minute.serialize(),
+        hour: this.#hour.serialize(),
+        dayOfMonth: this.#dayOfMonth.serialize(),
+        month: this.#month.serialize(),
+        dayOfWeek: this.#dayOfWeek.serialize()
+      };
+    }
+  }
+  exports.CronFieldCollection = CronFieldCollection;
+});
+
+// ../../node_modules/.bun/cron-parser@5.5.0/node_modules/cron-parser/dist/CronExpression.js
+var require_CronExpression = __commonJS((exports) => {
+  Object.defineProperty(exports, "__esModule", { value: true });
+  exports.CronExpression = exports.LOOPS_LIMIT_EXCEEDED_ERROR_MESSAGE = exports.TIME_SPAN_OUT_OF_BOUNDS_ERROR_MESSAGE = undefined;
+  var CronDate_1 = require_CronDate();
+  exports.TIME_SPAN_OUT_OF_BOUNDS_ERROR_MESSAGE = "Out of the time span range";
+  exports.LOOPS_LIMIT_EXCEEDED_ERROR_MESSAGE = "Invalid expression, loop limit exceeded";
+  var LOOP_LIMIT = 1e4;
+
+  class CronExpression {
+    #options;
+    #tz;
+    #currentDate;
+    #startDate;
+    #endDate;
+    #fields;
+    #dstTransitionDayKey = null;
+    #isDstTransitionDay = false;
+    constructor(fields, options) {
+      this.#options = options;
+      this.#tz = options.tz;
+      this.#startDate = options.startDate ? new CronDate_1.CronDate(options.startDate, this.#tz) : null;
+      this.#endDate = options.endDate ? new CronDate_1.CronDate(options.endDate, this.#tz) : null;
+      let currentDateValue = options.currentDate ?? options.startDate;
+      if (currentDateValue) {
+        const tempCurrentDate = new CronDate_1.CronDate(currentDateValue, this.#tz);
+        if (this.#startDate && tempCurrentDate.getTime() < this.#startDate.getTime()) {
+          currentDateValue = this.#startDate;
+        } else if (this.#endDate && tempCurrentDate.getTime() > this.#endDate.getTime()) {
+          currentDateValue = this.#endDate;
+        }
+      }
+      this.#currentDate = new CronDate_1.CronDate(currentDateValue, this.#tz);
+      this.#fields = fields;
+    }
+    get fields() {
+      return this.#fields;
+    }
+    static fieldsToExpression(fields, options) {
+      return new CronExpression(fields, options || {});
+    }
+    static #matchSchedule(value, sequence) {
+      return sequence.some((element) => element === value);
+    }
+    #getMinOrMax(values2, reverse) {
+      return values2[reverse ? values2.length - 1 : 0];
+    }
+    #checkDstTransition(currentDate) {
+      const key = `${currentDate.getFullYear()}-${currentDate.getMonth() + 1}-${currentDate.getDate()}`;
+      if (this.#dstTransitionDayKey === key) {
+        return this.#isDstTransitionDay;
+      }
+      const startOfDay = new CronDate_1.CronDate(currentDate);
+      startOfDay.setStartOfDay();
+      const endOfDay = new CronDate_1.CronDate(currentDate);
+      endOfDay.setEndOfDay();
+      this.#dstTransitionDayKey = key;
+      this.#isDstTransitionDay = startOfDay.getUTCOffset() !== endOfDay.getUTCOffset();
+      return this.#isDstTransitionDay;
+    }
+    #moveToNextSecond(currentDate, dateMathVerb, reverse) {
+      const seconds = this.#fields.second.values;
+      const currentSecond = currentDate.getSeconds();
+      const nextSecond = this.#fields.second.findNearestValue(currentSecond, reverse);
+      if (nextSecond !== null) {
+        currentDate.setSeconds(nextSecond);
+        return;
+      }
+      currentDate.applyDateOperation(dateMathVerb, CronDate_1.TimeUnit.Minute, this.#fields.hour.values.length);
+      currentDate.setSeconds(this.#getMinOrMax(seconds, reverse));
+    }
+    #moveToNextMinute(currentDate, dateMathVerb, reverse) {
+      const minutes = this.#fields.minute.values;
+      const seconds = this.#fields.second.values;
+      const currentMinute = currentDate.getMinutes();
+      const nextMinute = this.#fields.minute.findNearestValue(currentMinute, reverse);
+      if (nextMinute !== null) {
+        currentDate.setMinutes(nextMinute);
+        currentDate.setSeconds(this.#getMinOrMax(seconds, reverse));
+        return;
+      }
+      currentDate.applyDateOperation(dateMathVerb, CronDate_1.TimeUnit.Hour, this.#fields.hour.values.length);
+      currentDate.setMinutes(this.#getMinOrMax(minutes, reverse));
+      currentDate.setSeconds(this.#getMinOrMax(seconds, reverse));
+    }
+    static #isLastWeekdayOfMonthMatch(expressions, currentDate) {
+      const isLastWeekdayOfMonth = currentDate.isLastWeekdayOfMonth();
+      return expressions.some((expression) => {
+        const weekday = parseInt(expression.toString().charAt(0), 10) % 7;
+        if (Number.isNaN(weekday)) {
+          throw new Error(`Invalid last weekday of the month expression: ${expression}`);
+        }
+        return currentDate.getDay() === weekday && isLastWeekdayOfMonth;
+      });
+    }
+    next() {
+      return this.#findSchedule();
+    }
+    prev() {
+      return this.#findSchedule(true);
+    }
+    hasNext() {
+      const current = this.#currentDate;
+      try {
+        this.#findSchedule();
+        return true;
+      } catch {
+        return false;
+      } finally {
+        this.#currentDate = current;
+      }
+    }
+    hasPrev() {
+      const current = this.#currentDate;
+      try {
+        this.#findSchedule(true);
+        return true;
+      } catch {
+        return false;
+      } finally {
+        this.#currentDate = current;
+      }
+    }
+    take(limit) {
+      const items = [];
+      if (limit >= 0) {
+        for (let i = 0;i < limit; i++) {
+          try {
+            items.push(this.next());
+          } catch {
+            return items;
+          }
+        }
+      } else {
+        for (let i = 0;i > limit; i--) {
+          try {
+            items.push(this.prev());
+          } catch {
+            return items;
+          }
+        }
+      }
+      return items;
+    }
+    reset(newDate) {
+      this.#currentDate = new CronDate_1.CronDate(newDate || this.#options.currentDate);
+    }
+    stringify(includeSeconds = false) {
+      return this.#fields.stringify(includeSeconds);
+    }
+    includesDate(date6) {
+      const { second, minute, hour, month } = this.#fields;
+      const dt = new CronDate_1.CronDate(date6, this.#tz);
+      if (!second.values.includes(dt.getSeconds()) || !minute.values.includes(dt.getMinutes()) || !hour.values.includes(dt.getHours()) || !month.values.includes(dt.getMonth() + 1)) {
+        return false;
+      }
+      if (!this.#matchDayOfMonth(dt)) {
+        return false;
+      }
+      if (this.#fields.dayOfWeek.nthDay > 0) {
+        const weekInMonth = Math.ceil(dt.getDate() / 7);
+        if (weekInMonth !== this.#fields.dayOfWeek.nthDay) {
+          return false;
+        }
+      }
+      return true;
+    }
+    toString() {
+      return this.#options.expression || this.stringify(true);
+    }
+    #matchDayOfMonth(currentDate) {
+      const isDayOfMonthWildcardMatch = this.#fields.dayOfMonth.isWildcard;
+      const isRestrictedDayOfMonth = !isDayOfMonthWildcardMatch;
+      const isDayOfWeekWildcardMatch = this.#fields.dayOfWeek.isWildcard;
+      const isRestrictedDayOfWeek = !isDayOfWeekWildcardMatch;
+      const matchedDOM = CronExpression.#matchSchedule(currentDate.getDate(), this.#fields.dayOfMonth.values) || this.#fields.dayOfMonth.hasLastChar && currentDate.isLastDayOfMonth();
+      const matchedDOW = CronExpression.#matchSchedule(currentDate.getDay(), this.#fields.dayOfWeek.values) || this.#fields.dayOfWeek.hasLastChar && CronExpression.#isLastWeekdayOfMonthMatch(this.#fields.dayOfWeek.values, currentDate);
+      if (isRestrictedDayOfMonth && isRestrictedDayOfWeek && (matchedDOM || matchedDOW)) {
+        return true;
+      }
+      if (matchedDOM && !isRestrictedDayOfWeek) {
+        return true;
+      }
+      if (isDayOfMonthWildcardMatch && !isDayOfWeekWildcardMatch && matchedDOW) {
+        return true;
+      }
+      return false;
+    }
+    #matchHour(currentDate, dateMathVerb, reverse) {
+      const hourValues = this.#fields.hour.values;
+      const hours = hourValues;
+      const currentHour = currentDate.getHours();
+      const isMatch = CronExpression.#matchSchedule(currentHour, hourValues);
+      const isDstStart = currentDate.dstStart === currentHour;
+      const isDstEnd = currentDate.dstEnd === currentHour;
+      if (isDstStart) {
+        if (CronExpression.#matchSchedule(currentHour - 1, hourValues)) {
+          return true;
+        }
+        currentDate.invokeDateOperation(dateMathVerb, CronDate_1.TimeUnit.Hour);
+        return false;
+      }
+      if (isDstEnd && !reverse) {
+        currentDate.dstEnd = null;
+        currentDate.applyDateOperation(CronDate_1.DateMathOp.Add, CronDate_1.TimeUnit.Hour, hours.length);
+        return false;
+      }
+      if (isMatch) {
+        return true;
+      }
+      currentDate.dstStart = null;
+      const nextHour = this.#fields.hour.findNearestValue(currentHour, reverse);
+      if (nextHour === null) {
+        currentDate.applyDateOperation(dateMathVerb, CronDate_1.TimeUnit.Day, hours.length);
+        return false;
+      }
+      if (this.#checkDstTransition(currentDate)) {
+        const steps = reverse ? currentHour - nextHour : nextHour - currentHour;
+        for (let i = 0;i < steps; i++) {
+          currentDate.applyDateOperation(dateMathVerb, CronDate_1.TimeUnit.Hour, hours.length);
+        }
+      } else {
+        currentDate.setHours(nextHour);
+      }
+      currentDate.setMinutes(this.#getMinOrMax(this.#fields.minute.values, reverse));
+      currentDate.setSeconds(this.#getMinOrMax(this.#fields.second.values, reverse));
+      return false;
+    }
+    #validateTimeSpan(currentDate) {
+      if (!this.#startDate && !this.#endDate) {
+        return;
+      }
+      const currentTime = currentDate.getTime();
+      if (this.#startDate && currentTime < this.#startDate.getTime()) {
+        throw new Error(exports.TIME_SPAN_OUT_OF_BOUNDS_ERROR_MESSAGE);
+      }
+      if (this.#endDate && currentTime > this.#endDate.getTime()) {
+        throw new Error(exports.TIME_SPAN_OUT_OF_BOUNDS_ERROR_MESSAGE);
+      }
+    }
+    #findSchedule(reverse = false) {
+      const dateMathVerb = reverse ? CronDate_1.DateMathOp.Subtract : CronDate_1.DateMathOp.Add;
+      const currentDate = new CronDate_1.CronDate(this.#currentDate);
+      const startTimestamp = currentDate.getTime();
+      let stepCount = 0;
+      while (++stepCount < LOOP_LIMIT) {
+        this.#validateTimeSpan(currentDate);
+        if (!this.#matchDayOfMonth(currentDate)) {
+          currentDate.applyDateOperation(dateMathVerb, CronDate_1.TimeUnit.Day, this.#fields.hour.values.length);
+          continue;
+        }
+        if (!(this.#fields.dayOfWeek.nthDay <= 0 || Math.ceil(currentDate.getDate() / 7) === this.#fields.dayOfWeek.nthDay)) {
+          currentDate.applyDateOperation(dateMathVerb, CronDate_1.TimeUnit.Day, this.#fields.hour.values.length);
+          continue;
+        }
+        if (!CronExpression.#matchSchedule(currentDate.getMonth() + 1, this.#fields.month.values)) {
+          currentDate.applyDateOperation(dateMathVerb, CronDate_1.TimeUnit.Month, this.#fields.hour.values.length);
+          continue;
+        }
+        if (!this.#matchHour(currentDate, dateMathVerb, reverse)) {
+          continue;
+        }
+        if (!CronExpression.#matchSchedule(currentDate.getMinutes(), this.#fields.minute.values)) {
+          this.#moveToNextMinute(currentDate, dateMathVerb, reverse);
+          continue;
+        }
+        if (!CronExpression.#matchSchedule(currentDate.getSeconds(), this.#fields.second.values)) {
+          this.#moveToNextSecond(currentDate, dateMathVerb, reverse);
+          continue;
+        }
+        if (startTimestamp === currentDate.getTime()) {
+          if (dateMathVerb === "Add" || currentDate.getMilliseconds() === 0) {
+            currentDate.applyDateOperation(dateMathVerb, CronDate_1.TimeUnit.Second, this.#fields.hour.values.length);
+          }
+          continue;
+        }
+        break;
+      }
+      if (stepCount > LOOP_LIMIT) {
+        throw new Error(exports.LOOPS_LIMIT_EXCEEDED_ERROR_MESSAGE);
+      }
+      if (currentDate.getMilliseconds() !== 0) {
+        currentDate.setMilliseconds(0);
+      }
+      this.#currentDate = currentDate;
+      return currentDate;
+    }
+    [Symbol.iterator]() {
+      return {
+        next: () => {
+          const schedule2 = this.#findSchedule();
+          return { value: schedule2, done: !this.hasNext() };
+        }
+      };
+    }
+  }
+  exports.CronExpression = CronExpression;
+  exports.default = CronExpression;
+});
+
+// ../../node_modules/.bun/cron-parser@5.5.0/node_modules/cron-parser/dist/utils/random.js
+var require_random = __commonJS((exports) => {
+  Object.defineProperty(exports, "__esModule", { value: true });
+  exports.seededRandom = seededRandom;
+  function xfnv1a(str) {
+    let h = 2166136261 >>> 0;
+    for (let i = 0;i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return () => h >>> 0;
+  }
+  function mulberry32(seed) {
+    return () => {
+      let t2 = seed += 1831565813;
+      t2 = Math.imul(t2 ^ t2 >>> 15, t2 | 1);
+      t2 ^= t2 + Math.imul(t2 ^ t2 >>> 7, t2 | 61);
+      return ((t2 ^ t2 >>> 14) >>> 0) / 4294967296;
+    };
+  }
+  function seededRandom(str) {
+    const seed = str ? xfnv1a(str)() : Math.floor(Math.random() * 10000000000);
+    return mulberry32(seed);
+  }
+});
+
+// ../../node_modules/.bun/cron-parser@5.5.0/node_modules/cron-parser/dist/CronExpressionParser.js
+var require_CronExpressionParser = __commonJS((exports) => {
+  Object.defineProperty(exports, "__esModule", { value: true });
+  exports.CronExpressionParser = exports.DayOfWeek = exports.Months = exports.CronUnit = exports.PredefinedExpressions = undefined;
+  var CronFieldCollection_1 = require_CronFieldCollection();
+  var CronExpression_1 = require_CronExpression();
+  var random_1 = require_random();
+  var fields_1 = require_fields();
+  var PredefinedExpressions;
+  (function(PredefinedExpressions2) {
+    PredefinedExpressions2["@yearly"] = "0 0 0 1 1 *";
+    PredefinedExpressions2["@annually"] = "0 0 0 1 1 *";
+    PredefinedExpressions2["@monthly"] = "0 0 0 1 * *";
+    PredefinedExpressions2["@weekly"] = "0 0 0 * * 0";
+    PredefinedExpressions2["@daily"] = "0 0 0 * * *";
+    PredefinedExpressions2["@hourly"] = "0 0 * * * *";
+    PredefinedExpressions2["@minutely"] = "0 * * * * *";
+    PredefinedExpressions2["@secondly"] = "* * * * * *";
+    PredefinedExpressions2["@weekdays"] = "0 0 0 * * 1-5";
+    PredefinedExpressions2["@weekends"] = "0 0 0 * * 0,6";
+  })(PredefinedExpressions || (exports.PredefinedExpressions = PredefinedExpressions = {}));
+  var CronUnit;
+  (function(CronUnit2) {
+    CronUnit2["Second"] = "Second";
+    CronUnit2["Minute"] = "Minute";
+    CronUnit2["Hour"] = "Hour";
+    CronUnit2["DayOfMonth"] = "DayOfMonth";
+    CronUnit2["Month"] = "Month";
+    CronUnit2["DayOfWeek"] = "DayOfWeek";
+  })(CronUnit || (exports.CronUnit = CronUnit = {}));
+  var Months;
+  (function(Months2) {
+    Months2[Months2["jan"] = 1] = "jan";
+    Months2[Months2["feb"] = 2] = "feb";
+    Months2[Months2["mar"] = 3] = "mar";
+    Months2[Months2["apr"] = 4] = "apr";
+    Months2[Months2["may"] = 5] = "may";
+    Months2[Months2["jun"] = 6] = "jun";
+    Months2[Months2["jul"] = 7] = "jul";
+    Months2[Months2["aug"] = 8] = "aug";
+    Months2[Months2["sep"] = 9] = "sep";
+    Months2[Months2["oct"] = 10] = "oct";
+    Months2[Months2["nov"] = 11] = "nov";
+    Months2[Months2["dec"] = 12] = "dec";
+  })(Months || (exports.Months = Months = {}));
+  var DayOfWeek;
+  (function(DayOfWeek2) {
+    DayOfWeek2[DayOfWeek2["sun"] = 0] = "sun";
+    DayOfWeek2[DayOfWeek2["mon"] = 1] = "mon";
+    DayOfWeek2[DayOfWeek2["tue"] = 2] = "tue";
+    DayOfWeek2[DayOfWeek2["wed"] = 3] = "wed";
+    DayOfWeek2[DayOfWeek2["thu"] = 4] = "thu";
+    DayOfWeek2[DayOfWeek2["fri"] = 5] = "fri";
+    DayOfWeek2[DayOfWeek2["sat"] = 6] = "sat";
+  })(DayOfWeek || (exports.DayOfWeek = DayOfWeek = {}));
+
+  class CronExpressionParser {
+    static parse(expression, options = {}) {
+      const { strict = false, hashSeed } = options;
+      const rand = (0, random_1.seededRandom)(hashSeed);
+      expression = PredefinedExpressions[expression] || expression;
+      const rawFields = CronExpressionParser.#getRawFields(expression, strict);
+      if (!(rawFields.dayOfMonth === "*" || rawFields.dayOfWeek === "*" || !strict)) {
+        throw new Error("Cannot use both dayOfMonth and dayOfWeek together in strict mode!");
+      }
+      const second = CronExpressionParser.#parseField(CronUnit.Second, rawFields.second, fields_1.CronSecond.constraints, rand);
+      const minute = CronExpressionParser.#parseField(CronUnit.Minute, rawFields.minute, fields_1.CronMinute.constraints, rand);
+      const hour = CronExpressionParser.#parseField(CronUnit.Hour, rawFields.hour, fields_1.CronHour.constraints, rand);
+      const month = CronExpressionParser.#parseField(CronUnit.Month, rawFields.month, fields_1.CronMonth.constraints, rand);
+      const dayOfMonth = CronExpressionParser.#parseField(CronUnit.DayOfMonth, rawFields.dayOfMonth, fields_1.CronDayOfMonth.constraints, rand);
+      const { dayOfWeek: _dayOfWeek, nthDayOfWeek } = CronExpressionParser.#parseNthDay(rawFields.dayOfWeek);
+      const dayOfWeek = CronExpressionParser.#parseField(CronUnit.DayOfWeek, _dayOfWeek, fields_1.CronDayOfWeek.constraints, rand);
+      const fields = new CronFieldCollection_1.CronFieldCollection({
+        second: new fields_1.CronSecond(second, { rawValue: rawFields.second }),
+        minute: new fields_1.CronMinute(minute, { rawValue: rawFields.minute }),
+        hour: new fields_1.CronHour(hour, { rawValue: rawFields.hour }),
+        dayOfMonth: new fields_1.CronDayOfMonth(dayOfMonth, { rawValue: rawFields.dayOfMonth }),
+        month: new fields_1.CronMonth(month, { rawValue: rawFields.month }),
+        dayOfWeek: new fields_1.CronDayOfWeek(dayOfWeek, { rawValue: rawFields.dayOfWeek, nthDayOfWeek })
+      });
+      return new CronExpression_1.CronExpression(fields, { ...options, expression });
+    }
+    static #getRawFields(expression, strict) {
+      if (strict && !expression.length) {
+        throw new Error("Invalid cron expression");
+      }
+      expression = expression || "0 * * * * *";
+      const atoms = expression.trim().split(/\s+/);
+      if (strict && atoms.length < 6) {
+        throw new Error("Invalid cron expression, expected 6 fields");
+      }
+      if (atoms.length > 6) {
+        throw new Error("Invalid cron expression, too many fields");
+      }
+      const defaults = ["*", "*", "*", "*", "*", "0"];
+      if (atoms.length < defaults.length) {
+        atoms.unshift(...defaults.slice(atoms.length));
+      }
+      const [second, minute, hour, dayOfMonth, month, dayOfWeek] = atoms;
+      return { second, minute, hour, dayOfMonth, month, dayOfWeek };
+    }
+    static #parseField(field, value, constraints, rand) {
+      if (field === CronUnit.Month || field === CronUnit.DayOfWeek) {
+        value = value.replace(/[a-z]{3}/gi, (match2) => {
+          match2 = match2.toLowerCase();
+          const replacer = Months[match2] || DayOfWeek[match2];
+          if (replacer === undefined) {
+            throw new Error(`Validation error, cannot resolve alias "${match2}"`);
+          }
+          return replacer.toString();
+        });
+      }
+      if (!constraints.validChars.test(value)) {
+        throw new Error(`Invalid characters, got value: ${value}`);
+      }
+      value = this.#parseWildcard(value, constraints);
+      value = this.#parseHashed(value, constraints, rand);
+      return this.#parseSequence(field, value, constraints);
+    }
+    static #parseWildcard(value, constraints) {
+      return value.replace(/[*?]/g, constraints.min + "-" + constraints.max);
+    }
+    static #parseHashed(value, constraints, rand) {
+      const randomValue = rand();
+      return value.replace(/H(?:\((\d+)-(\d+)\))?(?:\/(\d+))?/g, (_, min, max, step) => {
+        if (min && max && step) {
+          const minNum = parseInt(min, 10);
+          const maxNum = parseInt(max, 10);
+          const stepNum = parseInt(step, 10);
+          if (minNum > maxNum) {
+            throw new Error(`Invalid range: ${minNum}-${maxNum}, min > max`);
+          }
+          if (stepNum <= 0) {
+            throw new Error(`Invalid step: ${stepNum}, must be positive`);
+          }
+          const minStart = Math.max(minNum, constraints.min);
+          const offset = Math.floor(randomValue * stepNum);
+          const values2 = [];
+          for (let i = Math.floor(minStart / stepNum) * stepNum + offset;i <= maxNum; i += stepNum) {
+            if (i >= minStart) {
+              values2.push(i);
+            }
+          }
+          return values2.join(",");
+        } else if (min && max) {
+          const minNum = parseInt(min, 10);
+          const maxNum = parseInt(max, 10);
+          if (minNum > maxNum) {
+            throw new Error(`Invalid range: ${minNum}-${maxNum}, min > max`);
+          }
+          return String(Math.floor(randomValue * (maxNum - minNum + 1)) + minNum);
+        } else if (step) {
+          const stepNum = parseInt(step, 10);
+          if (stepNum <= 0) {
+            throw new Error(`Invalid step: ${stepNum}, must be positive`);
+          }
+          const offset = Math.floor(randomValue * stepNum);
+          const values2 = [];
+          for (let i = Math.floor(constraints.min / stepNum) * stepNum + offset;i <= constraints.max; i += stepNum) {
+            if (i >= constraints.min) {
+              values2.push(i);
+            }
+          }
+          return values2.join(",");
+        } else {
+          return String(Math.floor(randomValue * (constraints.max - constraints.min + 1) + constraints.min));
+        }
+      });
+    }
+    static #parseSequence(field, val, constraints) {
+      const stack = [];
+      function handleResult(result, constraints2) {
+        if (Array.isArray(result)) {
+          stack.push(...result);
+        } else {
+          if (CronExpressionParser.#isValidConstraintChar(constraints2, result)) {
+            stack.push(result);
+          } else {
+            const v = parseInt(result.toString(), 10);
+            const isValid = v >= constraints2.min && v <= constraints2.max;
+            if (!isValid) {
+              throw new Error(`Constraint error, got value ${result} expected range ${constraints2.min}-${constraints2.max}`);
+            }
+            stack.push(field === CronUnit.DayOfWeek ? v % 7 : result);
+          }
+        }
+      }
+      const atoms = val.split(",");
+      atoms.forEach((atom) => {
+        if (!(atom.length > 0)) {
+          throw new Error("Invalid list value format");
+        }
+        handleResult(CronExpressionParser.#parseRepeat(field, atom, constraints), constraints);
+      });
+      return stack;
+    }
+    static #parseRepeat(field, val, constraints) {
+      const atoms = val.split("/");
+      if (atoms.length > 2) {
+        throw new Error(`Invalid repeat: ${val}`);
+      }
+      if (atoms.length === 2) {
+        if (!isNaN(parseInt(atoms[0], 10))) {
+          atoms[0] = `${atoms[0]}-${constraints.max}`;
+        }
+        return CronExpressionParser.#parseRange(field, atoms[0], parseInt(atoms[1], 10), constraints);
+      }
+      return CronExpressionParser.#parseRange(field, val, 1, constraints);
+    }
+    static #validateRange(min, max, constraints) {
+      const isValid = !isNaN(min) && !isNaN(max) && min >= constraints.min && max <= constraints.max;
+      if (!isValid) {
+        throw new Error(`Constraint error, got range ${min}-${max} expected range ${constraints.min}-${constraints.max}`);
+      }
+      if (min > max) {
+        throw new Error(`Invalid range: ${min}-${max}, min(${min}) > max(${max})`);
+      }
+    }
+    static #validateRepeatInterval(repeatInterval) {
+      if (!(!isNaN(repeatInterval) && repeatInterval > 0)) {
+        throw new Error(`Constraint error, cannot repeat at every ${repeatInterval} time.`);
+      }
+    }
+    static #createRange(field, min, max, repeatInterval) {
+      const stack = [];
+      if (field === CronUnit.DayOfWeek && max % 7 === 0) {
+        stack.push(0);
+      }
+      for (let index2 = min;index2 <= max; index2 += repeatInterval) {
+        if (stack.indexOf(index2) === -1) {
+          stack.push(index2);
+        }
+      }
+      return stack;
+    }
+    static #parseRange(field, val, repeatInterval, constraints) {
+      const atoms = val.split("-");
+      if (atoms.length <= 1) {
+        return isNaN(+val) ? val : +val;
+      }
+      const [min, max] = atoms.map((num) => parseInt(num, 10));
+      this.#validateRange(min, max, constraints);
+      this.#validateRepeatInterval(repeatInterval);
+      return this.#createRange(field, min, max, repeatInterval);
+    }
+    static #parseNthDay(val) {
+      const atoms = val.split("#");
+      if (atoms.length <= 1) {
+        return { dayOfWeek: atoms[0] };
+      }
+      const nthValue = +atoms[atoms.length - 1];
+      const matches = val.match(/([,-/])/);
+      if (matches !== null) {
+        throw new Error(`Constraint error, invalid dayOfWeek \`#\` and \`${matches?.[0]}\` special characters are incompatible`);
+      }
+      if (!(atoms.length <= 2 && !isNaN(nthValue) && nthValue >= 1 && nthValue <= 5)) {
+        throw new Error("Constraint error, invalid dayOfWeek occurrence number (#)");
+      }
+      return { dayOfWeek: atoms[0], nthDayOfWeek: nthValue };
+    }
+    static #isValidConstraintChar(constraints, value) {
+      return constraints.chars.some((char2) => value.toString().includes(char2));
+    }
+  }
+  exports.CronExpressionParser = CronExpressionParser;
+});
+
+// ../../node_modules/.bun/cron-parser@5.5.0/node_modules/cron-parser/dist/CronFileParser.js
+var require_CronFileParser = __commonJS((exports) => {
+  var __createBinding = exports && exports.__createBinding || (Object.create ? function(o, m, k, k2) {
+    if (k2 === undefined)
+      k2 = k;
+    var desc2 = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc2 || ("get" in desc2 ? !m.__esModule : desc2.writable || desc2.configurable)) {
+      desc2 = { enumerable: true, get: function() {
+        return m[k];
+      } };
+    }
+    Object.defineProperty(o, k2, desc2);
+  } : function(o, m, k, k2) {
+    if (k2 === undefined)
+      k2 = k;
+    o[k2] = m[k];
+  });
+  var __setModuleDefault = exports && exports.__setModuleDefault || (Object.create ? function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+  } : function(o, v) {
+    o["default"] = v;
+  });
+  var __importStar = exports && exports.__importStar || function() {
+    var ownKeys = function(o) {
+      ownKeys = Object.getOwnPropertyNames || function(o2) {
+        var ar = [];
+        for (var k in o2)
+          if (Object.prototype.hasOwnProperty.call(o2, k))
+            ar[ar.length] = k;
+        return ar;
+      };
+      return ownKeys(o);
+    };
+    return function(mod) {
+      if (mod && mod.__esModule)
+        return mod;
+      var result = {};
+      if (mod != null) {
+        for (var k = ownKeys(mod), i = 0;i < k.length; i++)
+          if (k[i] !== "default")
+            __createBinding(result, mod, k[i]);
+      }
+      __setModuleDefault(result, mod);
+      return result;
+    };
+  }();
+  Object.defineProperty(exports, "__esModule", { value: true });
+  exports.CronFileParser = undefined;
+  var CronExpressionParser_1 = require_CronExpressionParser();
+
+  class CronFileParser {
+    static async parseFile(filePath) {
+      const { readFile } = await Promise.resolve().then(() => __importStar(__require("fs/promises")));
+      const data = await readFile(filePath, "utf8");
+      return CronFileParser.#parseContent(data);
+    }
+    static parseFileSync(filePath) {
+      const { readFileSync } = __require("fs");
+      const data = readFileSync(filePath, "utf8");
+      return CronFileParser.#parseContent(data);
+    }
+    static #parseContent(data) {
+      const blocks = data.split(`
+`);
+      const result = {
+        variables: {},
+        expressions: [],
+        errors: {}
+      };
+      for (const block of blocks) {
+        const entry = block.trim();
+        if (entry.length === 0 || entry.startsWith("#")) {
+          continue;
+        }
+        const variableMatch = entry.match(/^(.*)=(.*)$/);
+        if (variableMatch) {
+          const [, key, value] = variableMatch;
+          result.variables[key] = value.replace(/["']/g, "");
+          continue;
+        }
+        try {
+          const parsedEntry = CronFileParser.#parseEntry(entry);
+          result.expressions.push(parsedEntry.interval);
+        } catch (err) {
+          result.errors[entry] = err;
+        }
+      }
+      return result;
+    }
+    static #parseEntry(entry) {
+      const atoms = entry.split(" ");
+      return {
+        interval: CronExpressionParser_1.CronExpressionParser.parse(atoms.slice(0, 5).join(" ")),
+        command: atoms.slice(5, atoms.length)
+      };
+    }
+  }
+  exports.CronFileParser = CronFileParser;
+});
+
+// ../../node_modules/.bun/cron-parser@5.5.0/node_modules/cron-parser/dist/index.js
+var require_dist6 = __commonJS((exports) => {
+  var __createBinding = exports && exports.__createBinding || (Object.create ? function(o, m, k, k2) {
+    if (k2 === undefined)
+      k2 = k;
+    var desc2 = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc2 || ("get" in desc2 ? !m.__esModule : desc2.writable || desc2.configurable)) {
+      desc2 = { enumerable: true, get: function() {
+        return m[k];
+      } };
+    }
+    Object.defineProperty(o, k2, desc2);
+  } : function(o, m, k, k2) {
+    if (k2 === undefined)
+      k2 = k;
+    o[k2] = m[k];
+  });
+  var __exportStar = exports && exports.__exportStar || function(m, exports2) {
+    for (var p in m)
+      if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports2, p))
+        __createBinding(exports2, m, p);
+  };
+  Object.defineProperty(exports, "__esModule", { value: true });
+  exports.CronFileParser = exports.CronExpressionParser = exports.CronExpression = exports.CronFieldCollection = exports.CronDate = undefined;
+  var CronExpressionParser_1 = require_CronExpressionParser();
+  var CronDate_1 = require_CronDate();
+  Object.defineProperty(exports, "CronDate", { enumerable: true, get: function() {
+    return CronDate_1.CronDate;
+  } });
+  var CronFieldCollection_1 = require_CronFieldCollection();
+  Object.defineProperty(exports, "CronFieldCollection", { enumerable: true, get: function() {
+    return CronFieldCollection_1.CronFieldCollection;
+  } });
+  var CronExpression_1 = require_CronExpression();
+  Object.defineProperty(exports, "CronExpression", { enumerable: true, get: function() {
+    return CronExpression_1.CronExpression;
+  } });
+  var CronExpressionParser_2 = require_CronExpressionParser();
+  Object.defineProperty(exports, "CronExpressionParser", { enumerable: true, get: function() {
+    return CronExpressionParser_2.CronExpressionParser;
+  } });
+  var CronFileParser_1 = require_CronFileParser();
+  Object.defineProperty(exports, "CronFileParser", { enumerable: true, get: function() {
+    return CronFileParser_1.CronFileParser;
+  } });
+  __exportStar(require_fields(), exports);
+  exports.default = CronExpressionParser_1.CronExpressionParser;
+});
+
+// ../../node_modules/.bun/postgres-array@2.0.0/node_modules/postgres-array/index.js
+var require_postgres_array = __commonJS((exports) => {
+  exports.parse = function(source, transform2) {
+    return new ArrayParser(source, transform2).parse();
+  };
+
+  class ArrayParser {
+    constructor(source, transform2) {
+      this.source = source;
+      this.transform = transform2 || identity2;
+      this.position = 0;
+      this.entries = [];
+      this.recorded = [];
+      this.dimension = 0;
+    }
+    isEof() {
+      return this.position >= this.source.length;
+    }
+    nextCharacter() {
+      var character = this.source[this.position++];
+      if (character === "\\") {
+        return {
+          value: this.source[this.position++],
+          escaped: true
+        };
+      }
+      return {
+        value: character,
+        escaped: false
+      };
+    }
+    record(character) {
+      this.recorded.push(character);
+    }
+    newEntry(includeEmpty) {
+      var entry;
+      if (this.recorded.length > 0 || includeEmpty) {
+        entry = this.recorded.join("");
+        if (entry === "NULL" && !includeEmpty) {
+          entry = null;
+        }
+        if (entry !== null)
+          entry = this.transform(entry);
+        this.entries.push(entry);
+        this.recorded = [];
+      }
+    }
+    consumeDimensions() {
+      if (this.source[0] === "[") {
+        while (!this.isEof()) {
+          var char2 = this.nextCharacter();
+          if (char2.value === "=")
+            break;
+        }
+      }
+    }
+    parse(nested) {
+      var character, parser, quote;
+      this.consumeDimensions();
+      while (!this.isEof()) {
+        character = this.nextCharacter();
+        if (character.value === "{" && !quote) {
+          this.dimension++;
+          if (this.dimension > 1) {
+            parser = new ArrayParser(this.source.substr(this.position - 1), this.transform);
+            this.entries.push(parser.parse(true));
+            this.position += parser.position - 2;
+          }
+        } else if (character.value === "}" && !quote) {
+          this.dimension--;
+          if (!this.dimension) {
+            this.newEntry();
+            if (nested)
+              return this.entries;
+          }
+        } else if (character.value === '"' && !character.escaped) {
+          if (quote)
+            this.newEntry(true);
+          quote = !quote;
+        } else if (character.value === "," && !quote) {
+          this.newEntry();
+        } else {
+          this.record(character.value);
+        }
+      }
+      if (this.dimension !== 0) {
+        throw new Error("array dimension not balanced");
+      }
+      return this.entries;
+    }
+  }
+  function identity2(value) {
+    return value;
+  }
+});
+
+// ../../node_modules/.bun/pg-types@2.2.0/node_modules/pg-types/lib/arrayParser.js
+var require_arrayParser = __commonJS((exports, module) => {
+  var array2 = require_postgres_array();
+  module.exports = {
+    create: function(source, transform2) {
+      return {
+        parse: function() {
+          return array2.parse(source, transform2);
+        }
+      };
+    }
+  };
+});
+
+// ../../node_modules/.bun/postgres-date@1.0.7/node_modules/postgres-date/index.js
+var require_postgres_date = __commonJS((exports, module) => {
+  var DATE_TIME = /(\d{1,})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})(\.\d{1,})?.*?( BC)?$/;
+  var DATE = /^(\d{1,})-(\d{2})-(\d{2})( BC)?$/;
+  var TIME_ZONE = /([Z+-])(\d{2})?:?(\d{2})?:?(\d{2})?/;
+  var INFINITY = /^-?infinity$/;
+  module.exports = function parseDate(isoDate) {
+    if (INFINITY.test(isoDate)) {
+      return Number(isoDate.replace("i", "I"));
+    }
+    var matches = DATE_TIME.exec(isoDate);
+    if (!matches) {
+      return getDate(isoDate) || null;
+    }
+    var isBC = !!matches[8];
+    var year = parseInt(matches[1], 10);
+    if (isBC) {
+      year = bcYearToNegativeYear(year);
+    }
+    var month = parseInt(matches[2], 10) - 1;
+    var day = matches[3];
+    var hour = parseInt(matches[4], 10);
+    var minute = parseInt(matches[5], 10);
+    var second = parseInt(matches[6], 10);
+    var ms = matches[7];
+    ms = ms ? 1000 * parseFloat(ms) : 0;
+    var date6;
+    var offset = timeZoneOffset(isoDate);
+    if (offset != null) {
+      date6 = new Date(Date.UTC(year, month, day, hour, minute, second, ms));
+      if (is0To99(year)) {
+        date6.setUTCFullYear(year);
+      }
+      if (offset !== 0) {
+        date6.setTime(date6.getTime() - offset);
+      }
+    } else {
+      date6 = new Date(year, month, day, hour, minute, second, ms);
+      if (is0To99(year)) {
+        date6.setFullYear(year);
+      }
+    }
+    return date6;
+  };
+  function getDate(isoDate) {
+    var matches = DATE.exec(isoDate);
+    if (!matches) {
+      return;
+    }
+    var year = parseInt(matches[1], 10);
+    var isBC = !!matches[4];
+    if (isBC) {
+      year = bcYearToNegativeYear(year);
+    }
+    var month = parseInt(matches[2], 10) - 1;
+    var day = matches[3];
+    var date6 = new Date(year, month, day);
+    if (is0To99(year)) {
+      date6.setFullYear(year);
+    }
+    return date6;
+  }
+  function timeZoneOffset(isoDate) {
+    if (isoDate.endsWith("+00")) {
+      return 0;
+    }
+    var zone = TIME_ZONE.exec(isoDate.split(" ")[1]);
+    if (!zone)
+      return;
+    var type = zone[1];
+    if (type === "Z") {
+      return 0;
+    }
+    var sign = type === "-" ? -1 : 1;
+    var offset = parseInt(zone[2], 10) * 3600 + parseInt(zone[3] || 0, 10) * 60 + parseInt(zone[4] || 0, 10);
+    return offset * sign * 1000;
+  }
+  function bcYearToNegativeYear(year) {
+    return -(year - 1);
+  }
+  function is0To99(num) {
+    return num >= 0 && num < 100;
+  }
+});
+
+// ../../node_modules/.bun/xtend@4.0.2/node_modules/xtend/mutable.js
+var require_mutable = __commonJS((exports, module) => {
+  module.exports = extend2;
+  var hasOwnProperty = Object.prototype.hasOwnProperty;
+  function extend2(target) {
+    for (var i = 1;i < arguments.length; i++) {
+      var source = arguments[i];
+      for (var key in source) {
+        if (hasOwnProperty.call(source, key)) {
+          target[key] = source[key];
+        }
+      }
+    }
+    return target;
+  }
+});
+
+// ../../node_modules/.bun/postgres-interval@1.2.0/node_modules/postgres-interval/index.js
+var require_postgres_interval = __commonJS((exports, module) => {
+  var extend2 = require_mutable();
+  module.exports = PostgresInterval;
+  function PostgresInterval(raw) {
+    if (!(this instanceof PostgresInterval)) {
+      return new PostgresInterval(raw);
+    }
+    extend2(this, parse7(raw));
+  }
+  var properties = ["seconds", "minutes", "hours", "days", "months", "years"];
+  PostgresInterval.prototype.toPostgres = function() {
+    var filtered = properties.filter(this.hasOwnProperty, this);
+    if (this.milliseconds && filtered.indexOf("seconds") < 0) {
+      filtered.push("seconds");
+    }
+    if (filtered.length === 0)
+      return "0";
+    return filtered.map(function(property) {
+      var value = this[property] || 0;
+      if (property === "seconds" && this.milliseconds) {
+        value = (value + this.milliseconds / 1000).toFixed(6).replace(/\.?0+$/, "");
+      }
+      return value + " " + property;
+    }, this).join(" ");
+  };
+  var propertiesISOEquivalent = {
+    years: "Y",
+    months: "M",
+    days: "D",
+    hours: "H",
+    minutes: "M",
+    seconds: "S"
+  };
+  var dateProperties = ["years", "months", "days"];
+  var timeProperties = ["hours", "minutes", "seconds"];
+  PostgresInterval.prototype.toISOString = PostgresInterval.prototype.toISO = function() {
+    var datePart = dateProperties.map(buildProperty, this).join("");
+    var timePart = timeProperties.map(buildProperty, this).join("");
+    return "P" + datePart + "T" + timePart;
+    function buildProperty(property) {
+      var value = this[property] || 0;
+      if (property === "seconds" && this.milliseconds) {
+        value = (value + this.milliseconds / 1000).toFixed(6).replace(/0+$/, "");
+      }
+      return value + propertiesISOEquivalent[property];
+    }
+  };
+  var NUMBER = "([+-]?\\d+)";
+  var YEAR = NUMBER + "\\s+years?";
+  var MONTH = NUMBER + "\\s+mons?";
+  var DAY = NUMBER + "\\s+days?";
+  var TIME = "([+-])?([\\d]*):(\\d\\d):(\\d\\d)\\.?(\\d{1,6})?";
+  var INTERVAL = new RegExp([YEAR, MONTH, DAY, TIME].map(function(regexString) {
+    return "(" + regexString + ")?";
+  }).join("\\s*"));
+  var positions = {
+    years: 2,
+    months: 4,
+    days: 6,
+    hours: 9,
+    minutes: 10,
+    seconds: 11,
+    milliseconds: 12
+  };
+  var negatives = ["hours", "minutes", "seconds", "milliseconds"];
+  function parseMilliseconds(fraction) {
+    var microseconds = fraction + "000000".slice(fraction.length);
+    return parseInt(microseconds, 10) / 1000;
+  }
+  function parse7(interval2) {
+    if (!interval2)
+      return {};
+    var matches = INTERVAL.exec(interval2);
+    var isNegative = matches[8] === "-";
+    return Object.keys(positions).reduce(function(parsed, property) {
+      var position = positions[property];
+      var value = matches[position];
+      if (!value)
+        return parsed;
+      value = property === "milliseconds" ? parseMilliseconds(value) : parseInt(value, 10);
+      if (!value)
+        return parsed;
+      if (isNegative && ~negatives.indexOf(property)) {
+        value *= -1;
+      }
+      parsed[property] = value;
+      return parsed;
+    }, {});
+  }
+});
+
+// ../../node_modules/.bun/postgres-bytea@1.0.1/node_modules/postgres-bytea/index.js
+var require_postgres_bytea = __commonJS((exports, module) => {
+  var bufferFrom = Buffer.from || Buffer;
+  module.exports = function parseBytea(input) {
+    if (/^\\x/.test(input)) {
+      return bufferFrom(input.substr(2), "hex");
+    }
+    var output = "";
+    var i = 0;
+    while (i < input.length) {
+      if (input[i] !== "\\") {
+        output += input[i];
+        ++i;
+      } else {
+        if (/[0-7]{3}/.test(input.substr(i + 1, 3))) {
+          output += String.fromCharCode(parseInt(input.substr(i + 1, 3), 8));
+          i += 4;
+        } else {
+          var backslashes = 1;
+          while (i + backslashes < input.length && input[i + backslashes] === "\\") {
+            backslashes++;
+          }
+          for (var k = 0;k < Math.floor(backslashes / 2); ++k) {
+            output += "\\";
+          }
+          i += Math.floor(backslashes / 2) * 2;
+        }
+      }
+    }
+    return bufferFrom(output, "binary");
+  };
+});
+
+// ../../node_modules/.bun/pg-types@2.2.0/node_modules/pg-types/lib/textParsers.js
+var require_textParsers = __commonJS((exports, module) => {
+  var array2 = require_postgres_array();
+  var arrayParser3 = require_arrayParser();
+  var parseDate = require_postgres_date();
+  var parseInterval = require_postgres_interval();
+  var parseByteA = require_postgres_bytea();
+  function allowNull(fn) {
+    return function nullAllowed(value) {
+      if (value === null)
+        return value;
+      return fn(value);
+    };
+  }
+  function parseBool(value) {
+    if (value === null)
+      return value;
+    return value === "TRUE" || value === "t" || value === "true" || value === "y" || value === "yes" || value === "on" || value === "1";
+  }
+  function parseBoolArray(value) {
+    if (!value)
+      return null;
+    return array2.parse(value, parseBool);
+  }
+  function parseBaseTenInt(string4) {
+    return parseInt(string4, 10);
+  }
+  function parseIntegerArray(value) {
+    if (!value)
+      return null;
+    return array2.parse(value, allowNull(parseBaseTenInt));
+  }
+  function parseBigIntegerArray(value) {
+    if (!value)
+      return null;
+    return array2.parse(value, allowNull(function(entry) {
+      return parseBigInteger(entry).trim();
+    }));
+  }
+  var parsePointArray = function(value) {
+    if (!value) {
+      return null;
+    }
+    var p = arrayParser3.create(value, function(entry) {
+      if (entry !== null) {
+        entry = parsePoint(entry);
+      }
+      return entry;
+    });
+    return p.parse();
+  };
+  var parseFloatArray = function(value) {
+    if (!value) {
+      return null;
+    }
+    var p = arrayParser3.create(value, function(entry) {
+      if (entry !== null) {
+        entry = parseFloat(entry);
+      }
+      return entry;
+    });
+    return p.parse();
+  };
+  var parseStringArray = function(value) {
+    if (!value) {
+      return null;
+    }
+    var p = arrayParser3.create(value);
+    return p.parse();
+  };
+  var parseDateArray = function(value) {
+    if (!value) {
+      return null;
+    }
+    var p = arrayParser3.create(value, function(entry) {
+      if (entry !== null) {
+        entry = parseDate(entry);
+      }
+      return entry;
+    });
+    return p.parse();
+  };
+  var parseIntervalArray = function(value) {
+    if (!value) {
+      return null;
+    }
+    var p = arrayParser3.create(value, function(entry) {
+      if (entry !== null) {
+        entry = parseInterval(entry);
+      }
+      return entry;
+    });
+    return p.parse();
+  };
+  var parseByteAArray = function(value) {
+    if (!value) {
+      return null;
+    }
+    return array2.parse(value, allowNull(parseByteA));
+  };
+  var parseInteger = function(value) {
+    return parseInt(value, 10);
+  };
+  var parseBigInteger = function(value) {
+    var valStr = String(value);
+    if (/^\d+$/.test(valStr)) {
+      return valStr;
+    }
+    return value;
+  };
+  var parseJsonArray = function(value) {
+    if (!value) {
+      return null;
+    }
+    return array2.parse(value, allowNull(JSON.parse));
+  };
+  var parsePoint = function(value) {
+    if (value[0] !== "(") {
+      return null;
+    }
+    value = value.substring(1, value.length - 1).split(",");
+    return {
+      x: parseFloat(value[0]),
+      y: parseFloat(value[1])
+    };
+  };
+  var parseCircle = function(value) {
+    if (value[0] !== "<" && value[1] !== "(") {
+      return null;
+    }
+    var point2 = "(";
+    var radius = "";
+    var pointParsed = false;
+    for (var i = 2;i < value.length - 1; i++) {
+      if (!pointParsed) {
+        point2 += value[i];
+      }
+      if (value[i] === ")") {
+        pointParsed = true;
+        continue;
+      } else if (!pointParsed) {
+        continue;
+      }
+      if (value[i] === ",") {
+        continue;
+      }
+      radius += value[i];
+    }
+    var result = parsePoint(point2);
+    result.radius = parseFloat(radius);
+    return result;
+  };
+  var init = function(register) {
+    register(20, parseBigInteger);
+    register(21, parseInteger);
+    register(23, parseInteger);
+    register(26, parseInteger);
+    register(700, parseFloat);
+    register(701, parseFloat);
+    register(16, parseBool);
+    register(1082, parseDate);
+    register(1114, parseDate);
+    register(1184, parseDate);
+    register(600, parsePoint);
+    register(651, parseStringArray);
+    register(718, parseCircle);
+    register(1000, parseBoolArray);
+    register(1001, parseByteAArray);
+    register(1005, parseIntegerArray);
+    register(1007, parseIntegerArray);
+    register(1028, parseIntegerArray);
+    register(1016, parseBigIntegerArray);
+    register(1017, parsePointArray);
+    register(1021, parseFloatArray);
+    register(1022, parseFloatArray);
+    register(1231, parseFloatArray);
+    register(1014, parseStringArray);
+    register(1015, parseStringArray);
+    register(1008, parseStringArray);
+    register(1009, parseStringArray);
+    register(1040, parseStringArray);
+    register(1041, parseStringArray);
+    register(1115, parseDateArray);
+    register(1182, parseDateArray);
+    register(1185, parseDateArray);
+    register(1186, parseInterval);
+    register(1187, parseIntervalArray);
+    register(17, parseByteA);
+    register(114, JSON.parse.bind(JSON));
+    register(3802, JSON.parse.bind(JSON));
+    register(199, parseJsonArray);
+    register(3807, parseJsonArray);
+    register(3907, parseStringArray);
+    register(2951, parseStringArray);
+    register(791, parseStringArray);
+    register(1183, parseStringArray);
+    register(1270, parseStringArray);
+  };
+  module.exports = {
+    init
+  };
+});
+
+// ../../node_modules/.bun/pg-int8@1.0.1/node_modules/pg-int8/index.js
+var require_pg_int8 = __commonJS((exports, module) => {
+  var BASE = 1e6;
+  function readInt8(buffer2) {
+    var high = buffer2.readInt32BE(0);
+    var low = buffer2.readUInt32BE(4);
+    var sign = "";
+    if (high < 0) {
+      high = ~high + (low === 0);
+      low = ~low + 1 >>> 0;
+      sign = "-";
+    }
+    var result = "";
+    var carry;
+    var t2;
+    var digits;
+    var pad;
+    var l;
+    var i;
+    {
+      carry = high % BASE;
+      high = high / BASE >>> 0;
+      t2 = 4294967296 * carry + low;
+      low = t2 / BASE >>> 0;
+      digits = "" + (t2 - BASE * low);
+      if (low === 0 && high === 0) {
+        return sign + digits + result;
+      }
+      pad = "";
+      l = 6 - digits.length;
+      for (i = 0;i < l; i++) {
+        pad += "0";
+      }
+      result = pad + digits + result;
+    }
+    {
+      carry = high % BASE;
+      high = high / BASE >>> 0;
+      t2 = 4294967296 * carry + low;
+      low = t2 / BASE >>> 0;
+      digits = "" + (t2 - BASE * low);
+      if (low === 0 && high === 0) {
+        return sign + digits + result;
+      }
+      pad = "";
+      l = 6 - digits.length;
+      for (i = 0;i < l; i++) {
+        pad += "0";
+      }
+      result = pad + digits + result;
+    }
+    {
+      carry = high % BASE;
+      high = high / BASE >>> 0;
+      t2 = 4294967296 * carry + low;
+      low = t2 / BASE >>> 0;
+      digits = "" + (t2 - BASE * low);
+      if (low === 0 && high === 0) {
+        return sign + digits + result;
+      }
+      pad = "";
+      l = 6 - digits.length;
+      for (i = 0;i < l; i++) {
+        pad += "0";
+      }
+      result = pad + digits + result;
+    }
+    {
+      carry = high % BASE;
+      t2 = 4294967296 * carry + low;
+      digits = "" + t2 % BASE;
+      return sign + digits + result;
+    }
+  }
+  module.exports = readInt8;
+});
+
+// ../../node_modules/.bun/pg-types@2.2.0/node_modules/pg-types/lib/binaryParsers.js
+var require_binaryParsers = __commonJS((exports, module) => {
+  var parseInt64 = require_pg_int8();
+  var parseBits = function(data, bits, offset, invert, callback) {
+    offset = offset || 0;
+    invert = invert || false;
+    callback = callback || function(lastValue, newValue, bits2) {
+      return lastValue * Math.pow(2, bits2) + newValue;
+    };
+    var offsetBytes = offset >> 3;
+    var inv = function(value) {
+      if (invert) {
+        return ~value & 255;
+      }
+      return value;
+    };
+    var mask = 255;
+    var firstBits = 8 - offset % 8;
+    if (bits < firstBits) {
+      mask = 255 << 8 - bits & 255;
+      firstBits = bits;
+    }
+    if (offset) {
+      mask = mask >> offset % 8;
+    }
+    var result = 0;
+    if (offset % 8 + bits >= 8) {
+      result = callback(0, inv(data[offsetBytes]) & mask, firstBits);
+    }
+    var bytes = bits + offset >> 3;
+    for (var i = offsetBytes + 1;i < bytes; i++) {
+      result = callback(result, inv(data[i]), 8);
+    }
+    var lastBits = (bits + offset) % 8;
+    if (lastBits > 0) {
+      result = callback(result, inv(data[bytes]) >> 8 - lastBits, lastBits);
+    }
+    return result;
+  };
+  var parseFloatFromBits = function(data, precisionBits, exponentBits) {
+    var bias = Math.pow(2, exponentBits - 1) - 1;
+    var sign = parseBits(data, 1);
+    var exponent = parseBits(data, exponentBits, 1);
+    if (exponent === 0) {
+      return 0;
+    }
+    var precisionBitsCounter = 1;
+    var parsePrecisionBits = function(lastValue, newValue, bits) {
+      if (lastValue === 0) {
+        lastValue = 1;
+      }
+      for (var i = 1;i <= bits; i++) {
+        precisionBitsCounter /= 2;
+        if ((newValue & 1 << bits - i) > 0) {
+          lastValue += precisionBitsCounter;
+        }
+      }
+      return lastValue;
+    };
+    var mantissa = parseBits(data, precisionBits, exponentBits + 1, false, parsePrecisionBits);
+    if (exponent == Math.pow(2, exponentBits + 1) - 1) {
+      if (mantissa === 0) {
+        return sign === 0 ? Infinity : -Infinity;
+      }
+      return NaN;
+    }
+    return (sign === 0 ? 1 : -1) * Math.pow(2, exponent - bias) * mantissa;
+  };
+  var parseInt16 = function(value) {
+    if (parseBits(value, 1) == 1) {
+      return -1 * (parseBits(value, 15, 1, true) + 1);
+    }
+    return parseBits(value, 15, 1);
+  };
+  var parseInt32 = function(value) {
+    if (parseBits(value, 1) == 1) {
+      return -1 * (parseBits(value, 31, 1, true) + 1);
+    }
+    return parseBits(value, 31, 1);
+  };
+  var parseFloat32 = function(value) {
+    return parseFloatFromBits(value, 23, 8);
+  };
+  var parseFloat64 = function(value) {
+    return parseFloatFromBits(value, 52, 11);
+  };
+  var parseNumeric = function(value) {
+    var sign = parseBits(value, 16, 32);
+    if (sign == 49152) {
+      return NaN;
+    }
+    var weight = Math.pow(1e4, parseBits(value, 16, 16));
+    var result = 0;
+    var digits = [];
+    var ndigits = parseBits(value, 16);
+    for (var i = 0;i < ndigits; i++) {
+      result += parseBits(value, 16, 64 + 16 * i) * weight;
+      weight /= 1e4;
+    }
+    var scale = Math.pow(10, parseBits(value, 16, 48));
+    return (sign === 0 ? 1 : -1) * Math.round(result * scale) / scale;
+  };
+  var parseDate = function(isUTC, value) {
+    var sign = parseBits(value, 1);
+    var rawValue = parseBits(value, 63, 1);
+    var result = new Date((sign === 0 ? 1 : -1) * rawValue / 1000 + 946684800000);
+    if (!isUTC) {
+      result.setTime(result.getTime() + result.getTimezoneOffset() * 60000);
+    }
+    result.usec = rawValue % 1000;
+    result.getMicroSeconds = function() {
+      return this.usec;
+    };
+    result.setMicroSeconds = function(value2) {
+      this.usec = value2;
+    };
+    result.getUTCMicroSeconds = function() {
+      return this.usec;
+    };
+    return result;
+  };
+  var parseArray = function(value) {
+    var dim = parseBits(value, 32);
+    var flags = parseBits(value, 32, 32);
+    var elementType = parseBits(value, 32, 64);
+    var offset = 96;
+    var dims = [];
+    for (var i = 0;i < dim; i++) {
+      dims[i] = parseBits(value, 32, offset);
+      offset += 32;
+      offset += 32;
+    }
+    var parseElement = function(elementType2) {
+      var length = parseBits(value, 32, offset);
+      offset += 32;
+      if (length == 4294967295) {
+        return null;
+      }
+      var result;
+      if (elementType2 == 23 || elementType2 == 20) {
+        result = parseBits(value, length * 8, offset);
+        offset += length * 8;
+        return result;
+      } else if (elementType2 == 25) {
+        result = value.toString(this.encoding, offset >> 3, (offset += length << 3) >> 3);
+        return result;
+      } else {
+        console.log("ERROR: ElementType not implemented: " + elementType2);
+      }
+    };
+    var parse7 = function(dimension, elementType2) {
+      var array2 = [];
+      var i2;
+      if (dimension.length > 1) {
+        var count = dimension.shift();
+        for (i2 = 0;i2 < count; i2++) {
+          array2[i2] = parse7(dimension, elementType2);
+        }
+        dimension.unshift(count);
+      } else {
+        for (i2 = 0;i2 < dimension[0]; i2++) {
+          array2[i2] = parseElement(elementType2);
+        }
+      }
+      return array2;
+    };
+    return parse7(dims, elementType);
+  };
+  var parseText = function(value) {
+    return value.toString("utf8");
+  };
+  var parseBool = function(value) {
+    if (value === null)
+      return null;
+    return parseBits(value, 8) > 0;
+  };
+  var init = function(register) {
+    register(20, parseInt64);
+    register(21, parseInt16);
+    register(23, parseInt32);
+    register(26, parseInt32);
+    register(1700, parseNumeric);
+    register(700, parseFloat32);
+    register(701, parseFloat64);
+    register(16, parseBool);
+    register(1114, parseDate.bind(null, false));
+    register(1184, parseDate.bind(null, true));
+    register(1000, parseArray);
+    register(1007, parseArray);
+    register(1016, parseArray);
+    register(1008, parseArray);
+    register(1009, parseArray);
+    register(25, parseText);
+  };
+  module.exports = {
+    init
+  };
+});
+
+// ../../node_modules/.bun/pg-types@2.2.0/node_modules/pg-types/lib/builtins.js
+var require_builtins = __commonJS((exports, module) => {
+  module.exports = {
+    BOOL: 16,
+    BYTEA: 17,
+    CHAR: 18,
+    INT8: 20,
+    INT2: 21,
+    INT4: 23,
+    REGPROC: 24,
+    TEXT: 25,
+    OID: 26,
+    TID: 27,
+    XID: 28,
+    CID: 29,
+    JSON: 114,
+    XML: 142,
+    PG_NODE_TREE: 194,
+    SMGR: 210,
+    PATH: 602,
+    POLYGON: 604,
+    CIDR: 650,
+    FLOAT4: 700,
+    FLOAT8: 701,
+    ABSTIME: 702,
+    RELTIME: 703,
+    TINTERVAL: 704,
+    CIRCLE: 718,
+    MACADDR8: 774,
+    MONEY: 790,
+    MACADDR: 829,
+    INET: 869,
+    ACLITEM: 1033,
+    BPCHAR: 1042,
+    VARCHAR: 1043,
+    DATE: 1082,
+    TIME: 1083,
+    TIMESTAMP: 1114,
+    TIMESTAMPTZ: 1184,
+    INTERVAL: 1186,
+    TIMETZ: 1266,
+    BIT: 1560,
+    VARBIT: 1562,
+    NUMERIC: 1700,
+    REFCURSOR: 1790,
+    REGPROCEDURE: 2202,
+    REGOPER: 2203,
+    REGOPERATOR: 2204,
+    REGCLASS: 2205,
+    REGTYPE: 2206,
+    UUID: 2950,
+    TXID_SNAPSHOT: 2970,
+    PG_LSN: 3220,
+    PG_NDISTINCT: 3361,
+    PG_DEPENDENCIES: 3402,
+    TSVECTOR: 3614,
+    TSQUERY: 3615,
+    GTSVECTOR: 3642,
+    REGCONFIG: 3734,
+    REGDICTIONARY: 3769,
+    JSONB: 3802,
+    REGNAMESPACE: 4089,
+    REGROLE: 4096
+  };
+});
+
+// ../../node_modules/.bun/pg-types@2.2.0/node_modules/pg-types/index.js
+var require_pg_types = __commonJS((exports) => {
+  var textParsers = require_textParsers();
+  var binaryParsers = require_binaryParsers();
+  var arrayParser3 = require_arrayParser();
+  var builtinTypes = require_builtins();
+  exports.getTypeParser = getTypeParser;
+  exports.setTypeParser = setTypeParser;
+  exports.arrayParser = arrayParser3;
+  exports.builtins = builtinTypes;
+  var typeParsers = {
+    text: {},
+    binary: {}
+  };
+  function noParse(val) {
+    return String(val);
+  }
+  function getTypeParser(oid, format) {
+    format = format || "text";
+    if (!typeParsers[format]) {
+      return noParse;
+    }
+    return typeParsers[format][oid] || noParse;
+  }
+  function setTypeParser(oid, format, parseFn) {
+    if (typeof format == "function") {
+      parseFn = format;
+      format = "text";
+    }
+    typeParsers[format][oid] = parseFn;
+  }
+  textParsers.init(function(oid, converter) {
+    typeParsers.text[oid] = converter;
+  });
+  binaryParsers.init(function(oid, converter) {
+    typeParsers.binary[oid] = converter;
+  });
+});
+
+// ../../node_modules/.bun/pg@8.18.0+32ccf17b773ffb11/node_modules/pg/lib/defaults.js
+var require_defaults2 = __commonJS((exports, module) => {
+  var user;
+  try {
+    user = process.platform === "win32" ? process.env.USERNAME : process.env.USER;
+  } catch {}
+  module.exports = {
+    host: "localhost",
+    user,
+    database: undefined,
+    password: null,
+    connectionString: undefined,
+    port: 5432,
+    rows: 0,
+    binary: false,
+    max: 10,
+    idleTimeoutMillis: 30000,
+    client_encoding: "",
+    ssl: false,
+    application_name: undefined,
+    fallback_application_name: undefined,
+    options: undefined,
+    parseInputDatesAsUTC: false,
+    statement_timeout: false,
+    lock_timeout: false,
+    idle_in_transaction_session_timeout: false,
+    query_timeout: false,
+    connect_timeout: 0,
+    keepalives: 1,
+    keepalives_idle: 0
+  };
+  var pgTypes = require_pg_types();
+  var parseBigInteger = pgTypes.getTypeParser(20, "text");
+  var parseBigIntegerArray = pgTypes.getTypeParser(1016, "text");
+  module.exports.__defineSetter__("parseInt8", function(val) {
+    pgTypes.setTypeParser(20, "text", val ? pgTypes.getTypeParser(23, "text") : parseBigInteger);
+    pgTypes.setTypeParser(1016, "text", val ? pgTypes.getTypeParser(1007, "text") : parseBigIntegerArray);
+  });
+});
+
+// ../../node_modules/.bun/pg@8.18.0+32ccf17b773ffb11/node_modules/pg/lib/utils.js
+var require_utils2 = __commonJS((exports, module) => {
+  var defaults = require_defaults2();
+  var util = __require("util");
+  var { isDate } = util.types || util;
+  function escapeElement(elementRepresentation) {
+    const escaped = elementRepresentation.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
+    return '"' + escaped + '"';
+  }
+  function arrayString(val) {
+    let result = "{";
+    for (let i = 0;i < val.length; i++) {
+      if (i > 0) {
+        result = result + ",";
+      }
+      if (val[i] === null || typeof val[i] === "undefined") {
+        result = result + "NULL";
+      } else if (Array.isArray(val[i])) {
+        result = result + arrayString(val[i]);
+      } else if (ArrayBuffer.isView(val[i])) {
+        let item = val[i];
+        if (!(item instanceof Buffer)) {
+          const buf = Buffer.from(item.buffer, item.byteOffset, item.byteLength);
+          if (buf.length === item.byteLength) {
+            item = buf;
+          } else {
+            item = buf.slice(item.byteOffset, item.byteOffset + item.byteLength);
+          }
+        }
+        result += "\\\\x" + item.toString("hex");
+      } else {
+        result += escapeElement(prepareValue(val[i]));
+      }
+    }
+    result = result + "}";
+    return result;
+  }
+  var prepareValue = function(val, seen) {
+    if (val == null) {
+      return null;
+    }
+    if (typeof val === "object") {
+      if (val instanceof Buffer) {
+        return val;
+      }
+      if (ArrayBuffer.isView(val)) {
+        const buf = Buffer.from(val.buffer, val.byteOffset, val.byteLength);
+        if (buf.length === val.byteLength) {
+          return buf;
+        }
+        return buf.slice(val.byteOffset, val.byteOffset + val.byteLength);
+      }
+      if (isDate(val)) {
+        if (defaults.parseInputDatesAsUTC) {
+          return dateToStringUTC(val);
+        } else {
+          return dateToString(val);
+        }
+      }
+      if (Array.isArray(val)) {
+        return arrayString(val);
+      }
+      return prepareObject(val, seen);
+    }
+    return val.toString();
+  };
+  function prepareObject(val, seen) {
+    if (val && typeof val.toPostgres === "function") {
+      seen = seen || [];
+      if (seen.indexOf(val) !== -1) {
+        throw new Error('circular reference detected while preparing "' + val + '" for query');
+      }
+      seen.push(val);
+      return prepareValue(val.toPostgres(prepareValue), seen);
+    }
+    return JSON.stringify(val);
+  }
+  function dateToString(date6) {
+    let offset = -date6.getTimezoneOffset();
+    let year = date6.getFullYear();
+    const isBCYear = year < 1;
+    if (isBCYear)
+      year = Math.abs(year) + 1;
+    let ret = String(year).padStart(4, "0") + "-" + String(date6.getMonth() + 1).padStart(2, "0") + "-" + String(date6.getDate()).padStart(2, "0") + "T" + String(date6.getHours()).padStart(2, "0") + ":" + String(date6.getMinutes()).padStart(2, "0") + ":" + String(date6.getSeconds()).padStart(2, "0") + "." + String(date6.getMilliseconds()).padStart(3, "0");
+    if (offset < 0) {
+      ret += "-";
+      offset *= -1;
+    } else {
+      ret += "+";
+    }
+    ret += String(Math.floor(offset / 60)).padStart(2, "0") + ":" + String(offset % 60).padStart(2, "0");
+    if (isBCYear)
+      ret += " BC";
+    return ret;
+  }
+  function dateToStringUTC(date6) {
+    let year = date6.getUTCFullYear();
+    const isBCYear = year < 1;
+    if (isBCYear)
+      year = Math.abs(year) + 1;
+    let ret = String(year).padStart(4, "0") + "-" + String(date6.getUTCMonth() + 1).padStart(2, "0") + "-" + String(date6.getUTCDate()).padStart(2, "0") + "T" + String(date6.getUTCHours()).padStart(2, "0") + ":" + String(date6.getUTCMinutes()).padStart(2, "0") + ":" + String(date6.getUTCSeconds()).padStart(2, "0") + "." + String(date6.getUTCMilliseconds()).padStart(3, "0");
+    ret += "+00:00";
+    if (isBCYear)
+      ret += " BC";
+    return ret;
+  }
+  function normalizeQueryConfig(config2, values2, callback) {
+    config2 = typeof config2 === "string" ? { text: config2 } : config2;
+    if (values2) {
+      if (typeof values2 === "function") {
+        config2.callback = values2;
+      } else {
+        config2.values = values2;
+      }
+    }
+    if (callback) {
+      config2.callback = callback;
+    }
+    return config2;
+  }
+  var escapeIdentifier2 = function(str) {
+    return '"' + str.replace(/"/g, '""') + '"';
+  };
+  var escapeLiteral = function(str) {
+    let hasBackslash = false;
+    let escaped = "'";
+    if (str == null) {
+      return "''";
+    }
+    if (typeof str !== "string") {
+      return "''";
+    }
+    for (let i = 0;i < str.length; i++) {
+      const c = str[i];
+      if (c === "'") {
+        escaped += c + c;
+      } else if (c === "\\") {
+        escaped += c + c;
+        hasBackslash = true;
+      } else {
+        escaped += c;
+      }
+    }
+    escaped += "'";
+    if (hasBackslash === true) {
+      escaped = " E" + escaped;
+    }
+    return escaped;
+  };
+  module.exports = {
+    prepareValue: function prepareValueWrapper(value) {
+      return prepareValue(value);
+    },
+    normalizeQueryConfig,
+    escapeIdentifier: escapeIdentifier2,
+    escapeLiteral
+  };
+});
+
+// ../../node_modules/.bun/pg@8.18.0+32ccf17b773ffb11/node_modules/pg/lib/crypto/utils-legacy.js
+var require_utils_legacy = __commonJS((exports, module) => {
+  var nodeCrypto = __require("crypto");
+  function md52(string4) {
+    return nodeCrypto.createHash("md5").update(string4, "utf-8").digest("hex");
+  }
+  function postgresMd5PasswordHash(user, password, salt) {
+    const inner = md52(password + user);
+    const outer = md52(Buffer.concat([Buffer.from(inner), salt]));
+    return "md5" + outer;
+  }
+  function sha2562(text2) {
+    return nodeCrypto.createHash("sha256").update(text2).digest();
+  }
+  function hashByName(hashName, text2) {
+    hashName = hashName.replace(/(\D)-/, "$1");
+    return nodeCrypto.createHash(hashName).update(text2).digest();
+  }
+  function hmacSha256(key, msg) {
+    return nodeCrypto.createHmac("sha256", key).update(msg).digest();
+  }
+  async function deriveKey(password, salt, iterations) {
+    return nodeCrypto.pbkdf2Sync(password, salt, iterations, 32, "sha256");
+  }
+  module.exports = {
+    postgresMd5PasswordHash,
+    randomBytes: nodeCrypto.randomBytes,
+    deriveKey,
+    sha256: sha2562,
+    hashByName,
+    hmacSha256,
+    md5: md52
+  };
+});
+
+// ../../node_modules/.bun/pg@8.18.0+32ccf17b773ffb11/node_modules/pg/lib/crypto/utils-webcrypto.js
+var require_utils_webcrypto = __commonJS((exports, module) => {
+  var nodeCrypto = __require("crypto");
+  module.exports = {
+    postgresMd5PasswordHash,
+    randomBytes: randomBytes3,
+    deriveKey,
+    sha256: sha2562,
+    hashByName,
+    hmacSha256,
+    md5: md52
+  };
+  var webCrypto = nodeCrypto.webcrypto || globalThis.crypto;
+  var subtleCrypto = webCrypto.subtle;
+  var textEncoder = new TextEncoder;
+  function randomBytes3(length) {
+    return webCrypto.getRandomValues(Buffer.alloc(length));
+  }
+  async function md52(string4) {
+    try {
+      return nodeCrypto.createHash("md5").update(string4, "utf-8").digest("hex");
+    } catch (e) {
+      const data = typeof string4 === "string" ? textEncoder.encode(string4) : string4;
+      const hash2 = await subtleCrypto.digest("MD5", data);
+      return Array.from(new Uint8Array(hash2)).map((b2) => b2.toString(16).padStart(2, "0")).join("");
+    }
+  }
+  async function postgresMd5PasswordHash(user, password, salt) {
+    const inner = await md52(password + user);
+    const outer = await md52(Buffer.concat([Buffer.from(inner), salt]));
+    return "md5" + outer;
+  }
+  async function sha2562(text2) {
+    return await subtleCrypto.digest("SHA-256", text2);
+  }
+  async function hashByName(hashName, text2) {
+    return await subtleCrypto.digest(hashName, text2);
+  }
+  async function hmacSha256(keyBuffer, msg) {
+    const key = await subtleCrypto.importKey("raw", keyBuffer, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+    return await subtleCrypto.sign("HMAC", key, textEncoder.encode(msg));
+  }
+  async function deriveKey(password, salt, iterations) {
+    const key = await subtleCrypto.importKey("raw", textEncoder.encode(password), "PBKDF2", false, ["deriveBits"]);
+    const params = { name: "PBKDF2", hash: "SHA-256", salt, iterations };
+    return await subtleCrypto.deriveBits(params, key, 32 * 8, ["deriveBits"]);
+  }
+});
+
+// ../../node_modules/.bun/pg@8.18.0+32ccf17b773ffb11/node_modules/pg/lib/crypto/utils.js
+var require_utils3 = __commonJS((exports, module) => {
+  var useLegacyCrypto = parseInt(process.versions && process.versions.node && process.versions.node.split(".")[0]) < 15;
+  if (useLegacyCrypto) {
+    module.exports = require_utils_legacy();
+  } else {
+    module.exports = require_utils_webcrypto();
+  }
+});
+
+// ../../node_modules/.bun/pg@8.18.0+32ccf17b773ffb11/node_modules/pg/lib/crypto/cert-signatures.js
+var require_cert_signatures = __commonJS((exports, module) => {
+  function x509Error(msg, cert) {
+    return new Error("SASL channel binding: " + msg + " when parsing public certificate " + cert.toString("base64"));
+  }
+  function readASN1Length(data, index2) {
+    let length = data[index2++];
+    if (length < 128)
+      return { length, index: index2 };
+    const lengthBytes = length & 127;
+    if (lengthBytes > 4)
+      throw x509Error("bad length", data);
+    length = 0;
+    for (let i = 0;i < lengthBytes; i++) {
+      length = length << 8 | data[index2++];
+    }
+    return { length, index: index2 };
+  }
+  function readASN1OID(data, index2) {
+    if (data[index2++] !== 6)
+      throw x509Error("non-OID data", data);
+    const { length: OIDLength, index: indexAfterOIDLength } = readASN1Length(data, index2);
+    index2 = indexAfterOIDLength;
+    const lastIndex = index2 + OIDLength;
+    const byte1 = data[index2++];
+    let oid = (byte1 / 40 >> 0) + "." + byte1 % 40;
+    while (index2 < lastIndex) {
+      let value = 0;
+      while (index2 < lastIndex) {
+        const nextByte = data[index2++];
+        value = value << 7 | nextByte & 127;
+        if (nextByte < 128)
+          break;
+      }
+      oid += "." + value;
+    }
+    return { oid, index: index2 };
+  }
+  function expectASN1Seq(data, index2) {
+    if (data[index2++] !== 48)
+      throw x509Error("non-sequence data", data);
+    return readASN1Length(data, index2);
+  }
+  function signatureAlgorithmHashFromCertificate(data, index2) {
+    if (index2 === undefined)
+      index2 = 0;
+    index2 = expectASN1Seq(data, index2).index;
+    const { length: certInfoLength, index: indexAfterCertInfoLength } = expectASN1Seq(data, index2);
+    index2 = indexAfterCertInfoLength + certInfoLength;
+    index2 = expectASN1Seq(data, index2).index;
+    const { oid, index: indexAfterOID } = readASN1OID(data, index2);
+    switch (oid) {
+      case "1.2.840.113549.1.1.4":
+        return "MD5";
+      case "1.2.840.113549.1.1.5":
+        return "SHA-1";
+      case "1.2.840.113549.1.1.11":
+        return "SHA-256";
+      case "1.2.840.113549.1.1.12":
+        return "SHA-384";
+      case "1.2.840.113549.1.1.13":
+        return "SHA-512";
+      case "1.2.840.113549.1.1.14":
+        return "SHA-224";
+      case "1.2.840.113549.1.1.15":
+        return "SHA512-224";
+      case "1.2.840.113549.1.1.16":
+        return "SHA512-256";
+      case "1.2.840.10045.4.1":
+        return "SHA-1";
+      case "1.2.840.10045.4.3.1":
+        return "SHA-224";
+      case "1.2.840.10045.4.3.2":
+        return "SHA-256";
+      case "1.2.840.10045.4.3.3":
+        return "SHA-384";
+      case "1.2.840.10045.4.3.4":
+        return "SHA-512";
+      case "1.2.840.113549.1.1.10": {
+        index2 = indexAfterOID;
+        index2 = expectASN1Seq(data, index2).index;
+        if (data[index2++] !== 160)
+          throw x509Error("non-tag data", data);
+        index2 = readASN1Length(data, index2).index;
+        index2 = expectASN1Seq(data, index2).index;
+        const { oid: hashOID } = readASN1OID(data, index2);
+        switch (hashOID) {
+          case "1.2.840.113549.2.5":
+            return "MD5";
+          case "1.3.14.3.2.26":
+            return "SHA-1";
+          case "2.16.840.1.101.3.4.2.1":
+            return "SHA-256";
+          case "2.16.840.1.101.3.4.2.2":
+            return "SHA-384";
+          case "2.16.840.1.101.3.4.2.3":
+            return "SHA-512";
+        }
+        throw x509Error("unknown hash OID " + hashOID, data);
+      }
+      case "1.3.101.110":
+      case "1.3.101.112":
+        return "SHA-512";
+      case "1.3.101.111":
+      case "1.3.101.113":
+        throw x509Error("Ed448 certificate channel binding is not currently supported by Postgres");
+    }
+    throw x509Error("unknown OID " + oid, data);
+  }
+  module.exports = { signatureAlgorithmHashFromCertificate };
+});
+
+// ../../node_modules/.bun/pg@8.18.0+32ccf17b773ffb11/node_modules/pg/lib/crypto/sasl.js
+var require_sasl = __commonJS((exports, module) => {
+  var crypto3 = require_utils3();
+  var { signatureAlgorithmHashFromCertificate } = require_cert_signatures();
+  function startSession(mechanisms, stream) {
+    const candidates = ["SCRAM-SHA-256"];
+    if (stream)
+      candidates.unshift("SCRAM-SHA-256-PLUS");
+    const mechanism = candidates.find((candidate) => mechanisms.includes(candidate));
+    if (!mechanism) {
+      throw new Error("SASL: Only mechanism(s) " + candidates.join(" and ") + " are supported");
+    }
+    if (mechanism === "SCRAM-SHA-256-PLUS" && typeof stream.getPeerCertificate !== "function") {
+      throw new Error("SASL: Mechanism SCRAM-SHA-256-PLUS requires a certificate");
+    }
+    const clientNonce = crypto3.randomBytes(18).toString("base64");
+    const gs2Header = mechanism === "SCRAM-SHA-256-PLUS" ? "p=tls-server-end-point" : stream ? "y" : "n";
+    return {
+      mechanism,
+      clientNonce,
+      response: gs2Header + ",,n=*,r=" + clientNonce,
+      message: "SASLInitialResponse"
+    };
+  }
+  async function continueSession(session, password, serverData, stream) {
+    if (session.message !== "SASLInitialResponse") {
+      throw new Error("SASL: Last message was not SASLInitialResponse");
+    }
+    if (typeof password !== "string") {
+      throw new Error("SASL: SCRAM-SERVER-FIRST-MESSAGE: client password must be a string");
+    }
+    if (password === "") {
+      throw new Error("SASL: SCRAM-SERVER-FIRST-MESSAGE: client password must be a non-empty string");
+    }
+    if (typeof serverData !== "string") {
+      throw new Error("SASL: SCRAM-SERVER-FIRST-MESSAGE: serverData must be a string");
+    }
+    const sv = parseServerFirstMessage(serverData);
+    if (!sv.nonce.startsWith(session.clientNonce)) {
+      throw new Error("SASL: SCRAM-SERVER-FIRST-MESSAGE: server nonce does not start with client nonce");
+    } else if (sv.nonce.length === session.clientNonce.length) {
+      throw new Error("SASL: SCRAM-SERVER-FIRST-MESSAGE: server nonce is too short");
+    }
+    const clientFirstMessageBare = "n=*,r=" + session.clientNonce;
+    const serverFirstMessage = "r=" + sv.nonce + ",s=" + sv.salt + ",i=" + sv.iteration;
+    let channelBinding = stream ? "eSws" : "biws";
+    if (session.mechanism === "SCRAM-SHA-256-PLUS") {
+      const peerCert = stream.getPeerCertificate().raw;
+      let hashName = signatureAlgorithmHashFromCertificate(peerCert);
+      if (hashName === "MD5" || hashName === "SHA-1")
+        hashName = "SHA-256";
+      const certHash = await crypto3.hashByName(hashName, peerCert);
+      const bindingData = Buffer.concat([Buffer.from("p=tls-server-end-point,,"), Buffer.from(certHash)]);
+      channelBinding = bindingData.toString("base64");
+    }
+    const clientFinalMessageWithoutProof = "c=" + channelBinding + ",r=" + sv.nonce;
+    const authMessage = clientFirstMessageBare + "," + serverFirstMessage + "," + clientFinalMessageWithoutProof;
+    const saltBytes = Buffer.from(sv.salt, "base64");
+    const saltedPassword = await crypto3.deriveKey(password, saltBytes, sv.iteration);
+    const clientKey = await crypto3.hmacSha256(saltedPassword, "Client Key");
+    const storedKey = await crypto3.sha256(clientKey);
+    const clientSignature = await crypto3.hmacSha256(storedKey, authMessage);
+    const clientProof = xorBuffers(Buffer.from(clientKey), Buffer.from(clientSignature)).toString("base64");
+    const serverKey = await crypto3.hmacSha256(saltedPassword, "Server Key");
+    const serverSignatureBytes = await crypto3.hmacSha256(serverKey, authMessage);
+    session.message = "SASLResponse";
+    session.serverSignature = Buffer.from(serverSignatureBytes).toString("base64");
+    session.response = clientFinalMessageWithoutProof + ",p=" + clientProof;
+  }
+  function finalizeSession(session, serverData) {
+    if (session.message !== "SASLResponse") {
+      throw new Error("SASL: Last message was not SASLResponse");
+    }
+    if (typeof serverData !== "string") {
+      throw new Error("SASL: SCRAM-SERVER-FINAL-MESSAGE: serverData must be a string");
+    }
+    const { serverSignature } = parseServerFinalMessage(serverData);
+    if (serverSignature !== session.serverSignature) {
+      throw new Error("SASL: SCRAM-SERVER-FINAL-MESSAGE: server signature does not match");
+    }
+  }
+  function isPrintableChars(text2) {
+    if (typeof text2 !== "string") {
+      throw new TypeError("SASL: text must be a string");
+    }
+    return text2.split("").map((_, i) => text2.charCodeAt(i)).every((c) => c >= 33 && c <= 43 || c >= 45 && c <= 126);
+  }
+  function isBase64(text2) {
+    return /^(?:[a-zA-Z0-9+/]{4})*(?:[a-zA-Z0-9+/]{2}==|[a-zA-Z0-9+/]{3}=)?$/.test(text2);
+  }
+  function parseAttributePairs(text2) {
+    if (typeof text2 !== "string") {
+      throw new TypeError("SASL: attribute pairs text must be a string");
+    }
+    return new Map(text2.split(",").map((attrValue) => {
+      if (!/^.=/.test(attrValue)) {
+        throw new Error("SASL: Invalid attribute pair entry");
+      }
+      const name = attrValue[0];
+      const value = attrValue.substring(2);
+      return [name, value];
+    }));
+  }
+  function parseServerFirstMessage(data) {
+    const attrPairs = parseAttributePairs(data);
+    const nonce = attrPairs.get("r");
+    if (!nonce) {
+      throw new Error("SASL: SCRAM-SERVER-FIRST-MESSAGE: nonce missing");
+    } else if (!isPrintableChars(nonce)) {
+      throw new Error("SASL: SCRAM-SERVER-FIRST-MESSAGE: nonce must only contain printable characters");
+    }
+    const salt = attrPairs.get("s");
+    if (!salt) {
+      throw new Error("SASL: SCRAM-SERVER-FIRST-MESSAGE: salt missing");
+    } else if (!isBase64(salt)) {
+      throw new Error("SASL: SCRAM-SERVER-FIRST-MESSAGE: salt must be base64");
+    }
+    const iterationText = attrPairs.get("i");
+    if (!iterationText) {
+      throw new Error("SASL: SCRAM-SERVER-FIRST-MESSAGE: iteration missing");
+    } else if (!/^[1-9][0-9]*$/.test(iterationText)) {
+      throw new Error("SASL: SCRAM-SERVER-FIRST-MESSAGE: invalid iteration count");
+    }
+    const iteration = parseInt(iterationText, 10);
+    return {
+      nonce,
+      salt,
+      iteration
+    };
+  }
+  function parseServerFinalMessage(serverData) {
+    const attrPairs = parseAttributePairs(serverData);
+    const serverSignature = attrPairs.get("v");
+    if (!serverSignature) {
+      throw new Error("SASL: SCRAM-SERVER-FINAL-MESSAGE: server signature is missing");
+    } else if (!isBase64(serverSignature)) {
+      throw new Error("SASL: SCRAM-SERVER-FINAL-MESSAGE: server signature must be base64");
+    }
+    return {
+      serverSignature
+    };
+  }
+  function xorBuffers(a, b2) {
+    if (!Buffer.isBuffer(a)) {
+      throw new TypeError("first argument must be a Buffer");
+    }
+    if (!Buffer.isBuffer(b2)) {
+      throw new TypeError("second argument must be a Buffer");
+    }
+    if (a.length !== b2.length) {
+      throw new Error("Buffer lengths must match");
+    }
+    if (a.length === 0) {
+      throw new Error("Buffers cannot be empty");
+    }
+    return Buffer.from(a.map((_, i) => a[i] ^ b2[i]));
+  }
+  module.exports = {
+    startSession,
+    continueSession,
+    finalizeSession
+  };
+});
+
+// ../../node_modules/.bun/pg@8.18.0+32ccf17b773ffb11/node_modules/pg/lib/type-overrides.js
+var require_type_overrides = __commonJS((exports, module) => {
+  var types2 = require_pg_types();
+  function TypeOverrides(userTypes) {
+    this._types = userTypes || types2;
+    this.text = {};
+    this.binary = {};
+  }
+  TypeOverrides.prototype.getOverrides = function(format) {
+    switch (format) {
+      case "text":
+        return this.text;
+      case "binary":
+        return this.binary;
+      default:
+        return {};
+    }
+  };
+  TypeOverrides.prototype.setTypeParser = function(oid, format, parseFn) {
+    if (typeof format === "function") {
+      parseFn = format;
+      format = "text";
+    }
+    this.getOverrides(format)[oid] = parseFn;
+  };
+  TypeOverrides.prototype.getTypeParser = function(oid, format) {
+    format = format || "text";
+    return this.getOverrides(format)[oid] || this._types.getTypeParser(oid, format);
+  };
+  module.exports = TypeOverrides;
+});
+
+// ../../node_modules/.bun/pg-connection-string@2.11.0/node_modules/pg-connection-string/index.js
+var require_pg_connection_string = __commonJS((exports, module) => {
+  function parse7(str, options = {}) {
+    if (str.charAt(0) === "/") {
+      const config3 = str.split(" ");
+      return { host: config3[0], database: config3[1] };
+    }
+    const config2 = {};
+    let result;
+    let dummyHost = false;
+    if (/ |%[^a-f0-9]|%[a-f0-9][^a-f0-9]/i.test(str)) {
+      str = encodeURI(str).replace(/%25(\d\d)/g, "%$1");
+    }
+    try {
+      try {
+        result = new URL(str, "postgres://base");
+      } catch (e) {
+        result = new URL(str.replace("@/", "@___DUMMY___/"), "postgres://base");
+        dummyHost = true;
+      }
+    } catch (err) {
+      err.input && (err.input = "*****REDACTED*****");
+      throw err;
+    }
+    for (const entry of result.searchParams.entries()) {
+      config2[entry[0]] = entry[1];
+    }
+    config2.user = config2.user || decodeURIComponent(result.username);
+    config2.password = config2.password || decodeURIComponent(result.password);
+    if (result.protocol == "socket:") {
+      config2.host = decodeURI(result.pathname);
+      config2.database = result.searchParams.get("db");
+      config2.client_encoding = result.searchParams.get("encoding");
+      return config2;
+    }
+    const hostname3 = dummyHost ? "" : result.hostname;
+    if (!config2.host) {
+      config2.host = decodeURIComponent(hostname3);
+    } else if (hostname3 && /^%2f/i.test(hostname3)) {
+      result.pathname = hostname3 + result.pathname;
+    }
+    if (!config2.port) {
+      config2.port = result.port;
+    }
+    const pathname = result.pathname.slice(1) || null;
+    config2.database = pathname ? decodeURI(pathname) : null;
+    if (config2.ssl === "true" || config2.ssl === "1") {
+      config2.ssl = true;
+    }
+    if (config2.ssl === "0") {
+      config2.ssl = false;
+    }
+    if (config2.sslcert || config2.sslkey || config2.sslrootcert || config2.sslmode) {
+      config2.ssl = {};
+    }
+    const fs2 = config2.sslcert || config2.sslkey || config2.sslrootcert ? __require("fs") : null;
+    if (config2.sslcert) {
+      config2.ssl.cert = fs2.readFileSync(config2.sslcert).toString();
+    }
+    if (config2.sslkey) {
+      config2.ssl.key = fs2.readFileSync(config2.sslkey).toString();
+    }
+    if (config2.sslrootcert) {
+      config2.ssl.ca = fs2.readFileSync(config2.sslrootcert).toString();
+    }
+    if (options.useLibpqCompat && config2.uselibpqcompat) {
+      throw new Error("Both useLibpqCompat and uselibpqcompat are set. Please use only one of them.");
+    }
+    if (config2.uselibpqcompat === "true" || options.useLibpqCompat) {
+      switch (config2.sslmode) {
+        case "disable": {
+          config2.ssl = false;
+          break;
+        }
+        case "prefer": {
+          config2.ssl.rejectUnauthorized = false;
+          break;
+        }
+        case "require": {
+          if (config2.sslrootcert) {
+            config2.ssl.checkServerIdentity = function() {};
+          } else {
+            config2.ssl.rejectUnauthorized = false;
+          }
+          break;
+        }
+        case "verify-ca": {
+          if (!config2.ssl.ca) {
+            throw new Error("SECURITY WARNING: Using sslmode=verify-ca requires specifying a CA with sslrootcert. If a public CA is used, verify-ca allows connections to a server that somebody else may have registered with the CA, making you vulnerable to Man-in-the-Middle attacks. Either specify a custom CA certificate with sslrootcert parameter or use sslmode=verify-full for proper security.");
+          }
+          config2.ssl.checkServerIdentity = function() {};
+          break;
+        }
+        case "verify-full": {
+          break;
+        }
+      }
+    } else {
+      switch (config2.sslmode) {
+        case "disable": {
+          config2.ssl = false;
+          break;
+        }
+        case "prefer":
+        case "require":
+        case "verify-ca":
+        case "verify-full": {
+          if (config2.sslmode !== "verify-full") {
+            deprecatedSslModeWarning(config2.sslmode);
+          }
+          break;
+        }
+        case "no-verify": {
+          config2.ssl.rejectUnauthorized = false;
+          break;
+        }
+      }
+    }
+    return config2;
+  }
+  function toConnectionOptions(sslConfig) {
+    const connectionOptions = Object.entries(sslConfig).reduce((c, [key, value]) => {
+      if (value !== undefined && value !== null) {
+        c[key] = value;
+      }
+      return c;
+    }, {});
+    return connectionOptions;
+  }
+  function toClientConfig(config2) {
+    const poolConfig = Object.entries(config2).reduce((c, [key, value]) => {
+      if (key === "ssl") {
+        const sslConfig = value;
+        if (typeof sslConfig === "boolean") {
+          c[key] = sslConfig;
+        }
+        if (typeof sslConfig === "object") {
+          c[key] = toConnectionOptions(sslConfig);
+        }
+      } else if (value !== undefined && value !== null) {
+        if (key === "port") {
+          if (value !== "") {
+            const v = parseInt(value, 10);
+            if (isNaN(v)) {
+              throw new Error(`Invalid ${key}: ${value}`);
+            }
+            c[key] = v;
+          }
+        } else {
+          c[key] = value;
+        }
+      }
+      return c;
+    }, {});
+    return poolConfig;
+  }
+  function parseIntoClientConfig(str) {
+    return toClientConfig(parse7(str));
+  }
+  function deprecatedSslModeWarning(sslmode) {
+    if (!deprecatedSslModeWarning.warned && typeof process !== "undefined" && process.emitWarning) {
+      deprecatedSslModeWarning.warned = true;
+      process.emitWarning(`SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for 'verify-full'.
+In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq semantics, which have weaker security guarantees.
+
+To prepare for this change:
+- If you want the current behavior, explicitly use 'sslmode=verify-full'
+- If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=${sslmode}'
+
+See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.`);
+    }
+  }
+  module.exports = parse7;
+  parse7.parse = parse7;
+  parse7.toClientConfig = toClientConfig;
+  parse7.parseIntoClientConfig = parseIntoClientConfig;
+});
+
+// ../../node_modules/.bun/pg@8.18.0+32ccf17b773ffb11/node_modules/pg/lib/connection-parameters.js
+var require_connection_parameters = __commonJS((exports, module) => {
+  var dns = __require("dns");
+  var defaults = require_defaults2();
+  var parse7 = require_pg_connection_string().parse;
+  var val = function(key, config2, envVar) {
+    if (config2[key]) {
+      return config2[key];
+    }
+    if (envVar === undefined) {
+      envVar = process.env["PG" + key.toUpperCase()];
+    } else if (envVar === false) {} else {
+      envVar = process.env[envVar];
+    }
+    return envVar || defaults[key];
+  };
+  var readSSLConfigFromEnvironment = function() {
+    switch (process.env.PGSSLMODE) {
+      case "disable":
+        return false;
+      case "prefer":
+      case "require":
+      case "verify-ca":
+      case "verify-full":
+        return true;
+      case "no-verify":
+        return { rejectUnauthorized: false };
+    }
+    return defaults.ssl;
+  };
+  var quoteParamValue = function(value) {
+    return "'" + ("" + value).replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "'";
+  };
+  var add = function(params, config2, paramName) {
+    const value = config2[paramName];
+    if (value !== undefined && value !== null) {
+      params.push(paramName + "=" + quoteParamValue(value));
+    }
+  };
+
+  class ConnectionParameters {
+    constructor(config2) {
+      config2 = typeof config2 === "string" ? parse7(config2) : config2 || {};
+      if (config2.connectionString) {
+        config2 = Object.assign({}, config2, parse7(config2.connectionString));
+      }
+      this.user = val("user", config2);
+      this.database = val("database", config2);
+      if (this.database === undefined) {
+        this.database = this.user;
+      }
+      this.port = parseInt(val("port", config2), 10);
+      this.host = val("host", config2);
+      Object.defineProperty(this, "password", {
+        configurable: true,
+        enumerable: false,
+        writable: true,
+        value: val("password", config2)
+      });
+      this.binary = val("binary", config2);
+      this.options = val("options", config2);
+      this.ssl = typeof config2.ssl === "undefined" ? readSSLConfigFromEnvironment() : config2.ssl;
+      if (typeof this.ssl === "string") {
+        if (this.ssl === "true") {
+          this.ssl = true;
+        }
+      }
+      if (this.ssl === "no-verify") {
+        this.ssl = { rejectUnauthorized: false };
+      }
+      if (this.ssl && this.ssl.key) {
+        Object.defineProperty(this.ssl, "key", {
+          enumerable: false
+        });
+      }
+      this.client_encoding = val("client_encoding", config2);
+      this.replication = val("replication", config2);
+      this.isDomainSocket = !(this.host || "").indexOf("/");
+      this.application_name = val("application_name", config2, "PGAPPNAME");
+      this.fallback_application_name = val("fallback_application_name", config2, false);
+      this.statement_timeout = val("statement_timeout", config2, false);
+      this.lock_timeout = val("lock_timeout", config2, false);
+      this.idle_in_transaction_session_timeout = val("idle_in_transaction_session_timeout", config2, false);
+      this.query_timeout = val("query_timeout", config2, false);
+      if (config2.connectionTimeoutMillis === undefined) {
+        this.connect_timeout = process.env.PGCONNECT_TIMEOUT || 0;
+      } else {
+        this.connect_timeout = Math.floor(config2.connectionTimeoutMillis / 1000);
+      }
+      if (config2.keepAlive === false) {
+        this.keepalives = 0;
+      } else if (config2.keepAlive === true) {
+        this.keepalives = 1;
+      }
+      if (typeof config2.keepAliveInitialDelayMillis === "number") {
+        this.keepalives_idle = Math.floor(config2.keepAliveInitialDelayMillis / 1000);
+      }
+    }
+    getLibpqConnectionString(cb) {
+      const params = [];
+      add(params, this, "user");
+      add(params, this, "password");
+      add(params, this, "port");
+      add(params, this, "application_name");
+      add(params, this, "fallback_application_name");
+      add(params, this, "connect_timeout");
+      add(params, this, "options");
+      const ssl = typeof this.ssl === "object" ? this.ssl : this.ssl ? { sslmode: this.ssl } : {};
+      add(params, ssl, "sslmode");
+      add(params, ssl, "sslca");
+      add(params, ssl, "sslkey");
+      add(params, ssl, "sslcert");
+      add(params, ssl, "sslrootcert");
+      if (this.database) {
+        params.push("dbname=" + quoteParamValue(this.database));
+      }
+      if (this.replication) {
+        params.push("replication=" + quoteParamValue(this.replication));
+      }
+      if (this.host) {
+        params.push("host=" + quoteParamValue(this.host));
+      }
+      if (this.isDomainSocket) {
+        return cb(null, params.join(" "));
+      }
+      if (this.client_encoding) {
+        params.push("client_encoding=" + quoteParamValue(this.client_encoding));
+      }
+      dns.lookup(this.host, function(err, address) {
+        if (err)
+          return cb(err, null);
+        params.push("hostaddr=" + quoteParamValue(address));
+        return cb(null, params.join(" "));
+      });
+    }
+  }
+  module.exports = ConnectionParameters;
+});
+
+// ../../node_modules/.bun/pg@8.18.0+32ccf17b773ffb11/node_modules/pg/lib/result.js
+var require_result = __commonJS((exports, module) => {
+  var types2 = require_pg_types();
+  var matchRegexp = /^([A-Za-z]+)(?: (\d+))?(?: (\d+))?/;
+
+  class Result2 {
+    constructor(rowMode, types3) {
+      this.command = null;
+      this.rowCount = null;
+      this.oid = null;
+      this.rows = [];
+      this.fields = [];
+      this._parsers = undefined;
+      this._types = types3;
+      this.RowCtor = null;
+      this.rowAsArray = rowMode === "array";
+      if (this.rowAsArray) {
+        this.parseRow = this._parseRowAsArray;
+      }
+      this._prebuiltEmptyResultObject = null;
+    }
+    addCommandComplete(msg) {
+      let match2;
+      if (msg.text) {
+        match2 = matchRegexp.exec(msg.text);
+      } else {
+        match2 = matchRegexp.exec(msg.command);
+      }
+      if (match2) {
+        this.command = match2[1];
+        if (match2[3]) {
+          this.oid = parseInt(match2[2], 10);
+          this.rowCount = parseInt(match2[3], 10);
+        } else if (match2[2]) {
+          this.rowCount = parseInt(match2[2], 10);
+        }
+      }
+    }
+    _parseRowAsArray(rowData) {
+      const row = new Array(rowData.length);
+      for (let i = 0, len = rowData.length;i < len; i++) {
+        const rawValue = rowData[i];
+        if (rawValue !== null) {
+          row[i] = this._parsers[i](rawValue);
+        } else {
+          row[i] = null;
+        }
+      }
+      return row;
+    }
+    parseRow(rowData) {
+      const row = { ...this._prebuiltEmptyResultObject };
+      for (let i = 0, len = rowData.length;i < len; i++) {
+        const rawValue = rowData[i];
+        const field = this.fields[i].name;
+        if (rawValue !== null) {
+          const v = this.fields[i].format === "binary" ? Buffer.from(rawValue) : rawValue;
+          row[field] = this._parsers[i](v);
+        } else {
+          row[field] = null;
+        }
+      }
+      return row;
+    }
+    addRow(row) {
+      this.rows.push(row);
+    }
+    addFields(fieldDescriptions) {
+      this.fields = fieldDescriptions;
+      if (this.fields.length) {
+        this._parsers = new Array(fieldDescriptions.length);
+      }
+      const row = {};
+      for (let i = 0;i < fieldDescriptions.length; i++) {
+        const desc2 = fieldDescriptions[i];
+        row[desc2.name] = null;
+        if (this._types) {
+          this._parsers[i] = this._types.getTypeParser(desc2.dataTypeID, desc2.format || "text");
+        } else {
+          this._parsers[i] = types2.getTypeParser(desc2.dataTypeID, desc2.format || "text");
+        }
+      }
+      this._prebuiltEmptyResultObject = { ...row };
+    }
+  }
+  module.exports = Result2;
+});
+
+// ../../node_modules/.bun/pg@8.18.0+32ccf17b773ffb11/node_modules/pg/lib/query.js
+var require_query = __commonJS((exports, module) => {
+  var { EventEmitter: EventEmitter6 } = __require("events");
+  var Result2 = require_result();
+  var utils = require_utils2();
+
+  class Query2 extends EventEmitter6 {
+    constructor(config2, values2, callback) {
+      super();
+      config2 = utils.normalizeQueryConfig(config2, values2, callback);
+      this.text = config2.text;
+      this.values = config2.values;
+      this.rows = config2.rows;
+      this.types = config2.types;
+      this.name = config2.name;
+      this.queryMode = config2.queryMode;
+      this.binary = config2.binary;
+      this.portal = config2.portal || "";
+      this.callback = config2.callback;
+      this._rowMode = config2.rowMode;
+      if (process.domain && config2.callback) {
+        this.callback = process.domain.bind(config2.callback);
+      }
+      this._result = new Result2(this._rowMode, this.types);
+      this._results = this._result;
+      this._canceledDueToError = false;
+    }
+    requiresPreparation() {
+      if (this.queryMode === "extended") {
+        return true;
+      }
+      if (this.name) {
+        return true;
+      }
+      if (this.rows) {
+        return true;
+      }
+      if (!this.text) {
+        return false;
+      }
+      if (!this.values) {
+        return false;
+      }
+      return this.values.length > 0;
+    }
+    _checkForMultirow() {
+      if (this._result.command) {
+        if (!Array.isArray(this._results)) {
+          this._results = [this._result];
+        }
+        this._result = new Result2(this._rowMode, this._result._types);
+        this._results.push(this._result);
+      }
+    }
+    handleRowDescription(msg) {
+      this._checkForMultirow();
+      this._result.addFields(msg.fields);
+      this._accumulateRows = this.callback || !this.listeners("row").length;
+    }
+    handleDataRow(msg) {
+      let row;
+      if (this._canceledDueToError) {
+        return;
+      }
+      try {
+        row = this._result.parseRow(msg.fields);
+      } catch (err) {
+        this._canceledDueToError = err;
+        return;
+      }
+      this.emit("row", row, this._result);
+      if (this._accumulateRows) {
+        this._result.addRow(row);
+      }
+    }
+    handleCommandComplete(msg, connection2) {
+      this._checkForMultirow();
+      this._result.addCommandComplete(msg);
+      if (this.rows) {
+        connection2.sync();
+      }
+    }
+    handleEmptyQuery(connection2) {
+      if (this.rows) {
+        connection2.sync();
+      }
+    }
+    handleError(err, connection2) {
+      if (this._canceledDueToError) {
+        err = this._canceledDueToError;
+        this._canceledDueToError = false;
+      }
+      if (this.callback) {
+        return this.callback(err);
+      }
+      this.emit("error", err);
+    }
+    handleReadyForQuery(con) {
+      if (this._canceledDueToError) {
+        return this.handleError(this._canceledDueToError, con);
+      }
+      if (this.callback) {
+        try {
+          this.callback(null, this._results);
+        } catch (err) {
+          process.nextTick(() => {
+            throw err;
+          });
+        }
+      }
+      this.emit("end", this._results);
+    }
+    submit(connection2) {
+      if (typeof this.text !== "string" && typeof this.name !== "string") {
+        return new Error("A query must have either text or a name. Supplying neither is unsupported.");
+      }
+      const previous = connection2.parsedStatements[this.name];
+      if (this.text && previous && this.text !== previous) {
+        return new Error(`Prepared statements must be unique - '${this.name}' was used for a different statement`);
+      }
+      if (this.values && !Array.isArray(this.values)) {
+        return new Error("Query values must be an array");
+      }
+      if (this.requiresPreparation()) {
+        connection2.stream.cork && connection2.stream.cork();
+        try {
+          this.prepare(connection2);
+        } finally {
+          connection2.stream.uncork && connection2.stream.uncork();
+        }
+      } else {
+        connection2.query(this.text);
+      }
+      return null;
+    }
+    hasBeenParsed(connection2) {
+      return this.name && connection2.parsedStatements[this.name];
+    }
+    handlePortalSuspended(connection2) {
+      this._getRows(connection2, this.rows);
+    }
+    _getRows(connection2, rows) {
+      connection2.execute({
+        portal: this.portal,
+        rows
+      });
+      if (!rows) {
+        connection2.sync();
+      } else {
+        connection2.flush();
+      }
+    }
+    prepare(connection2) {
+      if (!this.hasBeenParsed(connection2)) {
+        connection2.parse({
+          text: this.text,
+          name: this.name,
+          types: this.types
+        });
+      }
+      try {
+        connection2.bind({
+          portal: this.portal,
+          statement: this.name,
+          values: this.values,
+          binary: this.binary,
+          valueMapper: utils.prepareValue
+        });
+      } catch (err) {
+        this.handleError(err, connection2);
+        return;
+      }
+      connection2.describe({
+        type: "P",
+        name: this.portal || ""
+      });
+      this._getRows(connection2, this.rows);
+    }
+    handleCopyInResponse(connection2) {
+      connection2.sendCopyFail("No source stream defined");
+    }
+    handleCopyData(msg, connection2) {}
+  }
+  module.exports = Query2;
+});
+
+// ../../node_modules/.bun/pg-protocol@1.11.0/node_modules/pg-protocol/dist/messages.js
+var require_messages = __commonJS((exports) => {
+  Object.defineProperty(exports, "__esModule", { value: true });
+  exports.NoticeMessage = exports.DataRowMessage = exports.CommandCompleteMessage = exports.ReadyForQueryMessage = exports.NotificationResponseMessage = exports.BackendKeyDataMessage = exports.AuthenticationMD5Password = exports.ParameterStatusMessage = exports.ParameterDescriptionMessage = exports.RowDescriptionMessage = exports.Field = exports.CopyResponse = exports.CopyDataMessage = exports.DatabaseError = exports.copyDone = exports.emptyQuery = exports.replicationStart = exports.portalSuspended = exports.noData = exports.closeComplete = exports.bindComplete = exports.parseComplete = undefined;
+  exports.parseComplete = {
+    name: "parseComplete",
+    length: 5
+  };
+  exports.bindComplete = {
+    name: "bindComplete",
+    length: 5
+  };
+  exports.closeComplete = {
+    name: "closeComplete",
+    length: 5
+  };
+  exports.noData = {
+    name: "noData",
+    length: 5
+  };
+  exports.portalSuspended = {
+    name: "portalSuspended",
+    length: 5
+  };
+  exports.replicationStart = {
+    name: "replicationStart",
+    length: 4
+  };
+  exports.emptyQuery = {
+    name: "emptyQuery",
+    length: 4
+  };
+  exports.copyDone = {
+    name: "copyDone",
+    length: 4
+  };
+
+  class DatabaseError extends Error {
+    constructor(message, length, name) {
+      super(message);
+      this.length = length;
+      this.name = name;
+    }
+  }
+  exports.DatabaseError = DatabaseError;
+
+  class CopyDataMessage {
+    constructor(length, chunk) {
+      this.length = length;
+      this.chunk = chunk;
+      this.name = "copyData";
+    }
+  }
+  exports.CopyDataMessage = CopyDataMessage;
+
+  class CopyResponse {
+    constructor(length, name, binary, columnCount) {
+      this.length = length;
+      this.name = name;
+      this.binary = binary;
+      this.columnTypes = new Array(columnCount);
+    }
+  }
+  exports.CopyResponse = CopyResponse;
+
+  class Field {
+    constructor(name, tableID, columnID, dataTypeID, dataTypeSize, dataTypeModifier, format) {
+      this.name = name;
+      this.tableID = tableID;
+      this.columnID = columnID;
+      this.dataTypeID = dataTypeID;
+      this.dataTypeSize = dataTypeSize;
+      this.dataTypeModifier = dataTypeModifier;
+      this.format = format;
+    }
+  }
+  exports.Field = Field;
+
+  class RowDescriptionMessage {
+    constructor(length, fieldCount) {
+      this.length = length;
+      this.fieldCount = fieldCount;
+      this.name = "rowDescription";
+      this.fields = new Array(this.fieldCount);
+    }
+  }
+  exports.RowDescriptionMessage = RowDescriptionMessage;
+
+  class ParameterDescriptionMessage {
+    constructor(length, parameterCount) {
+      this.length = length;
+      this.parameterCount = parameterCount;
+      this.name = "parameterDescription";
+      this.dataTypeIDs = new Array(this.parameterCount);
+    }
+  }
+  exports.ParameterDescriptionMessage = ParameterDescriptionMessage;
+
+  class ParameterStatusMessage {
+    constructor(length, parameterName, parameterValue) {
+      this.length = length;
+      this.parameterName = parameterName;
+      this.parameterValue = parameterValue;
+      this.name = "parameterStatus";
+    }
+  }
+  exports.ParameterStatusMessage = ParameterStatusMessage;
+
+  class AuthenticationMD5Password {
+    constructor(length, salt) {
+      this.length = length;
+      this.salt = salt;
+      this.name = "authenticationMD5Password";
+    }
+  }
+  exports.AuthenticationMD5Password = AuthenticationMD5Password;
+
+  class BackendKeyDataMessage {
+    constructor(length, processID, secretKey) {
+      this.length = length;
+      this.processID = processID;
+      this.secretKey = secretKey;
+      this.name = "backendKeyData";
+    }
+  }
+  exports.BackendKeyDataMessage = BackendKeyDataMessage;
+
+  class NotificationResponseMessage {
+    constructor(length, processId, channel, payload) {
+      this.length = length;
+      this.processId = processId;
+      this.channel = channel;
+      this.payload = payload;
+      this.name = "notification";
+    }
+  }
+  exports.NotificationResponseMessage = NotificationResponseMessage;
+
+  class ReadyForQueryMessage {
+    constructor(length, status) {
+      this.length = length;
+      this.status = status;
+      this.name = "readyForQuery";
+    }
+  }
+  exports.ReadyForQueryMessage = ReadyForQueryMessage;
+
+  class CommandCompleteMessage {
+    constructor(length, text2) {
+      this.length = length;
+      this.text = text2;
+      this.name = "commandComplete";
+    }
+  }
+  exports.CommandCompleteMessage = CommandCompleteMessage;
+
+  class DataRowMessage {
+    constructor(length, fields) {
+      this.length = length;
+      this.fields = fields;
+      this.name = "dataRow";
+      this.fieldCount = fields.length;
+    }
+  }
+  exports.DataRowMessage = DataRowMessage;
+
+  class NoticeMessage {
+    constructor(length, message) {
+      this.length = length;
+      this.message = message;
+      this.name = "notice";
+    }
+  }
+  exports.NoticeMessage = NoticeMessage;
+});
+
+// ../../node_modules/.bun/pg-protocol@1.11.0/node_modules/pg-protocol/dist/buffer-writer.js
+var require_buffer_writer = __commonJS((exports) => {
+  Object.defineProperty(exports, "__esModule", { value: true });
+  exports.Writer = undefined;
+
+  class Writer {
+    constructor(size2 = 256) {
+      this.size = size2;
+      this.offset = 5;
+      this.headerPosition = 0;
+      this.buffer = Buffer.allocUnsafe(size2);
+    }
+    ensure(size2) {
+      const remaining = this.buffer.length - this.offset;
+      if (remaining < size2) {
+        const oldBuffer = this.buffer;
+        const newSize = oldBuffer.length + (oldBuffer.length >> 1) + size2;
+        this.buffer = Buffer.allocUnsafe(newSize);
+        oldBuffer.copy(this.buffer);
+      }
+    }
+    addInt32(num) {
+      this.ensure(4);
+      this.buffer[this.offset++] = num >>> 24 & 255;
+      this.buffer[this.offset++] = num >>> 16 & 255;
+      this.buffer[this.offset++] = num >>> 8 & 255;
+      this.buffer[this.offset++] = num >>> 0 & 255;
+      return this;
+    }
+    addInt16(num) {
+      this.ensure(2);
+      this.buffer[this.offset++] = num >>> 8 & 255;
+      this.buffer[this.offset++] = num >>> 0 & 255;
+      return this;
+    }
+    addCString(string4) {
+      if (!string4) {
+        this.ensure(1);
+      } else {
+        const len = Buffer.byteLength(string4);
+        this.ensure(len + 1);
+        this.buffer.write(string4, this.offset, "utf-8");
+        this.offset += len;
+      }
+      this.buffer[this.offset++] = 0;
+      return this;
+    }
+    addString(string4 = "") {
+      const len = Buffer.byteLength(string4);
+      this.ensure(len);
+      this.buffer.write(string4, this.offset);
+      this.offset += len;
+      return this;
+    }
+    add(otherBuffer) {
+      this.ensure(otherBuffer.length);
+      otherBuffer.copy(this.buffer, this.offset);
+      this.offset += otherBuffer.length;
+      return this;
+    }
+    join(code) {
+      if (code) {
+        this.buffer[this.headerPosition] = code;
+        const length = this.offset - (this.headerPosition + 1);
+        this.buffer.writeInt32BE(length, this.headerPosition + 1);
+      }
+      return this.buffer.slice(code ? 0 : 5, this.offset);
+    }
+    flush(code) {
+      const result = this.join(code);
+      this.offset = 5;
+      this.headerPosition = 0;
+      this.buffer = Buffer.allocUnsafe(this.size);
+      return result;
+    }
+  }
+  exports.Writer = Writer;
+});
+
+// ../../node_modules/.bun/pg-protocol@1.11.0/node_modules/pg-protocol/dist/serializer.js
+var require_serializer2 = __commonJS((exports) => {
+  Object.defineProperty(exports, "__esModule", { value: true });
+  exports.serialize = undefined;
+  var buffer_writer_1 = require_buffer_writer();
+  var writer = new buffer_writer_1.Writer;
+  var startup = (opts) => {
+    writer.addInt16(3).addInt16(0);
+    for (const key of Object.keys(opts)) {
+      writer.addCString(key).addCString(opts[key]);
+    }
+    writer.addCString("client_encoding").addCString("UTF8");
+    const bodyBuffer = writer.addCString("").flush();
+    const length = bodyBuffer.length + 4;
+    return new buffer_writer_1.Writer().addInt32(length).add(bodyBuffer).flush();
+  };
+  var requestSsl = () => {
+    const response = Buffer.allocUnsafe(8);
+    response.writeInt32BE(8, 0);
+    response.writeInt32BE(80877103, 4);
+    return response;
+  };
+  var password = (password2) => {
+    return writer.addCString(password2).flush(112);
+  };
+  var sendSASLInitialResponseMessage = function(mechanism, initialResponse) {
+    writer.addCString(mechanism).addInt32(Buffer.byteLength(initialResponse)).addString(initialResponse);
+    return writer.flush(112);
+  };
+  var sendSCRAMClientFinalMessage = function(additionalData) {
+    return writer.addString(additionalData).flush(112);
+  };
+  var query = (text2) => {
+    return writer.addCString(text2).flush(81);
+  };
+  var emptyArray = [];
+  var parse7 = (query2) => {
+    const name = query2.name || "";
+    if (name.length > 63) {
+      console.error("Warning! Postgres only supports 63 characters for query names.");
+      console.error("You supplied %s (%s)", name, name.length);
+      console.error("This can cause conflicts and silent errors executing queries");
+    }
+    const types2 = query2.types || emptyArray;
+    const len = types2.length;
+    const buffer2 = writer.addCString(name).addCString(query2.text).addInt16(len);
+    for (let i = 0;i < len; i++) {
+      buffer2.addInt32(types2[i]);
+    }
+    return writer.flush(80);
+  };
+  var paramWriter = new buffer_writer_1.Writer;
+  var writeValues = function(values2, valueMapper) {
+    for (let i = 0;i < values2.length; i++) {
+      const mappedVal = valueMapper ? valueMapper(values2[i], i) : values2[i];
+      if (mappedVal == null) {
+        writer.addInt16(0);
+        paramWriter.addInt32(-1);
+      } else if (mappedVal instanceof Buffer) {
+        writer.addInt16(1);
+        paramWriter.addInt32(mappedVal.length);
+        paramWriter.add(mappedVal);
+      } else {
+        writer.addInt16(0);
+        paramWriter.addInt32(Buffer.byteLength(mappedVal));
+        paramWriter.addString(mappedVal);
+      }
+    }
+  };
+  var bind = (config2 = {}) => {
+    const portal = config2.portal || "";
+    const statement = config2.statement || "";
+    const binary = config2.binary || false;
+    const values2 = config2.values || emptyArray;
+    const len = values2.length;
+    writer.addCString(portal).addCString(statement);
+    writer.addInt16(len);
+    writeValues(values2, config2.valueMapper);
+    writer.addInt16(len);
+    writer.add(paramWriter.flush());
+    writer.addInt16(1);
+    writer.addInt16(binary ? 1 : 0);
+    return writer.flush(66);
+  };
+  var emptyExecute = Buffer.from([69, 0, 0, 0, 9, 0, 0, 0, 0, 0]);
+  var execute = (config2) => {
+    if (!config2 || !config2.portal && !config2.rows) {
+      return emptyExecute;
+    }
+    const portal = config2.portal || "";
+    const rows = config2.rows || 0;
+    const portalLength = Buffer.byteLength(portal);
+    const len = 4 + portalLength + 1 + 4;
+    const buff = Buffer.allocUnsafe(1 + len);
+    buff[0] = 69;
+    buff.writeInt32BE(len, 1);
+    buff.write(portal, 5, "utf-8");
+    buff[portalLength + 5] = 0;
+    buff.writeUInt32BE(rows, buff.length - 4);
+    return buff;
+  };
+  var cancel = (processID, secretKey) => {
+    const buffer2 = Buffer.allocUnsafe(16);
+    buffer2.writeInt32BE(16, 0);
+    buffer2.writeInt16BE(1234, 4);
+    buffer2.writeInt16BE(5678, 6);
+    buffer2.writeInt32BE(processID, 8);
+    buffer2.writeInt32BE(secretKey, 12);
+    return buffer2;
+  };
+  var cstringMessage = (code, string4) => {
+    const stringLen = Buffer.byteLength(string4);
+    const len = 4 + stringLen + 1;
+    const buffer2 = Buffer.allocUnsafe(1 + len);
+    buffer2[0] = code;
+    buffer2.writeInt32BE(len, 1);
+    buffer2.write(string4, 5, "utf-8");
+    buffer2[len] = 0;
+    return buffer2;
+  };
+  var emptyDescribePortal = writer.addCString("P").flush(68);
+  var emptyDescribeStatement = writer.addCString("S").flush(68);
+  var describe3 = (msg) => {
+    return msg.name ? cstringMessage(68, `${msg.type}${msg.name || ""}`) : msg.type === "P" ? emptyDescribePortal : emptyDescribeStatement;
+  };
+  var close = (msg) => {
+    const text2 = `${msg.type}${msg.name || ""}`;
+    return cstringMessage(67, text2);
+  };
+  var copyData = (chunk) => {
+    return writer.add(chunk).flush(100);
+  };
+  var copyFail = (message) => {
+    return cstringMessage(102, message);
+  };
+  var codeOnlyBuffer = (code) => Buffer.from([code, 0, 0, 0, 4]);
+  var flushBuffer = codeOnlyBuffer(72);
+  var syncBuffer = codeOnlyBuffer(83);
+  var endBuffer = codeOnlyBuffer(88);
+  var copyDoneBuffer = codeOnlyBuffer(99);
+  var serialize = {
+    startup,
+    password,
+    requestSsl,
+    sendSASLInitialResponseMessage,
+    sendSCRAMClientFinalMessage,
+    query,
+    parse: parse7,
+    bind,
+    execute,
+    describe: describe3,
+    close,
+    flush: () => flushBuffer,
+    sync: () => syncBuffer,
+    end: () => endBuffer,
+    copyData,
+    copyDone: () => copyDoneBuffer,
+    copyFail,
+    cancel
+  };
+  exports.serialize = serialize;
+});
+
+// ../../node_modules/.bun/pg-protocol@1.11.0/node_modules/pg-protocol/dist/buffer-reader.js
+var require_buffer_reader = __commonJS((exports) => {
+  Object.defineProperty(exports, "__esModule", { value: true });
+  exports.BufferReader = undefined;
+  var emptyBuffer = Buffer.allocUnsafe(0);
+
+  class BufferReader {
+    constructor(offset = 0) {
+      this.offset = offset;
+      this.buffer = emptyBuffer;
+      this.encoding = "utf-8";
+    }
+    setBuffer(offset, buffer2) {
+      this.offset = offset;
+      this.buffer = buffer2;
+    }
+    int16() {
+      const result = this.buffer.readInt16BE(this.offset);
+      this.offset += 2;
+      return result;
+    }
+    byte() {
+      const result = this.buffer[this.offset];
+      this.offset++;
+      return result;
+    }
+    int32() {
+      const result = this.buffer.readInt32BE(this.offset);
+      this.offset += 4;
+      return result;
+    }
+    uint32() {
+      const result = this.buffer.readUInt32BE(this.offset);
+      this.offset += 4;
+      return result;
+    }
+    string(length) {
+      const result = this.buffer.toString(this.encoding, this.offset, this.offset + length);
+      this.offset += length;
+      return result;
+    }
+    cstring() {
+      const start = this.offset;
+      let end = start;
+      while (this.buffer[end++] !== 0) {}
+      this.offset = end;
+      return this.buffer.toString(this.encoding, start, end - 1);
+    }
+    bytes(length) {
+      const result = this.buffer.slice(this.offset, this.offset + length);
+      this.offset += length;
+      return result;
+    }
+  }
+  exports.BufferReader = BufferReader;
+});
+
+// ../../node_modules/.bun/pg-protocol@1.11.0/node_modules/pg-protocol/dist/parser.js
+var require_parser = __commonJS((exports) => {
+  Object.defineProperty(exports, "__esModule", { value: true });
+  exports.Parser = undefined;
+  var messages_1 = require_messages();
+  var buffer_reader_1 = require_buffer_reader();
+  var CODE_LENGTH = 1;
+  var LEN_LENGTH = 4;
+  var HEADER_LENGTH = CODE_LENGTH + LEN_LENGTH;
+  var LATEINIT_LENGTH = -1;
+  var emptyBuffer = Buffer.allocUnsafe(0);
+
+  class Parser {
+    constructor(opts) {
+      this.buffer = emptyBuffer;
+      this.bufferLength = 0;
+      this.bufferOffset = 0;
+      this.reader = new buffer_reader_1.BufferReader;
+      if ((opts === null || opts === undefined ? undefined : opts.mode) === "binary") {
+        throw new Error("Binary mode not supported yet");
+      }
+      this.mode = (opts === null || opts === undefined ? undefined : opts.mode) || "text";
+    }
+    parse(buffer2, callback) {
+      this.mergeBuffer(buffer2);
+      const bufferFullLength = this.bufferOffset + this.bufferLength;
+      let offset = this.bufferOffset;
+      while (offset + HEADER_LENGTH <= bufferFullLength) {
+        const code = this.buffer[offset];
+        const length = this.buffer.readUInt32BE(offset + CODE_LENGTH);
+        const fullMessageLength = CODE_LENGTH + length;
+        if (fullMessageLength + offset <= bufferFullLength) {
+          const message = this.handlePacket(offset + HEADER_LENGTH, code, length, this.buffer);
+          callback(message);
+          offset += fullMessageLength;
+        } else {
+          break;
+        }
+      }
+      if (offset === bufferFullLength) {
+        this.buffer = emptyBuffer;
+        this.bufferLength = 0;
+        this.bufferOffset = 0;
+      } else {
+        this.bufferLength = bufferFullLength - offset;
+        this.bufferOffset = offset;
+      }
+    }
+    mergeBuffer(buffer2) {
+      if (this.bufferLength > 0) {
+        const newLength = this.bufferLength + buffer2.byteLength;
+        const newFullLength = newLength + this.bufferOffset;
+        if (newFullLength > this.buffer.byteLength) {
+          let newBuffer;
+          if (newLength <= this.buffer.byteLength && this.bufferOffset >= this.bufferLength) {
+            newBuffer = this.buffer;
+          } else {
+            let newBufferLength = this.buffer.byteLength * 2;
+            while (newLength >= newBufferLength) {
+              newBufferLength *= 2;
+            }
+            newBuffer = Buffer.allocUnsafe(newBufferLength);
+          }
+          this.buffer.copy(newBuffer, 0, this.bufferOffset, this.bufferOffset + this.bufferLength);
+          this.buffer = newBuffer;
+          this.bufferOffset = 0;
+        }
+        buffer2.copy(this.buffer, this.bufferOffset + this.bufferLength);
+        this.bufferLength = newLength;
+      } else {
+        this.buffer = buffer2;
+        this.bufferOffset = 0;
+        this.bufferLength = buffer2.byteLength;
+      }
+    }
+    handlePacket(offset, code, length, bytes) {
+      const { reader } = this;
+      reader.setBuffer(offset, bytes);
+      let message;
+      switch (code) {
+        case 50:
+          message = messages_1.bindComplete;
+          break;
+        case 49:
+          message = messages_1.parseComplete;
+          break;
+        case 51:
+          message = messages_1.closeComplete;
+          break;
+        case 110:
+          message = messages_1.noData;
+          break;
+        case 115:
+          message = messages_1.portalSuspended;
+          break;
+        case 99:
+          message = messages_1.copyDone;
+          break;
+        case 87:
+          message = messages_1.replicationStart;
+          break;
+        case 73:
+          message = messages_1.emptyQuery;
+          break;
+        case 68:
+          message = parseDataRowMessage(reader);
+          break;
+        case 67:
+          message = parseCommandCompleteMessage(reader);
+          break;
+        case 90:
+          message = parseReadyForQueryMessage(reader);
+          break;
+        case 65:
+          message = parseNotificationMessage(reader);
+          break;
+        case 82:
+          message = parseAuthenticationResponse(reader, length);
+          break;
+        case 83:
+          message = parseParameterStatusMessage(reader);
+          break;
+        case 75:
+          message = parseBackendKeyData(reader);
+          break;
+        case 69:
+          message = parseErrorMessage(reader, "error");
+          break;
+        case 78:
+          message = parseErrorMessage(reader, "notice");
+          break;
+        case 84:
+          message = parseRowDescriptionMessage(reader);
+          break;
+        case 116:
+          message = parseParameterDescriptionMessage(reader);
+          break;
+        case 71:
+          message = parseCopyInMessage(reader);
+          break;
+        case 72:
+          message = parseCopyOutMessage(reader);
+          break;
+        case 100:
+          message = parseCopyData(reader, length);
+          break;
+        default:
+          return new messages_1.DatabaseError("received invalid response: " + code.toString(16), length, "error");
+      }
+      reader.setBuffer(0, emptyBuffer);
+      message.length = length;
+      return message;
+    }
+  }
+  exports.Parser = Parser;
+  var parseReadyForQueryMessage = (reader) => {
+    const status = reader.string(1);
+    return new messages_1.ReadyForQueryMessage(LATEINIT_LENGTH, status);
+  };
+  var parseCommandCompleteMessage = (reader) => {
+    const text2 = reader.cstring();
+    return new messages_1.CommandCompleteMessage(LATEINIT_LENGTH, text2);
+  };
+  var parseCopyData = (reader, length) => {
+    const chunk = reader.bytes(length - 4);
+    return new messages_1.CopyDataMessage(LATEINIT_LENGTH, chunk);
+  };
+  var parseCopyInMessage = (reader) => parseCopyMessage(reader, "copyInResponse");
+  var parseCopyOutMessage = (reader) => parseCopyMessage(reader, "copyOutResponse");
+  var parseCopyMessage = (reader, messageName) => {
+    const isBinary = reader.byte() !== 0;
+    const columnCount = reader.int16();
+    const message = new messages_1.CopyResponse(LATEINIT_LENGTH, messageName, isBinary, columnCount);
+    for (let i = 0;i < columnCount; i++) {
+      message.columnTypes[i] = reader.int16();
+    }
+    return message;
+  };
+  var parseNotificationMessage = (reader) => {
+    const processId = reader.int32();
+    const channel = reader.cstring();
+    const payload = reader.cstring();
+    return new messages_1.NotificationResponseMessage(LATEINIT_LENGTH, processId, channel, payload);
+  };
+  var parseRowDescriptionMessage = (reader) => {
+    const fieldCount = reader.int16();
+    const message = new messages_1.RowDescriptionMessage(LATEINIT_LENGTH, fieldCount);
+    for (let i = 0;i < fieldCount; i++) {
+      message.fields[i] = parseField(reader);
+    }
+    return message;
+  };
+  var parseField = (reader) => {
+    const name = reader.cstring();
+    const tableID = reader.uint32();
+    const columnID = reader.int16();
+    const dataTypeID = reader.uint32();
+    const dataTypeSize = reader.int16();
+    const dataTypeModifier = reader.int32();
+    const mode = reader.int16() === 0 ? "text" : "binary";
+    return new messages_1.Field(name, tableID, columnID, dataTypeID, dataTypeSize, dataTypeModifier, mode);
+  };
+  var parseParameterDescriptionMessage = (reader) => {
+    const parameterCount = reader.int16();
+    const message = new messages_1.ParameterDescriptionMessage(LATEINIT_LENGTH, parameterCount);
+    for (let i = 0;i < parameterCount; i++) {
+      message.dataTypeIDs[i] = reader.int32();
+    }
+    return message;
+  };
+  var parseDataRowMessage = (reader) => {
+    const fieldCount = reader.int16();
+    const fields = new Array(fieldCount);
+    for (let i = 0;i < fieldCount; i++) {
+      const len = reader.int32();
+      fields[i] = len === -1 ? null : reader.string(len);
+    }
+    return new messages_1.DataRowMessage(LATEINIT_LENGTH, fields);
+  };
+  var parseParameterStatusMessage = (reader) => {
+    const name = reader.cstring();
+    const value = reader.cstring();
+    return new messages_1.ParameterStatusMessage(LATEINIT_LENGTH, name, value);
+  };
+  var parseBackendKeyData = (reader) => {
+    const processID = reader.int32();
+    const secretKey = reader.int32();
+    return new messages_1.BackendKeyDataMessage(LATEINIT_LENGTH, processID, secretKey);
+  };
+  var parseAuthenticationResponse = (reader, length) => {
+    const code = reader.int32();
+    const message = {
+      name: "authenticationOk",
+      length
+    };
+    switch (code) {
+      case 0:
+        break;
+      case 3:
+        if (message.length === 8) {
+          message.name = "authenticationCleartextPassword";
+        }
+        break;
+      case 5:
+        if (message.length === 12) {
+          message.name = "authenticationMD5Password";
+          const salt = reader.bytes(4);
+          return new messages_1.AuthenticationMD5Password(LATEINIT_LENGTH, salt);
+        }
+        break;
+      case 10:
+        {
+          message.name = "authenticationSASL";
+          message.mechanisms = [];
+          let mechanism;
+          do {
+            mechanism = reader.cstring();
+            if (mechanism) {
+              message.mechanisms.push(mechanism);
+            }
+          } while (mechanism);
+        }
+        break;
+      case 11:
+        message.name = "authenticationSASLContinue";
+        message.data = reader.string(length - 8);
+        break;
+      case 12:
+        message.name = "authenticationSASLFinal";
+        message.data = reader.string(length - 8);
+        break;
+      default:
+        throw new Error("Unknown authenticationOk message type " + code);
+    }
+    return message;
+  };
+  var parseErrorMessage = (reader, name) => {
+    const fields = {};
+    let fieldType = reader.string(1);
+    while (fieldType !== "\x00") {
+      fields[fieldType] = reader.cstring();
+      fieldType = reader.string(1);
+    }
+    const messageValue = fields.M;
+    const message = name === "notice" ? new messages_1.NoticeMessage(LATEINIT_LENGTH, messageValue) : new messages_1.DatabaseError(messageValue, LATEINIT_LENGTH, name);
+    message.severity = fields.S;
+    message.code = fields.C;
+    message.detail = fields.D;
+    message.hint = fields.H;
+    message.position = fields.P;
+    message.internalPosition = fields.p;
+    message.internalQuery = fields.q;
+    message.where = fields.W;
+    message.schema = fields.s;
+    message.table = fields.t;
+    message.column = fields.c;
+    message.dataType = fields.d;
+    message.constraint = fields.n;
+    message.file = fields.F;
+    message.line = fields.L;
+    message.routine = fields.R;
+    return message;
+  };
+});
+
+// ../../node_modules/.bun/pg-protocol@1.11.0/node_modules/pg-protocol/dist/index.js
+var require_dist7 = __commonJS((exports) => {
+  Object.defineProperty(exports, "__esModule", { value: true });
+  exports.DatabaseError = exports.serialize = exports.parse = undefined;
+  var messages_1 = require_messages();
+  Object.defineProperty(exports, "DatabaseError", { enumerable: true, get: function() {
+    return messages_1.DatabaseError;
+  } });
+  var serializer_1 = require_serializer2();
+  Object.defineProperty(exports, "serialize", { enumerable: true, get: function() {
+    return serializer_1.serialize;
+  } });
+  var parser_1 = require_parser();
+  function parse7(stream, callback) {
+    const parser = new parser_1.Parser;
+    stream.on("data", (buffer2) => parser.parse(buffer2, callback));
+    return new Promise((resolve) => stream.on("end", () => resolve()));
+  }
+  exports.parse = parse7;
+});
+
+// ../../node_modules/.bun/pg-cloudflare@1.3.0/node_modules/pg-cloudflare/dist/empty.js
+var require_empty = __commonJS((exports) => {
+  Object.defineProperty(exports, "__esModule", { value: true });
+  exports.default = {};
+});
+
+// ../../node_modules/.bun/pg@8.18.0+32ccf17b773ffb11/node_modules/pg/lib/stream.js
+var require_stream = __commonJS((exports, module) => {
+  var { getStream, getSecureStream } = getStreamFuncs();
+  module.exports = {
+    getStream,
+    getSecureStream
+  };
+  function getNodejsStreamFuncs() {
+    function getStream2(ssl) {
+      const net2 = __require("net");
+      return new net2.Socket;
+    }
+    function getSecureStream2(options) {
+      const tls2 = __require("tls");
+      return tls2.connect(options);
+    }
+    return {
+      getStream: getStream2,
+      getSecureStream: getSecureStream2
+    };
+  }
+  function getCloudflareStreamFuncs() {
+    function getStream2(ssl) {
+      const { CloudflareSocket } = require_empty();
+      return new CloudflareSocket(ssl);
+    }
+    function getSecureStream2(options) {
+      options.socket.startTls(options);
+      return options.socket;
+    }
+    return {
+      getStream: getStream2,
+      getSecureStream: getSecureStream2
+    };
+  }
+  function isCloudflareRuntime() {
+    if (typeof navigator === "object" && navigator !== null && typeof navigator.userAgent === "string") {
+      return navigator.userAgent === "Cloudflare-Workers";
+    }
+    if (typeof Response === "function") {
+      const resp = new Response(null, { cf: { thing: true } });
+      if (typeof resp.cf === "object" && resp.cf !== null && resp.cf.thing) {
+        return true;
+      }
+    }
+    return false;
+  }
+  function getStreamFuncs() {
+    if (isCloudflareRuntime()) {
+      return getCloudflareStreamFuncs();
+    }
+    return getNodejsStreamFuncs();
+  }
+});
+
+// ../../node_modules/.bun/pg@8.18.0+32ccf17b773ffb11/node_modules/pg/lib/connection.js
+var require_connection = __commonJS((exports, module) => {
+  var EventEmitter6 = __require("events").EventEmitter;
+  var { parse: parse7, serialize } = require_dist7();
+  var { getStream, getSecureStream } = require_stream();
+  var flushBuffer = serialize.flush();
+  var syncBuffer = serialize.sync();
+  var endBuffer = serialize.end();
+
+  class Connection2 extends EventEmitter6 {
+    constructor(config2) {
+      super();
+      config2 = config2 || {};
+      this.stream = config2.stream || getStream(config2.ssl);
+      if (typeof this.stream === "function") {
+        this.stream = this.stream(config2);
+      }
+      this._keepAlive = config2.keepAlive;
+      this._keepAliveInitialDelayMillis = config2.keepAliveInitialDelayMillis;
+      this.parsedStatements = {};
+      this.ssl = config2.ssl || false;
+      this._ending = false;
+      this._emitMessage = false;
+      const self = this;
+      this.on("newListener", function(eventName) {
+        if (eventName === "message") {
+          self._emitMessage = true;
+        }
+      });
+    }
+    connect(port, host) {
+      const self = this;
+      this._connecting = true;
+      this.stream.setNoDelay(true);
+      this.stream.connect(port, host);
+      this.stream.once("connect", function() {
+        if (self._keepAlive) {
+          self.stream.setKeepAlive(true, self._keepAliveInitialDelayMillis);
+        }
+        self.emit("connect");
+      });
+      const reportStreamError = function(error48) {
+        if (self._ending && (error48.code === "ECONNRESET" || error48.code === "EPIPE")) {
+          return;
+        }
+        self.emit("error", error48);
+      };
+      this.stream.on("error", reportStreamError);
+      this.stream.on("close", function() {
+        self.emit("end");
+      });
+      if (!this.ssl) {
+        return this.attachListeners(this.stream);
+      }
+      this.stream.once("data", function(buffer2) {
+        const responseCode = buffer2.toString("utf8");
+        switch (responseCode) {
+          case "S":
+            break;
+          case "N":
+            self.stream.end();
+            return self.emit("error", new Error("The server does not support SSL connections"));
+          default:
+            self.stream.end();
+            return self.emit("error", new Error("There was an error establishing an SSL connection"));
+        }
+        const options = {
+          socket: self.stream
+        };
+        if (self.ssl !== true) {
+          Object.assign(options, self.ssl);
+          if ("key" in self.ssl) {
+            options.key = self.ssl.key;
+          }
+        }
+        const net2 = __require("net");
+        if (net2.isIP && net2.isIP(host) === 0) {
+          options.servername = host;
+        }
+        try {
+          self.stream = getSecureStream(options);
+        } catch (err) {
+          return self.emit("error", err);
+        }
+        self.attachListeners(self.stream);
+        self.stream.on("error", reportStreamError);
+        self.emit("sslconnect");
+      });
+    }
+    attachListeners(stream) {
+      parse7(stream, (msg) => {
+        const eventName = msg.name === "error" ? "errorMessage" : msg.name;
+        if (this._emitMessage) {
+          this.emit("message", msg);
+        }
+        this.emit(eventName, msg);
+      });
+    }
+    requestSsl() {
+      this.stream.write(serialize.requestSsl());
+    }
+    startup(config2) {
+      this.stream.write(serialize.startup(config2));
+    }
+    cancel(processID, secretKey) {
+      this._send(serialize.cancel(processID, secretKey));
+    }
+    password(password) {
+      this._send(serialize.password(password));
+    }
+    sendSASLInitialResponseMessage(mechanism, initialResponse) {
+      this._send(serialize.sendSASLInitialResponseMessage(mechanism, initialResponse));
+    }
+    sendSCRAMClientFinalMessage(additionalData) {
+      this._send(serialize.sendSCRAMClientFinalMessage(additionalData));
+    }
+    _send(buffer2) {
+      if (!this.stream.writable) {
+        return false;
+      }
+      return this.stream.write(buffer2);
+    }
+    query(text2) {
+      this._send(serialize.query(text2));
+    }
+    parse(query) {
+      this._send(serialize.parse(query));
+    }
+    bind(config2) {
+      this._send(serialize.bind(config2));
+    }
+    execute(config2) {
+      this._send(serialize.execute(config2));
+    }
+    flush() {
+      if (this.stream.writable) {
+        this.stream.write(flushBuffer);
+      }
+    }
+    sync() {
+      this._ending = true;
+      this._send(syncBuffer);
+    }
+    ref() {
+      this.stream.ref();
+    }
+    unref() {
+      this.stream.unref();
+    }
+    end() {
+      this._ending = true;
+      if (!this._connecting || !this.stream.writable) {
+        this.stream.end();
+        return;
+      }
+      return this.stream.write(endBuffer, () => {
+        this.stream.end();
+      });
+    }
+    close(msg) {
+      this._send(serialize.close(msg));
+    }
+    describe(msg) {
+      this._send(serialize.describe(msg));
+    }
+    sendCopyFromChunk(chunk) {
+      this._send(serialize.copyData(chunk));
+    }
+    endCopyFrom() {
+      this._send(serialize.copyDone());
+    }
+    sendCopyFail(msg) {
+      this._send(serialize.copyFail(msg));
+    }
+  }
+  module.exports = Connection2;
+});
+
+// ../../node_modules/.bun/split2@4.2.0/node_modules/split2/index.js
+var require_split2 = __commonJS((exports, module) => {
+  var { Transform } = __require("stream");
+  var { StringDecoder } = __require("string_decoder");
+  var kLast = Symbol("last");
+  var kDecoder = Symbol("decoder");
+  function transform2(chunk, enc, cb) {
+    let list2;
+    if (this.overflow) {
+      const buf = this[kDecoder].write(chunk);
+      list2 = buf.split(this.matcher);
+      if (list2.length === 1)
+        return cb();
+      list2.shift();
+      this.overflow = false;
+    } else {
+      this[kLast] += this[kDecoder].write(chunk);
+      list2 = this[kLast].split(this.matcher);
+    }
+    this[kLast] = list2.pop();
+    for (let i = 0;i < list2.length; i++) {
+      try {
+        push(this, this.mapper(list2[i]));
+      } catch (error48) {
+        return cb(error48);
+      }
+    }
+    this.overflow = this[kLast].length > this.maxLength;
+    if (this.overflow && !this.skipOverflow) {
+      cb(new Error("maximum buffer reached"));
+      return;
+    }
+    cb();
+  }
+  function flush(cb) {
+    this[kLast] += this[kDecoder].end();
+    if (this[kLast]) {
+      try {
+        push(this, this.mapper(this[kLast]));
+      } catch (error48) {
+        return cb(error48);
+      }
+    }
+    cb();
+  }
+  function push(self, val) {
+    if (val !== undefined) {
+      self.push(val);
+    }
+  }
+  function noop4(incoming) {
+    return incoming;
+  }
+  function split(matcher, mapper, options) {
+    matcher = matcher || /\r?\n/;
+    mapper = mapper || noop4;
+    options = options || {};
+    switch (arguments.length) {
+      case 1:
+        if (typeof matcher === "function") {
+          mapper = matcher;
+          matcher = /\r?\n/;
+        } else if (typeof matcher === "object" && !(matcher instanceof RegExp) && !matcher[Symbol.split]) {
+          options = matcher;
+          matcher = /\r?\n/;
+        }
+        break;
+      case 2:
+        if (typeof matcher === "function") {
+          options = mapper;
+          mapper = matcher;
+          matcher = /\r?\n/;
+        } else if (typeof mapper === "object") {
+          options = mapper;
+          mapper = noop4;
+        }
+    }
+    options = Object.assign({}, options);
+    options.autoDestroy = true;
+    options.transform = transform2;
+    options.flush = flush;
+    options.readableObjectMode = true;
+    const stream = new Transform(options);
+    stream[kLast] = "";
+    stream[kDecoder] = new StringDecoder("utf8");
+    stream.matcher = matcher;
+    stream.mapper = mapper;
+    stream.maxLength = options.maxLength;
+    stream.skipOverflow = options.skipOverflow || false;
+    stream.overflow = false;
+    stream._destroy = function(err, cb) {
+      this._writableState.errorEmitted = false;
+      cb(err);
+    };
+    return stream;
+  }
+  module.exports = split;
+});
+
+// ../../node_modules/.bun/pgpass@1.0.5/node_modules/pgpass/lib/helper.js
+var require_helper = __commonJS((exports, module) => {
+  var path = __require("path");
+  var Stream3 = __require("stream").Stream;
+  var split = require_split2();
+  var util = __require("util");
+  var defaultPort = 5432;
+  var isWin = process.platform === "win32";
+  var warnStream = process.stderr;
+  var S_IRWXG = 56;
+  var S_IRWXO = 7;
+  var S_IFMT = 61440;
+  var S_IFREG = 32768;
+  function isRegFile(mode) {
+    return (mode & S_IFMT) == S_IFREG;
+  }
+  var fieldNames = ["host", "port", "database", "user", "password"];
+  var nrOfFields = fieldNames.length;
+  var passKey = fieldNames[nrOfFields - 1];
+  function warn() {
+    var isWritable = warnStream instanceof Stream3 && warnStream.writable === true;
+    if (isWritable) {
+      var args = Array.prototype.slice.call(arguments).concat(`
+`);
+      warnStream.write(util.format.apply(util, args));
+    }
+  }
+  Object.defineProperty(exports, "isWin", {
+    get: function() {
+      return isWin;
+    },
+    set: function(val) {
+      isWin = val;
+    }
+  });
+  exports.warnTo = function(stream) {
+    var old = warnStream;
+    warnStream = stream;
+    return old;
+  };
+  exports.getFileName = function(rawEnv2) {
+    var env2 = rawEnv2 || process.env;
+    var file2 = env2.PGPASSFILE || (isWin ? path.join(env2.APPDATA || "./", "postgresql", "pgpass.conf") : path.join(env2.HOME || "./", ".pgpass"));
+    return file2;
+  };
+  exports.usePgPass = function(stats, fname) {
+    if (Object.prototype.hasOwnProperty.call(process.env, "PGPASSWORD")) {
+      return false;
+    }
+    if (isWin) {
+      return true;
+    }
+    fname = fname || "<unkn>";
+    if (!isRegFile(stats.mode)) {
+      warn('WARNING: password file "%s" is not a plain file', fname);
+      return false;
+    }
+    if (stats.mode & (S_IRWXG | S_IRWXO)) {
+      warn('WARNING: password file "%s" has group or world access; permissions should be u=rw (0600) or less', fname);
+      return false;
+    }
+    return true;
+  };
+  var matcher = exports.match = function(connInfo, entry) {
+    return fieldNames.slice(0, -1).reduce(function(prev, field, idx) {
+      if (idx == 1) {
+        if (Number(connInfo[field] || defaultPort) === Number(entry[field])) {
+          return prev && true;
+        }
+      }
+      return prev && (entry[field] === "*" || entry[field] === connInfo[field]);
+    }, true);
+  };
+  exports.getPassword = function(connInfo, stream, cb) {
+    var pass;
+    var lineStream = stream.pipe(split());
+    function onLine(line2) {
+      var entry = parseLine(line2);
+      if (entry && isValidEntry(entry) && matcher(connInfo, entry)) {
+        pass = entry[passKey];
+        lineStream.end();
+      }
+    }
+    var onEnd = function() {
+      stream.destroy();
+      cb(pass);
+    };
+    var onErr = function(err) {
+      stream.destroy();
+      warn("WARNING: error on reading file: %s", err);
+      cb(undefined);
+    };
+    stream.on("error", onErr);
+    lineStream.on("data", onLine).on("end", onEnd).on("error", onErr);
+  };
+  var parseLine = exports.parseLine = function(line2) {
+    if (line2.length < 11 || line2.match(/^\s+#/)) {
+      return null;
+    }
+    var curChar = "";
+    var prevChar = "";
+    var fieldIdx = 0;
+    var startIdx = 0;
+    var endIdx = 0;
+    var obj = {};
+    var isLastField = false;
+    var addToObj = function(idx, i0, i1) {
+      var field = line2.substring(i0, i1);
+      if (!Object.hasOwnProperty.call(process.env, "PGPASS_NO_DEESCAPE")) {
+        field = field.replace(/\\([:\\])/g, "$1");
+      }
+      obj[fieldNames[idx]] = field;
+    };
+    for (var i = 0;i < line2.length - 1; i += 1) {
+      curChar = line2.charAt(i + 1);
+      prevChar = line2.charAt(i);
+      isLastField = fieldIdx == nrOfFields - 1;
+      if (isLastField) {
+        addToObj(fieldIdx, startIdx);
+        break;
+      }
+      if (i >= 0 && curChar == ":" && prevChar !== "\\") {
+        addToObj(fieldIdx, startIdx, i + 1);
+        startIdx = i + 2;
+        fieldIdx += 1;
+      }
+    }
+    obj = Object.keys(obj).length === nrOfFields ? obj : null;
+    return obj;
+  };
+  var isValidEntry = exports.isValidEntry = function(entry) {
+    var rules = {
+      0: function(x) {
+        return x.length > 0;
+      },
+      1: function(x) {
+        if (x === "*") {
+          return true;
+        }
+        x = Number(x);
+        return isFinite(x) && x > 0 && x < 9007199254740992 && Math.floor(x) === x;
+      },
+      2: function(x) {
+        return x.length > 0;
+      },
+      3: function(x) {
+        return x.length > 0;
+      },
+      4: function(x) {
+        return x.length > 0;
+      }
+    };
+    for (var idx = 0;idx < fieldNames.length; idx += 1) {
+      var rule = rules[idx];
+      var value = entry[fieldNames[idx]] || "";
+      var res = rule(value);
+      if (!res) {
+        return false;
+      }
+    }
+    return true;
+  };
+});
+
+// ../../node_modules/.bun/pgpass@1.0.5/node_modules/pgpass/lib/index.js
+var require_lib2 = __commonJS((exports, module) => {
+  var path = __require("path");
+  var fs2 = __require("fs");
+  var helper = require_helper();
+  module.exports = function(connInfo, cb) {
+    var file2 = helper.getFileName();
+    fs2.stat(file2, function(err, stat) {
+      if (err || !helper.usePgPass(stat, file2)) {
+        return cb(undefined);
+      }
+      var st = fs2.createReadStream(file2);
+      helper.getPassword(connInfo, st, cb);
+    });
+  };
+  module.exports.warnTo = helper.warnTo;
+});
+
+// ../../node_modules/.bun/pg@8.18.0+32ccf17b773ffb11/node_modules/pg/lib/client.js
+var require_client = __commonJS((exports, module) => {
+  var EventEmitter6 = __require("events").EventEmitter;
+  var utils = require_utils2();
+  var nodeUtils = __require("util");
+  var sasl = require_sasl();
+  var TypeOverrides = require_type_overrides();
+  var ConnectionParameters = require_connection_parameters();
+  var Query2 = require_query();
+  var defaults = require_defaults2();
+  var Connection2 = require_connection();
+  var crypto3 = require_utils3();
+  var activeQueryDeprecationNotice = nodeUtils.deprecate(() => {}, "Client.activeQuery is deprecated and will be removed in a future version.");
+  var queryQueueDeprecationNotice = nodeUtils.deprecate(() => {}, "Client.queryQueue is deprecated and will be removed in a future version.");
+  var pgPassDeprecationNotice = nodeUtils.deprecate(() => {}, "pgpass support is deprecated and will be removed in a future version. " + "You can provide an async function as the password property to the Client/Pool constructor that returns a password instead. Within this funciton you can call the pgpass module in your own code.");
+  var byoPromiseDeprecationNotice = nodeUtils.deprecate(() => {}, "Passing a custom Promise implementation to the Client/Pool constructor is deprecated and will be removed in a future version.");
+
+  class Client extends EventEmitter6 {
+    constructor(config2) {
+      super();
+      this.connectionParameters = new ConnectionParameters(config2);
+      this.user = this.connectionParameters.user;
+      this.database = this.connectionParameters.database;
+      this.port = this.connectionParameters.port;
+      this.host = this.connectionParameters.host;
+      Object.defineProperty(this, "password", {
+        configurable: true,
+        enumerable: false,
+        writable: true,
+        value: this.connectionParameters.password
+      });
+      this.replication = this.connectionParameters.replication;
+      const c = config2 || {};
+      if (c.Promise) {
+        byoPromiseDeprecationNotice();
+      }
+      this._Promise = c.Promise || global.Promise;
+      this._types = new TypeOverrides(c.types);
+      this._ending = false;
+      this._ended = false;
+      this._connecting = false;
+      this._connected = false;
+      this._connectionError = false;
+      this._queryable = true;
+      this._activeQuery = null;
+      this.enableChannelBinding = Boolean(c.enableChannelBinding);
+      this.connection = c.connection || new Connection2({
+        stream: c.stream,
+        ssl: this.connectionParameters.ssl,
+        keepAlive: c.keepAlive || false,
+        keepAliveInitialDelayMillis: c.keepAliveInitialDelayMillis || 0,
+        encoding: this.connectionParameters.client_encoding || "utf8"
+      });
+      this._queryQueue = [];
+      this.binary = c.binary || defaults.binary;
+      this.processID = null;
+      this.secretKey = null;
+      this.ssl = this.connectionParameters.ssl || false;
+      if (this.ssl && this.ssl.key) {
+        Object.defineProperty(this.ssl, "key", {
+          enumerable: false
+        });
+      }
+      this._connectionTimeoutMillis = c.connectionTimeoutMillis || 0;
+    }
+    get activeQuery() {
+      activeQueryDeprecationNotice();
+      return this._activeQuery;
+    }
+    set activeQuery(val) {
+      activeQueryDeprecationNotice();
+      this._activeQuery = val;
+    }
+    _getActiveQuery() {
+      return this._activeQuery;
+    }
+    _errorAllQueries(err) {
+      const enqueueError = (query) => {
+        process.nextTick(() => {
+          query.handleError(err, this.connection);
+        });
+      };
+      const activeQuery = this._getActiveQuery();
+      if (activeQuery) {
+        enqueueError(activeQuery);
+        this._activeQuery = null;
+      }
+      this._queryQueue.forEach(enqueueError);
+      this._queryQueue.length = 0;
+    }
+    _connect(callback) {
+      const self = this;
+      const con = this.connection;
+      this._connectionCallback = callback;
+      if (this._connecting || this._connected) {
+        const err = new Error("Client has already been connected. You cannot reuse a client.");
+        process.nextTick(() => {
+          callback(err);
+        });
+        return;
+      }
+      this._connecting = true;
+      if (this._connectionTimeoutMillis > 0) {
+        this.connectionTimeoutHandle = setTimeout(() => {
+          con._ending = true;
+          con.stream.destroy(new Error("timeout expired"));
+        }, this._connectionTimeoutMillis);
+        if (this.connectionTimeoutHandle.unref) {
+          this.connectionTimeoutHandle.unref();
+        }
+      }
+      if (this.host && this.host.indexOf("/") === 0) {
+        con.connect(this.host + "/.s.PGSQL." + this.port);
+      } else {
+        con.connect(this.port, this.host);
+      }
+      con.on("connect", function() {
+        if (self.ssl) {
+          con.requestSsl();
+        } else {
+          con.startup(self.getStartupConf());
+        }
+      });
+      con.on("sslconnect", function() {
+        con.startup(self.getStartupConf());
+      });
+      this._attachListeners(con);
+      con.once("end", () => {
+        const error48 = this._ending ? new Error("Connection terminated") : new Error("Connection terminated unexpectedly");
+        clearTimeout(this.connectionTimeoutHandle);
+        this._errorAllQueries(error48);
+        this._ended = true;
+        if (!this._ending) {
+          if (this._connecting && !this._connectionError) {
+            if (this._connectionCallback) {
+              this._connectionCallback(error48);
+            } else {
+              this._handleErrorEvent(error48);
+            }
+          } else if (!this._connectionError) {
+            this._handleErrorEvent(error48);
+          }
+        }
+        process.nextTick(() => {
+          this.emit("end");
+        });
+      });
+    }
+    connect(callback) {
+      if (callback) {
+        this._connect(callback);
+        return;
+      }
+      return new this._Promise((resolve, reject) => {
+        this._connect((error48) => {
+          if (error48) {
+            reject(error48);
+          } else {
+            resolve(this);
+          }
+        });
+      });
+    }
+    _attachListeners(con) {
+      con.on("authenticationCleartextPassword", this._handleAuthCleartextPassword.bind(this));
+      con.on("authenticationMD5Password", this._handleAuthMD5Password.bind(this));
+      con.on("authenticationSASL", this._handleAuthSASL.bind(this));
+      con.on("authenticationSASLContinue", this._handleAuthSASLContinue.bind(this));
+      con.on("authenticationSASLFinal", this._handleAuthSASLFinal.bind(this));
+      con.on("backendKeyData", this._handleBackendKeyData.bind(this));
+      con.on("error", this._handleErrorEvent.bind(this));
+      con.on("errorMessage", this._handleErrorMessage.bind(this));
+      con.on("readyForQuery", this._handleReadyForQuery.bind(this));
+      con.on("notice", this._handleNotice.bind(this));
+      con.on("rowDescription", this._handleRowDescription.bind(this));
+      con.on("dataRow", this._handleDataRow.bind(this));
+      con.on("portalSuspended", this._handlePortalSuspended.bind(this));
+      con.on("emptyQuery", this._handleEmptyQuery.bind(this));
+      con.on("commandComplete", this._handleCommandComplete.bind(this));
+      con.on("parseComplete", this._handleParseComplete.bind(this));
+      con.on("copyInResponse", this._handleCopyInResponse.bind(this));
+      con.on("copyData", this._handleCopyData.bind(this));
+      con.on("notification", this._handleNotification.bind(this));
+    }
+    _getPassword(cb) {
+      const con = this.connection;
+      if (typeof this.password === "function") {
+        this._Promise.resolve().then(() => this.password()).then((pass) => {
+          if (pass !== undefined) {
+            if (typeof pass !== "string") {
+              con.emit("error", new TypeError("Password must be a string"));
+              return;
+            }
+            this.connectionParameters.password = this.password = pass;
+          } else {
+            this.connectionParameters.password = this.password = null;
+          }
+          cb();
+        }).catch((err) => {
+          con.emit("error", err);
+        });
+      } else if (this.password !== null) {
+        cb();
+      } else {
+        try {
+          const pgPass = require_lib2();
+          pgPass(this.connectionParameters, (pass) => {
+            if (pass !== undefined) {
+              pgPassDeprecationNotice();
+              this.connectionParameters.password = this.password = pass;
+            }
+            cb();
+          });
+        } catch (e) {
+          this.emit("error", e);
+        }
+      }
+    }
+    _handleAuthCleartextPassword(msg) {
+      this._getPassword(() => {
+        this.connection.password(this.password);
+      });
+    }
+    _handleAuthMD5Password(msg) {
+      this._getPassword(async () => {
+        try {
+          const hashedPassword = await crypto3.postgresMd5PasswordHash(this.user, this.password, msg.salt);
+          this.connection.password(hashedPassword);
+        } catch (e) {
+          this.emit("error", e);
+        }
+      });
+    }
+    _handleAuthSASL(msg) {
+      this._getPassword(() => {
+        try {
+          this.saslSession = sasl.startSession(msg.mechanisms, this.enableChannelBinding && this.connection.stream);
+          this.connection.sendSASLInitialResponseMessage(this.saslSession.mechanism, this.saslSession.response);
+        } catch (err) {
+          this.connection.emit("error", err);
+        }
+      });
+    }
+    async _handleAuthSASLContinue(msg) {
+      try {
+        await sasl.continueSession(this.saslSession, this.password, msg.data, this.enableChannelBinding && this.connection.stream);
+        this.connection.sendSCRAMClientFinalMessage(this.saslSession.response);
+      } catch (err) {
+        this.connection.emit("error", err);
+      }
+    }
+    _handleAuthSASLFinal(msg) {
+      try {
+        sasl.finalizeSession(this.saslSession, msg.data);
+        this.saslSession = null;
+      } catch (err) {
+        this.connection.emit("error", err);
+      }
+    }
+    _handleBackendKeyData(msg) {
+      this.processID = msg.processID;
+      this.secretKey = msg.secretKey;
+    }
+    _handleReadyForQuery(msg) {
+      if (this._connecting) {
+        this._connecting = false;
+        this._connected = true;
+        clearTimeout(this.connectionTimeoutHandle);
+        if (this._connectionCallback) {
+          this._connectionCallback(null, this);
+          this._connectionCallback = null;
+        }
+        this.emit("connect");
+      }
+      const activeQuery = this._getActiveQuery();
+      this._activeQuery = null;
+      this.readyForQuery = true;
+      if (activeQuery) {
+        activeQuery.handleReadyForQuery(this.connection);
+      }
+      this._pulseQueryQueue();
+    }
+    _handleErrorWhileConnecting(err) {
+      if (this._connectionError) {
+        return;
+      }
+      this._connectionError = true;
+      clearTimeout(this.connectionTimeoutHandle);
+      if (this._connectionCallback) {
+        return this._connectionCallback(err);
+      }
+      this.emit("error", err);
+    }
+    _handleErrorEvent(err) {
+      if (this._connecting) {
+        return this._handleErrorWhileConnecting(err);
+      }
+      this._queryable = false;
+      this._errorAllQueries(err);
+      this.emit("error", err);
+    }
+    _handleErrorMessage(msg) {
+      if (this._connecting) {
+        return this._handleErrorWhileConnecting(msg);
+      }
+      const activeQuery = this._getActiveQuery();
+      if (!activeQuery) {
+        this._handleErrorEvent(msg);
+        return;
+      }
+      this._activeQuery = null;
+      activeQuery.handleError(msg, this.connection);
+    }
+    _handleRowDescription(msg) {
+      const activeQuery = this._getActiveQuery();
+      if (activeQuery == null) {
+        const error48 = new Error("Received unexpected rowDescription message from backend.");
+        this._handleErrorEvent(error48);
+        return;
+      }
+      activeQuery.handleRowDescription(msg);
+    }
+    _handleDataRow(msg) {
+      const activeQuery = this._getActiveQuery();
+      if (activeQuery == null) {
+        const error48 = new Error("Received unexpected dataRow message from backend.");
+        this._handleErrorEvent(error48);
+        return;
+      }
+      activeQuery.handleDataRow(msg);
+    }
+    _handlePortalSuspended(msg) {
+      const activeQuery = this._getActiveQuery();
+      if (activeQuery == null) {
+        const error48 = new Error("Received unexpected portalSuspended message from backend.");
+        this._handleErrorEvent(error48);
+        return;
+      }
+      activeQuery.handlePortalSuspended(this.connection);
+    }
+    _handleEmptyQuery(msg) {
+      const activeQuery = this._getActiveQuery();
+      if (activeQuery == null) {
+        const error48 = new Error("Received unexpected emptyQuery message from backend.");
+        this._handleErrorEvent(error48);
+        return;
+      }
+      activeQuery.handleEmptyQuery(this.connection);
+    }
+    _handleCommandComplete(msg) {
+      const activeQuery = this._getActiveQuery();
+      if (activeQuery == null) {
+        const error48 = new Error("Received unexpected commandComplete message from backend.");
+        this._handleErrorEvent(error48);
+        return;
+      }
+      activeQuery.handleCommandComplete(msg, this.connection);
+    }
+    _handleParseComplete() {
+      const activeQuery = this._getActiveQuery();
+      if (activeQuery == null) {
+        const error48 = new Error("Received unexpected parseComplete message from backend.");
+        this._handleErrorEvent(error48);
+        return;
+      }
+      if (activeQuery.name) {
+        this.connection.parsedStatements[activeQuery.name] = activeQuery.text;
+      }
+    }
+    _handleCopyInResponse(msg) {
+      const activeQuery = this._getActiveQuery();
+      if (activeQuery == null) {
+        const error48 = new Error("Received unexpected copyInResponse message from backend.");
+        this._handleErrorEvent(error48);
+        return;
+      }
+      activeQuery.handleCopyInResponse(this.connection);
+    }
+    _handleCopyData(msg) {
+      const activeQuery = this._getActiveQuery();
+      if (activeQuery == null) {
+        const error48 = new Error("Received unexpected copyData message from backend.");
+        this._handleErrorEvent(error48);
+        return;
+      }
+      activeQuery.handleCopyData(msg, this.connection);
+    }
+    _handleNotification(msg) {
+      this.emit("notification", msg);
+    }
+    _handleNotice(msg) {
+      this.emit("notice", msg);
+    }
+    getStartupConf() {
+      const params = this.connectionParameters;
+      const data = {
+        user: params.user,
+        database: params.database
+      };
+      const appName = params.application_name || params.fallback_application_name;
+      if (appName) {
+        data.application_name = appName;
+      }
+      if (params.replication) {
+        data.replication = "" + params.replication;
+      }
+      if (params.statement_timeout) {
+        data.statement_timeout = String(parseInt(params.statement_timeout, 10));
+      }
+      if (params.lock_timeout) {
+        data.lock_timeout = String(parseInt(params.lock_timeout, 10));
+      }
+      if (params.idle_in_transaction_session_timeout) {
+        data.idle_in_transaction_session_timeout = String(parseInt(params.idle_in_transaction_session_timeout, 10));
+      }
+      if (params.options) {
+        data.options = params.options;
+      }
+      return data;
+    }
+    cancel(client, query) {
+      if (client.activeQuery === query) {
+        const con = this.connection;
+        if (this.host && this.host.indexOf("/") === 0) {
+          con.connect(this.host + "/.s.PGSQL." + this.port);
+        } else {
+          con.connect(this.port, this.host);
+        }
+        con.on("connect", function() {
+          con.cancel(client.processID, client.secretKey);
+        });
+      } else if (client._queryQueue.indexOf(query) !== -1) {
+        client._queryQueue.splice(client._queryQueue.indexOf(query), 1);
+      }
+    }
+    setTypeParser(oid, format, parseFn) {
+      return this._types.setTypeParser(oid, format, parseFn);
+    }
+    getTypeParser(oid, format) {
+      return this._types.getTypeParser(oid, format);
+    }
+    escapeIdentifier(str) {
+      return utils.escapeIdentifier(str);
+    }
+    escapeLiteral(str) {
+      return utils.escapeLiteral(str);
+    }
+    _pulseQueryQueue() {
+      if (this.readyForQuery === true) {
+        this._activeQuery = this._queryQueue.shift();
+        const activeQuery = this._getActiveQuery();
+        if (activeQuery) {
+          this.readyForQuery = false;
+          this.hasExecuted = true;
+          const queryError = activeQuery.submit(this.connection);
+          if (queryError) {
+            process.nextTick(() => {
+              activeQuery.handleError(queryError, this.connection);
+              this.readyForQuery = true;
+              this._pulseQueryQueue();
+            });
+          }
+        } else if (this.hasExecuted) {
+          this._activeQuery = null;
+          this.emit("drain");
+        }
+      }
+    }
+    query(config2, values2, callback) {
+      let query;
+      let result;
+      let readTimeout;
+      let readTimeoutTimer;
+      let queryCallback;
+      if (config2 === null || config2 === undefined) {
+        throw new TypeError("Client was passed a null or undefined query");
+      } else if (typeof config2.submit === "function") {
+        readTimeout = config2.query_timeout || this.connectionParameters.query_timeout;
+        result = query = config2;
+        if (typeof values2 === "function") {
+          query.callback = query.callback || values2;
+        }
+      } else {
+        readTimeout = config2.query_timeout || this.connectionParameters.query_timeout;
+        query = new Query2(config2, values2, callback);
+        if (!query.callback) {
+          result = new this._Promise((resolve, reject) => {
+            query.callback = (err, res) => err ? reject(err) : resolve(res);
+          }).catch((err) => {
+            Error.captureStackTrace(err);
+            throw err;
+          });
+        }
+      }
+      if (readTimeout) {
+        queryCallback = query.callback;
+        readTimeoutTimer = setTimeout(() => {
+          const error48 = new Error("Query read timeout");
+          process.nextTick(() => {
+            query.handleError(error48, this.connection);
+          });
+          queryCallback(error48);
+          query.callback = () => {};
+          const index2 = this._queryQueue.indexOf(query);
+          if (index2 > -1) {
+            this._queryQueue.splice(index2, 1);
+          }
+          this._pulseQueryQueue();
+        }, readTimeout);
+        query.callback = (err, res) => {
+          clearTimeout(readTimeoutTimer);
+          queryCallback(err, res);
+        };
+      }
+      if (this.binary && !query.binary) {
+        query.binary = true;
+      }
+      if (query._result && !query._result._types) {
+        query._result._types = this._types;
+      }
+      if (!this._queryable) {
+        process.nextTick(() => {
+          query.handleError(new Error("Client has encountered a connection error and is not queryable"), this.connection);
+        });
+        return result;
+      }
+      if (this._ending) {
+        process.nextTick(() => {
+          query.handleError(new Error("Client was closed and is not queryable"), this.connection);
+        });
+        return result;
+      }
+      this._queryQueue.push(query);
+      this._pulseQueryQueue();
+      return result;
+    }
+    ref() {
+      this.connection.ref();
+    }
+    unref() {
+      this.connection.unref();
+    }
+    end(cb) {
+      this._ending = true;
+      if (!this.connection._connecting || this._ended) {
+        if (cb) {
+          cb();
+        } else {
+          return this._Promise.resolve();
+        }
+      }
+      if (this._getActiveQuery() || !this._queryable) {
+        this.connection.stream.destroy();
+      } else {
+        this.connection.end();
+      }
+      if (cb) {
+        this.connection.once("end", cb);
+      } else {
+        return new this._Promise((resolve) => {
+          this.connection.once("end", resolve);
+        });
+      }
+    }
+    get queryQueue() {
+      queryQueueDeprecationNotice();
+      return this._queryQueue;
+    }
+  }
+  Client.Query = Query2;
+  module.exports = Client;
+});
+
+// ../../node_modules/.bun/pg-pool@3.11.0+32ccf17b773ffb11/node_modules/pg-pool/index.js
+var require_pg_pool = __commonJS((exports, module) => {
+  var EventEmitter6 = __require("events").EventEmitter;
+  var NOOP2 = function() {};
+  var removeWhere = (list2, predicate) => {
+    const i = list2.findIndex(predicate);
+    return i === -1 ? undefined : list2.splice(i, 1)[0];
+  };
+
+  class IdleItem {
+    constructor(client, idleListener, timeoutId) {
+      this.client = client;
+      this.idleListener = idleListener;
+      this.timeoutId = timeoutId;
+    }
+  }
+
+  class PendingItem {
+    constructor(callback) {
+      this.callback = callback;
+    }
+  }
+  function throwOnDoubleRelease() {
+    throw new Error("Release called on client which has already been released to the pool.");
+  }
+  function promisify(Promise2, callback) {
+    if (callback) {
+      return { callback, result: undefined };
+    }
+    let rej;
+    let res;
+    const cb = function(err, client) {
+      err ? rej(err) : res(client);
+    };
+    const result = new Promise2(function(resolve, reject) {
+      res = resolve;
+      rej = reject;
+    }).catch((err) => {
+      Error.captureStackTrace(err);
+      throw err;
+    });
+    return { callback: cb, result };
+  }
+  function makeIdleListener(pool, client) {
+    return function idleListener(err) {
+      err.client = client;
+      client.removeListener("error", idleListener);
+      client.on("error", () => {
+        pool.log("additional client error after disconnection due to error", err);
+      });
+      pool._remove(client);
+      pool.emit("error", err, client);
+    };
+  }
+
+  class Pool extends EventEmitter6 {
+    constructor(options, Client) {
+      super();
+      this.options = Object.assign({}, options);
+      if (options != null && "password" in options) {
+        Object.defineProperty(this.options, "password", {
+          configurable: true,
+          enumerable: false,
+          writable: true,
+          value: options.password
+        });
+      }
+      if (options != null && options.ssl && options.ssl.key) {
+        Object.defineProperty(this.options.ssl, "key", {
+          enumerable: false
+        });
+      }
+      this.options.max = this.options.max || this.options.poolSize || 10;
+      this.options.min = this.options.min || 0;
+      this.options.maxUses = this.options.maxUses || Infinity;
+      this.options.allowExitOnIdle = this.options.allowExitOnIdle || false;
+      this.options.maxLifetimeSeconds = this.options.maxLifetimeSeconds || 0;
+      this.log = this.options.log || function() {};
+      this.Client = this.options.Client || Client || require_lib3().Client;
+      this.Promise = this.options.Promise || global.Promise;
+      if (typeof this.options.idleTimeoutMillis === "undefined") {
+        this.options.idleTimeoutMillis = 1e4;
+      }
+      this._clients = [];
+      this._idle = [];
+      this._expired = new WeakSet;
+      this._pendingQueue = [];
+      this._endCallback = undefined;
+      this.ending = false;
+      this.ended = false;
+    }
+    _isFull() {
+      return this._clients.length >= this.options.max;
+    }
+    _isAboveMin() {
+      return this._clients.length > this.options.min;
+    }
+    _pulseQueue() {
+      this.log("pulse queue");
+      if (this.ended) {
+        this.log("pulse queue ended");
+        return;
+      }
+      if (this.ending) {
+        this.log("pulse queue on ending");
+        if (this._idle.length) {
+          this._idle.slice().map((item) => {
+            this._remove(item.client);
+          });
+        }
+        if (!this._clients.length) {
+          this.ended = true;
+          this._endCallback();
+        }
+        return;
+      }
+      if (!this._pendingQueue.length) {
+        this.log("no queued requests");
+        return;
+      }
+      if (!this._idle.length && this._isFull()) {
+        return;
+      }
+      const pendingItem = this._pendingQueue.shift();
+      if (this._idle.length) {
+        const idleItem = this._idle.pop();
+        clearTimeout(idleItem.timeoutId);
+        const client = idleItem.client;
+        client.ref && client.ref();
+        const idleListener = idleItem.idleListener;
+        return this._acquireClient(client, pendingItem, idleListener, false);
+      }
+      if (!this._isFull()) {
+        return this.newClient(pendingItem);
+      }
+      throw new Error("unexpected condition");
+    }
+    _remove(client, callback) {
+      const removed = removeWhere(this._idle, (item) => item.client === client);
+      if (removed !== undefined) {
+        clearTimeout(removed.timeoutId);
+      }
+      this._clients = this._clients.filter((c) => c !== client);
+      const context = this;
+      client.end(() => {
+        context.emit("remove", client);
+        if (typeof callback === "function") {
+          callback();
+        }
+      });
+    }
+    connect(cb) {
+      if (this.ending) {
+        const err = new Error("Cannot use a pool after calling end on the pool");
+        return cb ? cb(err) : this.Promise.reject(err);
+      }
+      const response = promisify(this.Promise, cb);
+      const result = response.result;
+      if (this._isFull() || this._idle.length) {
+        if (this._idle.length) {
+          process.nextTick(() => this._pulseQueue());
+        }
+        if (!this.options.connectionTimeoutMillis) {
+          this._pendingQueue.push(new PendingItem(response.callback));
+          return result;
+        }
+        const queueCallback = (err, res, done) => {
+          clearTimeout(tid);
+          response.callback(err, res, done);
+        };
+        const pendingItem = new PendingItem(queueCallback);
+        const tid = setTimeout(() => {
+          removeWhere(this._pendingQueue, (i) => i.callback === queueCallback);
+          pendingItem.timedOut = true;
+          response.callback(new Error("timeout exceeded when trying to connect"));
+        }, this.options.connectionTimeoutMillis);
+        if (tid.unref) {
+          tid.unref();
+        }
+        this._pendingQueue.push(pendingItem);
+        return result;
+      }
+      this.newClient(new PendingItem(response.callback));
+      return result;
+    }
+    newClient(pendingItem) {
+      const client = new this.Client(this.options);
+      this._clients.push(client);
+      const idleListener = makeIdleListener(this, client);
+      this.log("checking client timeout");
+      let tid;
+      let timeoutHit = false;
+      if (this.options.connectionTimeoutMillis) {
+        tid = setTimeout(() => {
+          this.log("ending client due to timeout");
+          timeoutHit = true;
+          client.connection ? client.connection.stream.destroy() : client.end();
+        }, this.options.connectionTimeoutMillis);
+      }
+      this.log("connecting new client");
+      client.connect((err) => {
+        if (tid) {
+          clearTimeout(tid);
+        }
+        client.on("error", idleListener);
+        if (err) {
+          this.log("client failed to connect", err);
+          this._clients = this._clients.filter((c) => c !== client);
+          if (timeoutHit) {
+            err = new Error("Connection terminated due to connection timeout", { cause: err });
+          }
+          this._pulseQueue();
+          if (!pendingItem.timedOut) {
+            pendingItem.callback(err, undefined, NOOP2);
+          }
+        } else {
+          this.log("new client connected");
+          if (this.options.maxLifetimeSeconds !== 0) {
+            const maxLifetimeTimeout = setTimeout(() => {
+              this.log("ending client due to expired lifetime");
+              this._expired.add(client);
+              const idleIndex = this._idle.findIndex((idleItem) => idleItem.client === client);
+              if (idleIndex !== -1) {
+                this._acquireClient(client, new PendingItem((err2, client2, clientRelease) => clientRelease()), idleListener, false);
+              }
+            }, this.options.maxLifetimeSeconds * 1000);
+            maxLifetimeTimeout.unref();
+            client.once("end", () => clearTimeout(maxLifetimeTimeout));
+          }
+          return this._acquireClient(client, pendingItem, idleListener, true);
+        }
+      });
+    }
+    _acquireClient(client, pendingItem, idleListener, isNew) {
+      if (isNew) {
+        this.emit("connect", client);
+      }
+      this.emit("acquire", client);
+      client.release = this._releaseOnce(client, idleListener);
+      client.removeListener("error", idleListener);
+      if (!pendingItem.timedOut) {
+        if (isNew && this.options.verify) {
+          this.options.verify(client, (err) => {
+            if (err) {
+              client.release(err);
+              return pendingItem.callback(err, undefined, NOOP2);
+            }
+            pendingItem.callback(undefined, client, client.release);
+          });
+        } else {
+          pendingItem.callback(undefined, client, client.release);
+        }
+      } else {
+        if (isNew && this.options.verify) {
+          this.options.verify(client, client.release);
+        } else {
+          client.release();
+        }
+      }
+    }
+    _releaseOnce(client, idleListener) {
+      let released = false;
+      return (err) => {
+        if (released) {
+          throwOnDoubleRelease();
+        }
+        released = true;
+        this._release(client, idleListener, err);
+      };
+    }
+    _release(client, idleListener, err) {
+      client.on("error", idleListener);
+      client._poolUseCount = (client._poolUseCount || 0) + 1;
+      this.emit("release", err, client);
+      if (err || this.ending || !client._queryable || client._ending || client._poolUseCount >= this.options.maxUses) {
+        if (client._poolUseCount >= this.options.maxUses) {
+          this.log("remove expended client");
+        }
+        return this._remove(client, this._pulseQueue.bind(this));
+      }
+      const isExpired = this._expired.has(client);
+      if (isExpired) {
+        this.log("remove expired client");
+        this._expired.delete(client);
+        return this._remove(client, this._pulseQueue.bind(this));
+      }
+      let tid;
+      if (this.options.idleTimeoutMillis && this._isAboveMin()) {
+        tid = setTimeout(() => {
+          if (this._isAboveMin()) {
+            this.log("remove idle client");
+            this._remove(client, this._pulseQueue.bind(this));
+          }
+        }, this.options.idleTimeoutMillis);
+        if (this.options.allowExitOnIdle) {
+          tid.unref();
+        }
+      }
+      if (this.options.allowExitOnIdle) {
+        client.unref();
+      }
+      this._idle.push(new IdleItem(client, idleListener, tid));
+      this._pulseQueue();
+    }
+    query(text2, values2, cb) {
+      if (typeof text2 === "function") {
+        const response2 = promisify(this.Promise, text2);
+        setImmediate(function() {
+          return response2.callback(new Error("Passing a function as the first parameter to pool.query is not supported"));
+        });
+        return response2.result;
+      }
+      if (typeof values2 === "function") {
+        cb = values2;
+        values2 = undefined;
+      }
+      const response = promisify(this.Promise, cb);
+      cb = response.callback;
+      this.connect((err, client) => {
+        if (err) {
+          return cb(err);
+        }
+        let clientReleased = false;
+        const onError = (err2) => {
+          if (clientReleased) {
+            return;
+          }
+          clientReleased = true;
+          client.release(err2);
+          cb(err2);
+        };
+        client.once("error", onError);
+        this.log("dispatching query");
+        try {
+          client.query(text2, values2, (err2, res) => {
+            this.log("query dispatched");
+            client.removeListener("error", onError);
+            if (clientReleased) {
+              return;
+            }
+            clientReleased = true;
+            client.release(err2);
+            if (err2) {
+              return cb(err2);
+            }
+            return cb(undefined, res);
+          });
+        } catch (err2) {
+          client.release(err2);
+          return cb(err2);
+        }
+      });
+      return response.result;
+    }
+    end(cb) {
+      this.log("ending");
+      if (this.ending) {
+        const err = new Error("Called end on pool more than once");
+        return cb ? cb(err) : this.Promise.reject(err);
+      }
+      this.ending = true;
+      const promised = promisify(this.Promise, cb);
+      this._endCallback = promised.callback;
+      this._pulseQueue();
+      return promised.result;
+    }
+    get waitingCount() {
+      return this._pendingQueue.length;
+    }
+    get idleCount() {
+      return this._idle.length;
+    }
+    get expiredCount() {
+      return this._clients.reduce((acc, client) => acc + (this._expired.has(client) ? 1 : 0), 0);
+    }
+    get totalCount() {
+      return this._clients.length;
+    }
+  }
+  module.exports = Pool;
+});
+
+// ../../node_modules/.bun/pg@8.18.0+32ccf17b773ffb11/node_modules/pg/lib/native/query.js
+var require_query2 = __commonJS((exports, module) => {
+  var EventEmitter6 = __require("events").EventEmitter;
+  var util = __require("util");
+  var utils = require_utils2();
+  var NativeQuery = module.exports = function(config2, values2, callback) {
+    EventEmitter6.call(this);
+    config2 = utils.normalizeQueryConfig(config2, values2, callback);
+    this.text = config2.text;
+    this.values = config2.values;
+    this.name = config2.name;
+    this.queryMode = config2.queryMode;
+    this.callback = config2.callback;
+    this.state = "new";
+    this._arrayMode = config2.rowMode === "array";
+    this._emitRowEvents = false;
+    this.on("newListener", function(event) {
+      if (event === "row")
+        this._emitRowEvents = true;
+    }.bind(this));
+  };
+  util.inherits(NativeQuery, EventEmitter6);
+  var errorFieldMap = {
+    sqlState: "code",
+    statementPosition: "position",
+    messagePrimary: "message",
+    context: "where",
+    schemaName: "schema",
+    tableName: "table",
+    columnName: "column",
+    dataTypeName: "dataType",
+    constraintName: "constraint",
+    sourceFile: "file",
+    sourceLine: "line",
+    sourceFunction: "routine"
+  };
+  NativeQuery.prototype.handleError = function(err) {
+    const fields = this.native.pq.resultErrorFields();
+    if (fields) {
+      for (const key in fields) {
+        const normalizedFieldName = errorFieldMap[key] || key;
+        err[normalizedFieldName] = fields[key];
+      }
+    }
+    if (this.callback) {
+      this.callback(err);
+    } else {
+      this.emit("error", err);
+    }
+    this.state = "error";
+  };
+  NativeQuery.prototype.then = function(onSuccess, onFailure) {
+    return this._getPromise().then(onSuccess, onFailure);
+  };
+  NativeQuery.prototype.catch = function(callback) {
+    return this._getPromise().catch(callback);
+  };
+  NativeQuery.prototype._getPromise = function() {
+    if (this._promise)
+      return this._promise;
+    this._promise = new Promise(function(resolve, reject) {
+      this._once("end", resolve);
+      this._once("error", reject);
+    }.bind(this));
+    return this._promise;
+  };
+  NativeQuery.prototype.submit = function(client) {
+    this.state = "running";
+    const self = this;
+    this.native = client.native;
+    client.native.arrayMode = this._arrayMode;
+    let after = function(err, rows, results) {
+      client.native.arrayMode = false;
+      setImmediate(function() {
+        self.emit("_done");
+      });
+      if (err) {
+        return self.handleError(err);
+      }
+      if (self._emitRowEvents) {
+        if (results.length > 1) {
+          rows.forEach((rowOfRows, i) => {
+            rowOfRows.forEach((row) => {
+              self.emit("row", row, results[i]);
+            });
+          });
+        } else {
+          rows.forEach(function(row) {
+            self.emit("row", row, results);
+          });
+        }
+      }
+      self.state = "end";
+      self.emit("end", results);
+      if (self.callback) {
+        self.callback(null, results);
+      }
+    };
+    if (process.domain) {
+      after = process.domain.bind(after);
+    }
+    if (this.name) {
+      if (this.name.length > 63) {
+        console.error("Warning! Postgres only supports 63 characters for query names.");
+        console.error("You supplied %s (%s)", this.name, this.name.length);
+        console.error("This can cause conflicts and silent errors executing queries");
+      }
+      const values2 = (this.values || []).map(utils.prepareValue);
+      if (client.namedQueries[this.name]) {
+        if (this.text && client.namedQueries[this.name] !== this.text) {
+          const err = new Error(`Prepared statements must be unique - '${this.name}' was used for a different statement`);
+          return after(err);
+        }
+        return client.native.execute(this.name, values2, after);
+      }
+      return client.native.prepare(this.name, this.text, values2.length, function(err) {
+        if (err)
+          return after(err);
+        client.namedQueries[self.name] = self.text;
+        return self.native.execute(self.name, values2, after);
+      });
+    } else if (this.values) {
+      if (!Array.isArray(this.values)) {
+        const err = new Error("Query values must be an array");
+        return after(err);
+      }
+      const vals = this.values.map(utils.prepareValue);
+      client.native.query(this.text, vals, after);
+    } else if (this.queryMode === "extended") {
+      client.native.query(this.text, [], after);
+    } else {
+      client.native.query(this.text, after);
+    }
+  };
+});
+
+// ../../node_modules/.bun/pg@8.18.0+32ccf17b773ffb11/node_modules/pg/lib/native/client.js
+var require_client2 = __commonJS((exports, module) => {
+  var Native;
+  try {
+    Native = (()=>{throw new Error("Cannot require module "+"pg-native");})();
+  } catch (e) {
+    throw e;
+  }
+  var TypeOverrides = require_type_overrides();
+  var EventEmitter6 = __require("events").EventEmitter;
+  var util = __require("util");
+  var ConnectionParameters = require_connection_parameters();
+  var NativeQuery = require_query2();
+  var Client = module.exports = function(config2) {
+    EventEmitter6.call(this);
+    config2 = config2 || {};
+    this._Promise = config2.Promise || global.Promise;
+    this._types = new TypeOverrides(config2.types);
+    this.native = new Native({
+      types: this._types
+    });
+    this._queryQueue = [];
+    this._ending = false;
+    this._connecting = false;
+    this._connected = false;
+    this._queryable = true;
+    const cp = this.connectionParameters = new ConnectionParameters(config2);
+    if (config2.nativeConnectionString)
+      cp.nativeConnectionString = config2.nativeConnectionString;
+    this.user = cp.user;
+    Object.defineProperty(this, "password", {
+      configurable: true,
+      enumerable: false,
+      writable: true,
+      value: cp.password
+    });
+    this.database = cp.database;
+    this.host = cp.host;
+    this.port = cp.port;
+    this.namedQueries = {};
+  };
+  Client.Query = NativeQuery;
+  util.inherits(Client, EventEmitter6);
+  Client.prototype._errorAllQueries = function(err) {
+    const enqueueError = (query) => {
+      process.nextTick(() => {
+        query.native = this.native;
+        query.handleError(err);
+      });
+    };
+    if (this._hasActiveQuery()) {
+      enqueueError(this._activeQuery);
+      this._activeQuery = null;
+    }
+    this._queryQueue.forEach(enqueueError);
+    this._queryQueue.length = 0;
+  };
+  Client.prototype._connect = function(cb) {
+    const self = this;
+    if (this._connecting) {
+      process.nextTick(() => cb(new Error("Client has already been connected. You cannot reuse a client.")));
+      return;
+    }
+    this._connecting = true;
+    this.connectionParameters.getLibpqConnectionString(function(err, conString) {
+      if (self.connectionParameters.nativeConnectionString)
+        conString = self.connectionParameters.nativeConnectionString;
+      if (err)
+        return cb(err);
+      self.native.connect(conString, function(err2) {
+        if (err2) {
+          self.native.end();
+          return cb(err2);
+        }
+        self._connected = true;
+        self.native.on("error", function(err3) {
+          self._queryable = false;
+          self._errorAllQueries(err3);
+          self.emit("error", err3);
+        });
+        self.native.on("notification", function(msg) {
+          self.emit("notification", {
+            channel: msg.relname,
+            payload: msg.extra
+          });
+        });
+        self.emit("connect");
+        self._pulseQueryQueue(true);
+        cb(null, this);
+      });
+    });
+  };
+  Client.prototype.connect = function(callback) {
+    if (callback) {
+      this._connect(callback);
+      return;
+    }
+    return new this._Promise((resolve, reject) => {
+      this._connect((error48) => {
+        if (error48) {
+          reject(error48);
+        } else {
+          resolve(this);
+        }
+      });
+    });
+  };
+  Client.prototype.query = function(config2, values2, callback) {
+    let query;
+    let result;
+    let readTimeout;
+    let readTimeoutTimer;
+    let queryCallback;
+    if (config2 === null || config2 === undefined) {
+      throw new TypeError("Client was passed a null or undefined query");
+    } else if (typeof config2.submit === "function") {
+      readTimeout = config2.query_timeout || this.connectionParameters.query_timeout;
+      result = query = config2;
+      if (typeof values2 === "function") {
+        config2.callback = values2;
+      }
+    } else {
+      readTimeout = config2.query_timeout || this.connectionParameters.query_timeout;
+      query = new NativeQuery(config2, values2, callback);
+      if (!query.callback) {
+        let resolveOut, rejectOut;
+        result = new this._Promise((resolve, reject) => {
+          resolveOut = resolve;
+          rejectOut = reject;
+        }).catch((err) => {
+          Error.captureStackTrace(err);
+          throw err;
+        });
+        query.callback = (err, res) => err ? rejectOut(err) : resolveOut(res);
+      }
+    }
+    if (readTimeout) {
+      queryCallback = query.callback;
+      readTimeoutTimer = setTimeout(() => {
+        const error48 = new Error("Query read timeout");
+        process.nextTick(() => {
+          query.handleError(error48, this.connection);
+        });
+        queryCallback(error48);
+        query.callback = () => {};
+        const index2 = this._queryQueue.indexOf(query);
+        if (index2 > -1) {
+          this._queryQueue.splice(index2, 1);
+        }
+        this._pulseQueryQueue();
+      }, readTimeout);
+      query.callback = (err, res) => {
+        clearTimeout(readTimeoutTimer);
+        queryCallback(err, res);
+      };
+    }
+    if (!this._queryable) {
+      query.native = this.native;
+      process.nextTick(() => {
+        query.handleError(new Error("Client has encountered a connection error and is not queryable"));
+      });
+      return result;
+    }
+    if (this._ending) {
+      query.native = this.native;
+      process.nextTick(() => {
+        query.handleError(new Error("Client was closed and is not queryable"));
+      });
+      return result;
+    }
+    this._queryQueue.push(query);
+    this._pulseQueryQueue();
+    return result;
+  };
+  Client.prototype.end = function(cb) {
+    const self = this;
+    this._ending = true;
+    if (!this._connected) {
+      this.once("connect", this.end.bind(this, cb));
+    }
+    let result;
+    if (!cb) {
+      result = new this._Promise(function(resolve, reject) {
+        cb = (err) => err ? reject(err) : resolve();
+      });
+    }
+    this.native.end(function() {
+      self._errorAllQueries(new Error("Connection terminated"));
+      process.nextTick(() => {
+        self.emit("end");
+        if (cb)
+          cb();
+      });
+    });
+    return result;
+  };
+  Client.prototype._hasActiveQuery = function() {
+    return this._activeQuery && this._activeQuery.state !== "error" && this._activeQuery.state !== "end";
+  };
+  Client.prototype._pulseQueryQueue = function(initialConnection) {
+    if (!this._connected) {
+      return;
+    }
+    if (this._hasActiveQuery()) {
+      return;
+    }
+    const query = this._queryQueue.shift();
+    if (!query) {
+      if (!initialConnection) {
+        this.emit("drain");
+      }
+      return;
+    }
+    this._activeQuery = query;
+    query.submit(this);
+    const self = this;
+    query.once("_done", function() {
+      self._pulseQueryQueue();
+    });
+  };
+  Client.prototype.cancel = function(query) {
+    if (this._activeQuery === query) {
+      this.native.cancel(function() {});
+    } else if (this._queryQueue.indexOf(query) !== -1) {
+      this._queryQueue.splice(this._queryQueue.indexOf(query), 1);
+    }
+  };
+  Client.prototype.ref = function() {};
+  Client.prototype.unref = function() {};
+  Client.prototype.setTypeParser = function(oid, format, parseFn) {
+    return this._types.setTypeParser(oid, format, parseFn);
+  };
+  Client.prototype.getTypeParser = function(oid, format) {
+    return this._types.getTypeParser(oid, format);
+  };
+});
+
+// ../../node_modules/.bun/pg@8.18.0+32ccf17b773ffb11/node_modules/pg/lib/index.js
+var require_lib3 = __commonJS((exports, module) => {
+  var Client = require_client();
+  var defaults = require_defaults2();
+  var Connection2 = require_connection();
+  var Result2 = require_result();
+  var utils = require_utils2();
+  var Pool = require_pg_pool();
+  var TypeOverrides = require_type_overrides();
+  var { DatabaseError } = require_dist7();
+  var { escapeIdentifier: escapeIdentifier2, escapeLiteral } = require_utils2();
+  var poolFactory = (Client2) => {
+    return class BoundPool extends Pool {
+      constructor(options) {
+        super(options, Client2);
+      }
+    };
+  };
+  var PG = function(clientConstructor2) {
+    this.defaults = defaults;
+    this.Client = clientConstructor2;
+    this.Query = this.Client.Query;
+    this.Pool = poolFactory(this.Client);
+    this._pools = [];
+    this.Connection = Connection2;
+    this.types = require_pg_types();
+    this.DatabaseError = DatabaseError;
+    this.TypeOverrides = TypeOverrides;
+    this.escapeIdentifier = escapeIdentifier2;
+    this.escapeLiteral = escapeLiteral;
+    this.Result = Result2;
+    this.utils = utils;
+  };
+  var clientConstructor = Client;
+  var forceNative = false;
+  try {
+    forceNative = !!process.env.NODE_PG_FORCE_NATIVE;
+  } catch {}
+  if (forceNative) {
+    clientConstructor = require_client2();
+  }
+  module.exports = new PG(clientConstructor);
+  Object.defineProperty(module.exports, "native", {
+    configurable: true,
+    enumerable: false,
+    get() {
+      let native = null;
+      try {
+        native = new PG(require_client2());
+      } catch (err) {
+        if (err.code !== "MODULE_NOT_FOUND") {
+          throw err;
+        }
+      }
+      Object.defineProperty(module.exports, "native", {
+        value: native
+      });
+      return native;
+    }
+  });
+});
+
 // src/index.ts
 var import_cors = __toESM(require_cors(), 1);
 
@@ -49871,42 +61154,9085 @@ function date4(params) {
 
 // ../../node_modules/.bun/zod@4.3.6/node_modules/zod/v4/classic/external.js
 config(en_default());
-// src/api/context.ts
-var createTrpcContext = ({ req, res }) => {
-  return {
-    request: req,
-    reply: res,
-    requestId: String(req.id)
-  };
+// ../../node_modules/.bun/@clerk+shared@3.47.0+bf16f8eded5e12ee/node_modules/@clerk/shared/dist/runtime/constants-ByUssRbE.mjs
+var DEV_OR_STAGING_SUFFIXES = [
+  ".lcl.dev",
+  ".stg.dev",
+  ".lclstage.dev",
+  ".stgstage.dev",
+  ".dev.lclclerk.com",
+  ".stg.lclclerk.com",
+  ".accounts.lclclerk.com",
+  "accountsstage.dev",
+  "accounts.dev"
+];
+
+// ../../node_modules/.bun/@clerk+shared@3.47.0+bf16f8eded5e12ee/node_modules/@clerk/shared/dist/runtime/isomorphicAtob-DybBXGFR.mjs
+var isomorphicAtob = (data) => {
+  if (typeof atob !== "undefined" && typeof atob === "function")
+    return atob(data);
+  else if (typeof global !== "undefined" && global.Buffer)
+    return new global.Buffer(data, "base64").toString();
+  return data;
 };
 
-// src/api/trpc.ts
-var t = initTRPC.context().create();
-var router = t.router;
-var appProcedure = t.procedure;
-var publicProcedure = t.procedure;
+// ../../node_modules/.bun/@clerk+shared@3.47.0+bf16f8eded5e12ee/node_modules/@clerk/shared/dist/runtime/keys-YNv6yjKk.mjs
+var PUBLISHABLE_KEY_LIVE_PREFIX = "pk_live_";
+var PUBLISHABLE_KEY_TEST_PREFIX = "pk_test_";
+function isValidDecodedPublishableKey(decoded) {
+  if (!decoded.endsWith("$"))
+    return false;
+  const withoutTrailing = decoded.slice(0, -1);
+  if (withoutTrailing.includes("$"))
+    return false;
+  return withoutTrailing.includes(".");
+}
+function parsePublishableKey(key, options = {}) {
+  key = key || "";
+  if (!key || !isPublishableKey(key)) {
+    if (options.fatal && !key)
+      throw new Error("Publishable key is missing. Ensure that your publishable key is correctly configured. Double-check your environment configuration for your keys, or access them here: https://dashboard.clerk.com/last-active?path=api-keys");
+    if (options.fatal && !isPublishableKey(key))
+      throw new Error("Publishable key not valid.");
+    return null;
+  }
+  const instanceType = key.startsWith(PUBLISHABLE_KEY_LIVE_PREFIX) ? "production" : "development";
+  let decodedFrontendApi;
+  try {
+    decodedFrontendApi = isomorphicAtob(key.split("_")[2]);
+  } catch {
+    if (options.fatal)
+      throw new Error("Publishable key not valid: Failed to decode key.");
+    return null;
+  }
+  if (!isValidDecodedPublishableKey(decodedFrontendApi)) {
+    if (options.fatal)
+      throw new Error("Publishable key not valid: Decoded key has invalid format.");
+    return null;
+  }
+  let frontendApi = decodedFrontendApi.slice(0, -1);
+  if (options.proxyUrl)
+    frontendApi = options.proxyUrl;
+  else if (instanceType !== "development" && options.domain && options.isSatellite)
+    frontendApi = `clerk.${options.domain}`;
+  return {
+    instanceType,
+    frontendApi
+  };
+}
+function isPublishableKey(key = "") {
+  try {
+    if (!(key.startsWith(PUBLISHABLE_KEY_LIVE_PREFIX) || key.startsWith(PUBLISHABLE_KEY_TEST_PREFIX)))
+      return false;
+    const parts = key.split("_");
+    if (parts.length !== 3)
+      return false;
+    const encodedPart = parts[2];
+    if (!encodedPart)
+      return false;
+    return isValidDecodedPublishableKey(isomorphicAtob(encodedPart));
+  } catch {
+    return false;
+  }
+}
+function createDevOrStagingUrlCache() {
+  const devOrStagingUrlCache = /* @__PURE__ */ new Map;
+  return { isDevOrStagingUrl: (url2) => {
+    if (!url2)
+      return false;
+    const hostname3 = typeof url2 === "string" ? url2 : url2.hostname;
+    let res = devOrStagingUrlCache.get(hostname3);
+    if (res === undefined) {
+      res = DEV_OR_STAGING_SUFFIXES.some((s) => hostname3.endsWith(s));
+      devOrStagingUrlCache.set(hostname3, res);
+    }
+    return res;
+  } };
+}
+
+// ../../node_modules/.bun/@clerk+shared@3.47.0+bf16f8eded5e12ee/node_modules/@clerk/shared/dist/runtime/retry-DAlTROH9.mjs
+var defaultOptions = {
+  initialDelay: 125,
+  maxDelayBetweenRetries: 0,
+  factor: 2,
+  shouldRetry: (_, iteration) => iteration < 5,
+  retryImmediately: false,
+  jitter: true
+};
+var RETRY_IMMEDIATELY_DELAY = 100;
+var sleep = async (ms) => new Promise((s) => setTimeout(s, ms));
+var applyJitter = (delay, jitter) => {
+  return jitter ? delay * (1 + Math.random()) : delay;
+};
+var createExponentialDelayAsyncFn = (opts) => {
+  let timesCalled = 0;
+  const calculateDelayInMs = () => {
+    const constant = opts.initialDelay;
+    const base = opts.factor;
+    let delay = constant * Math.pow(base, timesCalled);
+    delay = applyJitter(delay, opts.jitter);
+    return Math.min(opts.maxDelayBetweenRetries || delay, delay);
+  };
+  return async () => {
+    await sleep(calculateDelayInMs());
+    timesCalled++;
+  };
+};
+var retry = async (callback, options = {}) => {
+  let iterations = 0;
+  const { shouldRetry, initialDelay, maxDelayBetweenRetries, factor, retryImmediately, jitter, onBeforeRetry } = {
+    ...defaultOptions,
+    ...options
+  };
+  const delay = createExponentialDelayAsyncFn({
+    initialDelay,
+    maxDelayBetweenRetries,
+    factor,
+    jitter
+  });
+  while (true)
+    try {
+      return await callback();
+    } catch (e) {
+      iterations++;
+      if (!shouldRetry(e, iterations))
+        throw e;
+      if (onBeforeRetry)
+        await onBeforeRetry(iterations);
+      if (retryImmediately && iterations === 1)
+        await sleep(applyJitter(RETRY_IMMEDIATELY_DELAY, jitter));
+      else
+        await delay();
+    }
+};
+
+// ../../node_modules/.bun/@clerk+shared@3.47.0+bf16f8eded5e12ee/node_modules/@clerk/shared/dist/runtime/error-Dl9xmUf3.mjs
+function createErrorTypeGuard(ErrorClass) {
+  function typeGuard(error48) {
+    const target = error48 ?? this;
+    if (!target)
+      throw new TypeError(`${ErrorClass.kind || ErrorClass.name} type guard requires an error object`);
+    if (ErrorClass.kind && typeof target === "object" && target !== null && "constructor" in target) {
+      if (target.constructor?.kind === ErrorClass.kind)
+        return true;
+    }
+    return target instanceof ErrorClass;
+  }
+  return typeGuard;
+}
+var ClerkAPIError = class {
+  static kind = "ClerkApiError";
+  code;
+  message;
+  longMessage;
+  meta;
+  constructor(json2) {
+    const parsedError = {
+      code: json2.code,
+      message: json2.message,
+      longMessage: json2.long_message,
+      meta: {
+        paramName: json2.meta?.param_name,
+        sessionId: json2.meta?.session_id,
+        emailAddresses: json2.meta?.email_addresses,
+        identifiers: json2.meta?.identifiers,
+        zxcvbn: json2.meta?.zxcvbn,
+        plan: json2.meta?.plan,
+        isPlanUpgradePossible: json2.meta?.is_plan_upgrade_possible
+      }
+    };
+    this.code = parsedError.code;
+    this.message = parsedError.message;
+    this.longMessage = parsedError.longMessage;
+    this.meta = parsedError.meta;
+  }
+};
+var isClerkAPIError = createErrorTypeGuard(ClerkAPIError);
+var ClerkError = class ClerkError2 extends Error {
+  static kind = "ClerkError";
+  clerkError = true;
+  code;
+  longMessage;
+  docsUrl;
+  cause;
+  get name() {
+    return this.constructor.name;
+  }
+  constructor(opts) {
+    super(new.target.formatMessage(new.target.kind, opts.message, opts.code, opts.docsUrl), { cause: opts.cause });
+    Object.setPrototypeOf(this, ClerkError2.prototype);
+    this.code = opts.code;
+    this.docsUrl = opts.docsUrl;
+    this.longMessage = opts.longMessage;
+    this.cause = opts.cause;
+  }
+  toString() {
+    return `[${this.name}]
+Message:${this.message}`;
+  }
+  static formatMessage(name, msg, code, docsUrl) {
+    const prefix = "Clerk:";
+    const regex = new RegExp(prefix.replace(" ", "\\s*"), "i");
+    msg = msg.replace(regex, "");
+    msg = `${prefix} ${msg.trim()}
+
+(code="${code}")
+
+`;
+    if (docsUrl)
+      msg += `
+
+Docs: ${docsUrl}`;
+    return msg;
+  }
+};
+var ClerkAPIResponseError = class ClerkAPIResponseError2 extends ClerkError {
+  static kind = "ClerkAPIResponseError";
+  status;
+  clerkTraceId;
+  retryAfter;
+  errors;
+  constructor(message, options) {
+    const { data: errorsJson, status, clerkTraceId, retryAfter } = options;
+    super({
+      ...options,
+      message,
+      code: "api_response_error"
+    });
+    Object.setPrototypeOf(this, ClerkAPIResponseError2.prototype);
+    this.status = status;
+    this.clerkTraceId = clerkTraceId;
+    this.retryAfter = retryAfter;
+    this.errors = (errorsJson || []).map((e) => new ClerkAPIError(e));
+  }
+  toString() {
+    let message = `[${this.name}]
+Message:${this.message}
+Status:${this.status}
+Serialized errors: ${this.errors.map((e) => JSON.stringify(e))}`;
+    if (this.clerkTraceId)
+      message += `
+Clerk Trace ID: ${this.clerkTraceId}`;
+    return message;
+  }
+  static formatMessage(name, msg, _, __) {
+    return msg;
+  }
+};
+var isClerkAPIResponseError = createErrorTypeGuard(ClerkAPIResponseError);
+var DefaultMessages = Object.freeze({
+  InvalidProxyUrlErrorMessage: `The proxyUrl passed to Clerk is invalid. The expected value for proxyUrl is an absolute URL or a relative path with a leading '/'. (key={{url}})`,
+  InvalidPublishableKeyErrorMessage: `The publishableKey passed to Clerk is invalid. You can get your Publishable key at https://dashboard.clerk.com/last-active?path=api-keys. (key={{key}})`,
+  MissingPublishableKeyErrorMessage: `Missing publishableKey. You can get your key at https://dashboard.clerk.com/last-active?path=api-keys.`,
+  MissingSecretKeyErrorMessage: `Missing secretKey. You can get your key at https://dashboard.clerk.com/last-active?path=api-keys.`,
+  MissingClerkProvider: `{{source}} can only be used within the <ClerkProvider /> component. Learn more: https://clerk.com/docs/components/clerk-provider`
+});
+function buildErrorThrower({ packageName, customMessages }) {
+  let pkg = packageName;
+  function buildMessage(rawMessage, replacements) {
+    if (!replacements)
+      return `${pkg}: ${rawMessage}`;
+    let msg = rawMessage;
+    const matches = rawMessage.matchAll(/{{([a-zA-Z0-9-_]+)}}/g);
+    for (const match of matches) {
+      const replacement = (replacements[match[1]] || "").toString();
+      msg = msg.replace(`{{${match[1]}}}`, replacement);
+    }
+    return `${pkg}: ${msg}`;
+  }
+  const messages = {
+    ...DefaultMessages,
+    ...customMessages
+  };
+  return {
+    setPackageName({ packageName: packageName$1 }) {
+      if (typeof packageName$1 === "string")
+        pkg = packageName$1;
+      return this;
+    },
+    setMessages({ customMessages: customMessages$1 }) {
+      Object.assign(messages, customMessages$1 || {});
+      return this;
+    },
+    throwInvalidPublishableKeyError(params) {
+      throw new Error(buildMessage(messages.InvalidPublishableKeyErrorMessage, params));
+    },
+    throwInvalidProxyUrl(params) {
+      throw new Error(buildMessage(messages.InvalidProxyUrlErrorMessage, params));
+    },
+    throwMissingPublishableKeyError() {
+      throw new Error(buildMessage(messages.MissingPublishableKeyErrorMessage));
+    },
+    throwMissingSecretKeyError() {
+      throw new Error(buildMessage(messages.MissingSecretKeyErrorMessage));
+    },
+    throwMissingClerkProviderError(params) {
+      throw new Error(buildMessage(messages.MissingClerkProvider, params));
+    },
+    throw(message) {
+      throw new Error(buildMessage(message));
+    }
+  };
+}
+var ClerkRuntimeError = class ClerkRuntimeError2 extends ClerkError {
+  static kind = "ClerkRuntimeError";
+  clerkRuntimeError = true;
+  constructor(message, options) {
+    super({
+      ...options,
+      message
+    });
+    Object.setPrototypeOf(this, ClerkRuntimeError2.prototype);
+  }
+};
+var isClerkRuntimeError = createErrorTypeGuard(ClerkRuntimeError);
+
+// ../../node_modules/.bun/@clerk+backend@2.32.0+bf16f8eded5e12ee/node_modules/@clerk/backend/dist/chunk-YBVFDYDR.mjs
+var errorThrower = buildErrorThrower({ packageName: "@clerk/backend" });
+var { isDevOrStagingUrl } = createDevOrStagingUrlCache();
+
+// ../../node_modules/.bun/@clerk+backend@2.32.0+bf16f8eded5e12ee/node_modules/@clerk/backend/dist/chunk-TCIXZLLW.mjs
+var TokenVerificationErrorCode = {
+  InvalidSecretKey: "clerk_key_invalid"
+};
+var TokenVerificationErrorReason = {
+  TokenExpired: "token-expired",
+  TokenInvalid: "token-invalid",
+  TokenInvalidAlgorithm: "token-invalid-algorithm",
+  TokenInvalidAuthorizedParties: "token-invalid-authorized-parties",
+  TokenInvalidSignature: "token-invalid-signature",
+  TokenNotActiveYet: "token-not-active-yet",
+  TokenIatInTheFuture: "token-iat-in-the-future",
+  TokenVerificationFailed: "token-verification-failed",
+  InvalidSecretKey: "secret-key-invalid",
+  LocalJWKMissing: "jwk-local-missing",
+  RemoteJWKFailedToLoad: "jwk-remote-failed-to-load",
+  RemoteJWKInvalid: "jwk-remote-invalid",
+  RemoteJWKMissing: "jwk-remote-missing",
+  JWKFailedToResolve: "jwk-failed-to-resolve",
+  JWKKidMismatch: "jwk-kid-mismatch"
+};
+var TokenVerificationErrorAction = {
+  ContactSupport: "Contact support@clerk.com",
+  EnsureClerkJWT: "Make sure that this is a valid Clerk-generated JWT.",
+  SetClerkJWTKey: "Set the CLERK_JWT_KEY environment variable.",
+  SetClerkSecretKey: "Set the CLERK_SECRET_KEY environment variable.",
+  EnsureClockSync: "Make sure your system clock is in sync (e.g. turn off and on automatic time synchronization)."
+};
+var TokenVerificationError = class _TokenVerificationError extends Error {
+  constructor({
+    action,
+    message,
+    reason
+  }) {
+    super(message);
+    Object.setPrototypeOf(this, _TokenVerificationError.prototype);
+    this.reason = reason;
+    this.message = message;
+    this.action = action;
+  }
+  getFullMessage() {
+    return `${[this.message, this.action].filter((m) => m).join(" ")} (reason=${this.reason}, token-carrier=${this.tokenCarrier})`;
+  }
+};
+
+// ../../node_modules/.bun/@clerk+backend@2.32.0+bf16f8eded5e12ee/node_modules/@clerk/backend/dist/runtime/node/crypto.mjs
+import { webcrypto } from "crypto";
+
+// ../../node_modules/.bun/@clerk+backend@2.32.0+bf16f8eded5e12ee/node_modules/@clerk/backend/dist/chunk-7X3P2E3X.mjs
+var globalFetch = fetch.bind(globalThis);
+var runtime = {
+  crypto: webcrypto,
+  get fetch() {
+    return globalFetch;
+  },
+  AbortController: globalThis.AbortController,
+  Blob: globalThis.Blob,
+  FormData: globalThis.FormData,
+  Headers: globalThis.Headers,
+  Request: globalThis.Request,
+  Response: globalThis.Response
+};
+var base64url3 = {
+  parse(string4, opts) {
+    return parse5(string4, base64UrlEncoding, opts);
+  },
+  stringify(data, opts) {
+    return stringify(data, base64UrlEncoding, opts);
+  }
+};
+var base64UrlEncoding = {
+  chars: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_",
+  bits: 6
+};
+function parse5(string4, encoding, opts = {}) {
+  if (!encoding.codes) {
+    encoding.codes = {};
+    for (let i = 0;i < encoding.chars.length; ++i) {
+      encoding.codes[encoding.chars[i]] = i;
+    }
+  }
+  if (!opts.loose && string4.length * encoding.bits & 7) {
+    throw new SyntaxError("Invalid padding");
+  }
+  let end = string4.length;
+  while (string4[end - 1] === "=") {
+    --end;
+    if (!opts.loose && !((string4.length - end) * encoding.bits & 7)) {
+      throw new SyntaxError("Invalid padding");
+    }
+  }
+  const out = new (opts.out ?? Uint8Array)(end * encoding.bits / 8 | 0);
+  let bits = 0;
+  let buffer = 0;
+  let written = 0;
+  for (let i = 0;i < end; ++i) {
+    const value = encoding.codes[string4[i]];
+    if (value === undefined) {
+      throw new SyntaxError("Invalid character " + string4[i]);
+    }
+    buffer = buffer << encoding.bits | value;
+    bits += encoding.bits;
+    if (bits >= 8) {
+      bits -= 8;
+      out[written++] = 255 & buffer >> bits;
+    }
+  }
+  if (bits >= encoding.bits || 255 & buffer << 8 - bits) {
+    throw new SyntaxError("Unexpected end of data");
+  }
+  return out;
+}
+function stringify(data, encoding, opts = {}) {
+  const { pad = true } = opts;
+  const mask = (1 << encoding.bits) - 1;
+  let out = "";
+  let bits = 0;
+  let buffer = 0;
+  for (let i = 0;i < data.length; ++i) {
+    buffer = buffer << 8 | 255 & data[i];
+    bits += 8;
+    while (bits > encoding.bits) {
+      bits -= encoding.bits;
+      out += encoding.chars[mask & buffer >> bits];
+    }
+  }
+  if (bits) {
+    out += encoding.chars[mask & buffer << encoding.bits - bits];
+  }
+  if (pad) {
+    while (out.length * encoding.bits & 7) {
+      out += "=";
+    }
+  }
+  return out;
+}
+var algToHash = {
+  RS256: "SHA-256",
+  RS384: "SHA-384",
+  RS512: "SHA-512"
+};
+var RSA_ALGORITHM_NAME = "RSASSA-PKCS1-v1_5";
+var jwksAlgToCryptoAlg = {
+  RS256: RSA_ALGORITHM_NAME,
+  RS384: RSA_ALGORITHM_NAME,
+  RS512: RSA_ALGORITHM_NAME
+};
+var algs = Object.keys(algToHash);
+function getCryptoAlgorithm(algorithmName) {
+  const hash2 = algToHash[algorithmName];
+  const name = jwksAlgToCryptoAlg[algorithmName];
+  if (!hash2 || !name) {
+    throw new Error(`Unsupported algorithm ${algorithmName}, expected one of ${algs.join(",")}.`);
+  }
+  return {
+    hash: { name: algToHash[algorithmName] },
+    name: jwksAlgToCryptoAlg[algorithmName]
+  };
+}
+var isArrayString = (s) => {
+  return Array.isArray(s) && s.length > 0 && s.every((a) => typeof a === "string");
+};
+var assertAudienceClaim = (aud, audience) => {
+  const audienceList = [audience].flat().filter((a) => !!a);
+  const audList = [aud].flat().filter((a) => !!a);
+  const shouldVerifyAudience = audienceList.length > 0 && audList.length > 0;
+  if (!shouldVerifyAudience) {
+    return;
+  }
+  if (typeof aud === "string") {
+    if (!audienceList.includes(aud)) {
+      throw new TokenVerificationError({
+        action: TokenVerificationErrorAction.EnsureClerkJWT,
+        reason: TokenVerificationErrorReason.TokenVerificationFailed,
+        message: `Invalid JWT audience claim (aud) ${JSON.stringify(aud)}. Is not included in "${JSON.stringify(audienceList)}".`
+      });
+    }
+  } else if (isArrayString(aud)) {
+    if (!aud.some((a) => audienceList.includes(a))) {
+      throw new TokenVerificationError({
+        action: TokenVerificationErrorAction.EnsureClerkJWT,
+        reason: TokenVerificationErrorReason.TokenVerificationFailed,
+        message: `Invalid JWT audience claim array (aud) ${JSON.stringify(aud)}. Is not included in "${JSON.stringify(audienceList)}".`
+      });
+    }
+  }
+};
+var assertHeaderType = (typ, allowedTypes = "JWT") => {
+  if (typeof typ === "undefined") {
+    return;
+  }
+  const allowed = Array.isArray(allowedTypes) ? allowedTypes : [allowedTypes];
+  if (!allowed.includes(typ)) {
+    throw new TokenVerificationError({
+      action: TokenVerificationErrorAction.EnsureClerkJWT,
+      reason: TokenVerificationErrorReason.TokenInvalid,
+      message: `Invalid JWT type ${JSON.stringify(typ)}. Expected "${allowed.join(", ")}".`
+    });
+  }
+};
+var assertHeaderAlgorithm = (alg) => {
+  if (!algs.includes(alg)) {
+    throw new TokenVerificationError({
+      action: TokenVerificationErrorAction.EnsureClerkJWT,
+      reason: TokenVerificationErrorReason.TokenInvalidAlgorithm,
+      message: `Invalid JWT algorithm ${JSON.stringify(alg)}. Supported: ${algs}.`
+    });
+  }
+};
+var assertSubClaim = (sub) => {
+  if (typeof sub !== "string") {
+    throw new TokenVerificationError({
+      action: TokenVerificationErrorAction.EnsureClerkJWT,
+      reason: TokenVerificationErrorReason.TokenVerificationFailed,
+      message: `Subject claim (sub) is required and must be a string. Received ${JSON.stringify(sub)}.`
+    });
+  }
+};
+var assertAuthorizedPartiesClaim = (azp, authorizedParties) => {
+  if (!azp || !authorizedParties || authorizedParties.length === 0) {
+    return;
+  }
+  if (!authorizedParties.includes(azp)) {
+    throw new TokenVerificationError({
+      reason: TokenVerificationErrorReason.TokenInvalidAuthorizedParties,
+      message: `Invalid JWT Authorized party claim (azp) ${JSON.stringify(azp)}. Expected "${authorizedParties}".`
+    });
+  }
+};
+var assertExpirationClaim = (exp, clockSkewInMs) => {
+  if (typeof exp !== "number") {
+    throw new TokenVerificationError({
+      action: TokenVerificationErrorAction.EnsureClerkJWT,
+      reason: TokenVerificationErrorReason.TokenVerificationFailed,
+      message: `Invalid JWT expiry date claim (exp) ${JSON.stringify(exp)}. Expected number.`
+    });
+  }
+  const currentDate = new Date(Date.now());
+  const expiryDate = /* @__PURE__ */ new Date(0);
+  expiryDate.setUTCSeconds(exp);
+  const expired = expiryDate.getTime() <= currentDate.getTime() - clockSkewInMs;
+  if (expired) {
+    throw new TokenVerificationError({
+      reason: TokenVerificationErrorReason.TokenExpired,
+      message: `JWT is expired. Expiry date: ${expiryDate.toUTCString()}, Current date: ${currentDate.toUTCString()}.`
+    });
+  }
+};
+var assertActivationClaim = (nbf, clockSkewInMs) => {
+  if (typeof nbf === "undefined") {
+    return;
+  }
+  if (typeof nbf !== "number") {
+    throw new TokenVerificationError({
+      action: TokenVerificationErrorAction.EnsureClerkJWT,
+      reason: TokenVerificationErrorReason.TokenVerificationFailed,
+      message: `Invalid JWT not before date claim (nbf) ${JSON.stringify(nbf)}. Expected number.`
+    });
+  }
+  const currentDate = new Date(Date.now());
+  const notBeforeDate = /* @__PURE__ */ new Date(0);
+  notBeforeDate.setUTCSeconds(nbf);
+  const early = notBeforeDate.getTime() > currentDate.getTime() + clockSkewInMs;
+  if (early) {
+    throw new TokenVerificationError({
+      reason: TokenVerificationErrorReason.TokenNotActiveYet,
+      message: `JWT cannot be used prior to not before date claim (nbf). Not before date: ${notBeforeDate.toUTCString()}; Current date: ${currentDate.toUTCString()};`
+    });
+  }
+};
+var assertIssuedAtClaim = (iat, clockSkewInMs) => {
+  if (typeof iat === "undefined") {
+    return;
+  }
+  if (typeof iat !== "number") {
+    throw new TokenVerificationError({
+      action: TokenVerificationErrorAction.EnsureClerkJWT,
+      reason: TokenVerificationErrorReason.TokenVerificationFailed,
+      message: `Invalid JWT issued at date claim (iat) ${JSON.stringify(iat)}. Expected number.`
+    });
+  }
+  const currentDate = new Date(Date.now());
+  const issuedAtDate = /* @__PURE__ */ new Date(0);
+  issuedAtDate.setUTCSeconds(iat);
+  const postIssued = issuedAtDate.getTime() > currentDate.getTime() + clockSkewInMs;
+  if (postIssued) {
+    throw new TokenVerificationError({
+      reason: TokenVerificationErrorReason.TokenIatInTheFuture,
+      message: `JWT issued at date claim (iat) is in the future. Issued at date: ${issuedAtDate.toUTCString()}; Current date: ${currentDate.toUTCString()};`
+    });
+  }
+};
+function pemToBuffer(secret) {
+  const trimmed = secret.replace(/-----BEGIN.*?-----/g, "").replace(/-----END.*?-----/g, "").replace(/\s/g, "");
+  const decoded = isomorphicAtob(trimmed);
+  const buffer = new ArrayBuffer(decoded.length);
+  const bufView = new Uint8Array(buffer);
+  for (let i = 0, strLen = decoded.length;i < strLen; i++) {
+    bufView[i] = decoded.charCodeAt(i);
+  }
+  return bufView;
+}
+function importKey(key, algorithm, keyUsage) {
+  if (typeof key === "object") {
+    return runtime.crypto.subtle.importKey("jwk", key, algorithm, false, [keyUsage]);
+  }
+  const keyData = pemToBuffer(key);
+  const format = keyUsage === "sign" ? "pkcs8" : "spki";
+  return runtime.crypto.subtle.importKey(format, keyData, algorithm, false, [keyUsage]);
+}
+var DEFAULT_CLOCK_SKEW_IN_MS = 5 * 1000;
+async function hasValidSignature(jwt2, key) {
+  const { header, signature, raw } = jwt2;
+  const encoder = new TextEncoder;
+  const data = encoder.encode([raw.header, raw.payload].join("."));
+  const algorithm = getCryptoAlgorithm(header.alg);
+  try {
+    const cryptoKey = await importKey(key, algorithm, "verify");
+    const verified = await runtime.crypto.subtle.verify(algorithm.name, cryptoKey, signature, data);
+    return { data: verified };
+  } catch (error48) {
+    return {
+      errors: [
+        new TokenVerificationError({
+          reason: TokenVerificationErrorReason.TokenInvalidSignature,
+          message: error48?.message
+        })
+      ]
+    };
+  }
+}
+function decodeJwt(token) {
+  const tokenParts = (token || "").toString().split(".");
+  if (tokenParts.length !== 3) {
+    return {
+      errors: [
+        new TokenVerificationError({
+          reason: TokenVerificationErrorReason.TokenInvalid,
+          message: `Invalid JWT form. A JWT consists of three parts separated by dots.`
+        })
+      ]
+    };
+  }
+  const [rawHeader, rawPayload, rawSignature] = tokenParts;
+  const decoder = new TextDecoder;
+  const header = JSON.parse(decoder.decode(base64url3.parse(rawHeader, { loose: true })));
+  const payload = JSON.parse(decoder.decode(base64url3.parse(rawPayload, { loose: true })));
+  const signature = base64url3.parse(rawSignature, { loose: true });
+  const data = {
+    header,
+    payload,
+    signature,
+    raw: {
+      header: rawHeader,
+      payload: rawPayload,
+      signature: rawSignature,
+      text: token
+    }
+  };
+  return { data };
+}
+async function verifyJwt(token, options) {
+  const { audience, authorizedParties, clockSkewInMs, key, headerType } = options;
+  const clockSkew = clockSkewInMs || DEFAULT_CLOCK_SKEW_IN_MS;
+  const { data: decoded, errors: errors3 } = decodeJwt(token);
+  if (errors3) {
+    return { errors: errors3 };
+  }
+  const { header, payload } = decoded;
+  try {
+    const { typ, alg } = header;
+    assertHeaderType(typ, headerType);
+    assertHeaderAlgorithm(alg);
+    const { azp, sub, aud, iat, exp, nbf } = payload;
+    assertSubClaim(sub);
+    assertAudienceClaim([aud], [audience]);
+    assertAuthorizedPartiesClaim(azp, authorizedParties);
+    assertExpirationClaim(exp, clockSkew);
+    assertActivationClaim(nbf, clockSkew);
+    assertIssuedAtClaim(iat, clockSkew);
+  } catch (err) {
+    return { errors: [err] };
+  }
+  const { data: signatureValid, errors: signatureErrors } = await hasValidSignature(decoded, key);
+  if (signatureErrors) {
+    return {
+      errors: [
+        new TokenVerificationError({
+          action: TokenVerificationErrorAction.EnsureClerkJWT,
+          reason: TokenVerificationErrorReason.TokenVerificationFailed,
+          message: `Error verifying JWT signature. ${signatureErrors[0]}`
+        })
+      ]
+    };
+  }
+  if (!signatureValid) {
+    return {
+      errors: [
+        new TokenVerificationError({
+          reason: TokenVerificationErrorReason.TokenInvalidSignature,
+          message: "JWT signature is invalid."
+        })
+      ]
+    };
+  }
+  return { data: payload };
+}
+
+// ../../node_modules/.bun/@clerk+backend@2.32.0+bf16f8eded5e12ee/node_modules/@clerk/backend/dist/chunk-3SCGTTJP.mjs
+var __create3 = Object.create;
+var __defProp3 = Object.defineProperty;
+var __getOwnPropDesc2 = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames3 = Object.getOwnPropertyNames;
+var __getProtoOf3 = Object.getPrototypeOf;
+var __hasOwnProp3 = Object.prototype.hasOwnProperty;
+var __commonJS3 = (cb, mod) => function __require() {
+  return mod || (0, cb[__getOwnPropNames3(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+};
+var __copyProps2 = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames3(from))
+      if (!__hasOwnProp3.call(to, key) && key !== except)
+        __defProp3(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc2(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toESM3 = (mod, isNodeMode, target) => (target = mod != null ? __create3(__getProtoOf3(mod)) : {}, __copyProps2(isNodeMode || !mod || !mod.__esModule ? __defProp3(target, "default", { value: mod, enumerable: true }) : target, mod));
+
+// ../../node_modules/.bun/@clerk+shared@3.47.0+bf16f8eded5e12ee/node_modules/@clerk/shared/dist/runtime/authorization-D2ans7vW.mjs
+var ALLOWED_LEVELS = new Set([
+  "first_factor",
+  "second_factor",
+  "multi_factor"
+]);
+var ALLOWED_TYPES = new Set([
+  "strict_mfa",
+  "strict",
+  "moderate",
+  "lax"
+]);
+
+// ../../node_modules/.bun/@clerk+backend@2.32.0+bf16f8eded5e12ee/node_modules/@clerk/backend/dist/chunk-7WXT7APB.mjs
+var require_dist5 = __commonJS3({
+  "../../node_modules/.pnpm/cookie@1.0.2/node_modules/cookie/dist/index.js"(exports) {
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.parse = parse22;
+    exports.serialize = serialize;
+    var cookieNameRegExp = /^[\u0021-\u003A\u003C\u003E-\u007E]+$/;
+    var cookieValueRegExp = /^[\u0021-\u003A\u003C-\u007E]*$/;
+    var domainValueRegExp = /^([.]?[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)([.][a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$/i;
+    var pathValueRegExp = /^[\u0020-\u003A\u003D-\u007E]*$/;
+    var __toString = Object.prototype.toString;
+    var NullObject = /* @__PURE__ */ (() => {
+      const C = function() {};
+      C.prototype = /* @__PURE__ */ Object.create(null);
+      return C;
+    })();
+    function parse22(str, options) {
+      const obj = new NullObject;
+      const len = str.length;
+      if (len < 2)
+        return obj;
+      const dec = options?.decode || decode3;
+      let index = 0;
+      do {
+        const eqIdx = str.indexOf("=", index);
+        if (eqIdx === -1)
+          break;
+        const colonIdx = str.indexOf(";", index);
+        const endIdx = colonIdx === -1 ? len : colonIdx;
+        if (eqIdx > endIdx) {
+          index = str.lastIndexOf(";", eqIdx - 1) + 1;
+          continue;
+        }
+        const keyStartIdx = startIndex(str, index, eqIdx);
+        const keyEndIdx = endIndex(str, eqIdx, keyStartIdx);
+        const key = str.slice(keyStartIdx, keyEndIdx);
+        if (obj[key] === undefined) {
+          let valStartIdx = startIndex(str, eqIdx + 1, endIdx);
+          let valEndIdx = endIndex(str, endIdx, valStartIdx);
+          const value = dec(str.slice(valStartIdx, valEndIdx));
+          obj[key] = value;
+        }
+        index = endIdx + 1;
+      } while (index < len);
+      return obj;
+    }
+    function startIndex(str, index, max) {
+      do {
+        const code = str.charCodeAt(index);
+        if (code !== 32 && code !== 9)
+          return index;
+      } while (++index < max);
+      return max;
+    }
+    function endIndex(str, index, min) {
+      while (index > min) {
+        const code = str.charCodeAt(--index);
+        if (code !== 32 && code !== 9)
+          return index + 1;
+      }
+      return min;
+    }
+    function serialize(name, val, options) {
+      const enc = options?.encode || encodeURIComponent;
+      if (!cookieNameRegExp.test(name)) {
+        throw new TypeError(`argument name is invalid: ${name}`);
+      }
+      const value = enc(val);
+      if (!cookieValueRegExp.test(value)) {
+        throw new TypeError(`argument val is invalid: ${val}`);
+      }
+      let str = name + "=" + value;
+      if (!options)
+        return str;
+      if (options.maxAge !== undefined) {
+        if (!Number.isInteger(options.maxAge)) {
+          throw new TypeError(`option maxAge is invalid: ${options.maxAge}`);
+        }
+        str += "; Max-Age=" + options.maxAge;
+      }
+      if (options.domain) {
+        if (!domainValueRegExp.test(options.domain)) {
+          throw new TypeError(`option domain is invalid: ${options.domain}`);
+        }
+        str += "; Domain=" + options.domain;
+      }
+      if (options.path) {
+        if (!pathValueRegExp.test(options.path)) {
+          throw new TypeError(`option path is invalid: ${options.path}`);
+        }
+        str += "; Path=" + options.path;
+      }
+      if (options.expires) {
+        if (!isDate(options.expires) || !Number.isFinite(options.expires.valueOf())) {
+          throw new TypeError(`option expires is invalid: ${options.expires}`);
+        }
+        str += "; Expires=" + options.expires.toUTCString();
+      }
+      if (options.httpOnly) {
+        str += "; HttpOnly";
+      }
+      if (options.secure) {
+        str += "; Secure";
+      }
+      if (options.partitioned) {
+        str += "; Partitioned";
+      }
+      if (options.priority) {
+        const priority = typeof options.priority === "string" ? options.priority.toLowerCase() : undefined;
+        switch (priority) {
+          case "low":
+            str += "; Priority=Low";
+            break;
+          case "medium":
+            str += "; Priority=Medium";
+            break;
+          case "high":
+            str += "; Priority=High";
+            break;
+          default:
+            throw new TypeError(`option priority is invalid: ${options.priority}`);
+        }
+      }
+      if (options.sameSite) {
+        const sameSite = typeof options.sameSite === "string" ? options.sameSite.toLowerCase() : options.sameSite;
+        switch (sameSite) {
+          case true:
+          case "strict":
+            str += "; SameSite=Strict";
+            break;
+          case "lax":
+            str += "; SameSite=Lax";
+            break;
+          case "none":
+            str += "; SameSite=None";
+            break;
+          default:
+            throw new TypeError(`option sameSite is invalid: ${options.sameSite}`);
+        }
+      }
+      return str;
+    }
+    function decode3(str) {
+      if (str.indexOf("%") === -1)
+        return str;
+      try {
+        return decodeURIComponent(str);
+      } catch (e) {
+        return str;
+      }
+    }
+    function isDate(val) {
+      return __toString.call(val) === "[object Date]";
+    }
+  }
+});
+var API_URL = "https://api.clerk.com";
+var API_VERSION = "v1";
+var USER_AGENT = `${"@clerk/backend"}@${"2.32.0"}`;
+var MAX_CACHE_LAST_UPDATED_AT_SECONDS = 5 * 60;
+var SUPPORTED_BAPI_VERSION = "2025-11-10";
+var Cookies = {
+  Session: "__session",
+  Refresh: "__refresh",
+  ClientUat: "__client_uat",
+  Handshake: "__clerk_handshake",
+  DevBrowser: "__clerk_db_jwt",
+  RedirectCount: "__clerk_redirect_count",
+  HandshakeNonce: "__clerk_handshake_nonce"
+};
+var QueryParameters = {
+  ClerkSynced: "__clerk_synced",
+  SuffixedCookies: "suffixed_cookies",
+  ClerkRedirectUrl: "__clerk_redirect_url",
+  DevBrowser: Cookies.DevBrowser,
+  Handshake: Cookies.Handshake,
+  HandshakeHelp: "__clerk_help",
+  LegacyDevBrowser: "__dev_session",
+  HandshakeReason: "__clerk_hs_reason",
+  HandshakeNonce: Cookies.HandshakeNonce,
+  HandshakeFormat: "format",
+  Session: "__session"
+};
+var SEPARATOR = "/";
+var MULTIPLE_SEPARATOR_REGEX = new RegExp("(?<!:)" + SEPARATOR + "{1,}", "g");
+function joinPaths(...args) {
+  return args.filter((p) => p).join(SEPARATOR).replace(MULTIPLE_SEPARATOR_REGEX, SEPARATOR);
+}
+var _M2MTokenApi_instances;
+var createRequestOptions_fn;
+_M2MTokenApi_instances = new WeakSet;
+createRequestOptions_fn = function(options, machineSecretKey) {
+  if (machineSecretKey) {
+    return {
+      ...options,
+      headerParams: {
+        ...options.headerParams,
+        Authorization: `Bearer ${machineSecretKey}`
+      }
+    };
+  }
+  return options;
+};
+var mapObjectSkip = Symbol("mapObjectSkip");
+var PlainObjectConstructor = {}.constructor;
+var import_cookie = __toESM3(require_dist5());
+var cache = {};
+var lastUpdatedAt = 0;
+function getFromCache(kid) {
+  return cache[kid];
+}
+function getCacheValues() {
+  return Object.values(cache);
+}
+function setInCache(cacheKey, jwk, shouldExpire = true) {
+  cache[cacheKey] = jwk;
+  lastUpdatedAt = shouldExpire ? Date.now() : -1;
+}
+var PEM_HEADER = "-----BEGIN PUBLIC KEY-----";
+var PEM_TRAILER = "-----END PUBLIC KEY-----";
+var RSA_PREFIX = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA";
+var RSA_SUFFIX = "IDAQAB";
+function loadClerkJwkFromPem(params) {
+  const { kid, pem } = params;
+  const prefixedKid = `local-${kid}`;
+  const cachedJwk = getFromCache(prefixedKid);
+  if (cachedJwk) {
+    return cachedJwk;
+  }
+  if (!pem) {
+    throw new TokenVerificationError({
+      action: TokenVerificationErrorAction.SetClerkJWTKey,
+      message: "Missing local JWK.",
+      reason: TokenVerificationErrorReason.LocalJWKMissing
+    });
+  }
+  const modulus = pem.replace(/\r\n|\n|\r/g, "").replace(PEM_HEADER, "").replace(PEM_TRAILER, "").replace(RSA_PREFIX, "").replace(RSA_SUFFIX, "").replace(/\+/g, "-").replace(/\//g, "_");
+  const jwk = { kid: prefixedKid, kty: "RSA", alg: "RS256", n: modulus, e: "AQAB" };
+  setInCache(prefixedKid, jwk, false);
+  return jwk;
+}
+async function loadClerkJWKFromRemote(params) {
+  const { secretKey, apiUrl = API_URL, apiVersion = API_VERSION, kid, skipJwksCache } = params;
+  if (skipJwksCache || cacheHasExpired() || !getFromCache(kid)) {
+    if (!secretKey) {
+      throw new TokenVerificationError({
+        action: TokenVerificationErrorAction.ContactSupport,
+        message: "Failed to load JWKS from Clerk Backend or Frontend API.",
+        reason: TokenVerificationErrorReason.RemoteJWKFailedToLoad
+      });
+    }
+    const fetcher = () => fetchJWKSFromBAPI(apiUrl, secretKey, apiVersion);
+    const { keys } = await retry(fetcher);
+    if (!keys || !keys.length) {
+      throw new TokenVerificationError({
+        action: TokenVerificationErrorAction.ContactSupport,
+        message: "The JWKS endpoint did not contain any signing keys. Contact support@clerk.com.",
+        reason: TokenVerificationErrorReason.RemoteJWKFailedToLoad
+      });
+    }
+    keys.forEach((key) => setInCache(key.kid, key));
+  }
+  const jwk = getFromCache(kid);
+  if (!jwk) {
+    const cacheValues = getCacheValues();
+    const jwkKeys = cacheValues.map((jwk2) => jwk2.kid).sort().join(", ");
+    throw new TokenVerificationError({
+      action: `Go to your Dashboard and validate your secret and public keys are correct. ${TokenVerificationErrorAction.ContactSupport} if the issue persists.`,
+      message: `Unable to find a signing key in JWKS that matches the kid='${kid}' of the provided session token. Please make sure that the __session cookie or the HTTP authorization header contain a Clerk-generated session JWT. The following kid is available: ${jwkKeys}`,
+      reason: TokenVerificationErrorReason.JWKKidMismatch
+    });
+  }
+  return jwk;
+}
+async function fetchJWKSFromBAPI(apiUrl, key, apiVersion) {
+  if (!key) {
+    throw new TokenVerificationError({
+      action: TokenVerificationErrorAction.SetClerkSecretKey,
+      message: "Missing Clerk Secret Key or API Key. Go to https://dashboard.clerk.com and get your key for your instance.",
+      reason: TokenVerificationErrorReason.RemoteJWKFailedToLoad
+    });
+  }
+  const url2 = new URL(apiUrl);
+  url2.pathname = joinPaths(url2.pathname, apiVersion, "/jwks");
+  const response = await runtime.fetch(url2.href, {
+    headers: {
+      Authorization: `Bearer ${key}`,
+      "Clerk-API-Version": SUPPORTED_BAPI_VERSION,
+      "Content-Type": "application/json",
+      "User-Agent": USER_AGENT
+    }
+  });
+  if (!response.ok) {
+    const json2 = await response.json();
+    const invalidSecretKeyError = getErrorObjectByCode(json2?.errors, TokenVerificationErrorCode.InvalidSecretKey);
+    if (invalidSecretKeyError) {
+      const reason = TokenVerificationErrorReason.InvalidSecretKey;
+      throw new TokenVerificationError({
+        action: TokenVerificationErrorAction.ContactSupport,
+        message: invalidSecretKeyError.message,
+        reason
+      });
+    }
+    throw new TokenVerificationError({
+      action: TokenVerificationErrorAction.ContactSupport,
+      message: `Error loading Clerk JWKS from ${url2.href} with code=${response.status}`,
+      reason: TokenVerificationErrorReason.RemoteJWKFailedToLoad
+    });
+  }
+  return response.json();
+}
+function cacheHasExpired() {
+  if (lastUpdatedAt === -1) {
+    return false;
+  }
+  const isExpired = Date.now() - lastUpdatedAt >= MAX_CACHE_LAST_UPDATED_AT_SECONDS * 1000;
+  if (isExpired) {
+    cache = {};
+  }
+  return isExpired;
+}
+var getErrorObjectByCode = (errors3, code) => {
+  if (!errors3) {
+    return null;
+  }
+  return errors3.find((err) => err.code === code);
+};
+async function verifyToken(token, options) {
+  const { data: decodedResult, errors: errors3 } = decodeJwt(token);
+  if (errors3) {
+    return { errors: errors3 };
+  }
+  const { header } = decodedResult;
+  const { kid } = header;
+  try {
+    let key;
+    if (options.jwtKey) {
+      key = loadClerkJwkFromPem({ kid, pem: options.jwtKey });
+    } else if (options.secretKey) {
+      key = await loadClerkJWKFromRemote({ ...options, kid });
+    } else {
+      return {
+        errors: [
+          new TokenVerificationError({
+            action: TokenVerificationErrorAction.SetClerkJWTKey,
+            message: "Failed to resolve JWK during verification.",
+            reason: TokenVerificationErrorReason.JWKFailedToResolve
+          })
+        ]
+      };
+    }
+    return await verifyJwt(token, { ...options, key });
+  } catch (error48) {
+    return { errors: [error48] };
+  }
+}
+
+// ../../node_modules/.bun/@clerk+backend@2.32.0+bf16f8eded5e12ee/node_modules/@clerk/backend/dist/chunk-P263NW7Z.mjs
+function withLegacyReturn(cb) {
+  return async (...args) => {
+    const { data, errors: errors3 } = await cb(...args);
+    if (errors3) {
+      throw errors3[0];
+    }
+    return data;
+  };
+}
+
+// ../../node_modules/.bun/@clerk+shared@3.47.0+bf16f8eded5e12ee/node_modules/@clerk/shared/dist/runtime/underscore-DjQrhefX.mjs
+function snakeToCamel(str) {
+  return str ? str.replace(/([-_][a-z])/g, (match2) => match2.toUpperCase().replace(/-|_/, "")) : "";
+}
+function camelToSnake(str) {
+  return str ? str.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`) : "";
+}
+var createDeepObjectTransformer = (transform2) => {
+  const deepTransform = (obj) => {
+    if (!obj)
+      return obj;
+    if (Array.isArray(obj))
+      return obj.map((el) => {
+        if (typeof el === "object" || Array.isArray(el))
+          return deepTransform(el);
+        return el;
+      });
+    const copy = { ...obj };
+    const keys = Object.keys(copy);
+    for (const oldName of keys) {
+      const newName = transform2(oldName.toString());
+      if (newName !== oldName) {
+        copy[newName] = copy[oldName];
+        delete copy[oldName];
+      }
+      if (typeof copy[newName] === "object")
+        copy[newName] = deepTransform(copy[newName]);
+    }
+    return copy;
+  };
+  return deepTransform;
+};
+var deepCamelToSnake = createDeepObjectTransformer(camelToSnake);
+var deepSnakeToCamel = createDeepObjectTransformer(snakeToCamel);
+function isTruthy(value) {
+  if (typeof value === `boolean`)
+    return value;
+  if (value === undefined || value === null)
+    return false;
+  if (typeof value === `string`) {
+    if (value.toLowerCase() === `true`)
+      return true;
+    if (value.toLowerCase() === `false`)
+      return false;
+  }
+  const number4 = parseInt(value, 10);
+  if (isNaN(number4))
+    return false;
+  if (number4 > 0)
+    return true;
+  return false;
+}
+
+// ../../node_modules/.bun/@clerk+shared@3.47.0+bf16f8eded5e12ee/node_modules/@clerk/shared/dist/runtime/telemetry-wqMDWlvR.mjs
+var DEFAULT_CACHE_TTL_MS = 86400000;
+var TelemetryEventThrottler = class {
+  #cache;
+  #cacheTtl = DEFAULT_CACHE_TTL_MS;
+  constructor(cache2) {
+    this.#cache = cache2;
+  }
+  isEventThrottled(payload) {
+    const now = Date.now();
+    const key = this.#generateKey(payload);
+    const entry = this.#cache.getItem(key);
+    if (!entry) {
+      this.#cache.setItem(key, now);
+      return false;
+    }
+    if (now - entry > this.#cacheTtl) {
+      this.#cache.setItem(key, now);
+      return false;
+    }
+    return true;
+  }
+  #generateKey(event) {
+    const { sk: _sk, pk: _pk, payload, ...rest } = event;
+    const sanitizedEvent = {
+      ...payload,
+      ...rest
+    };
+    return JSON.stringify(Object.keys({
+      ...payload,
+      ...rest
+    }).sort().map((key) => sanitizedEvent[key]));
+  }
+};
+var LocalStorageThrottlerCache = class {
+  #storageKey = "clerk_telemetry_throttler";
+  getItem(key) {
+    return this.#getCache()[key];
+  }
+  setItem(key, value) {
+    try {
+      const cache2 = this.#getCache();
+      cache2[key] = value;
+      localStorage.setItem(this.#storageKey, JSON.stringify(cache2));
+    } catch (err) {
+      if (err instanceof DOMException && (err.name === "QuotaExceededError" || err.name === "NS_ERROR_DOM_QUOTA_REACHED") && localStorage.length > 0)
+        localStorage.removeItem(this.#storageKey);
+    }
+  }
+  removeItem(key) {
+    try {
+      const cache2 = this.#getCache();
+      delete cache2[key];
+      localStorage.setItem(this.#storageKey, JSON.stringify(cache2));
+    } catch {}
+  }
+  #getCache() {
+    try {
+      const cacheString = localStorage.getItem(this.#storageKey);
+      if (!cacheString)
+        return {};
+      return JSON.parse(cacheString);
+    } catch {
+      return {};
+    }
+  }
+  static isSupported() {
+    return typeof window !== "undefined" && !!window.localStorage;
+  }
+};
+var InMemoryThrottlerCache = class {
+  #cache = /* @__PURE__ */ new Map;
+  #maxSize = 1e4;
+  getItem(key) {
+    if (this.#cache.size > this.#maxSize) {
+      this.#cache.clear();
+      return;
+    }
+    return this.#cache.get(key);
+  }
+  setItem(key, value) {
+    this.#cache.set(key, value);
+  }
+  removeItem(key) {
+    this.#cache.delete(key);
+  }
+};
+function isWindowClerkWithMetadata(clerk) {
+  return typeof clerk === "object" && clerk !== null && "constructor" in clerk && typeof clerk.constructor === "function";
+}
+var VALID_LOG_LEVELS = new Set([
+  "error",
+  "warn",
+  "info",
+  "debug",
+  "trace"
+]);
+var DEFAULT_CONFIG = {
+  samplingRate: 1,
+  maxBufferSize: 5,
+  endpoint: "https://clerk-telemetry.com"
+};
+var TelemetryCollector = class {
+  #config;
+  #eventThrottler;
+  #metadata = {};
+  #buffer = [];
+  #pendingFlush = null;
+  constructor(options) {
+    this.#config = {
+      maxBufferSize: options.maxBufferSize ?? DEFAULT_CONFIG.maxBufferSize,
+      samplingRate: options.samplingRate ?? DEFAULT_CONFIG.samplingRate,
+      perEventSampling: options.perEventSampling ?? true,
+      disabled: options.disabled ?? false,
+      debug: options.debug ?? false,
+      endpoint: DEFAULT_CONFIG.endpoint
+    };
+    if (!options.clerkVersion && typeof window === "undefined")
+      this.#metadata.clerkVersion = "";
+    else
+      this.#metadata.clerkVersion = options.clerkVersion ?? "";
+    this.#metadata.sdk = options.sdk;
+    this.#metadata.sdkVersion = options.sdkVersion;
+    this.#metadata.publishableKey = options.publishableKey ?? "";
+    const parsedKey = parsePublishableKey(options.publishableKey);
+    if (parsedKey)
+      this.#metadata.instanceType = parsedKey.instanceType;
+    if (options.secretKey)
+      this.#metadata.secretKey = options.secretKey.substring(0, 16);
+    this.#eventThrottler = new TelemetryEventThrottler(LocalStorageThrottlerCache.isSupported() ? new LocalStorageThrottlerCache : new InMemoryThrottlerCache);
+  }
+  get isEnabled() {
+    if (this.#metadata.instanceType !== "development")
+      return false;
+    if (this.#config.disabled || typeof process !== "undefined" && process.env && isTruthy(process.env.CLERK_TELEMETRY_DISABLED))
+      return false;
+    if (typeof window !== "undefined" && !!window?.navigator?.webdriver)
+      return false;
+    return true;
+  }
+  get isDebug() {
+    return this.#config.debug || typeof process !== "undefined" && process.env && isTruthy(process.env.CLERK_TELEMETRY_DEBUG);
+  }
+  record(event) {
+    try {
+      const preparedPayload = this.#preparePayload(event.event, event.payload);
+      this.#logEvent(preparedPayload.event, preparedPayload);
+      if (!this.#shouldRecord(preparedPayload, event.eventSamplingRate))
+        return;
+      this.#buffer.push({
+        kind: "event",
+        value: preparedPayload
+      });
+      this.#scheduleFlush();
+    } catch (error48) {
+      console.error("[clerk/telemetry] Error recording telemetry event", error48);
+    }
+  }
+  recordLog(entry) {
+    try {
+      if (!this.#shouldRecordLog(entry))
+        return;
+      const levelIsValid = typeof entry?.level === "string" && VALID_LOG_LEVELS.has(entry.level);
+      const messageIsValid = typeof entry?.message === "string" && entry.message.trim().length > 0;
+      let normalizedTimestamp = null;
+      const timestampInput = entry?.timestamp;
+      if (typeof timestampInput === "number" || typeof timestampInput === "string") {
+        const candidate = new Date(timestampInput);
+        if (!Number.isNaN(candidate.getTime()))
+          normalizedTimestamp = candidate;
+      }
+      if (!levelIsValid || !messageIsValid || normalizedTimestamp === null) {
+        if (this.isDebug && typeof console !== "undefined")
+          console.warn("[clerk/telemetry] Dropping invalid telemetry log entry", {
+            levelIsValid,
+            messageIsValid,
+            timestampIsValid: normalizedTimestamp !== null
+          });
+        return;
+      }
+      const sdkMetadata = this.#getSDKMetadata();
+      const logData = {
+        sdk: sdkMetadata.name,
+        sdkv: sdkMetadata.version,
+        cv: this.#metadata.clerkVersion ?? "",
+        lvl: entry.level,
+        msg: entry.message,
+        ts: normalizedTimestamp.toISOString(),
+        pk: this.#metadata.publishableKey || null,
+        payload: this.#sanitizeContext(entry.context)
+      };
+      this.#buffer.push({
+        kind: "log",
+        value: logData
+      });
+      this.#scheduleFlush();
+    } catch (error48) {
+      console.error("[clerk/telemetry] Error recording telemetry log entry", error48);
+    }
+  }
+  #shouldRecord(preparedPayload, eventSamplingRate) {
+    return this.isEnabled && !this.isDebug && this.#shouldBeSampled(preparedPayload, eventSamplingRate);
+  }
+  #shouldRecordLog(_entry) {
+    return true;
+  }
+  #shouldBeSampled(preparedPayload, eventSamplingRate) {
+    const randomSeed = Math.random();
+    if (!(randomSeed <= this.#config.samplingRate && (this.#config.perEventSampling === false || typeof eventSamplingRate === "undefined" || randomSeed <= eventSamplingRate)))
+      return false;
+    return !this.#eventThrottler.isEventThrottled(preparedPayload);
+  }
+  #scheduleFlush() {
+    if (typeof window === "undefined") {
+      this.#flush();
+      return;
+    }
+    if (this.#buffer.length >= this.#config.maxBufferSize) {
+      if (this.#pendingFlush)
+        if (typeof cancelIdleCallback !== "undefined")
+          cancelIdleCallback(Number(this.#pendingFlush));
+        else
+          clearTimeout(Number(this.#pendingFlush));
+      this.#flush();
+      return;
+    }
+    if (this.#pendingFlush)
+      return;
+    if ("requestIdleCallback" in window)
+      this.#pendingFlush = requestIdleCallback(() => {
+        this.#flush();
+        this.#pendingFlush = null;
+      });
+    else
+      this.#pendingFlush = setTimeout(() => {
+        this.#flush();
+        this.#pendingFlush = null;
+      }, 0);
+  }
+  #flush() {
+    const itemsToSend = [...this.#buffer];
+    this.#buffer = [];
+    this.#pendingFlush = null;
+    if (itemsToSend.length === 0)
+      return;
+    const eventsToSend = itemsToSend.filter((item) => item.kind === "event").map((item) => item.value);
+    const logsToSend = itemsToSend.filter((item) => item.kind === "log").map((item) => item.value);
+    if (eventsToSend.length > 0) {
+      const eventsUrl = new URL("/v1/event", this.#config.endpoint);
+      fetch(eventsUrl, {
+        headers: { "Content-Type": "application/json" },
+        keepalive: true,
+        method: "POST",
+        body: JSON.stringify({ events: eventsToSend })
+      }).catch(() => {
+        return;
+      });
+    }
+    if (logsToSend.length > 0) {
+      const logsUrl = new URL("/v1/logs", this.#config.endpoint);
+      fetch(logsUrl, {
+        headers: { "Content-Type": "application/json" },
+        keepalive: true,
+        method: "POST",
+        body: JSON.stringify({ logs: logsToSend })
+      }).catch(() => {
+        return;
+      });
+    }
+  }
+  #logEvent(event, payload) {
+    if (!this.isDebug)
+      return;
+    if (typeof console.groupCollapsed !== "undefined") {
+      console.groupCollapsed("[clerk/telemetry]", event);
+      console.log(payload);
+      console.groupEnd();
+    } else
+      console.log("[clerk/telemetry]", event, payload);
+  }
+  #getSDKMetadata() {
+    const sdkMetadata = {
+      name: this.#metadata.sdk,
+      version: this.#metadata.sdkVersion
+    };
+    if (typeof window !== "undefined") {
+      const windowWithClerk = window;
+      if (windowWithClerk.Clerk) {
+        const windowClerk = windowWithClerk.Clerk;
+        if (isWindowClerkWithMetadata(windowClerk) && windowClerk.constructor.sdkMetadata) {
+          const { name, version: version2 } = windowClerk.constructor.sdkMetadata;
+          if (name !== undefined)
+            sdkMetadata.name = name;
+          if (version2 !== undefined)
+            sdkMetadata.version = version2;
+        }
+      }
+    }
+    return sdkMetadata;
+  }
+  #preparePayload(event, payload) {
+    const sdkMetadata = this.#getSDKMetadata();
+    return {
+      event,
+      cv: this.#metadata.clerkVersion ?? "",
+      it: this.#metadata.instanceType ?? "",
+      sdk: sdkMetadata.name,
+      sdkv: sdkMetadata.version,
+      ...this.#metadata.publishableKey ? { pk: this.#metadata.publishableKey } : {},
+      ...this.#metadata.secretKey ? { sk: this.#metadata.secretKey } : {},
+      payload
+    };
+  }
+  #sanitizeContext(context) {
+    if (context === null || typeof context === "undefined")
+      return null;
+    if (typeof context !== "object")
+      return null;
+    try {
+      const cleaned = JSON.parse(JSON.stringify(context));
+      if (cleaned && typeof cleaned === "object" && !Array.isArray(cleaned))
+        return cleaned;
+      return null;
+    } catch {
+      return null;
+    }
+  }
+};
+var AUTH_COMPONENTS = new Set(["SignIn", "SignUp"]);
+
+// ../../node_modules/.bun/@clerk+backend@2.32.0+bf16f8eded5e12ee/node_modules/@clerk/backend/dist/index.mjs
+var verifyToken2 = withLegacyReturn(verifyToken);
 
 // src/config/env.ts
 var envSchema = exports_external.object({
   NODE_ENV: exports_external.enum(["development", "test", "production"]).default("development"),
   PORT: exports_external.coerce.number().int().positive().default(8080),
   APP_ORIGIN: exports_external.string().url().default("http://localhost:5173"),
+  CLERK_SECRET_KEY: exports_external.string().min(1),
+  ADMIN_EMAIL: exports_external.string().email(),
   ETSY_API_KEY: exports_external.string().min(1),
-  ETSY_API_SHARED_SECRET: exports_external.string().min(1).optional(),
+  ETSY_API_SHARED_SECRET: exports_external.string().min(1),
   ETSY_OAUTH_REDIRECT_URI: exports_external.string().url(),
   ETSY_OAUTH_SCOPES: exports_external.string().default("listings_r listings_w shops_r transactions_r"),
   ETSY_OAUTH_STATE_TTL_MS: exports_external.coerce.number().int().positive().default(10 * 60 * 1000),
-  ETSY_OAUTH_REFRESH_SKEW_MS: exports_external.coerce.number().int().nonnegative().default(2 * 60 * 1000)
+  ETSY_OAUTH_REFRESH_SKEW_MS: exports_external.coerce.number().int().nonnegative().default(2 * 60 * 1000),
+  DATABASE_HOST: exports_external.string().min(1).optional(),
+  DATABASE_PORT: exports_external.coerce.number().int().positive().optional(),
+  DATABASE_NAME: exports_external.string().min(1).optional(),
+  DATABASE_USER: exports_external.string().min(1).optional(),
+  DATABASE_PASSWORD: exports_external.string().min(1).optional(),
+  ETSYSENTRY_DATABASE_NAME: exports_external.string().min(1).optional(),
+  ETSYSENTRY_DATABASE_USER: exports_external.string().min(1).optional(),
+  ETSYSENTRY_DATABASE_PASSWORD: exports_external.string().min(1).optional()
 });
 var rawEnv = envSchema.parse(process.env);
-var etsyOAuthScopes = rawEnv.ETSY_OAUTH_SCOPES.split(/\s+/).filter((scope) => scope.length > 0);
+var REQUIRED_ETSY_OAUTH_SCOPES = ["listings_r"];
+var parseOAuthScopes = (rawScopes) => {
+  return rawScopes.split(/[\s,]+/).map((scope) => scope.trim()).filter((scope) => scope.length > 0);
+};
+var validateOAuthRedirectUri = (params) => {
+  const parsedRedirectUri = new URL(params.redirectUri);
+  if (parsedRedirectUri.pathname !== "/auth/etsy/callback") {
+    throw new Error(`ETSY_OAUTH_REDIRECT_URI must use /auth/etsy/callback (received ${parsedRedirectUri.pathname}).`);
+  }
+  const isLoopbackHost = ["localhost", "127.0.0.1", "::1"].includes(parsedRedirectUri.hostname);
+  if (params.nodeEnv === "production" && isLoopbackHost) {
+    throw new Error("ETSY_OAUTH_REDIRECT_URI cannot use a localhost/loopback hostname in production.");
+  }
+};
+validateOAuthRedirectUri({
+  nodeEnv: rawEnv.NODE_ENV,
+  redirectUri: rawEnv.ETSY_OAUTH_REDIRECT_URI
+});
+var etsyOAuthScopes = Array.from(new Set([...parseOAuthScopes(rawEnv.ETSY_OAUTH_SCOPES), ...REQUIRED_ETSY_OAUTH_SCOPES]));
 if (etsyOAuthScopes.length === 0) {
   throw new Error("ETSY_OAUTH_SCOPES must contain at least one OAuth scope.");
 }
 var env = {
   ...rawEnv,
+  databaseHost: rawEnv.DATABASE_HOST ?? "localhost",
+  databaseName: rawEnv.DATABASE_NAME ?? rawEnv.ETSYSENTRY_DATABASE_NAME ?? "etsysentry",
+  databasePassword: rawEnv.DATABASE_PASSWORD ?? rawEnv.ETSYSENTRY_DATABASE_PASSWORD ?? "etsysentry_local_dev_password",
+  databasePort: rawEnv.DATABASE_PORT ?? 5435,
+  databaseUser: rawEnv.DATABASE_USER ?? rawEnv.ETSYSENTRY_DATABASE_USER ?? "etsysentry",
   etsyOAuthScopes
 };
+
+// src/api/context.ts
+var normalizeEmail = (email3) => {
+  return email3.trim().toLowerCase();
+};
+var adminEmail = normalizeEmail(env.ADMIN_EMAIL);
+var isAdminEmail = (email3) => {
+  if (!email3) {
+    return false;
+  }
+  return normalizeEmail(email3) === adminEmail;
+};
+var getBearerToken = (authorization) => {
+  if (!authorization || !authorization.startsWith("Bearer ")) {
+    return null;
+  }
+  const token = authorization.slice("Bearer ".length).trim();
+  return token.length > 0 ? token : null;
+};
+var createTrpcContext = async ({ req, res }) => {
+  const token = getBearerToken(req.headers.authorization);
+  if (!token) {
+    return {
+      authType: "none",
+      isAdmin: false,
+      reply: res,
+      request: req,
+      requestId: String(req.id),
+      tenantId: null,
+      user: null
+    };
+  }
+  try {
+    const payload = await verifyToken2(token, {
+      secretKey: env.CLERK_SECRET_KEY
+    });
+    const subject = typeof payload.sub === "string" ? payload.sub.trim() : "";
+    if (!subject) {
+      return {
+        authType: "none",
+        isAdmin: false,
+        reply: res,
+        request: req,
+        requestId: String(req.id),
+        tenantId: null,
+        user: null
+      };
+    }
+    const orgId = typeof payload.org_id === "string" ? payload.org_id.trim() : "";
+    const tenantId = orgId.length > 0 ? orgId : subject;
+    const email3 = typeof payload.email === "string" ? payload.email : undefined;
+    return {
+      authType: "clerk",
+      isAdmin: isAdminEmail(email3),
+      reply: res,
+      request: req,
+      requestId: String(req.id),
+      tenantId,
+      user: {
+        email: email3,
+        orgId: orgId.length > 0 ? orgId : null,
+        sub: subject
+      }
+    };
+  } catch {
+    return {
+      authType: "none",
+      isAdmin: false,
+      reply: res,
+      request: req,
+      requestId: String(req.id),
+      tenantId: null,
+      user: null
+    };
+  }
+};
+
+// src/api/trpc.ts
+var t = initTRPC.context().create();
+var router = t.router;
+var publicProcedure = t.procedure;
+var appProcedure = t.procedure.use(({ ctx, next }) => {
+  if (ctx.authType !== "clerk" || !ctx.user || !ctx.tenantId) {
+    throw new TRPCError({
+      code: "UNAUTHORIZED",
+      message: "Clerk authentication required."
+    });
+  }
+  return next({
+    ctx: {
+      ...ctx,
+      isAdmin: ctx.isAdmin,
+      tenantId: ctx.tenantId,
+      user: ctx.user
+    }
+  });
+});
+var adminProcedure = appProcedure.use(({ ctx, next }) => {
+  if (!ctx.isAdmin) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Admin access required."
+    });
+  }
+  return next({
+    ctx: {
+      ...ctx,
+      isAdmin: true
+    }
+  });
+});
+
+// src/api/app/admin/status.ts
+var adminStatusProcedure = adminProcedure.input(exports_external.object({})).query(async ({ ctx }) => {
+  return {
+    email: ctx.user.email ?? null,
+    isAdmin: true,
+    tenantId: ctx.tenantId
+  };
+});
+
+// src/api/app/admin/router.ts
+var adminRouter = router({
+  status: adminStatusProcedure
+});
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/entity.js
+var entityKind = Symbol.for("drizzle:entityKind");
+var hasOwnEntityKind = Symbol.for("drizzle:hasOwnEntityKind");
+function is(value, type) {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+  if (value instanceof type) {
+    return true;
+  }
+  if (!Object.prototype.hasOwnProperty.call(type, entityKind)) {
+    throw new Error(`Class "${type.name ?? "<unknown>"}" doesn't look like a Drizzle entity. If this is incorrect and the class is provided by Drizzle, please report this as a bug.`);
+  }
+  let cls = Object.getPrototypeOf(value).constructor;
+  if (cls) {
+    while (cls) {
+      if (entityKind in cls && cls[entityKind] === type[entityKind]) {
+        return true;
+      }
+      cls = Object.getPrototypeOf(cls);
+    }
+  }
+  return false;
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/column.js
+class Column {
+  constructor(table, config2) {
+    this.table = table;
+    this.config = config2;
+    this.name = config2.name;
+    this.keyAsName = config2.keyAsName;
+    this.notNull = config2.notNull;
+    this.default = config2.default;
+    this.defaultFn = config2.defaultFn;
+    this.onUpdateFn = config2.onUpdateFn;
+    this.hasDefault = config2.hasDefault;
+    this.primary = config2.primaryKey;
+    this.isUnique = config2.isUnique;
+    this.uniqueName = config2.uniqueName;
+    this.uniqueType = config2.uniqueType;
+    this.dataType = config2.dataType;
+    this.columnType = config2.columnType;
+    this.generated = config2.generated;
+    this.generatedIdentity = config2.generatedIdentity;
+  }
+  static [entityKind] = "Column";
+  name;
+  keyAsName;
+  primary;
+  notNull;
+  default;
+  defaultFn;
+  onUpdateFn;
+  hasDefault;
+  isUnique;
+  uniqueName;
+  uniqueType;
+  dataType;
+  columnType;
+  enumValues = undefined;
+  generated = undefined;
+  generatedIdentity = undefined;
+  config;
+  mapFromDriverValue(value) {
+    return value;
+  }
+  mapToDriverValue(value) {
+    return value;
+  }
+  shouldDisableInsert() {
+    return this.config.generated !== undefined && this.config.generated.type !== "byDefault";
+  }
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/column-builder.js
+class ColumnBuilder {
+  static [entityKind] = "ColumnBuilder";
+  config;
+  constructor(name, dataType, columnType) {
+    this.config = {
+      name,
+      keyAsName: name === "",
+      notNull: false,
+      default: undefined,
+      hasDefault: false,
+      primaryKey: false,
+      isUnique: false,
+      uniqueName: undefined,
+      uniqueType: undefined,
+      dataType,
+      columnType,
+      generated: undefined
+    };
+  }
+  $type() {
+    return this;
+  }
+  notNull() {
+    this.config.notNull = true;
+    return this;
+  }
+  default(value) {
+    this.config.default = value;
+    this.config.hasDefault = true;
+    return this;
+  }
+  $defaultFn(fn) {
+    this.config.defaultFn = fn;
+    this.config.hasDefault = true;
+    return this;
+  }
+  $default = this.$defaultFn;
+  $onUpdateFn(fn) {
+    this.config.onUpdateFn = fn;
+    this.config.hasDefault = true;
+    return this;
+  }
+  $onUpdate = this.$onUpdateFn;
+  primaryKey() {
+    this.config.primaryKey = true;
+    this.config.notNull = true;
+    return this;
+  }
+  setName(name) {
+    if (this.config.name !== "")
+      return;
+    this.config.name = name;
+  }
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/table.utils.js
+var TableName = Symbol.for("drizzle:Name");
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/foreign-keys.js
+class ForeignKeyBuilder {
+  static [entityKind] = "PgForeignKeyBuilder";
+  reference;
+  _onUpdate = "no action";
+  _onDelete = "no action";
+  constructor(config2, actions) {
+    this.reference = () => {
+      const { name, columns, foreignColumns } = config2();
+      return { name, columns, foreignTable: foreignColumns[0].table, foreignColumns };
+    };
+    if (actions) {
+      this._onUpdate = actions.onUpdate;
+      this._onDelete = actions.onDelete;
+    }
+  }
+  onUpdate(action) {
+    this._onUpdate = action === undefined ? "no action" : action;
+    return this;
+  }
+  onDelete(action) {
+    this._onDelete = action === undefined ? "no action" : action;
+    return this;
+  }
+  build(table) {
+    return new ForeignKey(table, this);
+  }
+}
+
+class ForeignKey {
+  constructor(table, builder) {
+    this.table = table;
+    this.reference = builder.reference;
+    this.onUpdate = builder._onUpdate;
+    this.onDelete = builder._onDelete;
+  }
+  static [entityKind] = "PgForeignKey";
+  reference;
+  onUpdate;
+  onDelete;
+  getName() {
+    const { name, columns, foreignColumns } = this.reference();
+    const columnNames = columns.map((column) => column.name);
+    const foreignColumnNames = foreignColumns.map((column) => column.name);
+    const chunks = [
+      this.table[TableName],
+      ...columnNames,
+      foreignColumns[0].table[TableName],
+      ...foreignColumnNames
+    ];
+    return name ?? `${chunks.join("_")}_fk`;
+  }
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/tracing-utils.js
+function iife(fn, ...args) {
+  return fn(...args);
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/unique-constraint.js
+function uniqueKeyName(table, columns) {
+  return `${table[TableName]}_${columns.join("_")}_unique`;
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/utils/array.js
+function parsePgArrayValue(arrayString, startFrom, inQuotes) {
+  for (let i = startFrom;i < arrayString.length; i++) {
+    const char = arrayString[i];
+    if (char === "\\") {
+      i++;
+      continue;
+    }
+    if (char === '"') {
+      return [arrayString.slice(startFrom, i).replace(/\\/g, ""), i + 1];
+    }
+    if (inQuotes) {
+      continue;
+    }
+    if (char === "," || char === "}") {
+      return [arrayString.slice(startFrom, i).replace(/\\/g, ""), i];
+    }
+  }
+  return [arrayString.slice(startFrom).replace(/\\/g, ""), arrayString.length];
+}
+function parsePgNestedArray(arrayString, startFrom = 0) {
+  const result = [];
+  let i = startFrom;
+  let lastCharIsComma = false;
+  while (i < arrayString.length) {
+    const char = arrayString[i];
+    if (char === ",") {
+      if (lastCharIsComma || i === startFrom) {
+        result.push("");
+      }
+      lastCharIsComma = true;
+      i++;
+      continue;
+    }
+    lastCharIsComma = false;
+    if (char === "\\") {
+      i += 2;
+      continue;
+    }
+    if (char === '"') {
+      const [value2, startFrom2] = parsePgArrayValue(arrayString, i + 1, true);
+      result.push(value2);
+      i = startFrom2;
+      continue;
+    }
+    if (char === "}") {
+      return [result, i + 1];
+    }
+    if (char === "{") {
+      const [value2, startFrom2] = parsePgNestedArray(arrayString, i + 1);
+      result.push(value2);
+      i = startFrom2;
+      continue;
+    }
+    const [value, newStartFrom] = parsePgArrayValue(arrayString, i, false);
+    result.push(value);
+    i = newStartFrom;
+  }
+  return [result, i];
+}
+function parsePgArray(arrayString) {
+  const [result] = parsePgNestedArray(arrayString, 1);
+  return result;
+}
+function makePgArray(array2) {
+  return `{${array2.map((item) => {
+    if (Array.isArray(item)) {
+      return makePgArray(item);
+    }
+    if (typeof item === "string") {
+      return `"${item.replace(/\\/g, "\\\\").replace(/"/g, "\\\"")}"`;
+    }
+    return `${item}`;
+  }).join(",")}}`;
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/columns/common.js
+class PgColumnBuilder extends ColumnBuilder {
+  foreignKeyConfigs = [];
+  static [entityKind] = "PgColumnBuilder";
+  array(size) {
+    return new PgArrayBuilder(this.config.name, this, size);
+  }
+  references(ref, actions = {}) {
+    this.foreignKeyConfigs.push({ ref, actions });
+    return this;
+  }
+  unique(name, config2) {
+    this.config.isUnique = true;
+    this.config.uniqueName = name;
+    this.config.uniqueType = config2?.nulls;
+    return this;
+  }
+  generatedAlwaysAs(as) {
+    this.config.generated = {
+      as,
+      type: "always",
+      mode: "stored"
+    };
+    return this;
+  }
+  buildForeignKeys(column, table) {
+    return this.foreignKeyConfigs.map(({ ref, actions }) => {
+      return iife((ref2, actions2) => {
+        const builder = new ForeignKeyBuilder(() => {
+          const foreignColumn = ref2();
+          return { columns: [column], foreignColumns: [foreignColumn] };
+        });
+        if (actions2.onUpdate) {
+          builder.onUpdate(actions2.onUpdate);
+        }
+        if (actions2.onDelete) {
+          builder.onDelete(actions2.onDelete);
+        }
+        return builder.build(table);
+      }, ref, actions);
+    });
+  }
+  buildExtraConfigColumn(table) {
+    return new ExtraConfigColumn(table, this.config);
+  }
+}
+
+class PgColumn extends Column {
+  constructor(table, config2) {
+    if (!config2.uniqueName) {
+      config2.uniqueName = uniqueKeyName(table, [config2.name]);
+    }
+    super(table, config2);
+    this.table = table;
+  }
+  static [entityKind] = "PgColumn";
+}
+
+class ExtraConfigColumn extends PgColumn {
+  static [entityKind] = "ExtraConfigColumn";
+  getSQLType() {
+    return this.getSQLType();
+  }
+  indexConfig = {
+    order: this.config.order ?? "asc",
+    nulls: this.config.nulls ?? "last",
+    opClass: this.config.opClass
+  };
+  defaultConfig = {
+    order: "asc",
+    nulls: "last",
+    opClass: undefined
+  };
+  asc() {
+    this.indexConfig.order = "asc";
+    return this;
+  }
+  desc() {
+    this.indexConfig.order = "desc";
+    return this;
+  }
+  nullsFirst() {
+    this.indexConfig.nulls = "first";
+    return this;
+  }
+  nullsLast() {
+    this.indexConfig.nulls = "last";
+    return this;
+  }
+  op(opClass) {
+    this.indexConfig.opClass = opClass;
+    return this;
+  }
+}
+
+class IndexedColumn {
+  static [entityKind] = "IndexedColumn";
+  constructor(name, keyAsName, type, indexConfig) {
+    this.name = name;
+    this.keyAsName = keyAsName;
+    this.type = type;
+    this.indexConfig = indexConfig;
+  }
+  name;
+  keyAsName;
+  type;
+  indexConfig;
+}
+
+class PgArrayBuilder extends PgColumnBuilder {
+  static [entityKind] = "PgArrayBuilder";
+  constructor(name, baseBuilder, size) {
+    super(name, "array", "PgArray");
+    this.config.baseBuilder = baseBuilder;
+    this.config.size = size;
+  }
+  build(table) {
+    const baseColumn = this.config.baseBuilder.build(table);
+    return new PgArray(table, this.config, baseColumn);
+  }
+}
+
+class PgArray extends PgColumn {
+  constructor(table, config2, baseColumn, range) {
+    super(table, config2);
+    this.baseColumn = baseColumn;
+    this.range = range;
+    this.size = config2.size;
+  }
+  size;
+  static [entityKind] = "PgArray";
+  getSQLType() {
+    return `${this.baseColumn.getSQLType()}[${typeof this.size === "number" ? this.size : ""}]`;
+  }
+  mapFromDriverValue(value) {
+    if (typeof value === "string") {
+      value = parsePgArray(value);
+    }
+    return value.map((v) => this.baseColumn.mapFromDriverValue(v));
+  }
+  mapToDriverValue(value, isNestedArray = false) {
+    const a = value.map((v) => v === null ? null : is(this.baseColumn, PgArray) ? this.baseColumn.mapToDriverValue(v, true) : this.baseColumn.mapToDriverValue(v));
+    if (isNestedArray)
+      return a;
+    return makePgArray(a);
+  }
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/columns/enum.js
+class PgEnumObjectColumnBuilder extends PgColumnBuilder {
+  static [entityKind] = "PgEnumObjectColumnBuilder";
+  constructor(name, enumInstance) {
+    super(name, "string", "PgEnumObjectColumn");
+    this.config.enum = enumInstance;
+  }
+  build(table) {
+    return new PgEnumObjectColumn(table, this.config);
+  }
+}
+
+class PgEnumObjectColumn extends PgColumn {
+  static [entityKind] = "PgEnumObjectColumn";
+  enum;
+  enumValues = this.config.enum.enumValues;
+  constructor(table, config2) {
+    super(table, config2);
+    this.enum = config2.enum;
+  }
+  getSQLType() {
+    return this.enum.enumName;
+  }
+}
+var isPgEnumSym = Symbol.for("drizzle:isPgEnum");
+function isPgEnum(obj) {
+  return !!obj && typeof obj === "function" && isPgEnumSym in obj && obj[isPgEnumSym] === true;
+}
+
+class PgEnumColumnBuilder extends PgColumnBuilder {
+  static [entityKind] = "PgEnumColumnBuilder";
+  constructor(name, enumInstance) {
+    super(name, "string", "PgEnumColumn");
+    this.config.enum = enumInstance;
+  }
+  build(table) {
+    return new PgEnumColumn(table, this.config);
+  }
+}
+
+class PgEnumColumn extends PgColumn {
+  static [entityKind] = "PgEnumColumn";
+  enum = this.config.enum;
+  enumValues = this.config.enum.enumValues;
+  constructor(table, config2) {
+    super(table, config2);
+    this.enum = config2.enum;
+  }
+  getSQLType() {
+    return this.enum.enumName;
+  }
+}
+function pgEnum(enumName, input) {
+  return Array.isArray(input) ? pgEnumWithSchema(enumName, [...input], undefined) : pgEnumObjectWithSchema(enumName, input, undefined);
+}
+function pgEnumWithSchema(enumName, values, schema) {
+  const enumInstance = Object.assign((name) => new PgEnumColumnBuilder(name ?? "", enumInstance), {
+    enumName,
+    enumValues: values,
+    schema,
+    [isPgEnumSym]: true
+  });
+  return enumInstance;
+}
+function pgEnumObjectWithSchema(enumName, values, schema) {
+  const enumInstance = Object.assign((name) => new PgEnumObjectColumnBuilder(name ?? "", enumInstance), {
+    enumName,
+    enumValues: Object.values(values),
+    schema,
+    [isPgEnumSym]: true
+  });
+  return enumInstance;
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/subquery.js
+class Subquery {
+  static [entityKind] = "Subquery";
+  constructor(sql, fields, alias, isWith = false, usedTables = []) {
+    this._ = {
+      brand: "Subquery",
+      sql,
+      selectedFields: fields,
+      alias,
+      isWith,
+      usedTables
+    };
+  }
+}
+
+class WithSubquery extends Subquery {
+  static [entityKind] = "WithSubquery";
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/version.js
+var version2 = "0.44.7";
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/tracing.js
+var otel;
+var rawTracer;
+var tracer = {
+  startActiveSpan(name, fn) {
+    if (!otel) {
+      return fn();
+    }
+    if (!rawTracer) {
+      rawTracer = otel.trace.getTracer("drizzle-orm", version2);
+    }
+    return iife((otel2, rawTracer2) => rawTracer2.startActiveSpan(name, (span) => {
+      try {
+        return fn(span);
+      } catch (e) {
+        span.setStatus({
+          code: otel2.SpanStatusCode.ERROR,
+          message: e instanceof Error ? e.message : "Unknown error"
+        });
+        throw e;
+      } finally {
+        span.end();
+      }
+    }), otel, rawTracer);
+  }
+};
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/view-common.js
+var ViewBaseConfig = Symbol.for("drizzle:ViewBaseConfig");
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/table.js
+var Schema = Symbol.for("drizzle:Schema");
+var Columns = Symbol.for("drizzle:Columns");
+var ExtraConfigColumns = Symbol.for("drizzle:ExtraConfigColumns");
+var OriginalName = Symbol.for("drizzle:OriginalName");
+var BaseName = Symbol.for("drizzle:BaseName");
+var IsAlias = Symbol.for("drizzle:IsAlias");
+var ExtraConfigBuilder = Symbol.for("drizzle:ExtraConfigBuilder");
+var IsDrizzleTable = Symbol.for("drizzle:IsDrizzleTable");
+
+class Table {
+  static [entityKind] = "Table";
+  static Symbol = {
+    Name: TableName,
+    Schema,
+    OriginalName,
+    Columns,
+    ExtraConfigColumns,
+    BaseName,
+    IsAlias,
+    ExtraConfigBuilder
+  };
+  [TableName];
+  [OriginalName];
+  [Schema];
+  [Columns];
+  [ExtraConfigColumns];
+  [BaseName];
+  [IsAlias] = false;
+  [IsDrizzleTable] = true;
+  [ExtraConfigBuilder] = undefined;
+  constructor(name, schema, baseName) {
+    this[TableName] = this[OriginalName] = name;
+    this[Schema] = schema;
+    this[BaseName] = baseName;
+  }
+}
+function getTableName(table) {
+  return table[TableName];
+}
+function getTableUniqueName(table) {
+  return `${table[Schema] ?? "public"}.${table[TableName]}`;
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/sql/sql.js
+function isSQLWrapper(value) {
+  return value !== null && value !== undefined && typeof value.getSQL === "function";
+}
+function mergeQueries(queries) {
+  const result = { sql: "", params: [] };
+  for (const query of queries) {
+    result.sql += query.sql;
+    result.params.push(...query.params);
+    if (query.typings?.length) {
+      if (!result.typings) {
+        result.typings = [];
+      }
+      result.typings.push(...query.typings);
+    }
+  }
+  return result;
+}
+
+class StringChunk {
+  static [entityKind] = "StringChunk";
+  value;
+  constructor(value) {
+    this.value = Array.isArray(value) ? value : [value];
+  }
+  getSQL() {
+    return new SQL([this]);
+  }
+}
+
+class SQL {
+  constructor(queryChunks) {
+    this.queryChunks = queryChunks;
+    for (const chunk of queryChunks) {
+      if (is(chunk, Table)) {
+        const schemaName = chunk[Table.Symbol.Schema];
+        this.usedTables.push(schemaName === undefined ? chunk[Table.Symbol.Name] : schemaName + "." + chunk[Table.Symbol.Name]);
+      }
+    }
+  }
+  static [entityKind] = "SQL";
+  decoder = noopDecoder;
+  shouldInlineParams = false;
+  usedTables = [];
+  append(query) {
+    this.queryChunks.push(...query.queryChunks);
+    return this;
+  }
+  toQuery(config2) {
+    return tracer.startActiveSpan("drizzle.buildSQL", (span) => {
+      const query = this.buildQueryFromSourceParams(this.queryChunks, config2);
+      span?.setAttributes({
+        "drizzle.query.text": query.sql,
+        "drizzle.query.params": JSON.stringify(query.params)
+      });
+      return query;
+    });
+  }
+  buildQueryFromSourceParams(chunks, _config) {
+    const config2 = Object.assign({}, _config, {
+      inlineParams: _config.inlineParams || this.shouldInlineParams,
+      paramStartIndex: _config.paramStartIndex || { value: 0 }
+    });
+    const {
+      casing,
+      escapeName,
+      escapeParam,
+      prepareTyping,
+      inlineParams,
+      paramStartIndex
+    } = config2;
+    return mergeQueries(chunks.map((chunk) => {
+      if (is(chunk, StringChunk)) {
+        return { sql: chunk.value.join(""), params: [] };
+      }
+      if (is(chunk, Name)) {
+        return { sql: escapeName(chunk.value), params: [] };
+      }
+      if (chunk === undefined) {
+        return { sql: "", params: [] };
+      }
+      if (Array.isArray(chunk)) {
+        const result = [new StringChunk("(")];
+        for (const [i, p] of chunk.entries()) {
+          result.push(p);
+          if (i < chunk.length - 1) {
+            result.push(new StringChunk(", "));
+          }
+        }
+        result.push(new StringChunk(")"));
+        return this.buildQueryFromSourceParams(result, config2);
+      }
+      if (is(chunk, SQL)) {
+        return this.buildQueryFromSourceParams(chunk.queryChunks, {
+          ...config2,
+          inlineParams: inlineParams || chunk.shouldInlineParams
+        });
+      }
+      if (is(chunk, Table)) {
+        const schemaName = chunk[Table.Symbol.Schema];
+        const tableName = chunk[Table.Symbol.Name];
+        return {
+          sql: schemaName === undefined || chunk[IsAlias] ? escapeName(tableName) : escapeName(schemaName) + "." + escapeName(tableName),
+          params: []
+        };
+      }
+      if (is(chunk, Column)) {
+        const columnName = casing.getColumnCasing(chunk);
+        if (_config.invokeSource === "indexes") {
+          return { sql: escapeName(columnName), params: [] };
+        }
+        const schemaName = chunk.table[Table.Symbol.Schema];
+        return {
+          sql: chunk.table[IsAlias] || schemaName === undefined ? escapeName(chunk.table[Table.Symbol.Name]) + "." + escapeName(columnName) : escapeName(schemaName) + "." + escapeName(chunk.table[Table.Symbol.Name]) + "." + escapeName(columnName),
+          params: []
+        };
+      }
+      if (is(chunk, View)) {
+        const schemaName = chunk[ViewBaseConfig].schema;
+        const viewName = chunk[ViewBaseConfig].name;
+        return {
+          sql: schemaName === undefined || chunk[ViewBaseConfig].isAlias ? escapeName(viewName) : escapeName(schemaName) + "." + escapeName(viewName),
+          params: []
+        };
+      }
+      if (is(chunk, Param)) {
+        if (is(chunk.value, Placeholder)) {
+          return { sql: escapeParam(paramStartIndex.value++, chunk), params: [chunk], typings: ["none"] };
+        }
+        const mappedValue = chunk.value === null ? null : chunk.encoder.mapToDriverValue(chunk.value);
+        if (is(mappedValue, SQL)) {
+          return this.buildQueryFromSourceParams([mappedValue], config2);
+        }
+        if (inlineParams) {
+          return { sql: this.mapInlineParam(mappedValue, config2), params: [] };
+        }
+        let typings = ["none"];
+        if (prepareTyping) {
+          typings = [prepareTyping(chunk.encoder)];
+        }
+        return { sql: escapeParam(paramStartIndex.value++, mappedValue), params: [mappedValue], typings };
+      }
+      if (is(chunk, Placeholder)) {
+        return { sql: escapeParam(paramStartIndex.value++, chunk), params: [chunk], typings: ["none"] };
+      }
+      if (is(chunk, SQL.Aliased) && chunk.fieldAlias !== undefined) {
+        return { sql: escapeName(chunk.fieldAlias), params: [] };
+      }
+      if (is(chunk, Subquery)) {
+        if (chunk._.isWith) {
+          return { sql: escapeName(chunk._.alias), params: [] };
+        }
+        return this.buildQueryFromSourceParams([
+          new StringChunk("("),
+          chunk._.sql,
+          new StringChunk(") "),
+          new Name(chunk._.alias)
+        ], config2);
+      }
+      if (isPgEnum(chunk)) {
+        if (chunk.schema) {
+          return { sql: escapeName(chunk.schema) + "." + escapeName(chunk.enumName), params: [] };
+        }
+        return { sql: escapeName(chunk.enumName), params: [] };
+      }
+      if (isSQLWrapper(chunk)) {
+        if (chunk.shouldOmitSQLParens?.()) {
+          return this.buildQueryFromSourceParams([chunk.getSQL()], config2);
+        }
+        return this.buildQueryFromSourceParams([
+          new StringChunk("("),
+          chunk.getSQL(),
+          new StringChunk(")")
+        ], config2);
+      }
+      if (inlineParams) {
+        return { sql: this.mapInlineParam(chunk, config2), params: [] };
+      }
+      return { sql: escapeParam(paramStartIndex.value++, chunk), params: [chunk], typings: ["none"] };
+    }));
+  }
+  mapInlineParam(chunk, { escapeString }) {
+    if (chunk === null) {
+      return "null";
+    }
+    if (typeof chunk === "number" || typeof chunk === "boolean") {
+      return chunk.toString();
+    }
+    if (typeof chunk === "string") {
+      return escapeString(chunk);
+    }
+    if (typeof chunk === "object") {
+      const mappedValueAsString = chunk.toString();
+      if (mappedValueAsString === "[object Object]") {
+        return escapeString(JSON.stringify(chunk));
+      }
+      return escapeString(mappedValueAsString);
+    }
+    throw new Error("Unexpected param value: " + chunk);
+  }
+  getSQL() {
+    return this;
+  }
+  as(alias) {
+    if (alias === undefined) {
+      return this;
+    }
+    return new SQL.Aliased(this, alias);
+  }
+  mapWith(decoder) {
+    this.decoder = typeof decoder === "function" ? { mapFromDriverValue: decoder } : decoder;
+    return this;
+  }
+  inlineParams() {
+    this.shouldInlineParams = true;
+    return this;
+  }
+  if(condition) {
+    return condition ? this : undefined;
+  }
+}
+
+class Name {
+  constructor(value) {
+    this.value = value;
+  }
+  static [entityKind] = "Name";
+  brand;
+  getSQL() {
+    return new SQL([this]);
+  }
+}
+function isDriverValueEncoder(value) {
+  return typeof value === "object" && value !== null && "mapToDriverValue" in value && typeof value.mapToDriverValue === "function";
+}
+var noopDecoder = {
+  mapFromDriverValue: (value) => value
+};
+var noopEncoder = {
+  mapToDriverValue: (value) => value
+};
+var noopMapper = {
+  ...noopDecoder,
+  ...noopEncoder
+};
+
+class Param {
+  constructor(value, encoder = noopEncoder) {
+    this.value = value;
+    this.encoder = encoder;
+  }
+  static [entityKind] = "Param";
+  brand;
+  getSQL() {
+    return new SQL([this]);
+  }
+}
+function sql(strings, ...params) {
+  const queryChunks = [];
+  if (params.length > 0 || strings.length > 0 && strings[0] !== "") {
+    queryChunks.push(new StringChunk(strings[0]));
+  }
+  for (const [paramIndex, param2] of params.entries()) {
+    queryChunks.push(param2, new StringChunk(strings[paramIndex + 1]));
+  }
+  return new SQL(queryChunks);
+}
+((sql2) => {
+  function empty() {
+    return new SQL([]);
+  }
+  sql2.empty = empty;
+  function fromList(list) {
+    return new SQL(list);
+  }
+  sql2.fromList = fromList;
+  function raw(str) {
+    return new SQL([new StringChunk(str)]);
+  }
+  sql2.raw = raw;
+  function join(chunks, separator) {
+    const result = [];
+    for (const [i, chunk] of chunks.entries()) {
+      if (i > 0 && separator !== undefined) {
+        result.push(separator);
+      }
+      result.push(chunk);
+    }
+    return new SQL(result);
+  }
+  sql2.join = join;
+  function identifier(value) {
+    return new Name(value);
+  }
+  sql2.identifier = identifier;
+  function placeholder2(name2) {
+    return new Placeholder(name2);
+  }
+  sql2.placeholder = placeholder2;
+  function param2(value, encoder) {
+    return new Param(value, encoder);
+  }
+  sql2.param = param2;
+})(sql || (sql = {}));
+((SQL2) => {
+
+  class Aliased {
+    constructor(sql2, fieldAlias) {
+      this.sql = sql2;
+      this.fieldAlias = fieldAlias;
+    }
+    static [entityKind] = "SQL.Aliased";
+    isSelectionField = false;
+    getSQL() {
+      return this.sql;
+    }
+    clone() {
+      return new Aliased(this.sql, this.fieldAlias);
+    }
+  }
+  SQL2.Aliased = Aliased;
+})(SQL || (SQL = {}));
+
+class Placeholder {
+  constructor(name2) {
+    this.name = name2;
+  }
+  static [entityKind] = "Placeholder";
+  getSQL() {
+    return new SQL([this]);
+  }
+}
+function fillPlaceholders(params, values) {
+  return params.map((p) => {
+    if (is(p, Placeholder)) {
+      if (!(p.name in values)) {
+        throw new Error(`No value for placeholder "${p.name}" was provided`);
+      }
+      return values[p.name];
+    }
+    if (is(p, Param) && is(p.value, Placeholder)) {
+      if (!(p.value.name in values)) {
+        throw new Error(`No value for placeholder "${p.value.name}" was provided`);
+      }
+      return p.encoder.mapToDriverValue(values[p.value.name]);
+    }
+    return p;
+  });
+}
+var IsDrizzleView = Symbol.for("drizzle:IsDrizzleView");
+
+class View {
+  static [entityKind] = "View";
+  [ViewBaseConfig];
+  [IsDrizzleView] = true;
+  constructor({ name: name2, schema, selectedFields, query }) {
+    this[ViewBaseConfig] = {
+      name: name2,
+      originalName: name2,
+      schema,
+      selectedFields,
+      query,
+      isExisting: !query,
+      isAlias: false
+    };
+  }
+  getSQL() {
+    return new SQL([this]);
+  }
+}
+Column.prototype.getSQL = function() {
+  return new SQL([this]);
+};
+Table.prototype.getSQL = function() {
+  return new SQL([this]);
+};
+Subquery.prototype.getSQL = function() {
+  return new SQL([this]);
+};
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/alias.js
+class ColumnAliasProxyHandler {
+  constructor(table) {
+    this.table = table;
+  }
+  static [entityKind] = "ColumnAliasProxyHandler";
+  get(columnObj, prop) {
+    if (prop === "table") {
+      return this.table;
+    }
+    return columnObj[prop];
+  }
+}
+
+class TableAliasProxyHandler {
+  constructor(alias, replaceOriginalName) {
+    this.alias = alias;
+    this.replaceOriginalName = replaceOriginalName;
+  }
+  static [entityKind] = "TableAliasProxyHandler";
+  get(target, prop) {
+    if (prop === Table.Symbol.IsAlias) {
+      return true;
+    }
+    if (prop === Table.Symbol.Name) {
+      return this.alias;
+    }
+    if (this.replaceOriginalName && prop === Table.Symbol.OriginalName) {
+      return this.alias;
+    }
+    if (prop === ViewBaseConfig) {
+      return {
+        ...target[ViewBaseConfig],
+        name: this.alias,
+        isAlias: true
+      };
+    }
+    if (prop === Table.Symbol.Columns) {
+      const columns = target[Table.Symbol.Columns];
+      if (!columns) {
+        return columns;
+      }
+      const proxiedColumns = {};
+      Object.keys(columns).map((key) => {
+        proxiedColumns[key] = new Proxy(columns[key], new ColumnAliasProxyHandler(new Proxy(target, this)));
+      });
+      return proxiedColumns;
+    }
+    const value = target[prop];
+    if (is(value, Column)) {
+      return new Proxy(value, new ColumnAliasProxyHandler(new Proxy(target, this)));
+    }
+    return value;
+  }
+}
+function aliasedTable(table, tableAlias) {
+  return new Proxy(table, new TableAliasProxyHandler(tableAlias, false));
+}
+function aliasedTableColumn(column, tableAlias) {
+  return new Proxy(column, new ColumnAliasProxyHandler(new Proxy(column.table, new TableAliasProxyHandler(tableAlias, false))));
+}
+function mapColumnsInAliasedSQLToAlias(query, alias) {
+  return new SQL.Aliased(mapColumnsInSQLToAlias(query.sql, alias), query.fieldAlias);
+}
+function mapColumnsInSQLToAlias(query, alias) {
+  return sql.join(query.queryChunks.map((c) => {
+    if (is(c, Column)) {
+      return aliasedTableColumn(c, alias);
+    }
+    if (is(c, SQL)) {
+      return mapColumnsInSQLToAlias(c, alias);
+    }
+    if (is(c, SQL.Aliased)) {
+      return mapColumnsInAliasedSQLToAlias(c, alias);
+    }
+    return c;
+  }));
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/errors.js
+class DrizzleError extends Error {
+  static [entityKind] = "DrizzleError";
+  constructor({ message, cause }) {
+    super(message);
+    this.name = "DrizzleError";
+    this.cause = cause;
+  }
+}
+
+class DrizzleQueryError extends Error {
+  constructor(query, params, cause) {
+    super(`Failed query: ${query}
+params: ${params}`);
+    this.query = query;
+    this.params = params;
+    this.cause = cause;
+    Error.captureStackTrace(this, DrizzleQueryError);
+    if (cause)
+      this.cause = cause;
+  }
+}
+
+class TransactionRollbackError extends DrizzleError {
+  static [entityKind] = "TransactionRollbackError";
+  constructor() {
+    super({ message: "Rollback" });
+  }
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/logger.js
+class ConsoleLogWriter {
+  static [entityKind] = "ConsoleLogWriter";
+  write(message) {
+    console.log(message);
+  }
+}
+
+class DefaultLogger {
+  static [entityKind] = "DefaultLogger";
+  writer;
+  constructor(config2) {
+    this.writer = config2?.writer ?? new ConsoleLogWriter;
+  }
+  logQuery(query, params) {
+    const stringifiedParams = params.map((p) => {
+      try {
+        return JSON.stringify(p);
+      } catch {
+        return String(p);
+      }
+    });
+    const paramsStr = stringifiedParams.length ? ` -- params: [${stringifiedParams.join(", ")}]` : "";
+    this.writer.write(`Query: ${query}${paramsStr}`);
+  }
+}
+
+class NoopLogger {
+  static [entityKind] = "NoopLogger";
+  logQuery() {}
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/query-promise.js
+class QueryPromise {
+  static [entityKind] = "QueryPromise";
+  [Symbol.toStringTag] = "QueryPromise";
+  catch(onRejected) {
+    return this.then(undefined, onRejected);
+  }
+  finally(onFinally) {
+    return this.then((value) => {
+      onFinally?.();
+      return value;
+    }, (reason) => {
+      onFinally?.();
+      throw reason;
+    });
+  }
+  then(onFulfilled, onRejected) {
+    return this.execute().then(onFulfilled, onRejected);
+  }
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/utils.js
+function mapResultRow(columns, row, joinsNotNullableMap) {
+  const nullifyMap = {};
+  const result = columns.reduce((result2, { path, field }, columnIndex) => {
+    let decoder;
+    if (is(field, Column)) {
+      decoder = field;
+    } else if (is(field, SQL)) {
+      decoder = field.decoder;
+    } else {
+      decoder = field.sql.decoder;
+    }
+    let node = result2;
+    for (const [pathChunkIndex, pathChunk] of path.entries()) {
+      if (pathChunkIndex < path.length - 1) {
+        if (!(pathChunk in node)) {
+          node[pathChunk] = {};
+        }
+        node = node[pathChunk];
+      } else {
+        const rawValue = row[columnIndex];
+        const value = node[pathChunk] = rawValue === null ? null : decoder.mapFromDriverValue(rawValue);
+        if (joinsNotNullableMap && is(field, Column) && path.length === 2) {
+          const objectName = path[0];
+          if (!(objectName in nullifyMap)) {
+            nullifyMap[objectName] = value === null ? getTableName(field.table) : false;
+          } else if (typeof nullifyMap[objectName] === "string" && nullifyMap[objectName] !== getTableName(field.table)) {
+            nullifyMap[objectName] = false;
+          }
+        }
+      }
+    }
+    return result2;
+  }, {});
+  if (joinsNotNullableMap && Object.keys(nullifyMap).length > 0) {
+    for (const [objectName, tableName] of Object.entries(nullifyMap)) {
+      if (typeof tableName === "string" && !joinsNotNullableMap[tableName]) {
+        result[objectName] = null;
+      }
+    }
+  }
+  return result;
+}
+function orderSelectedFields(fields, pathPrefix) {
+  return Object.entries(fields).reduce((result, [name, field]) => {
+    if (typeof name !== "string") {
+      return result;
+    }
+    const newPath = pathPrefix ? [...pathPrefix, name] : [name];
+    if (is(field, Column) || is(field, SQL) || is(field, SQL.Aliased)) {
+      result.push({ path: newPath, field });
+    } else if (is(field, Table)) {
+      result.push(...orderSelectedFields(field[Table.Symbol.Columns], newPath));
+    } else {
+      result.push(...orderSelectedFields(field, newPath));
+    }
+    return result;
+  }, []);
+}
+function haveSameKeys(left, right) {
+  const leftKeys = Object.keys(left);
+  const rightKeys = Object.keys(right);
+  if (leftKeys.length !== rightKeys.length) {
+    return false;
+  }
+  for (const [index, key] of leftKeys.entries()) {
+    if (key !== rightKeys[index]) {
+      return false;
+    }
+  }
+  return true;
+}
+function mapUpdateSet(table, values) {
+  const entries = Object.entries(values).filter(([, value]) => value !== undefined).map(([key, value]) => {
+    if (is(value, SQL) || is(value, Column)) {
+      return [key, value];
+    } else {
+      return [key, new Param(value, table[Table.Symbol.Columns][key])];
+    }
+  });
+  if (entries.length === 0) {
+    throw new Error("No values to set");
+  }
+  return Object.fromEntries(entries);
+}
+function applyMixins(baseClass, extendedClasses) {
+  for (const extendedClass of extendedClasses) {
+    for (const name of Object.getOwnPropertyNames(extendedClass.prototype)) {
+      if (name === "constructor")
+        continue;
+      Object.defineProperty(baseClass.prototype, name, Object.getOwnPropertyDescriptor(extendedClass.prototype, name) || /* @__PURE__ */ Object.create(null));
+    }
+  }
+}
+function getTableColumns(table) {
+  return table[Table.Symbol.Columns];
+}
+function getTableLikeName(table) {
+  return is(table, Subquery) ? table._.alias : is(table, View) ? table[ViewBaseConfig].name : is(table, SQL) ? undefined : table[Table.Symbol.IsAlias] ? table[Table.Symbol.Name] : table[Table.Symbol.BaseName];
+}
+function getColumnNameAndConfig(a, b) {
+  return {
+    name: typeof a === "string" && a.length > 0 ? a : "",
+    config: typeof a === "object" ? a : b
+  };
+}
+function isConfig(data) {
+  if (typeof data !== "object" || data === null)
+    return false;
+  if (data.constructor.name !== "Object")
+    return false;
+  if ("logger" in data) {
+    const type = typeof data["logger"];
+    if (type !== "boolean" && (type !== "object" || typeof data["logger"]["logQuery"] !== "function") && type !== "undefined")
+      return false;
+    return true;
+  }
+  if ("schema" in data) {
+    const type = typeof data["schema"];
+    if (type !== "object" && type !== "undefined")
+      return false;
+    return true;
+  }
+  if ("casing" in data) {
+    const type = typeof data["casing"];
+    if (type !== "string" && type !== "undefined")
+      return false;
+    return true;
+  }
+  if ("mode" in data) {
+    if (data["mode"] !== "default" || data["mode"] !== "planetscale" || data["mode"] !== undefined)
+      return false;
+    return true;
+  }
+  if ("connection" in data) {
+    const type = typeof data["connection"];
+    if (type !== "string" && type !== "object" && type !== "undefined")
+      return false;
+    return true;
+  }
+  if ("client" in data) {
+    const type = typeof data["client"];
+    if (type !== "object" && type !== "function" && type !== "undefined")
+      return false;
+    return true;
+  }
+  if (Object.keys(data).length === 0)
+    return true;
+  return false;
+}
+var textDecoder = typeof TextDecoder === "undefined" ? null : new TextDecoder;
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/columns/int.common.js
+class PgIntColumnBaseBuilder extends PgColumnBuilder {
+  static [entityKind] = "PgIntColumnBaseBuilder";
+  generatedAlwaysAsIdentity(sequence) {
+    if (sequence) {
+      const { name, ...options } = sequence;
+      this.config.generatedIdentity = {
+        type: "always",
+        sequenceName: name,
+        sequenceOptions: options
+      };
+    } else {
+      this.config.generatedIdentity = {
+        type: "always"
+      };
+    }
+    this.config.hasDefault = true;
+    this.config.notNull = true;
+    return this;
+  }
+  generatedByDefaultAsIdentity(sequence) {
+    if (sequence) {
+      const { name, ...options } = sequence;
+      this.config.generatedIdentity = {
+        type: "byDefault",
+        sequenceName: name,
+        sequenceOptions: options
+      };
+    } else {
+      this.config.generatedIdentity = {
+        type: "byDefault"
+      };
+    }
+    this.config.hasDefault = true;
+    this.config.notNull = true;
+    return this;
+  }
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/columns/bigint.js
+class PgBigInt53Builder extends PgIntColumnBaseBuilder {
+  static [entityKind] = "PgBigInt53Builder";
+  constructor(name) {
+    super(name, "number", "PgBigInt53");
+  }
+  build(table) {
+    return new PgBigInt53(table, this.config);
+  }
+}
+
+class PgBigInt53 extends PgColumn {
+  static [entityKind] = "PgBigInt53";
+  getSQLType() {
+    return "bigint";
+  }
+  mapFromDriverValue(value) {
+    if (typeof value === "number") {
+      return value;
+    }
+    return Number(value);
+  }
+}
+
+class PgBigInt64Builder extends PgIntColumnBaseBuilder {
+  static [entityKind] = "PgBigInt64Builder";
+  constructor(name) {
+    super(name, "bigint", "PgBigInt64");
+  }
+  build(table) {
+    return new PgBigInt64(table, this.config);
+  }
+}
+
+class PgBigInt64 extends PgColumn {
+  static [entityKind] = "PgBigInt64";
+  getSQLType() {
+    return "bigint";
+  }
+  mapFromDriverValue(value) {
+    return BigInt(value);
+  }
+}
+function bigint4(a, b) {
+  const { name, config: config2 } = getColumnNameAndConfig(a, b);
+  if (config2.mode === "number") {
+    return new PgBigInt53Builder(name);
+  }
+  return new PgBigInt64Builder(name);
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/columns/bigserial.js
+class PgBigSerial53Builder extends PgColumnBuilder {
+  static [entityKind] = "PgBigSerial53Builder";
+  constructor(name) {
+    super(name, "number", "PgBigSerial53");
+    this.config.hasDefault = true;
+    this.config.notNull = true;
+  }
+  build(table) {
+    return new PgBigSerial53(table, this.config);
+  }
+}
+
+class PgBigSerial53 extends PgColumn {
+  static [entityKind] = "PgBigSerial53";
+  getSQLType() {
+    return "bigserial";
+  }
+  mapFromDriverValue(value) {
+    if (typeof value === "number") {
+      return value;
+    }
+    return Number(value);
+  }
+}
+
+class PgBigSerial64Builder extends PgColumnBuilder {
+  static [entityKind] = "PgBigSerial64Builder";
+  constructor(name) {
+    super(name, "bigint", "PgBigSerial64");
+    this.config.hasDefault = true;
+  }
+  build(table) {
+    return new PgBigSerial64(table, this.config);
+  }
+}
+
+class PgBigSerial64 extends PgColumn {
+  static [entityKind] = "PgBigSerial64";
+  getSQLType() {
+    return "bigserial";
+  }
+  mapFromDriverValue(value) {
+    return BigInt(value);
+  }
+}
+function bigserial(a, b) {
+  const { name, config: config2 } = getColumnNameAndConfig(a, b);
+  if (config2.mode === "number") {
+    return new PgBigSerial53Builder(name);
+  }
+  return new PgBigSerial64Builder(name);
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/columns/boolean.js
+class PgBooleanBuilder extends PgColumnBuilder {
+  static [entityKind] = "PgBooleanBuilder";
+  constructor(name) {
+    super(name, "boolean", "PgBoolean");
+  }
+  build(table) {
+    return new PgBoolean(table, this.config);
+  }
+}
+
+class PgBoolean extends PgColumn {
+  static [entityKind] = "PgBoolean";
+  getSQLType() {
+    return "boolean";
+  }
+}
+function boolean4(name) {
+  return new PgBooleanBuilder(name ?? "");
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/columns/char.js
+class PgCharBuilder extends PgColumnBuilder {
+  static [entityKind] = "PgCharBuilder";
+  constructor(name, config2) {
+    super(name, "string", "PgChar");
+    this.config.length = config2.length;
+    this.config.enumValues = config2.enum;
+  }
+  build(table) {
+    return new PgChar(table, this.config);
+  }
+}
+
+class PgChar extends PgColumn {
+  static [entityKind] = "PgChar";
+  length = this.config.length;
+  enumValues = this.config.enumValues;
+  getSQLType() {
+    return this.length === undefined ? `char` : `char(${this.length})`;
+  }
+}
+function char(a, b = {}) {
+  const { name, config: config2 } = getColumnNameAndConfig(a, b);
+  return new PgCharBuilder(name, config2);
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/columns/cidr.js
+class PgCidrBuilder extends PgColumnBuilder {
+  static [entityKind] = "PgCidrBuilder";
+  constructor(name) {
+    super(name, "string", "PgCidr");
+  }
+  build(table) {
+    return new PgCidr(table, this.config);
+  }
+}
+
+class PgCidr extends PgColumn {
+  static [entityKind] = "PgCidr";
+  getSQLType() {
+    return "cidr";
+  }
+}
+function cidr(name) {
+  return new PgCidrBuilder(name ?? "");
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/columns/custom.js
+class PgCustomColumnBuilder extends PgColumnBuilder {
+  static [entityKind] = "PgCustomColumnBuilder";
+  constructor(name, fieldConfig, customTypeParams) {
+    super(name, "custom", "PgCustomColumn");
+    this.config.fieldConfig = fieldConfig;
+    this.config.customTypeParams = customTypeParams;
+  }
+  build(table) {
+    return new PgCustomColumn(table, this.config);
+  }
+}
+
+class PgCustomColumn extends PgColumn {
+  static [entityKind] = "PgCustomColumn";
+  sqlName;
+  mapTo;
+  mapFrom;
+  constructor(table, config2) {
+    super(table, config2);
+    this.sqlName = config2.customTypeParams.dataType(config2.fieldConfig);
+    this.mapTo = config2.customTypeParams.toDriver;
+    this.mapFrom = config2.customTypeParams.fromDriver;
+  }
+  getSQLType() {
+    return this.sqlName;
+  }
+  mapFromDriverValue(value) {
+    return typeof this.mapFrom === "function" ? this.mapFrom(value) : value;
+  }
+  mapToDriverValue(value) {
+    return typeof this.mapTo === "function" ? this.mapTo(value) : value;
+  }
+}
+function customType(customTypeParams) {
+  return (a, b) => {
+    const { name, config: config2 } = getColumnNameAndConfig(a, b);
+    return new PgCustomColumnBuilder(name, config2, customTypeParams);
+  };
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/columns/date.common.js
+class PgDateColumnBaseBuilder extends PgColumnBuilder {
+  static [entityKind] = "PgDateColumnBaseBuilder";
+  defaultNow() {
+    return this.default(sql`now()`);
+  }
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/columns/date.js
+class PgDateBuilder extends PgDateColumnBaseBuilder {
+  static [entityKind] = "PgDateBuilder";
+  constructor(name) {
+    super(name, "date", "PgDate");
+  }
+  build(table) {
+    return new PgDate(table, this.config);
+  }
+}
+
+class PgDate extends PgColumn {
+  static [entityKind] = "PgDate";
+  getSQLType() {
+    return "date";
+  }
+  mapFromDriverValue(value) {
+    return new Date(value);
+  }
+  mapToDriverValue(value) {
+    return value.toISOString();
+  }
+}
+
+class PgDateStringBuilder extends PgDateColumnBaseBuilder {
+  static [entityKind] = "PgDateStringBuilder";
+  constructor(name) {
+    super(name, "string", "PgDateString");
+  }
+  build(table) {
+    return new PgDateString(table, this.config);
+  }
+}
+
+class PgDateString extends PgColumn {
+  static [entityKind] = "PgDateString";
+  getSQLType() {
+    return "date";
+  }
+}
+function date5(a, b) {
+  const { name, config: config2 } = getColumnNameAndConfig(a, b);
+  if (config2?.mode === "date") {
+    return new PgDateBuilder(name);
+  }
+  return new PgDateStringBuilder(name);
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/columns/double-precision.js
+class PgDoublePrecisionBuilder extends PgColumnBuilder {
+  static [entityKind] = "PgDoublePrecisionBuilder";
+  constructor(name) {
+    super(name, "number", "PgDoublePrecision");
+  }
+  build(table) {
+    return new PgDoublePrecision(table, this.config);
+  }
+}
+
+class PgDoublePrecision extends PgColumn {
+  static [entityKind] = "PgDoublePrecision";
+  getSQLType() {
+    return "double precision";
+  }
+  mapFromDriverValue(value) {
+    if (typeof value === "string") {
+      return Number.parseFloat(value);
+    }
+    return value;
+  }
+}
+function doublePrecision(name) {
+  return new PgDoublePrecisionBuilder(name ?? "");
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/columns/inet.js
+class PgInetBuilder extends PgColumnBuilder {
+  static [entityKind] = "PgInetBuilder";
+  constructor(name) {
+    super(name, "string", "PgInet");
+  }
+  build(table) {
+    return new PgInet(table, this.config);
+  }
+}
+
+class PgInet extends PgColumn {
+  static [entityKind] = "PgInet";
+  getSQLType() {
+    return "inet";
+  }
+}
+function inet(name) {
+  return new PgInetBuilder(name ?? "");
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/columns/integer.js
+class PgIntegerBuilder extends PgIntColumnBaseBuilder {
+  static [entityKind] = "PgIntegerBuilder";
+  constructor(name) {
+    super(name, "number", "PgInteger");
+  }
+  build(table) {
+    return new PgInteger(table, this.config);
+  }
+}
+
+class PgInteger extends PgColumn {
+  static [entityKind] = "PgInteger";
+  getSQLType() {
+    return "integer";
+  }
+  mapFromDriverValue(value) {
+    if (typeof value === "string") {
+      return Number.parseInt(value);
+    }
+    return value;
+  }
+}
+function integer2(name) {
+  return new PgIntegerBuilder(name ?? "");
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/columns/interval.js
+class PgIntervalBuilder extends PgColumnBuilder {
+  static [entityKind] = "PgIntervalBuilder";
+  constructor(name, intervalConfig) {
+    super(name, "string", "PgInterval");
+    this.config.intervalConfig = intervalConfig;
+  }
+  build(table) {
+    return new PgInterval(table, this.config);
+  }
+}
+
+class PgInterval extends PgColumn {
+  static [entityKind] = "PgInterval";
+  fields = this.config.intervalConfig.fields;
+  precision = this.config.intervalConfig.precision;
+  getSQLType() {
+    const fields = this.fields ? ` ${this.fields}` : "";
+    const precision = this.precision ? `(${this.precision})` : "";
+    return `interval${fields}${precision}`;
+  }
+}
+function interval(a, b = {}) {
+  const { name, config: config2 } = getColumnNameAndConfig(a, b);
+  return new PgIntervalBuilder(name, config2);
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/columns/json.js
+class PgJsonBuilder extends PgColumnBuilder {
+  static [entityKind] = "PgJsonBuilder";
+  constructor(name) {
+    super(name, "json", "PgJson");
+  }
+  build(table) {
+    return new PgJson(table, this.config);
+  }
+}
+
+class PgJson extends PgColumn {
+  static [entityKind] = "PgJson";
+  constructor(table, config2) {
+    super(table, config2);
+  }
+  getSQLType() {
+    return "json";
+  }
+  mapToDriverValue(value) {
+    return JSON.stringify(value);
+  }
+  mapFromDriverValue(value) {
+    if (typeof value === "string") {
+      try {
+        return JSON.parse(value);
+      } catch {
+        return value;
+      }
+    }
+    return value;
+  }
+}
+function json2(name) {
+  return new PgJsonBuilder(name ?? "");
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/columns/jsonb.js
+class PgJsonbBuilder extends PgColumnBuilder {
+  static [entityKind] = "PgJsonbBuilder";
+  constructor(name) {
+    super(name, "json", "PgJsonb");
+  }
+  build(table) {
+    return new PgJsonb(table, this.config);
+  }
+}
+
+class PgJsonb extends PgColumn {
+  static [entityKind] = "PgJsonb";
+  constructor(table, config2) {
+    super(table, config2);
+  }
+  getSQLType() {
+    return "jsonb";
+  }
+  mapToDriverValue(value) {
+    return JSON.stringify(value);
+  }
+  mapFromDriverValue(value) {
+    if (typeof value === "string") {
+      try {
+        return JSON.parse(value);
+      } catch {
+        return value;
+      }
+    }
+    return value;
+  }
+}
+function jsonb(name) {
+  return new PgJsonbBuilder(name ?? "");
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/columns/line.js
+class PgLineBuilder extends PgColumnBuilder {
+  static [entityKind] = "PgLineBuilder";
+  constructor(name) {
+    super(name, "array", "PgLine");
+  }
+  build(table) {
+    return new PgLineTuple(table, this.config);
+  }
+}
+
+class PgLineTuple extends PgColumn {
+  static [entityKind] = "PgLine";
+  getSQLType() {
+    return "line";
+  }
+  mapFromDriverValue(value) {
+    const [a, b, c] = value.slice(1, -1).split(",");
+    return [Number.parseFloat(a), Number.parseFloat(b), Number.parseFloat(c)];
+  }
+  mapToDriverValue(value) {
+    return `{${value[0]},${value[1]},${value[2]}}`;
+  }
+}
+
+class PgLineABCBuilder extends PgColumnBuilder {
+  static [entityKind] = "PgLineABCBuilder";
+  constructor(name) {
+    super(name, "json", "PgLineABC");
+  }
+  build(table) {
+    return new PgLineABC(table, this.config);
+  }
+}
+
+class PgLineABC extends PgColumn {
+  static [entityKind] = "PgLineABC";
+  getSQLType() {
+    return "line";
+  }
+  mapFromDriverValue(value) {
+    const [a, b, c] = value.slice(1, -1).split(",");
+    return { a: Number.parseFloat(a), b: Number.parseFloat(b), c: Number.parseFloat(c) };
+  }
+  mapToDriverValue(value) {
+    return `{${value.a},${value.b},${value.c}}`;
+  }
+}
+function line(a, b) {
+  const { name, config: config2 } = getColumnNameAndConfig(a, b);
+  if (!config2?.mode || config2.mode === "tuple") {
+    return new PgLineBuilder(name);
+  }
+  return new PgLineABCBuilder(name);
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/columns/macaddr.js
+class PgMacaddrBuilder extends PgColumnBuilder {
+  static [entityKind] = "PgMacaddrBuilder";
+  constructor(name) {
+    super(name, "string", "PgMacaddr");
+  }
+  build(table) {
+    return new PgMacaddr(table, this.config);
+  }
+}
+
+class PgMacaddr extends PgColumn {
+  static [entityKind] = "PgMacaddr";
+  getSQLType() {
+    return "macaddr";
+  }
+}
+function macaddr(name) {
+  return new PgMacaddrBuilder(name ?? "");
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/columns/macaddr8.js
+class PgMacaddr8Builder extends PgColumnBuilder {
+  static [entityKind] = "PgMacaddr8Builder";
+  constructor(name) {
+    super(name, "string", "PgMacaddr8");
+  }
+  build(table) {
+    return new PgMacaddr8(table, this.config);
+  }
+}
+
+class PgMacaddr8 extends PgColumn {
+  static [entityKind] = "PgMacaddr8";
+  getSQLType() {
+    return "macaddr8";
+  }
+}
+function macaddr8(name) {
+  return new PgMacaddr8Builder(name ?? "");
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/columns/numeric.js
+class PgNumericBuilder extends PgColumnBuilder {
+  static [entityKind] = "PgNumericBuilder";
+  constructor(name, precision, scale) {
+    super(name, "string", "PgNumeric");
+    this.config.precision = precision;
+    this.config.scale = scale;
+  }
+  build(table) {
+    return new PgNumeric(table, this.config);
+  }
+}
+
+class PgNumeric extends PgColumn {
+  static [entityKind] = "PgNumeric";
+  precision;
+  scale;
+  constructor(table, config2) {
+    super(table, config2);
+    this.precision = config2.precision;
+    this.scale = config2.scale;
+  }
+  mapFromDriverValue(value) {
+    if (typeof value === "string")
+      return value;
+    return String(value);
+  }
+  getSQLType() {
+    if (this.precision !== undefined && this.scale !== undefined) {
+      return `numeric(${this.precision}, ${this.scale})`;
+    } else if (this.precision === undefined) {
+      return "numeric";
+    } else {
+      return `numeric(${this.precision})`;
+    }
+  }
+}
+
+class PgNumericNumberBuilder extends PgColumnBuilder {
+  static [entityKind] = "PgNumericNumberBuilder";
+  constructor(name, precision, scale) {
+    super(name, "number", "PgNumericNumber");
+    this.config.precision = precision;
+    this.config.scale = scale;
+  }
+  build(table) {
+    return new PgNumericNumber(table, this.config);
+  }
+}
+
+class PgNumericNumber extends PgColumn {
+  static [entityKind] = "PgNumericNumber";
+  precision;
+  scale;
+  constructor(table, config2) {
+    super(table, config2);
+    this.precision = config2.precision;
+    this.scale = config2.scale;
+  }
+  mapFromDriverValue(value) {
+    if (typeof value === "number")
+      return value;
+    return Number(value);
+  }
+  mapToDriverValue = String;
+  getSQLType() {
+    if (this.precision !== undefined && this.scale !== undefined) {
+      return `numeric(${this.precision}, ${this.scale})`;
+    } else if (this.precision === undefined) {
+      return "numeric";
+    } else {
+      return `numeric(${this.precision})`;
+    }
+  }
+}
+
+class PgNumericBigIntBuilder extends PgColumnBuilder {
+  static [entityKind] = "PgNumericBigIntBuilder";
+  constructor(name, precision, scale) {
+    super(name, "bigint", "PgNumericBigInt");
+    this.config.precision = precision;
+    this.config.scale = scale;
+  }
+  build(table) {
+    return new PgNumericBigInt(table, this.config);
+  }
+}
+
+class PgNumericBigInt extends PgColumn {
+  static [entityKind] = "PgNumericBigInt";
+  precision;
+  scale;
+  constructor(table, config2) {
+    super(table, config2);
+    this.precision = config2.precision;
+    this.scale = config2.scale;
+  }
+  mapFromDriverValue = BigInt;
+  mapToDriverValue = String;
+  getSQLType() {
+    if (this.precision !== undefined && this.scale !== undefined) {
+      return `numeric(${this.precision}, ${this.scale})`;
+    } else if (this.precision === undefined) {
+      return "numeric";
+    } else {
+      return `numeric(${this.precision})`;
+    }
+  }
+}
+function numeric(a, b) {
+  const { name, config: config2 } = getColumnNameAndConfig(a, b);
+  const mode = config2?.mode;
+  return mode === "number" ? new PgNumericNumberBuilder(name, config2?.precision, config2?.scale) : mode === "bigint" ? new PgNumericBigIntBuilder(name, config2?.precision, config2?.scale) : new PgNumericBuilder(name, config2?.precision, config2?.scale);
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/columns/point.js
+class PgPointTupleBuilder extends PgColumnBuilder {
+  static [entityKind] = "PgPointTupleBuilder";
+  constructor(name) {
+    super(name, "array", "PgPointTuple");
+  }
+  build(table) {
+    return new PgPointTuple(table, this.config);
+  }
+}
+
+class PgPointTuple extends PgColumn {
+  static [entityKind] = "PgPointTuple";
+  getSQLType() {
+    return "point";
+  }
+  mapFromDriverValue(value) {
+    if (typeof value === "string") {
+      const [x, y] = value.slice(1, -1).split(",");
+      return [Number.parseFloat(x), Number.parseFloat(y)];
+    }
+    return [value.x, value.y];
+  }
+  mapToDriverValue(value) {
+    return `(${value[0]},${value[1]})`;
+  }
+}
+
+class PgPointObjectBuilder extends PgColumnBuilder {
+  static [entityKind] = "PgPointObjectBuilder";
+  constructor(name) {
+    super(name, "json", "PgPointObject");
+  }
+  build(table) {
+    return new PgPointObject(table, this.config);
+  }
+}
+
+class PgPointObject extends PgColumn {
+  static [entityKind] = "PgPointObject";
+  getSQLType() {
+    return "point";
+  }
+  mapFromDriverValue(value) {
+    if (typeof value === "string") {
+      const [x, y] = value.slice(1, -1).split(",");
+      return { x: Number.parseFloat(x), y: Number.parseFloat(y) };
+    }
+    return value;
+  }
+  mapToDriverValue(value) {
+    return `(${value.x},${value.y})`;
+  }
+}
+function point(a, b) {
+  const { name, config: config2 } = getColumnNameAndConfig(a, b);
+  if (!config2?.mode || config2.mode === "tuple") {
+    return new PgPointTupleBuilder(name);
+  }
+  return new PgPointObjectBuilder(name);
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/columns/postgis_extension/utils.js
+function hexToBytes(hex3) {
+  const bytes = [];
+  for (let c = 0;c < hex3.length; c += 2) {
+    bytes.push(Number.parseInt(hex3.slice(c, c + 2), 16));
+  }
+  return new Uint8Array(bytes);
+}
+function bytesToFloat64(bytes, offset) {
+  const buffer = new ArrayBuffer(8);
+  const view = new DataView(buffer);
+  for (let i = 0;i < 8; i++) {
+    view.setUint8(i, bytes[offset + i]);
+  }
+  return view.getFloat64(0, true);
+}
+function parseEWKB(hex3) {
+  const bytes = hexToBytes(hex3);
+  let offset = 0;
+  const byteOrder = bytes[offset];
+  offset += 1;
+  const view = new DataView(bytes.buffer);
+  const geomType = view.getUint32(offset, byteOrder === 1);
+  offset += 4;
+  let _srid;
+  if (geomType & 536870912) {
+    _srid = view.getUint32(offset, byteOrder === 1);
+    offset += 4;
+  }
+  if ((geomType & 65535) === 1) {
+    const x = bytesToFloat64(bytes, offset);
+    offset += 8;
+    const y = bytesToFloat64(bytes, offset);
+    offset += 8;
+    return [x, y];
+  }
+  throw new Error("Unsupported geometry type");
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/columns/postgis_extension/geometry.js
+class PgGeometryBuilder extends PgColumnBuilder {
+  static [entityKind] = "PgGeometryBuilder";
+  constructor(name) {
+    super(name, "array", "PgGeometry");
+  }
+  build(table) {
+    return new PgGeometry(table, this.config);
+  }
+}
+
+class PgGeometry extends PgColumn {
+  static [entityKind] = "PgGeometry";
+  getSQLType() {
+    return "geometry(point)";
+  }
+  mapFromDriverValue(value) {
+    return parseEWKB(value);
+  }
+  mapToDriverValue(value) {
+    return `point(${value[0]} ${value[1]})`;
+  }
+}
+
+class PgGeometryObjectBuilder extends PgColumnBuilder {
+  static [entityKind] = "PgGeometryObjectBuilder";
+  constructor(name) {
+    super(name, "json", "PgGeometryObject");
+  }
+  build(table) {
+    return new PgGeometryObject(table, this.config);
+  }
+}
+
+class PgGeometryObject extends PgColumn {
+  static [entityKind] = "PgGeometryObject";
+  getSQLType() {
+    return "geometry(point)";
+  }
+  mapFromDriverValue(value) {
+    const parsed = parseEWKB(value);
+    return { x: parsed[0], y: parsed[1] };
+  }
+  mapToDriverValue(value) {
+    return `point(${value.x} ${value.y})`;
+  }
+}
+function geometry(a, b) {
+  const { name, config: config2 } = getColumnNameAndConfig(a, b);
+  if (!config2?.mode || config2.mode === "tuple") {
+    return new PgGeometryBuilder(name);
+  }
+  return new PgGeometryObjectBuilder(name);
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/columns/real.js
+class PgRealBuilder extends PgColumnBuilder {
+  static [entityKind] = "PgRealBuilder";
+  constructor(name, length) {
+    super(name, "number", "PgReal");
+    this.config.length = length;
+  }
+  build(table) {
+    return new PgReal(table, this.config);
+  }
+}
+
+class PgReal extends PgColumn {
+  static [entityKind] = "PgReal";
+  constructor(table, config2) {
+    super(table, config2);
+  }
+  getSQLType() {
+    return "real";
+  }
+  mapFromDriverValue = (value) => {
+    if (typeof value === "string") {
+      return Number.parseFloat(value);
+    }
+    return value;
+  };
+}
+function real(name) {
+  return new PgRealBuilder(name ?? "");
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/columns/serial.js
+class PgSerialBuilder extends PgColumnBuilder {
+  static [entityKind] = "PgSerialBuilder";
+  constructor(name) {
+    super(name, "number", "PgSerial");
+    this.config.hasDefault = true;
+    this.config.notNull = true;
+  }
+  build(table) {
+    return new PgSerial(table, this.config);
+  }
+}
+
+class PgSerial extends PgColumn {
+  static [entityKind] = "PgSerial";
+  getSQLType() {
+    return "serial";
+  }
+}
+function serial(name) {
+  return new PgSerialBuilder(name ?? "");
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/columns/smallint.js
+class PgSmallIntBuilder extends PgIntColumnBaseBuilder {
+  static [entityKind] = "PgSmallIntBuilder";
+  constructor(name) {
+    super(name, "number", "PgSmallInt");
+  }
+  build(table) {
+    return new PgSmallInt(table, this.config);
+  }
+}
+
+class PgSmallInt extends PgColumn {
+  static [entityKind] = "PgSmallInt";
+  getSQLType() {
+    return "smallint";
+  }
+  mapFromDriverValue = (value) => {
+    if (typeof value === "string") {
+      return Number(value);
+    }
+    return value;
+  };
+}
+function smallint(name) {
+  return new PgSmallIntBuilder(name ?? "");
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/columns/smallserial.js
+class PgSmallSerialBuilder extends PgColumnBuilder {
+  static [entityKind] = "PgSmallSerialBuilder";
+  constructor(name) {
+    super(name, "number", "PgSmallSerial");
+    this.config.hasDefault = true;
+    this.config.notNull = true;
+  }
+  build(table) {
+    return new PgSmallSerial(table, this.config);
+  }
+}
+
+class PgSmallSerial extends PgColumn {
+  static [entityKind] = "PgSmallSerial";
+  getSQLType() {
+    return "smallserial";
+  }
+}
+function smallserial(name) {
+  return new PgSmallSerialBuilder(name ?? "");
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/columns/text.js
+class PgTextBuilder extends PgColumnBuilder {
+  static [entityKind] = "PgTextBuilder";
+  constructor(name, config2) {
+    super(name, "string", "PgText");
+    this.config.enumValues = config2.enum;
+  }
+  build(table) {
+    return new PgText(table, this.config);
+  }
+}
+
+class PgText extends PgColumn {
+  static [entityKind] = "PgText";
+  enumValues = this.config.enumValues;
+  getSQLType() {
+    return "text";
+  }
+}
+function text(a, b = {}) {
+  const { name, config: config2 } = getColumnNameAndConfig(a, b);
+  return new PgTextBuilder(name, config2);
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/columns/time.js
+class PgTimeBuilder extends PgDateColumnBaseBuilder {
+  constructor(name, withTimezone, precision) {
+    super(name, "string", "PgTime");
+    this.withTimezone = withTimezone;
+    this.precision = precision;
+    this.config.withTimezone = withTimezone;
+    this.config.precision = precision;
+  }
+  static [entityKind] = "PgTimeBuilder";
+  build(table) {
+    return new PgTime(table, this.config);
+  }
+}
+
+class PgTime extends PgColumn {
+  static [entityKind] = "PgTime";
+  withTimezone;
+  precision;
+  constructor(table, config2) {
+    super(table, config2);
+    this.withTimezone = config2.withTimezone;
+    this.precision = config2.precision;
+  }
+  getSQLType() {
+    const precision = this.precision === undefined ? "" : `(${this.precision})`;
+    return `time${precision}${this.withTimezone ? " with time zone" : ""}`;
+  }
+}
+function time3(a, b = {}) {
+  const { name, config: config2 } = getColumnNameAndConfig(a, b);
+  return new PgTimeBuilder(name, config2.withTimezone ?? false, config2.precision);
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/columns/timestamp.js
+class PgTimestampBuilder extends PgDateColumnBaseBuilder {
+  static [entityKind] = "PgTimestampBuilder";
+  constructor(name, withTimezone, precision) {
+    super(name, "date", "PgTimestamp");
+    this.config.withTimezone = withTimezone;
+    this.config.precision = precision;
+  }
+  build(table) {
+    return new PgTimestamp(table, this.config);
+  }
+}
+
+class PgTimestamp extends PgColumn {
+  static [entityKind] = "PgTimestamp";
+  withTimezone;
+  precision;
+  constructor(table, config2) {
+    super(table, config2);
+    this.withTimezone = config2.withTimezone;
+    this.precision = config2.precision;
+  }
+  getSQLType() {
+    const precision = this.precision === undefined ? "" : ` (${this.precision})`;
+    return `timestamp${precision}${this.withTimezone ? " with time zone" : ""}`;
+  }
+  mapFromDriverValue = (value) => {
+    return new Date(this.withTimezone ? value : value + "+0000");
+  };
+  mapToDriverValue = (value) => {
+    return value.toISOString();
+  };
+}
+
+class PgTimestampStringBuilder extends PgDateColumnBaseBuilder {
+  static [entityKind] = "PgTimestampStringBuilder";
+  constructor(name, withTimezone, precision) {
+    super(name, "string", "PgTimestampString");
+    this.config.withTimezone = withTimezone;
+    this.config.precision = precision;
+  }
+  build(table) {
+    return new PgTimestampString(table, this.config);
+  }
+}
+
+class PgTimestampString extends PgColumn {
+  static [entityKind] = "PgTimestampString";
+  withTimezone;
+  precision;
+  constructor(table, config2) {
+    super(table, config2);
+    this.withTimezone = config2.withTimezone;
+    this.precision = config2.precision;
+  }
+  getSQLType() {
+    const precision = this.precision === undefined ? "" : `(${this.precision})`;
+    return `timestamp${precision}${this.withTimezone ? " with time zone" : ""}`;
+  }
+}
+function timestamp(a, b = {}) {
+  const { name, config: config2 } = getColumnNameAndConfig(a, b);
+  if (config2?.mode === "string") {
+    return new PgTimestampStringBuilder(name, config2.withTimezone ?? false, config2.precision);
+  }
+  return new PgTimestampBuilder(name, config2?.withTimezone ?? false, config2?.precision);
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/columns/uuid.js
+class PgUUIDBuilder extends PgColumnBuilder {
+  static [entityKind] = "PgUUIDBuilder";
+  constructor(name) {
+    super(name, "string", "PgUUID");
+  }
+  defaultRandom() {
+    return this.default(sql`gen_random_uuid()`);
+  }
+  build(table) {
+    return new PgUUID(table, this.config);
+  }
+}
+
+class PgUUID extends PgColumn {
+  static [entityKind] = "PgUUID";
+  getSQLType() {
+    return "uuid";
+  }
+}
+function uuid3(name) {
+  return new PgUUIDBuilder(name ?? "");
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/columns/varchar.js
+class PgVarcharBuilder extends PgColumnBuilder {
+  static [entityKind] = "PgVarcharBuilder";
+  constructor(name, config2) {
+    super(name, "string", "PgVarchar");
+    this.config.length = config2.length;
+    this.config.enumValues = config2.enum;
+  }
+  build(table) {
+    return new PgVarchar(table, this.config);
+  }
+}
+
+class PgVarchar extends PgColumn {
+  static [entityKind] = "PgVarchar";
+  length = this.config.length;
+  enumValues = this.config.enumValues;
+  getSQLType() {
+    return this.length === undefined ? `varchar` : `varchar(${this.length})`;
+  }
+}
+function varchar(a, b = {}) {
+  const { name, config: config2 } = getColumnNameAndConfig(a, b);
+  return new PgVarcharBuilder(name, config2);
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/columns/vector_extension/bit.js
+class PgBinaryVectorBuilder extends PgColumnBuilder {
+  static [entityKind] = "PgBinaryVectorBuilder";
+  constructor(name, config2) {
+    super(name, "string", "PgBinaryVector");
+    this.config.dimensions = config2.dimensions;
+  }
+  build(table) {
+    return new PgBinaryVector(table, this.config);
+  }
+}
+
+class PgBinaryVector extends PgColumn {
+  static [entityKind] = "PgBinaryVector";
+  dimensions = this.config.dimensions;
+  getSQLType() {
+    return `bit(${this.dimensions})`;
+  }
+}
+function bit(a, b) {
+  const { name, config: config2 } = getColumnNameAndConfig(a, b);
+  return new PgBinaryVectorBuilder(name, config2);
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/columns/vector_extension/halfvec.js
+class PgHalfVectorBuilder extends PgColumnBuilder {
+  static [entityKind] = "PgHalfVectorBuilder";
+  constructor(name, config2) {
+    super(name, "array", "PgHalfVector");
+    this.config.dimensions = config2.dimensions;
+  }
+  build(table) {
+    return new PgHalfVector(table, this.config);
+  }
+}
+
+class PgHalfVector extends PgColumn {
+  static [entityKind] = "PgHalfVector";
+  dimensions = this.config.dimensions;
+  getSQLType() {
+    return `halfvec(${this.dimensions})`;
+  }
+  mapToDriverValue(value) {
+    return JSON.stringify(value);
+  }
+  mapFromDriverValue(value) {
+    return value.slice(1, -1).split(",").map((v) => Number.parseFloat(v));
+  }
+}
+function halfvec(a, b) {
+  const { name, config: config2 } = getColumnNameAndConfig(a, b);
+  return new PgHalfVectorBuilder(name, config2);
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/columns/vector_extension/sparsevec.js
+class PgSparseVectorBuilder extends PgColumnBuilder {
+  static [entityKind] = "PgSparseVectorBuilder";
+  constructor(name, config2) {
+    super(name, "string", "PgSparseVector");
+    this.config.dimensions = config2.dimensions;
+  }
+  build(table) {
+    return new PgSparseVector(table, this.config);
+  }
+}
+
+class PgSparseVector extends PgColumn {
+  static [entityKind] = "PgSparseVector";
+  dimensions = this.config.dimensions;
+  getSQLType() {
+    return `sparsevec(${this.dimensions})`;
+  }
+}
+function sparsevec(a, b) {
+  const { name, config: config2 } = getColumnNameAndConfig(a, b);
+  return new PgSparseVectorBuilder(name, config2);
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/columns/vector_extension/vector.js
+class PgVectorBuilder extends PgColumnBuilder {
+  static [entityKind] = "PgVectorBuilder";
+  constructor(name, config2) {
+    super(name, "array", "PgVector");
+    this.config.dimensions = config2.dimensions;
+  }
+  build(table) {
+    return new PgVector(table, this.config);
+  }
+}
+
+class PgVector extends PgColumn {
+  static [entityKind] = "PgVector";
+  dimensions = this.config.dimensions;
+  getSQLType() {
+    return `vector(${this.dimensions})`;
+  }
+  mapToDriverValue(value) {
+    return JSON.stringify(value);
+  }
+  mapFromDriverValue(value) {
+    return value.slice(1, -1).split(",").map((v) => Number.parseFloat(v));
+  }
+}
+function vector(a, b) {
+  const { name, config: config2 } = getColumnNameAndConfig(a, b);
+  return new PgVectorBuilder(name, config2);
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/columns/all.js
+function getPgColumnBuilders() {
+  return {
+    bigint: bigint4,
+    bigserial,
+    boolean: boolean4,
+    char,
+    cidr,
+    customType,
+    date: date5,
+    doublePrecision,
+    inet,
+    integer: integer2,
+    interval,
+    json: json2,
+    jsonb,
+    line,
+    macaddr,
+    macaddr8,
+    numeric,
+    point,
+    geometry,
+    real,
+    serial,
+    smallint,
+    smallserial,
+    text,
+    time: time3,
+    timestamp,
+    uuid: uuid3,
+    varchar,
+    bit,
+    halfvec,
+    sparsevec,
+    vector
+  };
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/table.js
+var InlineForeignKeys = Symbol.for("drizzle:PgInlineForeignKeys");
+var EnableRLS = Symbol.for("drizzle:EnableRLS");
+
+class PgTable extends Table {
+  static [entityKind] = "PgTable";
+  static Symbol = Object.assign({}, Table.Symbol, {
+    InlineForeignKeys,
+    EnableRLS
+  });
+  [InlineForeignKeys] = [];
+  [EnableRLS] = false;
+  [Table.Symbol.ExtraConfigBuilder] = undefined;
+  [Table.Symbol.ExtraConfigColumns] = {};
+}
+function pgTableWithSchema(name, columns, extraConfig, schema, baseName = name) {
+  const rawTable = new PgTable(name, schema, baseName);
+  const parsedColumns = typeof columns === "function" ? columns(getPgColumnBuilders()) : columns;
+  const builtColumns = Object.fromEntries(Object.entries(parsedColumns).map(([name2, colBuilderBase]) => {
+    const colBuilder = colBuilderBase;
+    colBuilder.setName(name2);
+    const column = colBuilder.build(rawTable);
+    rawTable[InlineForeignKeys].push(...colBuilder.buildForeignKeys(column, rawTable));
+    return [name2, column];
+  }));
+  const builtColumnsForExtraConfig = Object.fromEntries(Object.entries(parsedColumns).map(([name2, colBuilderBase]) => {
+    const colBuilder = colBuilderBase;
+    colBuilder.setName(name2);
+    const column = colBuilder.buildExtraConfigColumn(rawTable);
+    return [name2, column];
+  }));
+  const table = Object.assign(rawTable, builtColumns);
+  table[Table.Symbol.Columns] = builtColumns;
+  table[Table.Symbol.ExtraConfigColumns] = builtColumnsForExtraConfig;
+  if (extraConfig) {
+    table[PgTable.Symbol.ExtraConfigBuilder] = extraConfig;
+  }
+  return Object.assign(table, {
+    enableRLS: () => {
+      table[PgTable.Symbol.EnableRLS] = true;
+      return table;
+    }
+  });
+}
+var pgTable = (name, columns, extraConfig) => {
+  return pgTableWithSchema(name, columns, extraConfig, undefined);
+};
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/primary-keys.js
+function primaryKey(...config2) {
+  if (config2[0].columns) {
+    return new PrimaryKeyBuilder(config2[0].columns, config2[0].name);
+  }
+  return new PrimaryKeyBuilder(config2);
+}
+
+class PrimaryKeyBuilder {
+  static [entityKind] = "PgPrimaryKeyBuilder";
+  columns;
+  name;
+  constructor(columns, name) {
+    this.columns = columns;
+    this.name = name;
+  }
+  build(table) {
+    return new PrimaryKey(table, this.columns, this.name);
+  }
+}
+
+class PrimaryKey {
+  constructor(table, columns, name) {
+    this.table = table;
+    this.columns = columns;
+    this.name = name;
+  }
+  static [entityKind] = "PgPrimaryKey";
+  columns;
+  name;
+  getName() {
+    return this.name ?? `${this.table[PgTable.Symbol.Name]}_${this.columns.map((column) => column.name).join("_")}_pk`;
+  }
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/sql/expressions/conditions.js
+function bindIfParam(value, column) {
+  if (isDriverValueEncoder(column) && !isSQLWrapper(value) && !is(value, Param) && !is(value, Placeholder) && !is(value, Column) && !is(value, Table) && !is(value, View)) {
+    return new Param(value, column);
+  }
+  return value;
+}
+var eq = (left, right) => {
+  return sql`${left} = ${bindIfParam(right, left)}`;
+};
+var ne = (left, right) => {
+  return sql`${left} <> ${bindIfParam(right, left)}`;
+};
+function and(...unfilteredConditions) {
+  const conditions = unfilteredConditions.filter((c) => c !== undefined);
+  if (conditions.length === 0) {
+    return;
+  }
+  if (conditions.length === 1) {
+    return new SQL(conditions);
+  }
+  return new SQL([
+    new StringChunk("("),
+    sql.join(conditions, new StringChunk(" and ")),
+    new StringChunk(")")
+  ]);
+}
+function or(...unfilteredConditions) {
+  const conditions = unfilteredConditions.filter((c) => c !== undefined);
+  if (conditions.length === 0) {
+    return;
+  }
+  if (conditions.length === 1) {
+    return new SQL(conditions);
+  }
+  return new SQL([
+    new StringChunk("("),
+    sql.join(conditions, new StringChunk(" or ")),
+    new StringChunk(")")
+  ]);
+}
+function not(condition) {
+  return sql`not ${condition}`;
+}
+var gt = (left, right) => {
+  return sql`${left} > ${bindIfParam(right, left)}`;
+};
+var gte = (left, right) => {
+  return sql`${left} >= ${bindIfParam(right, left)}`;
+};
+var lt = (left, right) => {
+  return sql`${left} < ${bindIfParam(right, left)}`;
+};
+var lte = (left, right) => {
+  return sql`${left} <= ${bindIfParam(right, left)}`;
+};
+function inArray(column, values) {
+  if (Array.isArray(values)) {
+    if (values.length === 0) {
+      return sql`false`;
+    }
+    return sql`${column} in ${values.map((v) => bindIfParam(v, column))}`;
+  }
+  return sql`${column} in ${bindIfParam(values, column)}`;
+}
+function notInArray(column, values) {
+  if (Array.isArray(values)) {
+    if (values.length === 0) {
+      return sql`true`;
+    }
+    return sql`${column} not in ${values.map((v) => bindIfParam(v, column))}`;
+  }
+  return sql`${column} not in ${bindIfParam(values, column)}`;
+}
+function isNull(value) {
+  return sql`${value} is null`;
+}
+function isNotNull(value) {
+  return sql`${value} is not null`;
+}
+function exists(subquery) {
+  return sql`exists ${subquery}`;
+}
+function notExists(subquery) {
+  return sql`not exists ${subquery}`;
+}
+function between(column, min, max) {
+  return sql`${column} between ${bindIfParam(min, column)} and ${bindIfParam(max, column)}`;
+}
+function notBetween(column, min, max) {
+  return sql`${column} not between ${bindIfParam(min, column)} and ${bindIfParam(max, column)}`;
+}
+function like(column, value) {
+  return sql`${column} like ${value}`;
+}
+function notLike(column, value) {
+  return sql`${column} not like ${value}`;
+}
+function ilike(column, value) {
+  return sql`${column} ilike ${value}`;
+}
+function notIlike(column, value) {
+  return sql`${column} not ilike ${value}`;
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/sql/expressions/select.js
+function asc(column) {
+  return sql`${column} asc`;
+}
+function desc(column) {
+  return sql`${column} desc`;
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/relations.js
+class Relation {
+  constructor(sourceTable, referencedTable, relationName) {
+    this.sourceTable = sourceTable;
+    this.referencedTable = referencedTable;
+    this.relationName = relationName;
+    this.referencedTableName = referencedTable[Table.Symbol.Name];
+  }
+  static [entityKind] = "Relation";
+  referencedTableName;
+  fieldName;
+}
+
+class Relations {
+  constructor(table, config2) {
+    this.table = table;
+    this.config = config2;
+  }
+  static [entityKind] = "Relations";
+}
+
+class One extends Relation {
+  constructor(sourceTable, referencedTable, config2, isNullable) {
+    super(sourceTable, referencedTable, config2?.relationName);
+    this.config = config2;
+    this.isNullable = isNullable;
+  }
+  static [entityKind] = "One";
+  withFieldName(fieldName) {
+    const relation = new One(this.sourceTable, this.referencedTable, this.config, this.isNullable);
+    relation.fieldName = fieldName;
+    return relation;
+  }
+}
+
+class Many extends Relation {
+  constructor(sourceTable, referencedTable, config2) {
+    super(sourceTable, referencedTable, config2?.relationName);
+    this.config = config2;
+  }
+  static [entityKind] = "Many";
+  withFieldName(fieldName) {
+    const relation = new Many(this.sourceTable, this.referencedTable, this.config);
+    relation.fieldName = fieldName;
+    return relation;
+  }
+}
+function getOperators() {
+  return {
+    and,
+    between,
+    eq,
+    exists,
+    gt,
+    gte,
+    ilike,
+    inArray,
+    isNull,
+    isNotNull,
+    like,
+    lt,
+    lte,
+    ne,
+    not,
+    notBetween,
+    notExists,
+    notLike,
+    notIlike,
+    notInArray,
+    or,
+    sql
+  };
+}
+function getOrderByOperators() {
+  return {
+    sql,
+    asc,
+    desc
+  };
+}
+function extractTablesRelationalConfig(schema, configHelpers) {
+  if (Object.keys(schema).length === 1 && "default" in schema && !is(schema["default"], Table)) {
+    schema = schema["default"];
+  }
+  const tableNamesMap = {};
+  const relationsBuffer = {};
+  const tablesConfig = {};
+  for (const [key, value] of Object.entries(schema)) {
+    if (is(value, Table)) {
+      const dbName = getTableUniqueName(value);
+      const bufferedRelations = relationsBuffer[dbName];
+      tableNamesMap[dbName] = key;
+      tablesConfig[key] = {
+        tsName: key,
+        dbName: value[Table.Symbol.Name],
+        schema: value[Table.Symbol.Schema],
+        columns: value[Table.Symbol.Columns],
+        relations: bufferedRelations?.relations ?? {},
+        primaryKey: bufferedRelations?.primaryKey ?? []
+      };
+      for (const column of Object.values(value[Table.Symbol.Columns])) {
+        if (column.primary) {
+          tablesConfig[key].primaryKey.push(column);
+        }
+      }
+      const extraConfig = value[Table.Symbol.ExtraConfigBuilder]?.(value[Table.Symbol.ExtraConfigColumns]);
+      if (extraConfig) {
+        for (const configEntry of Object.values(extraConfig)) {
+          if (is(configEntry, PrimaryKeyBuilder)) {
+            tablesConfig[key].primaryKey.push(...configEntry.columns);
+          }
+        }
+      }
+    } else if (is(value, Relations)) {
+      const dbName = getTableUniqueName(value.table);
+      const tableName = tableNamesMap[dbName];
+      const relations2 = value.config(configHelpers(value.table));
+      let primaryKey2;
+      for (const [relationName, relation] of Object.entries(relations2)) {
+        if (tableName) {
+          const tableConfig = tablesConfig[tableName];
+          tableConfig.relations[relationName] = relation;
+          if (primaryKey2) {
+            tableConfig.primaryKey.push(...primaryKey2);
+          }
+        } else {
+          if (!(dbName in relationsBuffer)) {
+            relationsBuffer[dbName] = {
+              relations: {},
+              primaryKey: primaryKey2
+            };
+          }
+          relationsBuffer[dbName].relations[relationName] = relation;
+        }
+      }
+    }
+  }
+  return { tables: tablesConfig, tableNamesMap };
+}
+function createOne(sourceTable) {
+  return function one(table, config2) {
+    return new One(sourceTable, table, config2, config2?.fields.reduce((res, f) => res && f.notNull, true) ?? false);
+  };
+}
+function createMany(sourceTable) {
+  return function many(referencedTable, config2) {
+    return new Many(sourceTable, referencedTable, config2);
+  };
+}
+function normalizeRelation(schema, tableNamesMap, relation) {
+  if (is(relation, One) && relation.config) {
+    return {
+      fields: relation.config.fields,
+      references: relation.config.references
+    };
+  }
+  const referencedTableTsName = tableNamesMap[getTableUniqueName(relation.referencedTable)];
+  if (!referencedTableTsName) {
+    throw new Error(`Table "${relation.referencedTable[Table.Symbol.Name]}" not found in schema`);
+  }
+  const referencedTableConfig = schema[referencedTableTsName];
+  if (!referencedTableConfig) {
+    throw new Error(`Table "${referencedTableTsName}" not found in schema`);
+  }
+  const sourceTable = relation.sourceTable;
+  const sourceTableTsName = tableNamesMap[getTableUniqueName(sourceTable)];
+  if (!sourceTableTsName) {
+    throw new Error(`Table "${sourceTable[Table.Symbol.Name]}" not found in schema`);
+  }
+  const reverseRelations = [];
+  for (const referencedTableRelation of Object.values(referencedTableConfig.relations)) {
+    if (relation.relationName && relation !== referencedTableRelation && referencedTableRelation.relationName === relation.relationName || !relation.relationName && referencedTableRelation.referencedTable === relation.sourceTable) {
+      reverseRelations.push(referencedTableRelation);
+    }
+  }
+  if (reverseRelations.length > 1) {
+    throw relation.relationName ? new Error(`There are multiple relations with name "${relation.relationName}" in table "${referencedTableTsName}"`) : new Error(`There are multiple relations between "${referencedTableTsName}" and "${relation.sourceTable[Table.Symbol.Name]}". Please specify relation name`);
+  }
+  if (reverseRelations[0] && is(reverseRelations[0], One) && reverseRelations[0].config) {
+    return {
+      fields: reverseRelations[0].config.references,
+      references: reverseRelations[0].config.fields
+    };
+  }
+  throw new Error(`There is not enough information to infer relation "${sourceTableTsName}.${relation.fieldName}"`);
+}
+function createTableRelationsHelpers(sourceTable) {
+  return {
+    one: createOne(sourceTable),
+    many: createMany(sourceTable)
+  };
+}
+function mapRelationalRow(tablesConfig, tableConfig, row, buildQueryResultSelection, mapColumnValue = (value) => value) {
+  const result = {};
+  for (const [
+    selectionItemIndex,
+    selectionItem
+  ] of buildQueryResultSelection.entries()) {
+    if (selectionItem.isJson) {
+      const relation = tableConfig.relations[selectionItem.tsKey];
+      const rawSubRows = row[selectionItemIndex];
+      const subRows = typeof rawSubRows === "string" ? JSON.parse(rawSubRows) : rawSubRows;
+      result[selectionItem.tsKey] = is(relation, One) ? subRows && mapRelationalRow(tablesConfig, tablesConfig[selectionItem.relationTableTsKey], subRows, selectionItem.selection, mapColumnValue) : subRows.map((subRow) => mapRelationalRow(tablesConfig, tablesConfig[selectionItem.relationTableTsKey], subRow, selectionItem.selection, mapColumnValue));
+    } else {
+      const value = mapColumnValue(row[selectionItemIndex]);
+      const field = selectionItem.field;
+      let decoder;
+      if (is(field, Column)) {
+        decoder = field;
+      } else if (is(field, SQL)) {
+        decoder = field.decoder;
+      } else {
+        decoder = field.sql.decoder;
+      }
+      result[selectionItem.tsKey] = value === null ? null : decoder.mapFromDriverValue(value);
+    }
+  }
+  return result;
+}
+
+// ../../node_modules/.bun/postgres@3.4.8/node_modules/postgres/src/index.js
+import os from "os";
+import fs from "fs";
+
+// ../../node_modules/.bun/postgres@3.4.8/node_modules/postgres/src/query.js
+var originCache = new Map;
+var originStackCache = new Map;
+var originError = Symbol("OriginError");
+var CLOSE = {};
+
+class Query extends Promise {
+  constructor(strings, args, handler, canceller, options = {}) {
+    let resolve, reject;
+    super((a, b) => {
+      resolve = a;
+      reject = b;
+    });
+    this.tagged = Array.isArray(strings.raw);
+    this.strings = strings;
+    this.args = args;
+    this.handler = handler;
+    this.canceller = canceller;
+    this.options = options;
+    this.state = null;
+    this.statement = null;
+    this.resolve = (x) => (this.active = false, resolve(x));
+    this.reject = (x) => (this.active = false, reject(x));
+    this.active = false;
+    this.cancelled = null;
+    this.executed = false;
+    this.signature = "";
+    this[originError] = this.handler.debug ? new Error : this.tagged && cachedError(this.strings);
+  }
+  get origin() {
+    return (this.handler.debug ? this[originError].stack : this.tagged && originStackCache.has(this.strings) ? originStackCache.get(this.strings) : originStackCache.set(this.strings, this[originError].stack).get(this.strings)) || "";
+  }
+  static get [Symbol.species]() {
+    return Promise;
+  }
+  cancel() {
+    return this.canceller && (this.canceller(this), this.canceller = null);
+  }
+  simple() {
+    this.options.simple = true;
+    this.options.prepare = false;
+    return this;
+  }
+  async readable() {
+    this.simple();
+    this.streaming = true;
+    return this;
+  }
+  async writable() {
+    this.simple();
+    this.streaming = true;
+    return this;
+  }
+  cursor(rows = 1, fn) {
+    this.options.simple = false;
+    if (typeof rows === "function") {
+      fn = rows;
+      rows = 1;
+    }
+    this.cursorRows = rows;
+    if (typeof fn === "function")
+      return this.cursorFn = fn, this;
+    let prev;
+    return {
+      [Symbol.asyncIterator]: () => ({
+        next: () => {
+          if (this.executed && !this.active)
+            return { done: true };
+          prev && prev();
+          const promise2 = new Promise((resolve, reject) => {
+            this.cursorFn = (value) => {
+              resolve({ value, done: false });
+              return new Promise((r) => prev = r);
+            };
+            this.resolve = () => (this.active = false, resolve({ done: true }));
+            this.reject = (x) => (this.active = false, reject(x));
+          });
+          this.execute();
+          return promise2;
+        },
+        return() {
+          prev && prev(CLOSE);
+          return { done: true };
+        }
+      })
+    };
+  }
+  describe() {
+    this.options.simple = false;
+    this.onlyDescribe = this.options.prepare = true;
+    return this;
+  }
+  stream() {
+    throw new Error(".stream has been renamed to .forEach");
+  }
+  forEach(fn) {
+    this.forEachFn = fn;
+    this.handle();
+    return this;
+  }
+  raw() {
+    this.isRaw = true;
+    return this;
+  }
+  values() {
+    this.isRaw = "values";
+    return this;
+  }
+  async handle() {
+    !this.executed && (this.executed = true) && await 1 && this.handler(this);
+  }
+  execute() {
+    this.handle();
+    return this;
+  }
+  then() {
+    this.handle();
+    return super.then.apply(this, arguments);
+  }
+  catch() {
+    this.handle();
+    return super.catch.apply(this, arguments);
+  }
+  finally() {
+    this.handle();
+    return super.finally.apply(this, arguments);
+  }
+}
+function cachedError(xs) {
+  if (originCache.has(xs))
+    return originCache.get(xs);
+  const x = Error.stackTraceLimit;
+  Error.stackTraceLimit = 4;
+  originCache.set(xs, new Error);
+  Error.stackTraceLimit = x;
+  return originCache.get(xs);
+}
+
+// ../../node_modules/.bun/postgres@3.4.8/node_modules/postgres/src/errors.js
+class PostgresError extends Error {
+  constructor(x) {
+    super(x.message);
+    this.name = this.constructor.name;
+    Object.assign(this, x);
+  }
+}
+var Errors = {
+  connection,
+  postgres,
+  generic,
+  notSupported
+};
+function connection(x, options, socket) {
+  const { host, port } = socket || options;
+  const error48 = Object.assign(new Error("write " + x + " " + (options.path || host + ":" + port)), {
+    code: x,
+    errno: x,
+    address: options.path || host
+  }, options.path ? {} : { port });
+  Error.captureStackTrace(error48, connection);
+  return error48;
+}
+function postgres(x) {
+  const error48 = new PostgresError(x);
+  Error.captureStackTrace(error48, postgres);
+  return error48;
+}
+function generic(code, message) {
+  const error48 = Object.assign(new Error(code + ": " + message), { code });
+  Error.captureStackTrace(error48, generic);
+  return error48;
+}
+function notSupported(x) {
+  const error48 = Object.assign(new Error(x + " (B) is not supported"), {
+    code: "MESSAGE_NOT_SUPPORTED",
+    name: x
+  });
+  Error.captureStackTrace(error48, notSupported);
+  return error48;
+}
+
+// ../../node_modules/.bun/postgres@3.4.8/node_modules/postgres/src/types.js
+var types = {
+  string: {
+    to: 25,
+    from: null,
+    serialize: (x) => "" + x
+  },
+  number: {
+    to: 0,
+    from: [21, 23, 26, 700, 701],
+    serialize: (x) => "" + x,
+    parse: (x) => +x
+  },
+  json: {
+    to: 114,
+    from: [114, 3802],
+    serialize: (x) => JSON.stringify(x),
+    parse: (x) => JSON.parse(x)
+  },
+  boolean: {
+    to: 16,
+    from: 16,
+    serialize: (x) => x === true ? "t" : "f",
+    parse: (x) => x === "t"
+  },
+  date: {
+    to: 1184,
+    from: [1082, 1114, 1184],
+    serialize: (x) => (x instanceof Date ? x : new Date(x)).toISOString(),
+    parse: (x) => new Date(x)
+  },
+  bytea: {
+    to: 17,
+    from: 17,
+    serialize: (x) => "\\x" + Buffer.from(x).toString("hex"),
+    parse: (x) => Buffer.from(x.slice(2), "hex")
+  }
+};
+
+class NotTagged {
+  then() {
+    notTagged();
+  }
+  catch() {
+    notTagged();
+  }
+  finally() {
+    notTagged();
+  }
+}
+
+class Identifier extends NotTagged {
+  constructor(value) {
+    super();
+    this.value = escapeIdentifier(value);
+  }
+}
+
+class Parameter extends NotTagged {
+  constructor(value, type, array2) {
+    super();
+    this.value = value;
+    this.type = type;
+    this.array = array2;
+  }
+}
+
+class Builder extends NotTagged {
+  constructor(first, rest) {
+    super();
+    this.first = first;
+    this.rest = rest;
+  }
+  build(before, parameters, types2, options) {
+    const keyword = builders.map(([x, fn]) => ({ fn, i: before.search(x) })).sort((a, b) => a.i - b.i).pop();
+    return keyword.i === -1 ? escapeIdentifiers(this.first, options) : keyword.fn(this.first, this.rest, parameters, types2, options);
+  }
+}
+function handleValue(x, parameters, types2, options) {
+  let value = x instanceof Parameter ? x.value : x;
+  if (value === undefined) {
+    x instanceof Parameter ? x.value = options.transform.undefined : value = x = options.transform.undefined;
+    if (value === undefined)
+      throw Errors.generic("UNDEFINED_VALUE", "Undefined values are not allowed");
+  }
+  return "$" + types2.push(x instanceof Parameter ? (parameters.push(x.value), x.array ? x.array[x.type || inferType(x.value)] || x.type || firstIsString(x.value) : x.type) : (parameters.push(x), inferType(x)));
+}
+var defaultHandlers = typeHandlers(types);
+function stringify2(q, string4, value, parameters, types2, options) {
+  for (let i = 1;i < q.strings.length; i++) {
+    string4 += stringifyValue(string4, value, parameters, types2, options) + q.strings[i];
+    value = q.args[i];
+  }
+  return string4;
+}
+function stringifyValue(string4, value, parameters, types2, o) {
+  return value instanceof Builder ? value.build(string4, parameters, types2, o) : value instanceof Query ? fragment(value, parameters, types2, o) : value instanceof Identifier ? value.value : value && value[0] instanceof Query ? value.reduce((acc, x) => acc + " " + fragment(x, parameters, types2, o), "") : handleValue(value, parameters, types2, o);
+}
+function fragment(q, parameters, types2, options) {
+  q.fragment = true;
+  return stringify2(q, q.strings[0], q.args[0], parameters, types2, options);
+}
+function valuesBuilder(first, parameters, types2, columns, options) {
+  return first.map((row) => "(" + columns.map((column) => stringifyValue("values", row[column], parameters, types2, options)).join(",") + ")").join(",");
+}
+function values(first, rest, parameters, types2, options) {
+  const multi = Array.isArray(first[0]);
+  const columns = rest.length ? rest.flat() : Object.keys(multi ? first[0] : first);
+  return valuesBuilder(multi ? first : [first], parameters, types2, columns, options);
+}
+function select(first, rest, parameters, types2, options) {
+  typeof first === "string" && (first = [first].concat(rest));
+  if (Array.isArray(first))
+    return escapeIdentifiers(first, options);
+  let value;
+  const columns = rest.length ? rest.flat() : Object.keys(first);
+  return columns.map((x) => {
+    value = first[x];
+    return (value instanceof Query ? fragment(value, parameters, types2, options) : value instanceof Identifier ? value.value : handleValue(value, parameters, types2, options)) + " as " + escapeIdentifier(options.transform.column.to ? options.transform.column.to(x) : x);
+  }).join(",");
+}
+var builders = Object.entries({
+  values,
+  in: (...xs) => {
+    const x = values(...xs);
+    return x === "()" ? "(null)" : x;
+  },
+  select,
+  as: select,
+  returning: select,
+  "\\(": select,
+  update(first, rest, parameters, types2, options) {
+    return (rest.length ? rest.flat() : Object.keys(first)).map((x) => escapeIdentifier(options.transform.column.to ? options.transform.column.to(x) : x) + "=" + stringifyValue("values", first[x], parameters, types2, options));
+  },
+  insert(first, rest, parameters, types2, options) {
+    const columns = rest.length ? rest.flat() : Object.keys(Array.isArray(first) ? first[0] : first);
+    return "(" + escapeIdentifiers(columns, options) + ")values" + valuesBuilder(Array.isArray(first) ? first : [first], parameters, types2, columns, options);
+  }
+}).map(([x, fn]) => [new RegExp("((?:^|[\\s(])" + x + "(?:$|[\\s(]))(?![\\s\\S]*\\1)", "i"), fn]);
+function notTagged() {
+  throw Errors.generic("NOT_TAGGED_CALL", "Query not called as a tagged template literal");
+}
+var serializers = defaultHandlers.serializers;
+var parsers = defaultHandlers.parsers;
+function firstIsString(x) {
+  if (Array.isArray(x))
+    return firstIsString(x[0]);
+  return typeof x === "string" ? 1009 : 0;
+}
+var mergeUserTypes = function(types2) {
+  const user = typeHandlers(types2 || {});
+  return {
+    serializers: Object.assign({}, serializers, user.serializers),
+    parsers: Object.assign({}, parsers, user.parsers)
+  };
+};
+function typeHandlers(types2) {
+  return Object.keys(types2).reduce((acc, k) => {
+    types2[k].from && [].concat(types2[k].from).forEach((x) => acc.parsers[x] = types2[k].parse);
+    if (types2[k].serialize) {
+      acc.serializers[types2[k].to] = types2[k].serialize;
+      types2[k].from && [].concat(types2[k].from).forEach((x) => acc.serializers[x] = types2[k].serialize);
+    }
+    return acc;
+  }, { parsers: {}, serializers: {} });
+}
+function escapeIdentifiers(xs, { transform: { column } }) {
+  return xs.map((x) => escapeIdentifier(column.to ? column.to(x) : x)).join(",");
+}
+var escapeIdentifier = function escape2(str) {
+  return '"' + str.replace(/"/g, '""').replace(/\./g, '"."') + '"';
+};
+var inferType = function inferType2(x) {
+  return x instanceof Parameter ? x.type : x instanceof Date ? 1184 : x instanceof Uint8Array ? 17 : x === true || x === false ? 16 : typeof x === "bigint" ? 20 : Array.isArray(x) ? inferType2(x[0]) : 0;
+};
+var escapeBackslash = /\\/g;
+var escapeQuote = /"/g;
+function arrayEscape(x) {
+  return x.replace(escapeBackslash, "\\\\").replace(escapeQuote, "\\\"");
+}
+var arraySerializer = function arraySerializer2(xs, serializer, options, typarray) {
+  if (Array.isArray(xs) === false)
+    return xs;
+  if (!xs.length)
+    return "{}";
+  const first = xs[0];
+  const delimiter = typarray === 1020 ? ";" : ",";
+  if (Array.isArray(first) && !first.type)
+    return "{" + xs.map((x) => arraySerializer2(x, serializer, options, typarray)).join(delimiter) + "}";
+  return "{" + xs.map((x) => {
+    if (x === undefined) {
+      x = options.transform.undefined;
+      if (x === undefined)
+        throw Errors.generic("UNDEFINED_VALUE", "Undefined values are not allowed");
+    }
+    return x === null ? "null" : '"' + arrayEscape(serializer ? serializer(x.type ? x.value : x) : "" + x) + '"';
+  }).join(delimiter) + "}";
+};
+var arrayParserState = {
+  i: 0,
+  char: null,
+  str: "",
+  quoted: false,
+  last: 0
+};
+var arrayParser = function arrayParser2(x, parser, typarray) {
+  arrayParserState.i = arrayParserState.last = 0;
+  return arrayParserLoop(arrayParserState, x, parser, typarray);
+};
+function arrayParserLoop(s, x, parser, typarray) {
+  const xs = [];
+  const delimiter = typarray === 1020 ? ";" : ",";
+  for (;s.i < x.length; s.i++) {
+    s.char = x[s.i];
+    if (s.quoted) {
+      if (s.char === "\\") {
+        s.str += x[++s.i];
+      } else if (s.char === '"') {
+        xs.push(parser ? parser(s.str) : s.str);
+        s.str = "";
+        s.quoted = x[s.i + 1] === '"';
+        s.last = s.i + 2;
+      } else {
+        s.str += s.char;
+      }
+    } else if (s.char === '"') {
+      s.quoted = true;
+    } else if (s.char === "{") {
+      s.last = ++s.i;
+      xs.push(arrayParserLoop(s, x, parser, typarray));
+    } else if (s.char === "}") {
+      s.quoted = false;
+      s.last < s.i && xs.push(parser ? parser(x.slice(s.last, s.i)) : x.slice(s.last, s.i));
+      s.last = s.i + 1;
+      break;
+    } else if (s.char === delimiter && s.p !== "}" && s.p !== '"') {
+      xs.push(parser ? parser(x.slice(s.last, s.i)) : x.slice(s.last, s.i));
+      s.last = s.i + 1;
+    }
+    s.p = s.char;
+  }
+  s.last < s.i && xs.push(parser ? parser(x.slice(s.last, s.i + 1)) : x.slice(s.last, s.i + 1));
+  return xs;
+}
+var toCamel = (x) => {
+  let str = x[0];
+  for (let i = 1;i < x.length; i++)
+    str += x[i] === "_" ? x[++i].toUpperCase() : x[i];
+  return str;
+};
+var toPascal = (x) => {
+  let str = x[0].toUpperCase();
+  for (let i = 1;i < x.length; i++)
+    str += x[i] === "_" ? x[++i].toUpperCase() : x[i];
+  return str;
+};
+var toKebab = (x) => x.replace(/_/g, "-");
+var fromCamel = (x) => x.replace(/([A-Z])/g, "_$1").toLowerCase();
+var fromPascal = (x) => (x.slice(0, 1) + x.slice(1).replace(/([A-Z])/g, "_$1")).toLowerCase();
+var fromKebab = (x) => x.replace(/-/g, "_");
+function createJsonTransform(fn) {
+  return function jsonTransform(x, column) {
+    return typeof x === "object" && x !== null && (column.type === 114 || column.type === 3802) ? Array.isArray(x) ? x.map((x2) => jsonTransform(x2, column)) : Object.entries(x).reduce((acc, [k, v]) => Object.assign(acc, { [fn(k)]: jsonTransform(v, column) }), {}) : x;
+  };
+}
+toCamel.column = { from: toCamel };
+toCamel.value = { from: createJsonTransform(toCamel) };
+fromCamel.column = { to: fromCamel };
+var camel = { ...toCamel };
+camel.column.to = fromCamel;
+toPascal.column = { from: toPascal };
+toPascal.value = { from: createJsonTransform(toPascal) };
+fromPascal.column = { to: fromPascal };
+var pascal = { ...toPascal };
+pascal.column.to = fromPascal;
+toKebab.column = { from: toKebab };
+toKebab.value = { from: createJsonTransform(toKebab) };
+fromKebab.column = { to: fromKebab };
+var kebab = { ...toKebab };
+kebab.column.to = fromKebab;
+
+// ../../node_modules/.bun/postgres@3.4.8/node_modules/postgres/src/connection.js
+import net from "net";
+import tls from "tls";
+import crypto2 from "crypto";
+import Stream from "stream";
+import { performance } from "perf_hooks";
+
+// ../../node_modules/.bun/postgres@3.4.8/node_modules/postgres/src/result.js
+class Result extends Array {
+  constructor() {
+    super();
+    Object.defineProperties(this, {
+      count: { value: null, writable: true },
+      state: { value: null, writable: true },
+      command: { value: null, writable: true },
+      columns: { value: null, writable: true },
+      statement: { value: null, writable: true }
+    });
+  }
+  static get [Symbol.species]() {
+    return Array;
+  }
+}
+
+// ../../node_modules/.bun/postgres@3.4.8/node_modules/postgres/src/queue.js
+var queue_default = Queue;
+function Queue(initial = []) {
+  let xs = initial.slice();
+  let index = 0;
+  return {
+    get length() {
+      return xs.length - index;
+    },
+    remove: (x) => {
+      const index2 = xs.indexOf(x);
+      return index2 === -1 ? null : (xs.splice(index2, 1), x);
+    },
+    push: (x) => (xs.push(x), x),
+    shift: () => {
+      const out = xs[index++];
+      if (index === xs.length) {
+        index = 0;
+        xs = [];
+      } else {
+        xs[index - 1] = undefined;
+      }
+      return out;
+    }
+  };
+}
+
+// ../../node_modules/.bun/postgres@3.4.8/node_modules/postgres/src/bytes.js
+var size = 256;
+var buffer = Buffer.allocUnsafe(size);
+var messages = "BCcDdEFfHPpQSX".split("").reduce((acc, x) => {
+  const v = x.charCodeAt(0);
+  acc[x] = () => {
+    buffer[0] = v;
+    b.i = 5;
+    return b;
+  };
+  return acc;
+}, {});
+var b = Object.assign(reset, messages, {
+  N: String.fromCharCode(0),
+  i: 0,
+  inc(x) {
+    b.i += x;
+    return b;
+  },
+  str(x) {
+    const length = Buffer.byteLength(x);
+    fit(length);
+    b.i += buffer.write(x, b.i, length, "utf8");
+    return b;
+  },
+  i16(x) {
+    fit(2);
+    buffer.writeUInt16BE(x, b.i);
+    b.i += 2;
+    return b;
+  },
+  i32(x, i) {
+    if (i || i === 0) {
+      buffer.writeUInt32BE(x, i);
+      return b;
+    }
+    fit(4);
+    buffer.writeUInt32BE(x, b.i);
+    b.i += 4;
+    return b;
+  },
+  z(x) {
+    fit(x);
+    buffer.fill(0, b.i, b.i + x);
+    b.i += x;
+    return b;
+  },
+  raw(x) {
+    buffer = Buffer.concat([buffer.subarray(0, b.i), x]);
+    b.i = buffer.length;
+    return b;
+  },
+  end(at = 1) {
+    buffer.writeUInt32BE(b.i - at, at);
+    const out = buffer.subarray(0, b.i);
+    b.i = 0;
+    buffer = Buffer.allocUnsafe(size);
+    return out;
+  }
+});
+var bytes_default = b;
+function fit(x) {
+  if (buffer.length - b.i < x) {
+    const prev = buffer, length = prev.length;
+    buffer = Buffer.allocUnsafe(length + (length >> 1) + x);
+    prev.copy(buffer);
+  }
+}
+function reset() {
+  b.i = 0;
+  return b;
+}
+
+// ../../node_modules/.bun/postgres@3.4.8/node_modules/postgres/src/connection.js
+var connection_default = Connection;
+var uid = 1;
+var Sync = bytes_default().S().end();
+var Flush = bytes_default().H().end();
+var SSLRequest = bytes_default().i32(8).i32(80877103).end(8);
+var ExecuteUnnamed = Buffer.concat([bytes_default().E().str(bytes_default.N).i32(0).end(), Sync]);
+var DescribeUnnamed = bytes_default().D().str("S").str(bytes_default.N).end();
+var noop2 = () => {};
+var retryRoutines = new Set([
+  "FetchPreparedStatement",
+  "RevalidateCachedQuery",
+  "transformAssignedExpr"
+]);
+var errorFields = {
+  83: "severity_local",
+  86: "severity",
+  67: "code",
+  77: "message",
+  68: "detail",
+  72: "hint",
+  80: "position",
+  112: "internal_position",
+  113: "internal_query",
+  87: "where",
+  115: "schema_name",
+  116: "table_name",
+  99: "column_name",
+  100: "data type_name",
+  110: "constraint_name",
+  70: "file",
+  76: "line",
+  82: "routine"
+};
+function Connection(options, queues = {}, { onopen = noop2, onend = noop2, onclose = noop2 } = {}) {
+  const {
+    sslnegotiation,
+    ssl,
+    max,
+    user,
+    host,
+    port,
+    database,
+    parsers: parsers2,
+    transform: transform2,
+    onnotice,
+    onnotify,
+    onparameter,
+    max_pipeline,
+    keep_alive,
+    backoff,
+    target_session_attrs
+  } = options;
+  const sent = queue_default(), id = uid++, backend = { pid: null, secret: null }, idleTimer = timer(end, options.idle_timeout), lifeTimer = timer(end, options.max_lifetime), connectTimer = timer(connectTimedOut, options.connect_timeout);
+  let socket = null, cancelMessage, errorResponse = null, result = new Result, incoming = Buffer.alloc(0), needsTypes = options.fetch_types, backendParameters = {}, statements = {}, statementId = Math.random().toString(36).slice(2), statementCount = 1, closedTime = 0, remaining = 0, hostIndex = 0, retries = 0, length = 0, delay = 0, rows = 0, serverSignature = null, nextWriteTimer = null, terminated = false, incomings = null, results = null, initial = null, ending = null, stream = null, chunk = null, ended = null, nonce = null, query = null, final = null;
+  const connection2 = {
+    queue: queues.closed,
+    idleTimer,
+    connect(query2) {
+      initial = query2;
+      reconnect();
+    },
+    terminate,
+    execute,
+    cancel,
+    end,
+    count: 0,
+    id
+  };
+  queues.closed && queues.closed.push(connection2);
+  return connection2;
+  async function createSocket() {
+    let x;
+    try {
+      x = options.socket ? await Promise.resolve(options.socket(options)) : new net.Socket;
+    } catch (e) {
+      error48(e);
+      return;
+    }
+    x.on("error", error48);
+    x.on("close", closed);
+    x.on("drain", drain);
+    return x;
+  }
+  async function cancel({ pid, secret }, resolve, reject) {
+    try {
+      cancelMessage = bytes_default().i32(16).i32(80877102).i32(pid).i32(secret).end(16);
+      await connect();
+      socket.once("error", reject);
+      socket.once("close", resolve);
+    } catch (error49) {
+      reject(error49);
+    }
+  }
+  function execute(q) {
+    if (terminated)
+      return queryError(q, Errors.connection("CONNECTION_DESTROYED", options));
+    if (stream)
+      return queryError(q, Errors.generic("COPY_IN_PROGRESS", "You cannot execute queries during copy"));
+    if (q.cancelled)
+      return;
+    try {
+      q.state = backend;
+      query ? sent.push(q) : (query = q, query.active = true);
+      build(q);
+      return write(toBuffer(q)) && !q.describeFirst && !q.cursorFn && sent.length < max_pipeline && (!q.options.onexecute || q.options.onexecute(connection2));
+    } catch (error49) {
+      sent.length === 0 && write(Sync);
+      errored(error49);
+      return true;
+    }
+  }
+  function toBuffer(q) {
+    if (q.parameters.length >= 65534)
+      throw Errors.generic("MAX_PARAMETERS_EXCEEDED", "Max number of parameters (65534) exceeded");
+    return q.options.simple ? bytes_default().Q().str(q.statement.string + bytes_default.N).end() : q.describeFirst ? Buffer.concat([describe3(q), Flush]) : q.prepare ? q.prepared ? prepared(q) : Buffer.concat([describe3(q), prepared(q)]) : unnamed(q);
+  }
+  function describe3(q) {
+    return Buffer.concat([
+      Parse(q.statement.string, q.parameters, q.statement.types, q.statement.name),
+      Describe("S", q.statement.name)
+    ]);
+  }
+  function prepared(q) {
+    return Buffer.concat([
+      Bind(q.parameters, q.statement.types, q.statement.name, q.cursorName),
+      q.cursorFn ? Execute("", q.cursorRows) : ExecuteUnnamed
+    ]);
+  }
+  function unnamed(q) {
+    return Buffer.concat([
+      Parse(q.statement.string, q.parameters, q.statement.types),
+      DescribeUnnamed,
+      prepared(q)
+    ]);
+  }
+  function build(q) {
+    const parameters = [], types2 = [];
+    const string4 = stringify2(q, q.strings[0], q.args[0], parameters, types2, options);
+    !q.tagged && q.args.forEach((x) => handleValue(x, parameters, types2, options));
+    q.prepare = options.prepare && ("prepare" in q.options ? q.options.prepare : true);
+    q.string = string4;
+    q.signature = q.prepare && types2 + string4;
+    q.onlyDescribe && delete statements[q.signature];
+    q.parameters = q.parameters || parameters;
+    q.prepared = q.prepare && q.signature in statements;
+    q.describeFirst = q.onlyDescribe || parameters.length && !q.prepared;
+    q.statement = q.prepared ? statements[q.signature] : { string: string4, types: types2, name: q.prepare ? statementId + statementCount++ : "" };
+    typeof options.debug === "function" && options.debug(id, string4, parameters, types2);
+  }
+  function write(x, fn) {
+    chunk = chunk ? Buffer.concat([chunk, x]) : Buffer.from(x);
+    if (fn || chunk.length >= 1024)
+      return nextWrite(fn);
+    nextWriteTimer === null && (nextWriteTimer = setImmediate(nextWrite));
+    return true;
+  }
+  function nextWrite(fn) {
+    const x = socket.write(chunk, fn);
+    nextWriteTimer !== null && clearImmediate(nextWriteTimer);
+    chunk = nextWriteTimer = null;
+    return x;
+  }
+  function connectTimedOut() {
+    errored(Errors.connection("CONNECT_TIMEOUT", options, socket));
+    socket.destroy();
+  }
+  async function secure() {
+    if (sslnegotiation !== "direct") {
+      write(SSLRequest);
+      const canSSL = await new Promise((r) => socket.once("data", (x) => r(x[0] === 83)));
+      if (!canSSL && ssl === "prefer")
+        return connected();
+    }
+    const options2 = {
+      socket,
+      servername: net.isIP(socket.host) ? undefined : socket.host
+    };
+    if (sslnegotiation === "direct")
+      options2.ALPNProtocols = ["postgresql"];
+    if (ssl === "require" || ssl === "allow" || ssl === "prefer")
+      options2.rejectUnauthorized = false;
+    else if (typeof ssl === "object")
+      Object.assign(options2, ssl);
+    socket.removeAllListeners();
+    socket = tls.connect(options2);
+    socket.on("secureConnect", connected);
+    socket.on("error", error48);
+    socket.on("close", closed);
+    socket.on("drain", drain);
+  }
+  function drain() {
+    !query && onopen(connection2);
+  }
+  function data(x) {
+    if (incomings) {
+      incomings.push(x);
+      remaining -= x.length;
+      if (remaining > 0)
+        return;
+    }
+    incoming = incomings ? Buffer.concat(incomings, length - remaining) : incoming.length === 0 ? x : Buffer.concat([incoming, x], incoming.length + x.length);
+    while (incoming.length > 4) {
+      length = incoming.readUInt32BE(1);
+      if (length >= incoming.length) {
+        remaining = length - incoming.length;
+        incomings = [incoming];
+        break;
+      }
+      try {
+        handle(incoming.subarray(0, length + 1));
+      } catch (e) {
+        query && (query.cursorFn || query.describeFirst) && write(Sync);
+        errored(e);
+      }
+      incoming = incoming.subarray(length + 1);
+      remaining = 0;
+      incomings = null;
+    }
+  }
+  async function connect() {
+    terminated = false;
+    backendParameters = {};
+    socket || (socket = await createSocket());
+    if (!socket)
+      return;
+    connectTimer.start();
+    if (options.socket)
+      return ssl ? secure() : connected();
+    socket.on("connect", ssl ? secure : connected);
+    if (options.path)
+      return socket.connect(options.path);
+    socket.ssl = ssl;
+    socket.connect(port[hostIndex], host[hostIndex]);
+    socket.host = host[hostIndex];
+    socket.port = port[hostIndex];
+    hostIndex = (hostIndex + 1) % port.length;
+  }
+  function reconnect() {
+    setTimeout(connect, closedTime ? Math.max(0, closedTime + delay - performance.now()) : 0);
+  }
+  function connected() {
+    try {
+      statements = {};
+      needsTypes = options.fetch_types;
+      statementId = Math.random().toString(36).slice(2);
+      statementCount = 1;
+      lifeTimer.start();
+      socket.on("data", data);
+      keep_alive && socket.setKeepAlive && socket.setKeepAlive(true, 1000 * keep_alive);
+      const s = StartupMessage();
+      write(s);
+    } catch (err) {
+      error48(err);
+    }
+  }
+  function error48(err) {
+    if (connection2.queue === queues.connecting && options.host[retries + 1])
+      return;
+    errored(err);
+    while (sent.length)
+      queryError(sent.shift(), err);
+  }
+  function errored(err) {
+    stream && (stream.destroy(err), stream = null);
+    query && queryError(query, err);
+    initial && (queryError(initial, err), initial = null);
+  }
+  function queryError(query2, err) {
+    if (query2.reserve)
+      return query2.reject(err);
+    if (!err || typeof err !== "object")
+      err = new Error(err);
+    "query" in err || "parameters" in err || Object.defineProperties(err, {
+      stack: { value: err.stack + query2.origin.replace(/.*\n/, `
+`), enumerable: options.debug },
+      query: { value: query2.string, enumerable: options.debug },
+      parameters: { value: query2.parameters, enumerable: options.debug },
+      args: { value: query2.args, enumerable: options.debug },
+      types: { value: query2.statement && query2.statement.types, enumerable: options.debug }
+    });
+    query2.reject(err);
+  }
+  function end() {
+    return ending || (!connection2.reserved && onend(connection2), !connection2.reserved && !initial && !query && sent.length === 0 ? (terminate(), new Promise((r) => socket && socket.readyState !== "closed" ? socket.once("close", r) : r())) : ending = new Promise((r) => ended = r));
+  }
+  function terminate() {
+    terminated = true;
+    if (stream || query || initial || sent.length)
+      error48(Errors.connection("CONNECTION_DESTROYED", options));
+    clearImmediate(nextWriteTimer);
+    if (socket) {
+      socket.removeListener("data", data);
+      socket.removeListener("connect", connected);
+      socket.readyState === "open" && socket.end(bytes_default().X().end());
+    }
+    ended && (ended(), ending = ended = null);
+  }
+  async function closed(hadError) {
+    incoming = Buffer.alloc(0);
+    remaining = 0;
+    incomings = null;
+    clearImmediate(nextWriteTimer);
+    socket.removeListener("data", data);
+    socket.removeListener("connect", connected);
+    idleTimer.cancel();
+    lifeTimer.cancel();
+    connectTimer.cancel();
+    socket.removeAllListeners();
+    socket = null;
+    if (initial)
+      return reconnect();
+    !hadError && (query || sent.length) && error48(Errors.connection("CONNECTION_CLOSED", options, socket));
+    closedTime = performance.now();
+    hadError && options.shared.retries++;
+    delay = (typeof backoff === "function" ? backoff(options.shared.retries) : backoff) * 1000;
+    onclose(connection2, Errors.connection("CONNECTION_CLOSED", options, socket));
+  }
+  function handle(xs, x = xs[0]) {
+    (x === 68 ? DataRow : x === 100 ? CopyData : x === 65 ? NotificationResponse : x === 83 ? ParameterStatus : x === 90 ? ReadyForQuery : x === 67 ? CommandComplete : x === 50 ? BindComplete : x === 49 ? ParseComplete : x === 116 ? ParameterDescription : x === 84 ? RowDescription : x === 82 ? Authentication : x === 110 ? NoData : x === 75 ? BackendKeyData : x === 69 ? ErrorResponse : x === 115 ? PortalSuspended : x === 51 ? CloseComplete : x === 71 ? CopyInResponse : x === 78 ? NoticeResponse : x === 72 ? CopyOutResponse : x === 99 ? CopyDone : x === 73 ? EmptyQueryResponse : x === 86 ? FunctionCallResponse : x === 118 ? NegotiateProtocolVersion : x === 87 ? CopyBothResponse : UnknownMessage)(xs);
+  }
+  function DataRow(x) {
+    let index = 7;
+    let length2;
+    let column;
+    let value;
+    const row = query.isRaw ? new Array(query.statement.columns.length) : {};
+    for (let i = 0;i < query.statement.columns.length; i++) {
+      column = query.statement.columns[i];
+      length2 = x.readInt32BE(index);
+      index += 4;
+      value = length2 === -1 ? null : query.isRaw === true ? x.subarray(index, index += length2) : column.parser === undefined ? x.toString("utf8", index, index += length2) : column.parser.array === true ? column.parser(x.toString("utf8", index + 1, index += length2)) : column.parser(x.toString("utf8", index, index += length2));
+      query.isRaw ? row[i] = query.isRaw === true ? value : transform2.value.from ? transform2.value.from(value, column) : value : row[column.name] = transform2.value.from ? transform2.value.from(value, column) : value;
+    }
+    query.forEachFn ? query.forEachFn(transform2.row.from ? transform2.row.from(row) : row, result) : result[rows++] = transform2.row.from ? transform2.row.from(row) : row;
+  }
+  function ParameterStatus(x) {
+    const [k, v] = x.toString("utf8", 5, x.length - 1).split(bytes_default.N);
+    backendParameters[k] = v;
+    if (options.parameters[k] !== v) {
+      options.parameters[k] = v;
+      onparameter && onparameter(k, v);
+    }
+  }
+  function ReadyForQuery(x) {
+    if (query) {
+      if (errorResponse) {
+        query.retried ? errored(query.retried) : query.prepared && retryRoutines.has(errorResponse.routine) ? retry2(query, errorResponse) : errored(errorResponse);
+      } else {
+        query.resolve(results || result);
+      }
+    } else if (errorResponse) {
+      errored(errorResponse);
+    }
+    query = results = errorResponse = null;
+    result = new Result;
+    connectTimer.cancel();
+    if (initial) {
+      if (target_session_attrs) {
+        if (!backendParameters.in_hot_standby || !backendParameters.default_transaction_read_only)
+          return fetchState();
+        else if (tryNext(target_session_attrs, backendParameters))
+          return terminate();
+      }
+      if (needsTypes) {
+        initial.reserve && (initial = null);
+        return fetchArrayTypes();
+      }
+      initial && !initial.reserve && execute(initial);
+      options.shared.retries = retries = 0;
+      initial = null;
+      return;
+    }
+    while (sent.length && (query = sent.shift()) && (query.active = true, query.cancelled))
+      Connection(options).cancel(query.state, query.cancelled.resolve, query.cancelled.reject);
+    if (query)
+      return;
+    connection2.reserved ? !connection2.reserved.release && x[5] === 73 ? ending ? terminate() : (connection2.reserved = null, onopen(connection2)) : connection2.reserved() : ending ? terminate() : onopen(connection2);
+  }
+  function CommandComplete(x) {
+    rows = 0;
+    for (let i = x.length - 1;i > 0; i--) {
+      if (x[i] === 32 && x[i + 1] < 58 && result.count === null)
+        result.count = +x.toString("utf8", i + 1, x.length - 1);
+      if (x[i - 1] >= 65) {
+        result.command = x.toString("utf8", 5, i);
+        result.state = backend;
+        break;
+      }
+    }
+    final && (final(), final = null);
+    if (result.command === "BEGIN" && max !== 1 && !connection2.reserved)
+      return errored(Errors.generic("UNSAFE_TRANSACTION", "Only use sql.begin, sql.reserved or max: 1"));
+    if (query.options.simple)
+      return BindComplete();
+    if (query.cursorFn) {
+      result.count && query.cursorFn(result);
+      write(Sync);
+    }
+  }
+  function ParseComplete() {
+    query.parsing = false;
+  }
+  function BindComplete() {
+    !result.statement && (result.statement = query.statement);
+    result.columns = query.statement.columns;
+  }
+  function ParameterDescription(x) {
+    const length2 = x.readUInt16BE(5);
+    for (let i = 0;i < length2; ++i)
+      !query.statement.types[i] && (query.statement.types[i] = x.readUInt32BE(7 + i * 4));
+    query.prepare && (statements[query.signature] = query.statement);
+    query.describeFirst && !query.onlyDescribe && (write(prepared(query)), query.describeFirst = false);
+  }
+  function RowDescription(x) {
+    if (result.command) {
+      results = results || [result];
+      results.push(result = new Result);
+      result.count = null;
+      query.statement.columns = null;
+    }
+    const length2 = x.readUInt16BE(5);
+    let index = 7;
+    let start;
+    query.statement.columns = Array(length2);
+    for (let i = 0;i < length2; ++i) {
+      start = index;
+      while (x[index++] !== 0)
+        ;
+      const table = x.readUInt32BE(index);
+      const number4 = x.readUInt16BE(index + 4);
+      const type = x.readUInt32BE(index + 6);
+      query.statement.columns[i] = {
+        name: transform2.column.from ? transform2.column.from(x.toString("utf8", start, index - 1)) : x.toString("utf8", start, index - 1),
+        parser: parsers2[type],
+        table,
+        number: number4,
+        type
+      };
+      index += 18;
+    }
+    result.statement = query.statement;
+    if (query.onlyDescribe)
+      return query.resolve(query.statement), write(Sync);
+  }
+  async function Authentication(x, type = x.readUInt32BE(5)) {
+    (type === 3 ? AuthenticationCleartextPassword : type === 5 ? AuthenticationMD5Password : type === 10 ? SASL : type === 11 ? SASLContinue : type === 12 ? SASLFinal : type !== 0 ? UnknownAuth : noop2)(x, type);
+  }
+  async function AuthenticationCleartextPassword() {
+    const payload = await Pass();
+    write(bytes_default().p().str(payload).z(1).end());
+  }
+  async function AuthenticationMD5Password(x) {
+    const payload = "md5" + await md5(Buffer.concat([
+      Buffer.from(await md5(await Pass() + user)),
+      x.subarray(9)
+    ]));
+    write(bytes_default().p().str(payload).z(1).end());
+  }
+  async function SASL() {
+    nonce = (await crypto2.randomBytes(18)).toString("base64");
+    bytes_default().p().str("SCRAM-SHA-256" + bytes_default.N);
+    const i = bytes_default.i;
+    write(bytes_default.inc(4).str("n,,n=*,r=" + nonce).i32(bytes_default.i - i - 4, i).end());
+  }
+  async function SASLContinue(x) {
+    const res = x.toString("utf8", 9).split(",").reduce((acc, x2) => (acc[x2[0]] = x2.slice(2), acc), {});
+    const saltedPassword = await crypto2.pbkdf2Sync(await Pass(), Buffer.from(res.s, "base64"), parseInt(res.i), 32, "sha256");
+    const clientKey = await hmac(saltedPassword, "Client Key");
+    const auth = "n=*,r=" + nonce + "," + "r=" + res.r + ",s=" + res.s + ",i=" + res.i + ",c=biws,r=" + res.r;
+    serverSignature = (await hmac(await hmac(saltedPassword, "Server Key"), auth)).toString("base64");
+    const payload = "c=biws,r=" + res.r + ",p=" + xor2(clientKey, Buffer.from(await hmac(await sha256(clientKey), auth))).toString("base64");
+    write(bytes_default().p().str(payload).end());
+  }
+  function SASLFinal(x) {
+    if (x.toString("utf8", 9).split(bytes_default.N, 1)[0].slice(2) === serverSignature)
+      return;
+    errored(Errors.generic("SASL_SIGNATURE_MISMATCH", "The server did not return the correct signature"));
+    socket.destroy();
+  }
+  function Pass() {
+    return Promise.resolve(typeof options.pass === "function" ? options.pass() : options.pass);
+  }
+  function NoData() {
+    result.statement = query.statement;
+    result.statement.columns = [];
+    if (query.onlyDescribe)
+      return query.resolve(query.statement), write(Sync);
+  }
+  function BackendKeyData(x) {
+    backend.pid = x.readUInt32BE(5);
+    backend.secret = x.readUInt32BE(9);
+  }
+  async function fetchArrayTypes() {
+    needsTypes = false;
+    const types2 = await new Query([`
+      select b.oid, b.typarray
+      from pg_catalog.pg_type a
+      left join pg_catalog.pg_type b on b.oid = a.typelem
+      where a.typcategory = 'A'
+      group by b.oid, b.typarray
+      order by b.oid
+    `], [], execute);
+    types2.forEach(({ oid, typarray }) => addArrayType(oid, typarray));
+  }
+  function addArrayType(oid, typarray) {
+    if (!!options.parsers[typarray] && !!options.serializers[typarray])
+      return;
+    const parser = options.parsers[oid];
+    options.shared.typeArrayMap[oid] = typarray;
+    options.parsers[typarray] = (xs) => arrayParser(xs, parser, typarray);
+    options.parsers[typarray].array = true;
+    options.serializers[typarray] = (xs) => arraySerializer(xs, options.serializers[oid], options, typarray);
+  }
+  function tryNext(x, xs) {
+    return x === "read-write" && xs.default_transaction_read_only === "on" || x === "read-only" && xs.default_transaction_read_only === "off" || x === "primary" && xs.in_hot_standby === "on" || x === "standby" && xs.in_hot_standby === "off" || x === "prefer-standby" && xs.in_hot_standby === "off" && options.host[retries];
+  }
+  function fetchState() {
+    const query2 = new Query([`
+      show transaction_read_only;
+      select pg_catalog.pg_is_in_recovery()
+    `], [], execute, null, { simple: true });
+    query2.resolve = ([[a], [b2]]) => {
+      backendParameters.default_transaction_read_only = a.transaction_read_only;
+      backendParameters.in_hot_standby = b2.pg_is_in_recovery ? "on" : "off";
+    };
+    query2.execute();
+  }
+  function ErrorResponse(x) {
+    if (query) {
+      (query.cursorFn || query.describeFirst) && write(Sync);
+      errorResponse = Errors.postgres(parseError2(x));
+    } else {
+      errored(Errors.postgres(parseError2(x)));
+    }
+  }
+  function retry2(q, error49) {
+    delete statements[q.signature];
+    q.retried = error49;
+    execute(q);
+  }
+  function NotificationResponse(x) {
+    if (!onnotify)
+      return;
+    let index = 9;
+    while (x[index++] !== 0)
+      ;
+    onnotify(x.toString("utf8", 9, index - 1), x.toString("utf8", index, x.length - 1));
+  }
+  async function PortalSuspended() {
+    try {
+      const x = await Promise.resolve(query.cursorFn(result));
+      rows = 0;
+      x === CLOSE ? write(Close(query.portal)) : (result = new Result, write(Execute("", query.cursorRows)));
+    } catch (err) {
+      write(Sync);
+      query.reject(err);
+    }
+  }
+  function CloseComplete() {
+    result.count && query.cursorFn(result);
+    query.resolve(result);
+  }
+  function CopyInResponse() {
+    stream = new Stream.Writable({
+      autoDestroy: true,
+      write(chunk2, encoding, callback) {
+        socket.write(bytes_default().d().raw(chunk2).end(), callback);
+      },
+      destroy(error49, callback) {
+        callback(error49);
+        socket.write(bytes_default().f().str(error49 + bytes_default.N).end());
+        stream = null;
+      },
+      final(callback) {
+        socket.write(bytes_default().c().end());
+        final = callback;
+        stream = null;
+      }
+    });
+    query.resolve(stream);
+  }
+  function CopyOutResponse() {
+    stream = new Stream.Readable({
+      read() {
+        socket.resume();
+      }
+    });
+    query.resolve(stream);
+  }
+  function CopyBothResponse() {
+    stream = new Stream.Duplex({
+      autoDestroy: true,
+      read() {
+        socket.resume();
+      },
+      write(chunk2, encoding, callback) {
+        socket.write(bytes_default().d().raw(chunk2).end(), callback);
+      },
+      destroy(error49, callback) {
+        callback(error49);
+        socket.write(bytes_default().f().str(error49 + bytes_default.N).end());
+        stream = null;
+      },
+      final(callback) {
+        socket.write(bytes_default().c().end());
+        final = callback;
+      }
+    });
+    query.resolve(stream);
+  }
+  function CopyData(x) {
+    stream && (stream.push(x.subarray(5)) || socket.pause());
+  }
+  function CopyDone() {
+    stream && stream.push(null);
+    stream = null;
+  }
+  function NoticeResponse(x) {
+    onnotice ? onnotice(parseError2(x)) : console.log(parseError2(x));
+  }
+  function EmptyQueryResponse() {}
+  function FunctionCallResponse() {
+    errored(Errors.notSupported("FunctionCallResponse"));
+  }
+  function NegotiateProtocolVersion() {
+    errored(Errors.notSupported("NegotiateProtocolVersion"));
+  }
+  function UnknownMessage(x) {
+    console.error("Postgres.js : Unknown Message:", x[0]);
+  }
+  function UnknownAuth(x, type) {
+    console.error("Postgres.js : Unknown Auth:", type);
+  }
+  function Bind(parameters, types2, statement = "", portal = "") {
+    let prev, type;
+    bytes_default().B().str(portal + bytes_default.N).str(statement + bytes_default.N).i16(0).i16(parameters.length);
+    parameters.forEach((x, i) => {
+      if (x === null)
+        return bytes_default.i32(4294967295);
+      type = types2[i];
+      parameters[i] = x = type in options.serializers ? options.serializers[type](x) : "" + x;
+      prev = bytes_default.i;
+      bytes_default.inc(4).str(x).i32(bytes_default.i - prev - 4, prev);
+    });
+    bytes_default.i16(0);
+    return bytes_default.end();
+  }
+  function Parse(str, parameters, types2, name = "") {
+    bytes_default().P().str(name + bytes_default.N).str(str + bytes_default.N).i16(parameters.length);
+    parameters.forEach((x, i) => bytes_default.i32(types2[i] || 0));
+    return bytes_default.end();
+  }
+  function Describe(x, name = "") {
+    return bytes_default().D().str(x).str(name + bytes_default.N).end();
+  }
+  function Execute(portal = "", rows2 = 0) {
+    return Buffer.concat([
+      bytes_default().E().str(portal + bytes_default.N).i32(rows2).end(),
+      Flush
+    ]);
+  }
+  function Close(portal = "") {
+    return Buffer.concat([
+      bytes_default().C().str("P").str(portal + bytes_default.N).end(),
+      bytes_default().S().end()
+    ]);
+  }
+  function StartupMessage() {
+    return cancelMessage || bytes_default().inc(4).i16(3).z(2).str(Object.entries(Object.assign({
+      user,
+      database,
+      client_encoding: "UTF8"
+    }, options.connection)).filter(([, v]) => v).map(([k, v]) => k + bytes_default.N + v).join(bytes_default.N)).z(2).end(0);
+  }
+}
+function parseError2(x) {
+  const error48 = {};
+  let start = 5;
+  for (let i = 5;i < x.length - 1; i++) {
+    if (x[i] === 0) {
+      error48[errorFields[x[start]]] = x.toString("utf8", start + 1, i);
+      start = i + 1;
+    }
+  }
+  return error48;
+}
+function md5(x) {
+  return crypto2.createHash("md5").update(x).digest("hex");
+}
+function hmac(key, x) {
+  return crypto2.createHmac("sha256", key).update(x).digest();
+}
+function sha256(x) {
+  return crypto2.createHash("sha256").update(x).digest();
+}
+function xor2(a, b2) {
+  const length = Math.max(a.length, b2.length);
+  const buffer2 = Buffer.allocUnsafe(length);
+  for (let i = 0;i < length; i++)
+    buffer2[i] = a[i] ^ b2[i];
+  return buffer2;
+}
+function timer(fn, seconds) {
+  seconds = typeof seconds === "function" ? seconds() : seconds;
+  if (!seconds)
+    return { cancel: noop2, start: noop2 };
+  let timer2;
+  return {
+    cancel() {
+      timer2 && (clearTimeout(timer2), timer2 = null);
+    },
+    start() {
+      timer2 && clearTimeout(timer2);
+      timer2 = setTimeout(done, seconds * 1000, arguments);
+    }
+  };
+  function done(args) {
+    fn.apply(null, args);
+    timer2 = null;
+  }
+}
+
+// ../../node_modules/.bun/postgres@3.4.8/node_modules/postgres/src/subscribe.js
+var noop3 = () => {};
+function Subscribe(postgres2, options) {
+  const subscribers = new Map, slot = "postgresjs_" + Math.random().toString(36).slice(2), state = {};
+  let connection2, stream, ended = false;
+  const sql2 = subscribe.sql = postgres2({
+    ...options,
+    transform: { column: {}, value: {}, row: {} },
+    max: 1,
+    fetch_types: false,
+    idle_timeout: null,
+    max_lifetime: null,
+    connection: {
+      ...options.connection,
+      replication: "database"
+    },
+    onclose: async function() {
+      if (ended)
+        return;
+      stream = null;
+      state.pid = state.secret = undefined;
+      connected(await init(sql2, slot, options.publications));
+      subscribers.forEach((event) => event.forEach(({ onsubscribe }) => onsubscribe()));
+    },
+    no_subscribe: true
+  });
+  const { end, close } = sql2;
+  sql2.end = async () => {
+    ended = true;
+    stream && await new Promise((r) => (stream.once("close", r), stream.end()));
+    return end();
+  };
+  sql2.close = async () => {
+    stream && await new Promise((r) => (stream.once("close", r), stream.end()));
+    return close();
+  };
+  return subscribe;
+  async function subscribe(event, fn, onsubscribe = noop3, onerror = noop3) {
+    event = parseEvent(event);
+    if (!connection2)
+      connection2 = init(sql2, slot, options.publications);
+    const subscriber = { fn, onsubscribe };
+    const fns = subscribers.has(event) ? subscribers.get(event).add(subscriber) : subscribers.set(event, new Set([subscriber])).get(event);
+    const unsubscribe = () => {
+      fns.delete(subscriber);
+      fns.size === 0 && subscribers.delete(event);
+    };
+    return connection2.then((x) => {
+      connected(x);
+      onsubscribe();
+      stream && stream.on("error", onerror);
+      return { unsubscribe, state, sql: sql2 };
+    });
+  }
+  function connected(x) {
+    stream = x.stream;
+    state.pid = x.state.pid;
+    state.secret = x.state.secret;
+  }
+  async function init(sql3, slot2, publications) {
+    if (!publications)
+      throw new Error("Missing publication names");
+    const xs = await sql3.unsafe(`CREATE_REPLICATION_SLOT ${slot2} TEMPORARY LOGICAL pgoutput NOEXPORT_SNAPSHOT`);
+    const [x] = xs;
+    const stream2 = await sql3.unsafe(`START_REPLICATION SLOT ${slot2} LOGICAL ${x.consistent_point} (proto_version '1', publication_names '${publications}')`).writable();
+    const state2 = {
+      lsn: Buffer.concat(x.consistent_point.split("/").map((x2) => Buffer.from(("00000000" + x2).slice(-8), "hex")))
+    };
+    stream2.on("data", data);
+    stream2.on("error", error48);
+    stream2.on("close", sql3.close);
+    return { stream: stream2, state: xs.state };
+    function error48(e) {
+      console.error("Unexpected error during logical streaming - reconnecting", e);
+    }
+    function data(x2) {
+      if (x2[0] === 119) {
+        parse6(x2.subarray(25), state2, sql3.options.parsers, handle, options.transform);
+      } else if (x2[0] === 107 && x2[17]) {
+        state2.lsn = x2.subarray(1, 9);
+        pong();
+      }
+    }
+    function handle(a, b2) {
+      const path = b2.relation.schema + "." + b2.relation.table;
+      call("*", a, b2);
+      call("*:" + path, a, b2);
+      b2.relation.keys.length && call("*:" + path + "=" + b2.relation.keys.map((x2) => a[x2.name]), a, b2);
+      call(b2.command, a, b2);
+      call(b2.command + ":" + path, a, b2);
+      b2.relation.keys.length && call(b2.command + ":" + path + "=" + b2.relation.keys.map((x2) => a[x2.name]), a, b2);
+    }
+    function pong() {
+      const x2 = Buffer.alloc(34);
+      x2[0] = 114;
+      x2.fill(state2.lsn, 1);
+      x2.writeBigInt64BE(BigInt(Date.now() - Date.UTC(2000, 0, 1)) * BigInt(1000), 25);
+      stream2.write(x2);
+    }
+  }
+  function call(x, a, b2) {
+    subscribers.has(x) && subscribers.get(x).forEach(({ fn }) => fn(a, b2, x));
+  }
+}
+function Time(x) {
+  return new Date(Date.UTC(2000, 0, 1) + Number(x / BigInt(1000)));
+}
+function parse6(x, state, parsers2, handle, transform2) {
+  const char2 = (acc, [k, v]) => (acc[k.charCodeAt(0)] = v, acc);
+  Object.entries({
+    R: (x2) => {
+      let i = 1;
+      const r = state[x2.readUInt32BE(i)] = {
+        schema: x2.toString("utf8", i += 4, i = x2.indexOf(0, i)) || "pg_catalog",
+        table: x2.toString("utf8", i + 1, i = x2.indexOf(0, i + 1)),
+        columns: Array(x2.readUInt16BE(i += 2)),
+        keys: []
+      };
+      i += 2;
+      let columnIndex = 0, column;
+      while (i < x2.length) {
+        column = r.columns[columnIndex++] = {
+          key: x2[i++],
+          name: transform2.column.from ? transform2.column.from(x2.toString("utf8", i, i = x2.indexOf(0, i))) : x2.toString("utf8", i, i = x2.indexOf(0, i)),
+          type: x2.readUInt32BE(i += 1),
+          parser: parsers2[x2.readUInt32BE(i)],
+          atttypmod: x2.readUInt32BE(i += 4)
+        };
+        column.key && r.keys.push(column);
+        i += 4;
+      }
+    },
+    Y: () => {},
+    O: () => {},
+    B: (x2) => {
+      state.date = Time(x2.readBigInt64BE(9));
+      state.lsn = x2.subarray(1, 9);
+    },
+    I: (x2) => {
+      let i = 1;
+      const relation = state[x2.readUInt32BE(i)];
+      const { row } = tuples(x2, relation.columns, i += 7, transform2);
+      handle(row, {
+        command: "insert",
+        relation
+      });
+    },
+    D: (x2) => {
+      let i = 1;
+      const relation = state[x2.readUInt32BE(i)];
+      i += 4;
+      const key = x2[i] === 75;
+      handle(key || x2[i] === 79 ? tuples(x2, relation.columns, i += 3, transform2).row : null, {
+        command: "delete",
+        relation,
+        key
+      });
+    },
+    U: (x2) => {
+      let i = 1;
+      const relation = state[x2.readUInt32BE(i)];
+      i += 4;
+      const key = x2[i] === 75;
+      const xs = key || x2[i] === 79 ? tuples(x2, relation.columns, i += 3, transform2) : null;
+      xs && (i = xs.i);
+      const { row } = tuples(x2, relation.columns, i + 3, transform2);
+      handle(row, {
+        command: "update",
+        relation,
+        key,
+        old: xs && xs.row
+      });
+    },
+    T: () => {},
+    C: () => {}
+  }).reduce(char2, {})[x[0]](x);
+}
+function tuples(x, columns, xi, transform2) {
+  let type, column, value;
+  const row = transform2.raw ? new Array(columns.length) : {};
+  for (let i = 0;i < columns.length; i++) {
+    type = x[xi++];
+    column = columns[i];
+    value = type === 110 ? null : type === 117 ? undefined : column.parser === undefined ? x.toString("utf8", xi + 4, xi += 4 + x.readUInt32BE(xi)) : column.parser.array === true ? column.parser(x.toString("utf8", xi + 5, xi += 4 + x.readUInt32BE(xi))) : column.parser(x.toString("utf8", xi + 4, xi += 4 + x.readUInt32BE(xi)));
+    transform2.raw ? row[i] = transform2.raw === true ? value : transform2.value.from ? transform2.value.from(value, column) : value : row[column.name] = transform2.value.from ? transform2.value.from(value, column) : value;
+  }
+  return { i: xi, row: transform2.row.from ? transform2.row.from(row) : row };
+}
+function parseEvent(x) {
+  const xs = x.match(/^(\*|insert|update|delete)?:?([^.]+?\.?[^=]+)?=?(.+)?/i) || [];
+  if (!xs)
+    throw new Error("Malformed subscribe pattern: " + x);
+  const [, command, path, key] = xs;
+  return (command || "*") + (path ? ":" + (path.indexOf(".") === -1 ? "public." + path : path) : "") + (key ? "=" + key : "");
+}
+
+// ../../node_modules/.bun/postgres@3.4.8/node_modules/postgres/src/large.js
+import Stream2 from "stream";
+function largeObject(sql2, oid, mode = 131072 | 262144) {
+  return new Promise(async (resolve, reject) => {
+    await sql2.begin(async (sql3) => {
+      let finish;
+      !oid && ([{ oid }] = await sql3`select lo_creat(-1) as oid`);
+      const [{ fd }] = await sql3`select lo_open(${oid}, ${mode}) as fd`;
+      const lo = {
+        writable,
+        readable,
+        close: () => sql3`select lo_close(${fd})`.then(finish),
+        tell: () => sql3`select lo_tell64(${fd})`,
+        read: (x) => sql3`select loread(${fd}, ${x}) as data`,
+        write: (x) => sql3`select lowrite(${fd}, ${x})`,
+        truncate: (x) => sql3`select lo_truncate64(${fd}, ${x})`,
+        seek: (x, whence = 0) => sql3`select lo_lseek64(${fd}, ${x}, ${whence})`,
+        size: () => sql3`
+          select
+            lo_lseek64(${fd}, location, 0) as position,
+            seek.size
+          from (
+            select
+              lo_lseek64($1, 0, 2) as size,
+              tell.location
+            from (select lo_tell64($1) as location) tell
+          ) seek
+        `
+      };
+      resolve(lo);
+      return new Promise(async (r) => finish = r);
+      async function readable({
+        highWaterMark = 2048 * 8,
+        start = 0,
+        end = Infinity
+      } = {}) {
+        let max = end - start;
+        start && await lo.seek(start);
+        return new Stream2.Readable({
+          highWaterMark,
+          async read(size2) {
+            const l = size2 > max ? size2 - max : size2;
+            max -= size2;
+            const [{ data }] = await lo.read(l);
+            this.push(data);
+            if (data.length < size2)
+              this.push(null);
+          }
+        });
+      }
+      async function writable({
+        highWaterMark = 2048 * 8,
+        start = 0
+      } = {}) {
+        start && await lo.seek(start);
+        return new Stream2.Writable({
+          highWaterMark,
+          write(chunk, encoding, callback) {
+            lo.write(chunk).then(() => callback(), callback);
+          }
+        });
+      }
+    }).catch(reject);
+  });
+}
+
+// ../../node_modules/.bun/postgres@3.4.8/node_modules/postgres/src/index.js
+Object.assign(Postgres, {
+  PostgresError,
+  toPascal,
+  pascal,
+  toCamel,
+  camel,
+  toKebab,
+  kebab,
+  fromPascal,
+  fromCamel,
+  fromKebab,
+  BigInt: {
+    to: 20,
+    from: [20],
+    parse: (x) => BigInt(x),
+    serialize: (x) => x.toString()
+  }
+});
+var src_default = Postgres;
+function Postgres(a, b2) {
+  const options = parseOptions(a, b2), subscribe = options.no_subscribe || Subscribe(Postgres, { ...options });
+  let ending = false;
+  const queries = queue_default(), connecting = queue_default(), reserved = queue_default(), closed = queue_default(), ended = queue_default(), open = queue_default(), busy = queue_default(), full = queue_default(), queues = { connecting, reserved, closed, ended, open, busy, full };
+  const connections = [...Array(options.max)].map(() => connection_default(options, queues, { onopen, onend, onclose }));
+  const sql2 = Sql(handler);
+  Object.assign(sql2, {
+    get parameters() {
+      return options.parameters;
+    },
+    largeObject: largeObject.bind(null, sql2),
+    subscribe,
+    CLOSE,
+    END: CLOSE,
+    PostgresError,
+    options,
+    reserve,
+    listen,
+    begin,
+    close,
+    end
+  });
+  return sql2;
+  function Sql(handler2) {
+    handler2.debug = options.debug;
+    Object.entries(options.types).reduce((acc, [name, type]) => {
+      acc[name] = (x) => new Parameter(x, type.to);
+      return acc;
+    }, typed);
+    Object.assign(sql3, {
+      types: typed,
+      typed,
+      unsafe,
+      notify,
+      array: array2,
+      json: json3,
+      file: file2
+    });
+    return sql3;
+    function typed(value, type) {
+      return new Parameter(value, type);
+    }
+    function sql3(strings, ...args) {
+      const query = strings && Array.isArray(strings.raw) ? new Query(strings, args, handler2, cancel) : typeof strings === "string" && !args.length ? new Identifier(options.transform.column.to ? options.transform.column.to(strings) : strings) : new Builder(strings, args);
+      return query;
+    }
+    function unsafe(string4, args = [], options2 = {}) {
+      arguments.length === 2 && !Array.isArray(args) && (options2 = args, args = []);
+      const query = new Query([string4], args, handler2, cancel, {
+        prepare: false,
+        ...options2,
+        simple: "simple" in options2 ? options2.simple : args.length === 0
+      });
+      return query;
+    }
+    function file2(path, args = [], options2 = {}) {
+      arguments.length === 2 && !Array.isArray(args) && (options2 = args, args = []);
+      const query = new Query([], args, (query2) => {
+        fs.readFile(path, "utf8", (err, string4) => {
+          if (err)
+            return query2.reject(err);
+          query2.strings = [string4];
+          handler2(query2);
+        });
+      }, cancel, {
+        ...options2,
+        simple: "simple" in options2 ? options2.simple : args.length === 0
+      });
+      return query;
+    }
+  }
+  async function listen(name, fn, onlisten) {
+    const listener = { fn, onlisten };
+    const sql3 = listen.sql || (listen.sql = Postgres({
+      ...options,
+      max: 1,
+      idle_timeout: null,
+      max_lifetime: null,
+      fetch_types: false,
+      onclose() {
+        Object.entries(listen.channels).forEach(([name2, { listeners }]) => {
+          delete listen.channels[name2];
+          Promise.all(listeners.map((l) => listen(name2, l.fn, l.onlisten).catch(() => {})));
+        });
+      },
+      onnotify(c, x) {
+        c in listen.channels && listen.channels[c].listeners.forEach((l) => l.fn(x));
+      }
+    }));
+    const channels = listen.channels || (listen.channels = {}), exists2 = name in channels;
+    if (exists2) {
+      channels[name].listeners.push(listener);
+      const result2 = await channels[name].result;
+      listener.onlisten && listener.onlisten();
+      return { state: result2.state, unlisten };
+    }
+    channels[name] = { result: sql3`listen ${sql3.unsafe('"' + name.replace(/"/g, '""') + '"')}`, listeners: [listener] };
+    const result = await channels[name].result;
+    listener.onlisten && listener.onlisten();
+    return { state: result.state, unlisten };
+    async function unlisten() {
+      if (name in channels === false)
+        return;
+      channels[name].listeners = channels[name].listeners.filter((x) => x !== listener);
+      if (channels[name].listeners.length)
+        return;
+      delete channels[name];
+      return sql3`unlisten ${sql3.unsafe('"' + name.replace(/"/g, '""') + '"')}`;
+    }
+  }
+  async function notify(channel, payload) {
+    return await sql2`select pg_notify(${channel}, ${"" + payload})`;
+  }
+  async function reserve() {
+    const queue = queue_default();
+    const c = open.length ? open.shift() : await new Promise((resolve, reject) => {
+      const query = { reserve: resolve, reject };
+      queries.push(query);
+      closed.length && connect(closed.shift(), query);
+    });
+    move(c, reserved);
+    c.reserved = () => queue.length ? c.execute(queue.shift()) : move(c, reserved);
+    c.reserved.release = true;
+    const sql3 = Sql(handler2);
+    sql3.release = () => {
+      c.reserved = null;
+      onopen(c);
+    };
+    return sql3;
+    function handler2(q) {
+      c.queue === full ? queue.push(q) : c.execute(q) || move(c, full);
+    }
+  }
+  async function begin(options2, fn) {
+    !fn && (fn = options2, options2 = "");
+    const queries2 = queue_default();
+    let savepoints = 0, connection2, prepare = null;
+    try {
+      await sql2.unsafe("begin " + options2.replace(/[^a-z ]/ig, ""), [], { onexecute }).execute();
+      return await Promise.race([
+        scope(connection2, fn),
+        new Promise((_, reject) => connection2.onclose = reject)
+      ]);
+    } catch (error48) {
+      throw error48;
+    }
+    async function scope(c, fn2, name) {
+      const sql3 = Sql(handler2);
+      sql3.savepoint = savepoint;
+      sql3.prepare = (x) => prepare = x.replace(/[^a-z0-9$-_. ]/gi);
+      let uncaughtError, result;
+      name && await sql3`savepoint ${sql3(name)}`;
+      try {
+        result = await new Promise((resolve, reject) => {
+          const x = fn2(sql3);
+          Promise.resolve(Array.isArray(x) ? Promise.all(x) : x).then(resolve, reject);
+        });
+        if (uncaughtError)
+          throw uncaughtError;
+      } catch (e) {
+        await (name ? sql3`rollback to ${sql3(name)}` : sql3`rollback`);
+        throw e instanceof PostgresError && e.code === "25P02" && uncaughtError || e;
+      }
+      if (!name) {
+        prepare ? await sql3`prepare transaction '${sql3.unsafe(prepare)}'` : await sql3`commit`;
+      }
+      return result;
+      function savepoint(name2, fn3) {
+        if (name2 && Array.isArray(name2.raw))
+          return savepoint((sql4) => sql4.apply(sql4, arguments));
+        arguments.length === 1 && (fn3 = name2, name2 = null);
+        return scope(c, fn3, "s" + savepoints++ + (name2 ? "_" + name2 : ""));
+      }
+      function handler2(q) {
+        q.catch((e) => uncaughtError || (uncaughtError = e));
+        c.queue === full ? queries2.push(q) : c.execute(q) || move(c, full);
+      }
+    }
+    function onexecute(c) {
+      connection2 = c;
+      move(c, reserved);
+      c.reserved = () => queries2.length ? c.execute(queries2.shift()) : move(c, reserved);
+    }
+  }
+  function move(c, queue) {
+    c.queue.remove(c);
+    queue.push(c);
+    c.queue = queue;
+    queue === open ? c.idleTimer.start() : c.idleTimer.cancel();
+    return c;
+  }
+  function json3(x) {
+    return new Parameter(x, 3802);
+  }
+  function array2(x, type) {
+    if (!Array.isArray(x))
+      return array2(Array.from(arguments));
+    return new Parameter(x, type || (x.length ? inferType(x) || 25 : 0), options.shared.typeArrayMap);
+  }
+  function handler(query) {
+    if (ending)
+      return query.reject(Errors.connection("CONNECTION_ENDED", options, options));
+    if (open.length)
+      return go(open.shift(), query);
+    if (closed.length)
+      return connect(closed.shift(), query);
+    busy.length ? go(busy.shift(), query) : queries.push(query);
+  }
+  function go(c, query) {
+    return c.execute(query) ? move(c, busy) : move(c, full);
+  }
+  function cancel(query) {
+    return new Promise((resolve, reject) => {
+      query.state ? query.active ? connection_default(options).cancel(query.state, resolve, reject) : query.cancelled = { resolve, reject } : (queries.remove(query), query.cancelled = true, query.reject(Errors.generic("57014", "canceling statement due to user request")), resolve());
+    });
+  }
+  async function end({ timeout = null } = {}) {
+    if (ending)
+      return ending;
+    await 1;
+    let timer2;
+    return ending = Promise.race([
+      new Promise((r) => timeout !== null && (timer2 = setTimeout(destroy, timeout * 1000, r))),
+      Promise.all(connections.map((c) => c.end()).concat(listen.sql ? listen.sql.end({ timeout: 0 }) : [], subscribe.sql ? subscribe.sql.end({ timeout: 0 }) : []))
+    ]).then(() => clearTimeout(timer2));
+  }
+  async function close() {
+    await Promise.all(connections.map((c) => c.end()));
+  }
+  async function destroy(resolve) {
+    await Promise.all(connections.map((c) => c.terminate()));
+    while (queries.length)
+      queries.shift().reject(Errors.connection("CONNECTION_DESTROYED", options));
+    resolve();
+  }
+  function connect(c, query) {
+    move(c, connecting);
+    c.connect(query);
+    return c;
+  }
+  function onend(c) {
+    move(c, ended);
+  }
+  function onopen(c) {
+    if (queries.length === 0)
+      return move(c, open);
+    let max = Math.ceil(queries.length / (connecting.length + 1)), ready = true;
+    while (ready && queries.length && max-- > 0) {
+      const query = queries.shift();
+      if (query.reserve)
+        return query.reserve(c);
+      ready = c.execute(query);
+    }
+    ready ? move(c, busy) : move(c, full);
+  }
+  function onclose(c, e) {
+    move(c, closed);
+    c.reserved = null;
+    c.onclose && (c.onclose(e), c.onclose = null);
+    options.onclose && options.onclose(c.id);
+    queries.length && connect(c, queries.shift());
+  }
+}
+function parseOptions(a, b2) {
+  if (a && a.shared)
+    return a;
+  const env2 = process.env, o = (!a || typeof a === "string" ? b2 : a) || {}, { url: url2, multihost } = parseUrl(a), query = [...url2.searchParams].reduce((a2, [b3, c]) => (a2[b3] = c, a2), {}), host = o.hostname || o.host || multihost || url2.hostname || env2.PGHOST || "localhost", port = o.port || url2.port || env2.PGPORT || 5432, user = o.user || o.username || url2.username || env2.PGUSERNAME || env2.PGUSER || osUsername();
+  o.no_prepare && (o.prepare = false);
+  query.sslmode && (query.ssl = query.sslmode, delete query.sslmode);
+  "timeout" in o && (console.log("The timeout option is deprecated, use idle_timeout instead"), o.idle_timeout = o.timeout);
+  query.sslrootcert === "system" && (query.ssl = "verify-full");
+  const ints = ["idle_timeout", "connect_timeout", "max_lifetime", "max_pipeline", "backoff", "keep_alive"];
+  const defaults = {
+    max: globalThis.Cloudflare ? 3 : 10,
+    ssl: false,
+    sslnegotiation: null,
+    idle_timeout: null,
+    connect_timeout: 30,
+    max_lifetime,
+    max_pipeline: 100,
+    backoff,
+    keep_alive: 60,
+    prepare: true,
+    debug: false,
+    fetch_types: true,
+    publications: "alltables",
+    target_session_attrs: null
+  };
+  return {
+    host: Array.isArray(host) ? host : host.split(",").map((x) => x.split(":")[0]),
+    port: Array.isArray(port) ? port : host.split(",").map((x) => parseInt(x.split(":")[1] || port)),
+    path: o.path || host.indexOf("/") > -1 && host + "/.s.PGSQL." + port,
+    database: o.database || o.db || (url2.pathname || "").slice(1) || env2.PGDATABASE || user,
+    user,
+    pass: o.pass || o.password || url2.password || env2.PGPASSWORD || "",
+    ...Object.entries(defaults).reduce((acc, [k, d]) => {
+      const value = k in o ? o[k] : (k in query) ? query[k] === "disable" || query[k] === "false" ? false : query[k] : env2["PG" + k.toUpperCase()] || d;
+      acc[k] = typeof value === "string" && ints.includes(k) ? +value : value;
+      return acc;
+    }, {}),
+    connection: {
+      application_name: env2.PGAPPNAME || "postgres.js",
+      ...o.connection,
+      ...Object.entries(query).reduce((acc, [k, v]) => ((k in defaults) || (acc[k] = v), acc), {})
+    },
+    types: o.types || {},
+    target_session_attrs: tsa(o, url2, env2),
+    onnotice: o.onnotice,
+    onnotify: o.onnotify,
+    onclose: o.onclose,
+    onparameter: o.onparameter,
+    socket: o.socket,
+    transform: parseTransform(o.transform || { undefined: undefined }),
+    parameters: {},
+    shared: { retries: 0, typeArrayMap: {} },
+    ...mergeUserTypes(o.types)
+  };
+}
+function tsa(o, url2, env2) {
+  const x = o.target_session_attrs || url2.searchParams.get("target_session_attrs") || env2.PGTARGETSESSIONATTRS;
+  if (!x || ["read-write", "read-only", "primary", "standby", "prefer-standby"].includes(x))
+    return x;
+  throw new Error("target_session_attrs " + x + " is not supported");
+}
+function backoff(retries) {
+  return (0.5 + Math.random() / 2) * Math.min(3 ** retries / 100, 20);
+}
+function max_lifetime() {
+  return 60 * (30 + Math.random() * 30);
+}
+function parseTransform(x) {
+  return {
+    undefined: x.undefined,
+    column: {
+      from: typeof x.column === "function" ? x.column : x.column && x.column.from,
+      to: x.column && x.column.to
+    },
+    value: {
+      from: typeof x.value === "function" ? x.value : x.value && x.value.from,
+      to: x.value && x.value.to
+    },
+    row: {
+      from: typeof x.row === "function" ? x.row : x.row && x.row.from,
+      to: x.row && x.row.to
+    }
+  };
+}
+function parseUrl(url2) {
+  if (!url2 || typeof url2 !== "string")
+    return { url: { searchParams: new Map } };
+  let host = url2;
+  host = host.slice(host.indexOf("://") + 3).split(/[?/]/)[0];
+  host = decodeURIComponent(host.slice(host.indexOf("@") + 1));
+  const urlObj = new URL(url2.replace(host, host.split(",")[0]));
+  return {
+    url: {
+      username: decodeURIComponent(urlObj.username),
+      password: decodeURIComponent(urlObj.password),
+      host: urlObj.host,
+      hostname: urlObj.hostname,
+      port: urlObj.port,
+      pathname: urlObj.pathname,
+      searchParams: urlObj.searchParams
+    },
+    multihost: host.indexOf(",") > -1 && host
+  };
+}
+function osUsername() {
+  try {
+    return os.userInfo().username;
+  } catch (_) {
+    return process.env.USERNAME || process.env.USER || process.env.LOGNAME;
+  }
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/selection-proxy.js
+class SelectionProxyHandler {
+  static [entityKind] = "SelectionProxyHandler";
+  config;
+  constructor(config2) {
+    this.config = { ...config2 };
+  }
+  get(subquery, prop) {
+    if (prop === "_") {
+      return {
+        ...subquery["_"],
+        selectedFields: new Proxy(subquery._.selectedFields, this)
+      };
+    }
+    if (prop === ViewBaseConfig) {
+      return {
+        ...subquery[ViewBaseConfig],
+        selectedFields: new Proxy(subquery[ViewBaseConfig].selectedFields, this)
+      };
+    }
+    if (typeof prop === "symbol") {
+      return subquery[prop];
+    }
+    const columns = is(subquery, Subquery) ? subquery._.selectedFields : is(subquery, View) ? subquery[ViewBaseConfig].selectedFields : subquery;
+    const value = columns[prop];
+    if (is(value, SQL.Aliased)) {
+      if (this.config.sqlAliasedBehavior === "sql" && !value.isSelectionField) {
+        return value.sql;
+      }
+      const newValue = value.clone();
+      newValue.isSelectionField = true;
+      return newValue;
+    }
+    if (is(value, SQL)) {
+      if (this.config.sqlBehavior === "sql") {
+        return value;
+      }
+      throw new Error(`You tried to reference "${prop}" field from a subquery, which is a raw SQL field, but it doesn't have an alias declared. Please add an alias to the field using ".as('alias')" method.`);
+    }
+    if (is(value, Column)) {
+      if (this.config.alias) {
+        return new Proxy(value, new ColumnAliasProxyHandler(new Proxy(value.table, new TableAliasProxyHandler(this.config.alias, this.config.replaceOriginalName ?? false))));
+      }
+      return value;
+    }
+    if (typeof value !== "object" || value === null) {
+      return value;
+    }
+    return new Proxy(value, new SelectionProxyHandler(this.config));
+  }
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/indexes.js
+class IndexBuilderOn {
+  constructor(unique, name) {
+    this.unique = unique;
+    this.name = name;
+  }
+  static [entityKind] = "PgIndexBuilderOn";
+  on(...columns) {
+    return new IndexBuilder(columns.map((it) => {
+      if (is(it, SQL)) {
+        return it;
+      }
+      it = it;
+      const clonedIndexedColumn = new IndexedColumn(it.name, !!it.keyAsName, it.columnType, it.indexConfig);
+      it.indexConfig = JSON.parse(JSON.stringify(it.defaultConfig));
+      return clonedIndexedColumn;
+    }), this.unique, false, this.name);
+  }
+  onOnly(...columns) {
+    return new IndexBuilder(columns.map((it) => {
+      if (is(it, SQL)) {
+        return it;
+      }
+      it = it;
+      const clonedIndexedColumn = new IndexedColumn(it.name, !!it.keyAsName, it.columnType, it.indexConfig);
+      it.indexConfig = it.defaultConfig;
+      return clonedIndexedColumn;
+    }), this.unique, true, this.name);
+  }
+  using(method, ...columns) {
+    return new IndexBuilder(columns.map((it) => {
+      if (is(it, SQL)) {
+        return it;
+      }
+      it = it;
+      const clonedIndexedColumn = new IndexedColumn(it.name, !!it.keyAsName, it.columnType, it.indexConfig);
+      it.indexConfig = JSON.parse(JSON.stringify(it.defaultConfig));
+      return clonedIndexedColumn;
+    }), this.unique, true, this.name, method);
+  }
+}
+
+class IndexBuilder {
+  static [entityKind] = "PgIndexBuilder";
+  config;
+  constructor(columns, unique, only, name, method = "btree") {
+    this.config = {
+      name,
+      columns,
+      unique,
+      only,
+      method
+    };
+  }
+  concurrently() {
+    this.config.concurrently = true;
+    return this;
+  }
+  with(obj) {
+    this.config.with = obj;
+    return this;
+  }
+  where(condition) {
+    this.config.where = condition;
+    return this;
+  }
+  build(table) {
+    return new Index(this.config, table);
+  }
+}
+
+class Index {
+  static [entityKind] = "PgIndex";
+  config;
+  constructor(config2, table) {
+    this.config = { ...config2, table };
+  }
+}
+function index(name) {
+  return new IndexBuilderOn(false, name);
+}
+function uniqueIndex(name) {
+  return new IndexBuilderOn(true, name);
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/casing.js
+function toSnakeCase(input) {
+  const words = input.replace(/['\u2019]/g, "").match(/[\da-z]+|[A-Z]+(?![a-z])|[A-Z][\da-z]+/g) ?? [];
+  return words.map((word) => word.toLowerCase()).join("_");
+}
+function toCamelCase(input) {
+  const words = input.replace(/['\u2019]/g, "").match(/[\da-z]+|[A-Z]+(?![a-z])|[A-Z][\da-z]+/g) ?? [];
+  return words.reduce((acc, word, i) => {
+    const formattedWord = i === 0 ? word.toLowerCase() : `${word[0].toUpperCase()}${word.slice(1)}`;
+    return acc + formattedWord;
+  }, "");
+}
+function noopCase(input) {
+  return input;
+}
+
+class CasingCache {
+  static [entityKind] = "CasingCache";
+  cache = {};
+  cachedTables = {};
+  convert;
+  constructor(casing) {
+    this.convert = casing === "snake_case" ? toSnakeCase : casing === "camelCase" ? toCamelCase : noopCase;
+  }
+  getColumnCasing(column) {
+    if (!column.keyAsName)
+      return column.name;
+    const schema = column.table[Table.Symbol.Schema] ?? "public";
+    const tableName = column.table[Table.Symbol.OriginalName];
+    const key = `${schema}.${tableName}.${column.name}`;
+    if (!this.cache[key]) {
+      this.cacheTable(column.table);
+    }
+    return this.cache[key];
+  }
+  cacheTable(table) {
+    const schema = table[Table.Symbol.Schema] ?? "public";
+    const tableName = table[Table.Symbol.OriginalName];
+    const tableKey = `${schema}.${tableName}`;
+    if (!this.cachedTables[tableKey]) {
+      for (const column of Object.values(table[Table.Symbol.Columns])) {
+        const columnKey = `${tableKey}.${column.name}`;
+        this.cache[columnKey] = this.convert(column.name);
+      }
+      this.cachedTables[tableKey] = true;
+    }
+  }
+  clearCache() {
+    this.cache = {};
+    this.cachedTables = {};
+  }
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/view-base.js
+class PgViewBase extends View {
+  static [entityKind] = "PgViewBase";
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/dialect.js
+class PgDialect {
+  static [entityKind] = "PgDialect";
+  casing;
+  constructor(config2) {
+    this.casing = new CasingCache(config2?.casing);
+  }
+  async migrate(migrations, session, config2) {
+    const migrationsTable = typeof config2 === "string" ? "__drizzle_migrations" : config2.migrationsTable ?? "__drizzle_migrations";
+    const migrationsSchema = typeof config2 === "string" ? "drizzle" : config2.migrationsSchema ?? "drizzle";
+    const migrationTableCreate = sql`
+			CREATE TABLE IF NOT EXISTS ${sql.identifier(migrationsSchema)}.${sql.identifier(migrationsTable)} (
+				id SERIAL PRIMARY KEY,
+				hash text NOT NULL,
+				created_at bigint
+			)
+		`;
+    await session.execute(sql`CREATE SCHEMA IF NOT EXISTS ${sql.identifier(migrationsSchema)}`);
+    await session.execute(migrationTableCreate);
+    const dbMigrations = await session.all(sql`select id, hash, created_at from ${sql.identifier(migrationsSchema)}.${sql.identifier(migrationsTable)} order by created_at desc limit 1`);
+    const lastDbMigration = dbMigrations[0];
+    await session.transaction(async (tx) => {
+      for await (const migration of migrations) {
+        if (!lastDbMigration || Number(lastDbMigration.created_at) < migration.folderMillis) {
+          for (const stmt of migration.sql) {
+            await tx.execute(sql.raw(stmt));
+          }
+          await tx.execute(sql`insert into ${sql.identifier(migrationsSchema)}.${sql.identifier(migrationsTable)} ("hash", "created_at") values(${migration.hash}, ${migration.folderMillis})`);
+        }
+      }
+    });
+  }
+  escapeName(name) {
+    return `"${name}"`;
+  }
+  escapeParam(num) {
+    return `$${num + 1}`;
+  }
+  escapeString(str) {
+    return `'${str.replace(/'/g, "''")}'`;
+  }
+  buildWithCTE(queries) {
+    if (!queries?.length)
+      return;
+    const withSqlChunks = [sql`with `];
+    for (const [i, w] of queries.entries()) {
+      withSqlChunks.push(sql`${sql.identifier(w._.alias)} as (${w._.sql})`);
+      if (i < queries.length - 1) {
+        withSqlChunks.push(sql`, `);
+      }
+    }
+    withSqlChunks.push(sql` `);
+    return sql.join(withSqlChunks);
+  }
+  buildDeleteQuery({ table, where, returning, withList }) {
+    const withSql = this.buildWithCTE(withList);
+    const returningSql = returning ? sql` returning ${this.buildSelection(returning, { isSingleTable: true })}` : undefined;
+    const whereSql = where ? sql` where ${where}` : undefined;
+    return sql`${withSql}delete from ${table}${whereSql}${returningSql}`;
+  }
+  buildUpdateSet(table, set2) {
+    const tableColumns = table[Table.Symbol.Columns];
+    const columnNames = Object.keys(tableColumns).filter((colName) => set2[colName] !== undefined || tableColumns[colName]?.onUpdateFn !== undefined);
+    const setSize = columnNames.length;
+    return sql.join(columnNames.flatMap((colName, i) => {
+      const col = tableColumns[colName];
+      const value = set2[colName] ?? sql.param(col.onUpdateFn(), col);
+      const res = sql`${sql.identifier(this.casing.getColumnCasing(col))} = ${value}`;
+      if (i < setSize - 1) {
+        return [res, sql.raw(", ")];
+      }
+      return [res];
+    }));
+  }
+  buildUpdateQuery({ table, set: set2, where, returning, withList, from, joins }) {
+    const withSql = this.buildWithCTE(withList);
+    const tableName = table[PgTable.Symbol.Name];
+    const tableSchema = table[PgTable.Symbol.Schema];
+    const origTableName = table[PgTable.Symbol.OriginalName];
+    const alias = tableName === origTableName ? undefined : tableName;
+    const tableSql = sql`${tableSchema ? sql`${sql.identifier(tableSchema)}.` : undefined}${sql.identifier(origTableName)}${alias && sql` ${sql.identifier(alias)}`}`;
+    const setSql = this.buildUpdateSet(table, set2);
+    const fromSql = from && sql.join([sql.raw(" from "), this.buildFromTable(from)]);
+    const joinsSql = this.buildJoins(joins);
+    const returningSql = returning ? sql` returning ${this.buildSelection(returning, { isSingleTable: !from })}` : undefined;
+    const whereSql = where ? sql` where ${where}` : undefined;
+    return sql`${withSql}update ${tableSql} set ${setSql}${fromSql}${joinsSql}${whereSql}${returningSql}`;
+  }
+  buildSelection(fields, { isSingleTable = false } = {}) {
+    const columnsLen = fields.length;
+    const chunks = fields.flatMap(({ field }, i) => {
+      const chunk = [];
+      if (is(field, SQL.Aliased) && field.isSelectionField) {
+        chunk.push(sql.identifier(field.fieldAlias));
+      } else if (is(field, SQL.Aliased) || is(field, SQL)) {
+        const query = is(field, SQL.Aliased) ? field.sql : field;
+        if (isSingleTable) {
+          chunk.push(new SQL(query.queryChunks.map((c) => {
+            if (is(c, PgColumn)) {
+              return sql.identifier(this.casing.getColumnCasing(c));
+            }
+            return c;
+          })));
+        } else {
+          chunk.push(query);
+        }
+        if (is(field, SQL.Aliased)) {
+          chunk.push(sql` as ${sql.identifier(field.fieldAlias)}`);
+        }
+      } else if (is(field, Column)) {
+        if (isSingleTable) {
+          chunk.push(sql.identifier(this.casing.getColumnCasing(field)));
+        } else {
+          chunk.push(field);
+        }
+      }
+      if (i < columnsLen - 1) {
+        chunk.push(sql`, `);
+      }
+      return chunk;
+    });
+    return sql.join(chunks);
+  }
+  buildJoins(joins) {
+    if (!joins || joins.length === 0) {
+      return;
+    }
+    const joinsArray = [];
+    for (const [index2, joinMeta] of joins.entries()) {
+      if (index2 === 0) {
+        joinsArray.push(sql` `);
+      }
+      const table = joinMeta.table;
+      const lateralSql = joinMeta.lateral ? sql` lateral` : undefined;
+      const onSql = joinMeta.on ? sql` on ${joinMeta.on}` : undefined;
+      if (is(table, PgTable)) {
+        const tableName = table[PgTable.Symbol.Name];
+        const tableSchema = table[PgTable.Symbol.Schema];
+        const origTableName = table[PgTable.Symbol.OriginalName];
+        const alias = tableName === origTableName ? undefined : joinMeta.alias;
+        joinsArray.push(sql`${sql.raw(joinMeta.joinType)} join${lateralSql} ${tableSchema ? sql`${sql.identifier(tableSchema)}.` : undefined}${sql.identifier(origTableName)}${alias && sql` ${sql.identifier(alias)}`}${onSql}`);
+      } else if (is(table, View)) {
+        const viewName = table[ViewBaseConfig].name;
+        const viewSchema = table[ViewBaseConfig].schema;
+        const origViewName = table[ViewBaseConfig].originalName;
+        const alias = viewName === origViewName ? undefined : joinMeta.alias;
+        joinsArray.push(sql`${sql.raw(joinMeta.joinType)} join${lateralSql} ${viewSchema ? sql`${sql.identifier(viewSchema)}.` : undefined}${sql.identifier(origViewName)}${alias && sql` ${sql.identifier(alias)}`}${onSql}`);
+      } else {
+        joinsArray.push(sql`${sql.raw(joinMeta.joinType)} join${lateralSql} ${table}${onSql}`);
+      }
+      if (index2 < joins.length - 1) {
+        joinsArray.push(sql` `);
+      }
+    }
+    return sql.join(joinsArray);
+  }
+  buildFromTable(table) {
+    if (is(table, Table) && table[Table.Symbol.IsAlias]) {
+      let fullName = sql`${sql.identifier(table[Table.Symbol.OriginalName])}`;
+      if (table[Table.Symbol.Schema]) {
+        fullName = sql`${sql.identifier(table[Table.Symbol.Schema])}.${fullName}`;
+      }
+      return sql`${fullName} ${sql.identifier(table[Table.Symbol.Name])}`;
+    }
+    return table;
+  }
+  buildSelectQuery({
+    withList,
+    fields,
+    fieldsFlat,
+    where,
+    having,
+    table,
+    joins,
+    orderBy,
+    groupBy,
+    limit,
+    offset,
+    lockingClause,
+    distinct,
+    setOperators
+  }) {
+    const fieldsList = fieldsFlat ?? orderSelectedFields(fields);
+    for (const f of fieldsList) {
+      if (is(f.field, Column) && getTableName(f.field.table) !== (is(table, Subquery) ? table._.alias : is(table, PgViewBase) ? table[ViewBaseConfig].name : is(table, SQL) ? undefined : getTableName(table)) && !((table2) => joins?.some(({ alias }) => alias === (table2[Table.Symbol.IsAlias] ? getTableName(table2) : table2[Table.Symbol.BaseName])))(f.field.table)) {
+        const tableName = getTableName(f.field.table);
+        throw new Error(`Your "${f.path.join("->")}" field references a column "${tableName}"."${f.field.name}", but the table "${tableName}" is not part of the query! Did you forget to join it?`);
+      }
+    }
+    const isSingleTable = !joins || joins.length === 0;
+    const withSql = this.buildWithCTE(withList);
+    let distinctSql;
+    if (distinct) {
+      distinctSql = distinct === true ? sql` distinct` : sql` distinct on (${sql.join(distinct.on, sql`, `)})`;
+    }
+    const selection = this.buildSelection(fieldsList, { isSingleTable });
+    const tableSql = this.buildFromTable(table);
+    const joinsSql = this.buildJoins(joins);
+    const whereSql = where ? sql` where ${where}` : undefined;
+    const havingSql = having ? sql` having ${having}` : undefined;
+    let orderBySql;
+    if (orderBy && orderBy.length > 0) {
+      orderBySql = sql` order by ${sql.join(orderBy, sql`, `)}`;
+    }
+    let groupBySql;
+    if (groupBy && groupBy.length > 0) {
+      groupBySql = sql` group by ${sql.join(groupBy, sql`, `)}`;
+    }
+    const limitSql = typeof limit === "object" || typeof limit === "number" && limit >= 0 ? sql` limit ${limit}` : undefined;
+    const offsetSql = offset ? sql` offset ${offset}` : undefined;
+    const lockingClauseSql = sql.empty();
+    if (lockingClause) {
+      const clauseSql = sql` for ${sql.raw(lockingClause.strength)}`;
+      if (lockingClause.config.of) {
+        clauseSql.append(sql` of ${sql.join(Array.isArray(lockingClause.config.of) ? lockingClause.config.of : [lockingClause.config.of], sql`, `)}`);
+      }
+      if (lockingClause.config.noWait) {
+        clauseSql.append(sql` nowait`);
+      } else if (lockingClause.config.skipLocked) {
+        clauseSql.append(sql` skip locked`);
+      }
+      lockingClauseSql.append(clauseSql);
+    }
+    const finalQuery = sql`${withSql}select${distinctSql} ${selection} from ${tableSql}${joinsSql}${whereSql}${groupBySql}${havingSql}${orderBySql}${limitSql}${offsetSql}${lockingClauseSql}`;
+    if (setOperators.length > 0) {
+      return this.buildSetOperations(finalQuery, setOperators);
+    }
+    return finalQuery;
+  }
+  buildSetOperations(leftSelect, setOperators) {
+    const [setOperator, ...rest] = setOperators;
+    if (!setOperator) {
+      throw new Error("Cannot pass undefined values to any set operator");
+    }
+    if (rest.length === 0) {
+      return this.buildSetOperationQuery({ leftSelect, setOperator });
+    }
+    return this.buildSetOperations(this.buildSetOperationQuery({ leftSelect, setOperator }), rest);
+  }
+  buildSetOperationQuery({
+    leftSelect,
+    setOperator: { type, isAll, rightSelect, limit, orderBy, offset }
+  }) {
+    const leftChunk = sql`(${leftSelect.getSQL()}) `;
+    const rightChunk = sql`(${rightSelect.getSQL()})`;
+    let orderBySql;
+    if (orderBy && orderBy.length > 0) {
+      const orderByValues = [];
+      for (const singleOrderBy of orderBy) {
+        if (is(singleOrderBy, PgColumn)) {
+          orderByValues.push(sql.identifier(singleOrderBy.name));
+        } else if (is(singleOrderBy, SQL)) {
+          for (let i = 0;i < singleOrderBy.queryChunks.length; i++) {
+            const chunk = singleOrderBy.queryChunks[i];
+            if (is(chunk, PgColumn)) {
+              singleOrderBy.queryChunks[i] = sql.identifier(chunk.name);
+            }
+          }
+          orderByValues.push(sql`${singleOrderBy}`);
+        } else {
+          orderByValues.push(sql`${singleOrderBy}`);
+        }
+      }
+      orderBySql = sql` order by ${sql.join(orderByValues, sql`, `)} `;
+    }
+    const limitSql = typeof limit === "object" || typeof limit === "number" && limit >= 0 ? sql` limit ${limit}` : undefined;
+    const operatorChunk = sql.raw(`${type} ${isAll ? "all " : ""}`);
+    const offsetSql = offset ? sql` offset ${offset}` : undefined;
+    return sql`${leftChunk}${operatorChunk}${rightChunk}${orderBySql}${limitSql}${offsetSql}`;
+  }
+  buildInsertQuery({ table, values: valuesOrSelect, onConflict, returning, withList, select: select2, overridingSystemValue_ }) {
+    const valuesSqlList = [];
+    const columns = table[Table.Symbol.Columns];
+    const colEntries = Object.entries(columns).filter(([_, col]) => !col.shouldDisableInsert());
+    const insertOrder = colEntries.map(([, column]) => sql.identifier(this.casing.getColumnCasing(column)));
+    if (select2) {
+      const select22 = valuesOrSelect;
+      if (is(select22, SQL)) {
+        valuesSqlList.push(select22);
+      } else {
+        valuesSqlList.push(select22.getSQL());
+      }
+    } else {
+      const values2 = valuesOrSelect;
+      valuesSqlList.push(sql.raw("values "));
+      for (const [valueIndex, value] of values2.entries()) {
+        const valueList = [];
+        for (const [fieldName, col] of colEntries) {
+          const colValue = value[fieldName];
+          if (colValue === undefined || is(colValue, Param) && colValue.value === undefined) {
+            if (col.defaultFn !== undefined) {
+              const defaultFnResult = col.defaultFn();
+              const defaultValue = is(defaultFnResult, SQL) ? defaultFnResult : sql.param(defaultFnResult, col);
+              valueList.push(defaultValue);
+            } else if (!col.default && col.onUpdateFn !== undefined) {
+              const onUpdateFnResult = col.onUpdateFn();
+              const newValue = is(onUpdateFnResult, SQL) ? onUpdateFnResult : sql.param(onUpdateFnResult, col);
+              valueList.push(newValue);
+            } else {
+              valueList.push(sql`default`);
+            }
+          } else {
+            valueList.push(colValue);
+          }
+        }
+        valuesSqlList.push(valueList);
+        if (valueIndex < values2.length - 1) {
+          valuesSqlList.push(sql`, `);
+        }
+      }
+    }
+    const withSql = this.buildWithCTE(withList);
+    const valuesSql = sql.join(valuesSqlList);
+    const returningSql = returning ? sql` returning ${this.buildSelection(returning, { isSingleTable: true })}` : undefined;
+    const onConflictSql = onConflict ? sql` on conflict ${onConflict}` : undefined;
+    const overridingSql = overridingSystemValue_ === true ? sql`overriding system value ` : undefined;
+    return sql`${withSql}insert into ${table} ${insertOrder} ${overridingSql}${valuesSql}${onConflictSql}${returningSql}`;
+  }
+  buildRefreshMaterializedViewQuery({ view, concurrently, withNoData }) {
+    const concurrentlySql = concurrently ? sql` concurrently` : undefined;
+    const withNoDataSql = withNoData ? sql` with no data` : undefined;
+    return sql`refresh materialized view${concurrentlySql} ${view}${withNoDataSql}`;
+  }
+  prepareTyping(encoder) {
+    if (is(encoder, PgJsonb) || is(encoder, PgJson)) {
+      return "json";
+    } else if (is(encoder, PgNumeric)) {
+      return "decimal";
+    } else if (is(encoder, PgTime)) {
+      return "time";
+    } else if (is(encoder, PgTimestamp) || is(encoder, PgTimestampString)) {
+      return "timestamp";
+    } else if (is(encoder, PgDate) || is(encoder, PgDateString)) {
+      return "date";
+    } else if (is(encoder, PgUUID)) {
+      return "uuid";
+    } else {
+      return "none";
+    }
+  }
+  sqlToQuery(sql2, invokeSource) {
+    return sql2.toQuery({
+      casing: this.casing,
+      escapeName: this.escapeName,
+      escapeParam: this.escapeParam,
+      escapeString: this.escapeString,
+      prepareTyping: this.prepareTyping,
+      invokeSource
+    });
+  }
+  buildRelationalQueryWithoutPK({
+    fullSchema,
+    schema,
+    tableNamesMap,
+    table,
+    tableConfig,
+    queryConfig: config2,
+    tableAlias,
+    nestedQueryRelation,
+    joinOn
+  }) {
+    let selection = [];
+    let limit, offset, orderBy = [], where;
+    const joins = [];
+    if (config2 === true) {
+      const selectionEntries = Object.entries(tableConfig.columns);
+      selection = selectionEntries.map(([key, value]) => ({
+        dbKey: value.name,
+        tsKey: key,
+        field: aliasedTableColumn(value, tableAlias),
+        relationTableTsKey: undefined,
+        isJson: false,
+        selection: []
+      }));
+    } else {
+      const aliasedColumns = Object.fromEntries(Object.entries(tableConfig.columns).map(([key, value]) => [key, aliasedTableColumn(value, tableAlias)]));
+      if (config2.where) {
+        const whereSql = typeof config2.where === "function" ? config2.where(aliasedColumns, getOperators()) : config2.where;
+        where = whereSql && mapColumnsInSQLToAlias(whereSql, tableAlias);
+      }
+      const fieldsSelection = [];
+      let selectedColumns = [];
+      if (config2.columns) {
+        let isIncludeMode = false;
+        for (const [field, value] of Object.entries(config2.columns)) {
+          if (value === undefined) {
+            continue;
+          }
+          if (field in tableConfig.columns) {
+            if (!isIncludeMode && value === true) {
+              isIncludeMode = true;
+            }
+            selectedColumns.push(field);
+          }
+        }
+        if (selectedColumns.length > 0) {
+          selectedColumns = isIncludeMode ? selectedColumns.filter((c) => config2.columns?.[c] === true) : Object.keys(tableConfig.columns).filter((key) => !selectedColumns.includes(key));
+        }
+      } else {
+        selectedColumns = Object.keys(tableConfig.columns);
+      }
+      for (const field of selectedColumns) {
+        const column = tableConfig.columns[field];
+        fieldsSelection.push({ tsKey: field, value: column });
+      }
+      let selectedRelations = [];
+      if (config2.with) {
+        selectedRelations = Object.entries(config2.with).filter((entry) => !!entry[1]).map(([tsKey, queryConfig]) => ({ tsKey, queryConfig, relation: tableConfig.relations[tsKey] }));
+      }
+      let extras;
+      if (config2.extras) {
+        extras = typeof config2.extras === "function" ? config2.extras(aliasedColumns, { sql }) : config2.extras;
+        for (const [tsKey, value] of Object.entries(extras)) {
+          fieldsSelection.push({
+            tsKey,
+            value: mapColumnsInAliasedSQLToAlias(value, tableAlias)
+          });
+        }
+      }
+      for (const { tsKey, value } of fieldsSelection) {
+        selection.push({
+          dbKey: is(value, SQL.Aliased) ? value.fieldAlias : tableConfig.columns[tsKey].name,
+          tsKey,
+          field: is(value, Column) ? aliasedTableColumn(value, tableAlias) : value,
+          relationTableTsKey: undefined,
+          isJson: false,
+          selection: []
+        });
+      }
+      let orderByOrig = typeof config2.orderBy === "function" ? config2.orderBy(aliasedColumns, getOrderByOperators()) : config2.orderBy ?? [];
+      if (!Array.isArray(orderByOrig)) {
+        orderByOrig = [orderByOrig];
+      }
+      orderBy = orderByOrig.map((orderByValue) => {
+        if (is(orderByValue, Column)) {
+          return aliasedTableColumn(orderByValue, tableAlias);
+        }
+        return mapColumnsInSQLToAlias(orderByValue, tableAlias);
+      });
+      limit = config2.limit;
+      offset = config2.offset;
+      for (const {
+        tsKey: selectedRelationTsKey,
+        queryConfig: selectedRelationConfigValue,
+        relation
+      } of selectedRelations) {
+        const normalizedRelation = normalizeRelation(schema, tableNamesMap, relation);
+        const relationTableName = getTableUniqueName(relation.referencedTable);
+        const relationTableTsName = tableNamesMap[relationTableName];
+        const relationTableAlias = `${tableAlias}_${selectedRelationTsKey}`;
+        const joinOn2 = and(...normalizedRelation.fields.map((field2, i) => eq(aliasedTableColumn(normalizedRelation.references[i], relationTableAlias), aliasedTableColumn(field2, tableAlias))));
+        const builtRelation = this.buildRelationalQueryWithoutPK({
+          fullSchema,
+          schema,
+          tableNamesMap,
+          table: fullSchema[relationTableTsName],
+          tableConfig: schema[relationTableTsName],
+          queryConfig: is(relation, One) ? selectedRelationConfigValue === true ? { limit: 1 } : { ...selectedRelationConfigValue, limit: 1 } : selectedRelationConfigValue,
+          tableAlias: relationTableAlias,
+          joinOn: joinOn2,
+          nestedQueryRelation: relation
+        });
+        const field = sql`${sql.identifier(relationTableAlias)}.${sql.identifier("data")}`.as(selectedRelationTsKey);
+        joins.push({
+          on: sql`true`,
+          table: new Subquery(builtRelation.sql, {}, relationTableAlias),
+          alias: relationTableAlias,
+          joinType: "left",
+          lateral: true
+        });
+        selection.push({
+          dbKey: selectedRelationTsKey,
+          tsKey: selectedRelationTsKey,
+          field,
+          relationTableTsKey: relationTableTsName,
+          isJson: true,
+          selection: builtRelation.selection
+        });
+      }
+    }
+    if (selection.length === 0) {
+      throw new DrizzleError({ message: `No fields selected for table "${tableConfig.tsName}" ("${tableAlias}")` });
+    }
+    let result;
+    where = and(joinOn, where);
+    if (nestedQueryRelation) {
+      let field = sql`json_build_array(${sql.join(selection.map(({ field: field2, tsKey, isJson }) => isJson ? sql`${sql.identifier(`${tableAlias}_${tsKey}`)}.${sql.identifier("data")}` : is(field2, SQL.Aliased) ? field2.sql : field2), sql`, `)})`;
+      if (is(nestedQueryRelation, Many)) {
+        field = sql`coalesce(json_agg(${field}${orderBy.length > 0 ? sql` order by ${sql.join(orderBy, sql`, `)}` : undefined}), '[]'::json)`;
+      }
+      const nestedSelection = [{
+        dbKey: "data",
+        tsKey: "data",
+        field: field.as("data"),
+        isJson: true,
+        relationTableTsKey: tableConfig.tsName,
+        selection
+      }];
+      const needsSubquery = limit !== undefined || offset !== undefined || orderBy.length > 0;
+      if (needsSubquery) {
+        result = this.buildSelectQuery({
+          table: aliasedTable(table, tableAlias),
+          fields: {},
+          fieldsFlat: [{
+            path: [],
+            field: sql.raw("*")
+          }],
+          where,
+          limit,
+          offset,
+          orderBy,
+          setOperators: []
+        });
+        where = undefined;
+        limit = undefined;
+        offset = undefined;
+        orderBy = [];
+      } else {
+        result = aliasedTable(table, tableAlias);
+      }
+      result = this.buildSelectQuery({
+        table: is(result, PgTable) ? result : new Subquery(result, {}, tableAlias),
+        fields: {},
+        fieldsFlat: nestedSelection.map(({ field: field2 }) => ({
+          path: [],
+          field: is(field2, Column) ? aliasedTableColumn(field2, tableAlias) : field2
+        })),
+        joins,
+        where,
+        limit,
+        offset,
+        orderBy,
+        setOperators: []
+      });
+    } else {
+      result = this.buildSelectQuery({
+        table: aliasedTable(table, tableAlias),
+        fields: {},
+        fieldsFlat: selection.map(({ field }) => ({
+          path: [],
+          field: is(field, Column) ? aliasedTableColumn(field, tableAlias) : field
+        })),
+        joins,
+        where,
+        limit,
+        offset,
+        orderBy,
+        setOperators: []
+      });
+    }
+    return {
+      tableTsKey: tableConfig.tsName,
+      sql: result,
+      selection
+    };
+  }
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/query-builders/query-builder.js
+class TypedQueryBuilder {
+  static [entityKind] = "TypedQueryBuilder";
+  getSelectedFields() {
+    return this._.selectedFields;
+  }
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/query-builders/select.js
+class PgSelectBuilder {
+  static [entityKind] = "PgSelectBuilder";
+  fields;
+  session;
+  dialect;
+  withList = [];
+  distinct;
+  constructor(config2) {
+    this.fields = config2.fields;
+    this.session = config2.session;
+    this.dialect = config2.dialect;
+    if (config2.withList) {
+      this.withList = config2.withList;
+    }
+    this.distinct = config2.distinct;
+  }
+  authToken;
+  setToken(token) {
+    this.authToken = token;
+    return this;
+  }
+  from(source) {
+    const isPartialSelect = !!this.fields;
+    const src = source;
+    let fields;
+    if (this.fields) {
+      fields = this.fields;
+    } else if (is(src, Subquery)) {
+      fields = Object.fromEntries(Object.keys(src._.selectedFields).map((key) => [key, src[key]]));
+    } else if (is(src, PgViewBase)) {
+      fields = src[ViewBaseConfig].selectedFields;
+    } else if (is(src, SQL)) {
+      fields = {};
+    } else {
+      fields = getTableColumns(src);
+    }
+    return new PgSelectBase({
+      table: src,
+      fields,
+      isPartialSelect,
+      session: this.session,
+      dialect: this.dialect,
+      withList: this.withList,
+      distinct: this.distinct
+    }).setToken(this.authToken);
+  }
+}
+
+class PgSelectQueryBuilderBase extends TypedQueryBuilder {
+  static [entityKind] = "PgSelectQueryBuilder";
+  _;
+  config;
+  joinsNotNullableMap;
+  tableName;
+  isPartialSelect;
+  session;
+  dialect;
+  cacheConfig = undefined;
+  usedTables = /* @__PURE__ */ new Set;
+  constructor({ table, fields, isPartialSelect, session, dialect, withList, distinct }) {
+    super();
+    this.config = {
+      withList,
+      table,
+      fields: { ...fields },
+      distinct,
+      setOperators: []
+    };
+    this.isPartialSelect = isPartialSelect;
+    this.session = session;
+    this.dialect = dialect;
+    this._ = {
+      selectedFields: fields,
+      config: this.config
+    };
+    this.tableName = getTableLikeName(table);
+    this.joinsNotNullableMap = typeof this.tableName === "string" ? { [this.tableName]: true } : {};
+    for (const item of extractUsedTable(table))
+      this.usedTables.add(item);
+  }
+  getUsedTables() {
+    return [...this.usedTables];
+  }
+  createJoin(joinType, lateral) {
+    return (table, on) => {
+      const baseTableName = this.tableName;
+      const tableName = getTableLikeName(table);
+      for (const item of extractUsedTable(table))
+        this.usedTables.add(item);
+      if (typeof tableName === "string" && this.config.joins?.some((join) => join.alias === tableName)) {
+        throw new Error(`Alias "${tableName}" is already used in this query`);
+      }
+      if (!this.isPartialSelect) {
+        if (Object.keys(this.joinsNotNullableMap).length === 1 && typeof baseTableName === "string") {
+          this.config.fields = {
+            [baseTableName]: this.config.fields
+          };
+        }
+        if (typeof tableName === "string" && !is(table, SQL)) {
+          const selection = is(table, Subquery) ? table._.selectedFields : is(table, View) ? table[ViewBaseConfig].selectedFields : table[Table.Symbol.Columns];
+          this.config.fields[tableName] = selection;
+        }
+      }
+      if (typeof on === "function") {
+        on = on(new Proxy(this.config.fields, new SelectionProxyHandler({ sqlAliasedBehavior: "sql", sqlBehavior: "sql" })));
+      }
+      if (!this.config.joins) {
+        this.config.joins = [];
+      }
+      this.config.joins.push({ on, table, joinType, alias: tableName, lateral });
+      if (typeof tableName === "string") {
+        switch (joinType) {
+          case "left": {
+            this.joinsNotNullableMap[tableName] = false;
+            break;
+          }
+          case "right": {
+            this.joinsNotNullableMap = Object.fromEntries(Object.entries(this.joinsNotNullableMap).map(([key]) => [key, false]));
+            this.joinsNotNullableMap[tableName] = true;
+            break;
+          }
+          case "cross":
+          case "inner": {
+            this.joinsNotNullableMap[tableName] = true;
+            break;
+          }
+          case "full": {
+            this.joinsNotNullableMap = Object.fromEntries(Object.entries(this.joinsNotNullableMap).map(([key]) => [key, false]));
+            this.joinsNotNullableMap[tableName] = false;
+            break;
+          }
+        }
+      }
+      return this;
+    };
+  }
+  leftJoin = this.createJoin("left", false);
+  leftJoinLateral = this.createJoin("left", true);
+  rightJoin = this.createJoin("right", false);
+  innerJoin = this.createJoin("inner", false);
+  innerJoinLateral = this.createJoin("inner", true);
+  fullJoin = this.createJoin("full", false);
+  crossJoin = this.createJoin("cross", false);
+  crossJoinLateral = this.createJoin("cross", true);
+  createSetOperator(type, isAll) {
+    return (rightSelection) => {
+      const rightSelect = typeof rightSelection === "function" ? rightSelection(getPgSetOperators()) : rightSelection;
+      if (!haveSameKeys(this.getSelectedFields(), rightSelect.getSelectedFields())) {
+        throw new Error("Set operator error (union / intersect / except): selected fields are not the same or are in a different order");
+      }
+      this.config.setOperators.push({ type, isAll, rightSelect });
+      return this;
+    };
+  }
+  union = this.createSetOperator("union", false);
+  unionAll = this.createSetOperator("union", true);
+  intersect = this.createSetOperator("intersect", false);
+  intersectAll = this.createSetOperator("intersect", true);
+  except = this.createSetOperator("except", false);
+  exceptAll = this.createSetOperator("except", true);
+  addSetOperators(setOperators) {
+    this.config.setOperators.push(...setOperators);
+    return this;
+  }
+  where(where) {
+    if (typeof where === "function") {
+      where = where(new Proxy(this.config.fields, new SelectionProxyHandler({ sqlAliasedBehavior: "sql", sqlBehavior: "sql" })));
+    }
+    this.config.where = where;
+    return this;
+  }
+  having(having) {
+    if (typeof having === "function") {
+      having = having(new Proxy(this.config.fields, new SelectionProxyHandler({ sqlAliasedBehavior: "sql", sqlBehavior: "sql" })));
+    }
+    this.config.having = having;
+    return this;
+  }
+  groupBy(...columns) {
+    if (typeof columns[0] === "function") {
+      const groupBy = columns[0](new Proxy(this.config.fields, new SelectionProxyHandler({ sqlAliasedBehavior: "alias", sqlBehavior: "sql" })));
+      this.config.groupBy = Array.isArray(groupBy) ? groupBy : [groupBy];
+    } else {
+      this.config.groupBy = columns;
+    }
+    return this;
+  }
+  orderBy(...columns) {
+    if (typeof columns[0] === "function") {
+      const orderBy = columns[0](new Proxy(this.config.fields, new SelectionProxyHandler({ sqlAliasedBehavior: "alias", sqlBehavior: "sql" })));
+      const orderByArray = Array.isArray(orderBy) ? orderBy : [orderBy];
+      if (this.config.setOperators.length > 0) {
+        this.config.setOperators.at(-1).orderBy = orderByArray;
+      } else {
+        this.config.orderBy = orderByArray;
+      }
+    } else {
+      const orderByArray = columns;
+      if (this.config.setOperators.length > 0) {
+        this.config.setOperators.at(-1).orderBy = orderByArray;
+      } else {
+        this.config.orderBy = orderByArray;
+      }
+    }
+    return this;
+  }
+  limit(limit) {
+    if (this.config.setOperators.length > 0) {
+      this.config.setOperators.at(-1).limit = limit;
+    } else {
+      this.config.limit = limit;
+    }
+    return this;
+  }
+  offset(offset) {
+    if (this.config.setOperators.length > 0) {
+      this.config.setOperators.at(-1).offset = offset;
+    } else {
+      this.config.offset = offset;
+    }
+    return this;
+  }
+  for(strength, config2 = {}) {
+    this.config.lockingClause = { strength, config: config2 };
+    return this;
+  }
+  getSQL() {
+    return this.dialect.buildSelectQuery(this.config);
+  }
+  toSQL() {
+    const { typings: _typings, ...rest } = this.dialect.sqlToQuery(this.getSQL());
+    return rest;
+  }
+  as(alias) {
+    const usedTables = [];
+    usedTables.push(...extractUsedTable(this.config.table));
+    if (this.config.joins) {
+      for (const it of this.config.joins)
+        usedTables.push(...extractUsedTable(it.table));
+    }
+    return new Proxy(new Subquery(this.getSQL(), this.config.fields, alias, false, [...new Set(usedTables)]), new SelectionProxyHandler({ alias, sqlAliasedBehavior: "alias", sqlBehavior: "error" }));
+  }
+  getSelectedFields() {
+    return new Proxy(this.config.fields, new SelectionProxyHandler({ alias: this.tableName, sqlAliasedBehavior: "alias", sqlBehavior: "error" }));
+  }
+  $dynamic() {
+    return this;
+  }
+  $withCache(config2) {
+    this.cacheConfig = config2 === undefined ? { config: {}, enable: true, autoInvalidate: true } : config2 === false ? { enable: false } : { enable: true, autoInvalidate: true, ...config2 };
+    return this;
+  }
+}
+
+class PgSelectBase extends PgSelectQueryBuilderBase {
+  static [entityKind] = "PgSelect";
+  _prepare(name) {
+    const { session, config: config2, dialect, joinsNotNullableMap, authToken, cacheConfig, usedTables } = this;
+    if (!session) {
+      throw new Error("Cannot execute a query on a query builder. Please use a database instance instead.");
+    }
+    const { fields } = config2;
+    return tracer.startActiveSpan("drizzle.prepareQuery", () => {
+      const fieldsList = orderSelectedFields(fields);
+      const query = session.prepareQuery(dialect.sqlToQuery(this.getSQL()), fieldsList, name, true, undefined, {
+        type: "select",
+        tables: [...usedTables]
+      }, cacheConfig);
+      query.joinsNotNullableMap = joinsNotNullableMap;
+      return query.setToken(authToken);
+    });
+  }
+  prepare(name) {
+    return this._prepare(name);
+  }
+  authToken;
+  setToken(token) {
+    this.authToken = token;
+    return this;
+  }
+  execute = (placeholderValues) => {
+    return tracer.startActiveSpan("drizzle.operation", () => {
+      return this._prepare().execute(placeholderValues, this.authToken);
+    });
+  };
+}
+applyMixins(PgSelectBase, [QueryPromise]);
+function createSetOperator(type, isAll) {
+  return (leftSelect, rightSelect, ...restSelects) => {
+    const setOperators = [rightSelect, ...restSelects].map((select2) => ({
+      type,
+      isAll,
+      rightSelect: select2
+    }));
+    for (const setOperator of setOperators) {
+      if (!haveSameKeys(leftSelect.getSelectedFields(), setOperator.rightSelect.getSelectedFields())) {
+        throw new Error("Set operator error (union / intersect / except): selected fields are not the same or are in a different order");
+      }
+    }
+    return leftSelect.addSetOperators(setOperators);
+  };
+}
+var getPgSetOperators = () => ({
+  union: union2,
+  unionAll,
+  intersect,
+  intersectAll,
+  except,
+  exceptAll
+});
+var union2 = createSetOperator("union", false);
+var unionAll = createSetOperator("union", true);
+var intersect = createSetOperator("intersect", false);
+var intersectAll = createSetOperator("intersect", true);
+var except = createSetOperator("except", false);
+var exceptAll = createSetOperator("except", true);
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/query-builders/query-builder.js
+class QueryBuilder {
+  static [entityKind] = "PgQueryBuilder";
+  dialect;
+  dialectConfig;
+  constructor(dialect) {
+    this.dialect = is(dialect, PgDialect) ? dialect : undefined;
+    this.dialectConfig = is(dialect, PgDialect) ? undefined : dialect;
+  }
+  $with = (alias, selection) => {
+    const queryBuilder = this;
+    const as = (qb) => {
+      if (typeof qb === "function") {
+        qb = qb(queryBuilder);
+      }
+      return new Proxy(new WithSubquery(qb.getSQL(), selection ?? ("getSelectedFields" in qb ? qb.getSelectedFields() ?? {} : {}), alias, true), new SelectionProxyHandler({ alias, sqlAliasedBehavior: "alias", sqlBehavior: "error" }));
+    };
+    return { as };
+  };
+  with(...queries) {
+    const self = this;
+    function select2(fields) {
+      return new PgSelectBuilder({
+        fields: fields ?? undefined,
+        session: undefined,
+        dialect: self.getDialect(),
+        withList: queries
+      });
+    }
+    function selectDistinct(fields) {
+      return new PgSelectBuilder({
+        fields: fields ?? undefined,
+        session: undefined,
+        dialect: self.getDialect(),
+        distinct: true
+      });
+    }
+    function selectDistinctOn(on, fields) {
+      return new PgSelectBuilder({
+        fields: fields ?? undefined,
+        session: undefined,
+        dialect: self.getDialect(),
+        distinct: { on }
+      });
+    }
+    return { select: select2, selectDistinct, selectDistinctOn };
+  }
+  select(fields) {
+    return new PgSelectBuilder({
+      fields: fields ?? undefined,
+      session: undefined,
+      dialect: this.getDialect()
+    });
+  }
+  selectDistinct(fields) {
+    return new PgSelectBuilder({
+      fields: fields ?? undefined,
+      session: undefined,
+      dialect: this.getDialect(),
+      distinct: true
+    });
+  }
+  selectDistinctOn(on, fields) {
+    return new PgSelectBuilder({
+      fields: fields ?? undefined,
+      session: undefined,
+      dialect: this.getDialect(),
+      distinct: { on }
+    });
+  }
+  getDialect() {
+    if (!this.dialect) {
+      this.dialect = new PgDialect(this.dialectConfig);
+    }
+    return this.dialect;
+  }
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/utils.js
+function extractUsedTable(table) {
+  if (is(table, PgTable)) {
+    return [table[Schema] ? `${table[Schema]}.${table[Table.Symbol.BaseName]}` : table[Table.Symbol.BaseName]];
+  }
+  if (is(table, Subquery)) {
+    return table._.usedTables ?? [];
+  }
+  if (is(table, SQL)) {
+    return table.usedTables ?? [];
+  }
+  return [];
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/query-builders/delete.js
+class PgDeleteBase extends QueryPromise {
+  constructor(table, session, dialect, withList) {
+    super();
+    this.session = session;
+    this.dialect = dialect;
+    this.config = { table, withList };
+  }
+  static [entityKind] = "PgDelete";
+  config;
+  cacheConfig;
+  where(where) {
+    this.config.where = where;
+    return this;
+  }
+  returning(fields = this.config.table[Table.Symbol.Columns]) {
+    this.config.returningFields = fields;
+    this.config.returning = orderSelectedFields(fields);
+    return this;
+  }
+  getSQL() {
+    return this.dialect.buildDeleteQuery(this.config);
+  }
+  toSQL() {
+    const { typings: _typings, ...rest } = this.dialect.sqlToQuery(this.getSQL());
+    return rest;
+  }
+  _prepare(name) {
+    return tracer.startActiveSpan("drizzle.prepareQuery", () => {
+      return this.session.prepareQuery(this.dialect.sqlToQuery(this.getSQL()), this.config.returning, name, true, undefined, {
+        type: "delete",
+        tables: extractUsedTable(this.config.table)
+      }, this.cacheConfig);
+    });
+  }
+  prepare(name) {
+    return this._prepare(name);
+  }
+  authToken;
+  setToken(token) {
+    this.authToken = token;
+    return this;
+  }
+  execute = (placeholderValues) => {
+    return tracer.startActiveSpan("drizzle.operation", () => {
+      return this._prepare().execute(placeholderValues, this.authToken);
+    });
+  };
+  getSelectedFields() {
+    return this.config.returningFields ? new Proxy(this.config.returningFields, new SelectionProxyHandler({
+      alias: getTableName(this.config.table),
+      sqlAliasedBehavior: "alias",
+      sqlBehavior: "error"
+    })) : undefined;
+  }
+  $dynamic() {
+    return this;
+  }
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/query-builders/insert.js
+class PgInsertBuilder {
+  constructor(table, session, dialect, withList, overridingSystemValue_) {
+    this.table = table;
+    this.session = session;
+    this.dialect = dialect;
+    this.withList = withList;
+    this.overridingSystemValue_ = overridingSystemValue_;
+  }
+  static [entityKind] = "PgInsertBuilder";
+  authToken;
+  setToken(token) {
+    this.authToken = token;
+    return this;
+  }
+  overridingSystemValue() {
+    this.overridingSystemValue_ = true;
+    return this;
+  }
+  values(values2) {
+    values2 = Array.isArray(values2) ? values2 : [values2];
+    if (values2.length === 0) {
+      throw new Error("values() must be called with at least one value");
+    }
+    const mappedValues = values2.map((entry) => {
+      const result = {};
+      const cols = this.table[Table.Symbol.Columns];
+      for (const colKey of Object.keys(entry)) {
+        const colValue = entry[colKey];
+        result[colKey] = is(colValue, SQL) ? colValue : new Param(colValue, cols[colKey]);
+      }
+      return result;
+    });
+    return new PgInsertBase(this.table, mappedValues, this.session, this.dialect, this.withList, false, this.overridingSystemValue_).setToken(this.authToken);
+  }
+  select(selectQuery) {
+    const select2 = typeof selectQuery === "function" ? selectQuery(new QueryBuilder) : selectQuery;
+    if (!is(select2, SQL) && !haveSameKeys(this.table[Columns], select2._.selectedFields)) {
+      throw new Error("Insert select error: selected fields are not the same or are in a different order compared to the table definition");
+    }
+    return new PgInsertBase(this.table, select2, this.session, this.dialect, this.withList, true);
+  }
+}
+
+class PgInsertBase extends QueryPromise {
+  constructor(table, values2, session, dialect, withList, select2, overridingSystemValue_) {
+    super();
+    this.session = session;
+    this.dialect = dialect;
+    this.config = { table, values: values2, withList, select: select2, overridingSystemValue_ };
+  }
+  static [entityKind] = "PgInsert";
+  config;
+  cacheConfig;
+  returning(fields = this.config.table[Table.Symbol.Columns]) {
+    this.config.returningFields = fields;
+    this.config.returning = orderSelectedFields(fields);
+    return this;
+  }
+  onConflictDoNothing(config2 = {}) {
+    if (config2.target === undefined) {
+      this.config.onConflict = sql`do nothing`;
+    } else {
+      let targetColumn = "";
+      targetColumn = Array.isArray(config2.target) ? config2.target.map((it) => this.dialect.escapeName(this.dialect.casing.getColumnCasing(it))).join(",") : this.dialect.escapeName(this.dialect.casing.getColumnCasing(config2.target));
+      const whereSql = config2.where ? sql` where ${config2.where}` : undefined;
+      this.config.onConflict = sql`(${sql.raw(targetColumn)})${whereSql} do nothing`;
+    }
+    return this;
+  }
+  onConflictDoUpdate(config2) {
+    if (config2.where && (config2.targetWhere || config2.setWhere)) {
+      throw new Error('You cannot use both "where" and "targetWhere"/"setWhere" at the same time - "where" is deprecated, use "targetWhere" or "setWhere" instead.');
+    }
+    const whereSql = config2.where ? sql` where ${config2.where}` : undefined;
+    const targetWhereSql = config2.targetWhere ? sql` where ${config2.targetWhere}` : undefined;
+    const setWhereSql = config2.setWhere ? sql` where ${config2.setWhere}` : undefined;
+    const setSql = this.dialect.buildUpdateSet(this.config.table, mapUpdateSet(this.config.table, config2.set));
+    let targetColumn = "";
+    targetColumn = Array.isArray(config2.target) ? config2.target.map((it) => this.dialect.escapeName(this.dialect.casing.getColumnCasing(it))).join(",") : this.dialect.escapeName(this.dialect.casing.getColumnCasing(config2.target));
+    this.config.onConflict = sql`(${sql.raw(targetColumn)})${targetWhereSql} do update set ${setSql}${whereSql}${setWhereSql}`;
+    return this;
+  }
+  getSQL() {
+    return this.dialect.buildInsertQuery(this.config);
+  }
+  toSQL() {
+    const { typings: _typings, ...rest } = this.dialect.sqlToQuery(this.getSQL());
+    return rest;
+  }
+  _prepare(name) {
+    return tracer.startActiveSpan("drizzle.prepareQuery", () => {
+      return this.session.prepareQuery(this.dialect.sqlToQuery(this.getSQL()), this.config.returning, name, true, undefined, {
+        type: "insert",
+        tables: extractUsedTable(this.config.table)
+      }, this.cacheConfig);
+    });
+  }
+  prepare(name) {
+    return this._prepare(name);
+  }
+  authToken;
+  setToken(token) {
+    this.authToken = token;
+    return this;
+  }
+  execute = (placeholderValues) => {
+    return tracer.startActiveSpan("drizzle.operation", () => {
+      return this._prepare().execute(placeholderValues, this.authToken);
+    });
+  };
+  getSelectedFields() {
+    return this.config.returningFields ? new Proxy(this.config.returningFields, new SelectionProxyHandler({
+      alias: getTableName(this.config.table),
+      sqlAliasedBehavior: "alias",
+      sqlBehavior: "error"
+    })) : undefined;
+  }
+  $dynamic() {
+    return this;
+  }
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/query-builders/refresh-materialized-view.js
+class PgRefreshMaterializedView extends QueryPromise {
+  constructor(view, session, dialect) {
+    super();
+    this.session = session;
+    this.dialect = dialect;
+    this.config = { view };
+  }
+  static [entityKind] = "PgRefreshMaterializedView";
+  config;
+  concurrently() {
+    if (this.config.withNoData !== undefined) {
+      throw new Error("Cannot use concurrently and withNoData together");
+    }
+    this.config.concurrently = true;
+    return this;
+  }
+  withNoData() {
+    if (this.config.concurrently !== undefined) {
+      throw new Error("Cannot use concurrently and withNoData together");
+    }
+    this.config.withNoData = true;
+    return this;
+  }
+  getSQL() {
+    return this.dialect.buildRefreshMaterializedViewQuery(this.config);
+  }
+  toSQL() {
+    const { typings: _typings, ...rest } = this.dialect.sqlToQuery(this.getSQL());
+    return rest;
+  }
+  _prepare(name) {
+    return tracer.startActiveSpan("drizzle.prepareQuery", () => {
+      return this.session.prepareQuery(this.dialect.sqlToQuery(this.getSQL()), undefined, name, true);
+    });
+  }
+  prepare(name) {
+    return this._prepare(name);
+  }
+  authToken;
+  setToken(token) {
+    this.authToken = token;
+    return this;
+  }
+  execute = (placeholderValues) => {
+    return tracer.startActiveSpan("drizzle.operation", () => {
+      return this._prepare().execute(placeholderValues, this.authToken);
+    });
+  };
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/query-builders/update.js
+class PgUpdateBuilder {
+  constructor(table, session, dialect, withList) {
+    this.table = table;
+    this.session = session;
+    this.dialect = dialect;
+    this.withList = withList;
+  }
+  static [entityKind] = "PgUpdateBuilder";
+  authToken;
+  setToken(token) {
+    this.authToken = token;
+    return this;
+  }
+  set(values2) {
+    return new PgUpdateBase(this.table, mapUpdateSet(this.table, values2), this.session, this.dialect, this.withList).setToken(this.authToken);
+  }
+}
+
+class PgUpdateBase extends QueryPromise {
+  constructor(table, set2, session, dialect, withList) {
+    super();
+    this.session = session;
+    this.dialect = dialect;
+    this.config = { set: set2, table, withList, joins: [] };
+    this.tableName = getTableLikeName(table);
+    this.joinsNotNullableMap = typeof this.tableName === "string" ? { [this.tableName]: true } : {};
+  }
+  static [entityKind] = "PgUpdate";
+  config;
+  tableName;
+  joinsNotNullableMap;
+  cacheConfig;
+  from(source) {
+    const src = source;
+    const tableName = getTableLikeName(src);
+    if (typeof tableName === "string") {
+      this.joinsNotNullableMap[tableName] = true;
+    }
+    this.config.from = src;
+    return this;
+  }
+  getTableLikeFields(table) {
+    if (is(table, PgTable)) {
+      return table[Table.Symbol.Columns];
+    } else if (is(table, Subquery)) {
+      return table._.selectedFields;
+    }
+    return table[ViewBaseConfig].selectedFields;
+  }
+  createJoin(joinType) {
+    return (table, on) => {
+      const tableName = getTableLikeName(table);
+      if (typeof tableName === "string" && this.config.joins.some((join) => join.alias === tableName)) {
+        throw new Error(`Alias "${tableName}" is already used in this query`);
+      }
+      if (typeof on === "function") {
+        const from = this.config.from && !is(this.config.from, SQL) ? this.getTableLikeFields(this.config.from) : undefined;
+        on = on(new Proxy(this.config.table[Table.Symbol.Columns], new SelectionProxyHandler({ sqlAliasedBehavior: "sql", sqlBehavior: "sql" })), from && new Proxy(from, new SelectionProxyHandler({ sqlAliasedBehavior: "sql", sqlBehavior: "sql" })));
+      }
+      this.config.joins.push({ on, table, joinType, alias: tableName });
+      if (typeof tableName === "string") {
+        switch (joinType) {
+          case "left": {
+            this.joinsNotNullableMap[tableName] = false;
+            break;
+          }
+          case "right": {
+            this.joinsNotNullableMap = Object.fromEntries(Object.entries(this.joinsNotNullableMap).map(([key]) => [key, false]));
+            this.joinsNotNullableMap[tableName] = true;
+            break;
+          }
+          case "inner": {
+            this.joinsNotNullableMap[tableName] = true;
+            break;
+          }
+          case "full": {
+            this.joinsNotNullableMap = Object.fromEntries(Object.entries(this.joinsNotNullableMap).map(([key]) => [key, false]));
+            this.joinsNotNullableMap[tableName] = false;
+            break;
+          }
+        }
+      }
+      return this;
+    };
+  }
+  leftJoin = this.createJoin("left");
+  rightJoin = this.createJoin("right");
+  innerJoin = this.createJoin("inner");
+  fullJoin = this.createJoin("full");
+  where(where) {
+    this.config.where = where;
+    return this;
+  }
+  returning(fields) {
+    if (!fields) {
+      fields = Object.assign({}, this.config.table[Table.Symbol.Columns]);
+      if (this.config.from) {
+        const tableName = getTableLikeName(this.config.from);
+        if (typeof tableName === "string" && this.config.from && !is(this.config.from, SQL)) {
+          const fromFields = this.getTableLikeFields(this.config.from);
+          fields[tableName] = fromFields;
+        }
+        for (const join of this.config.joins) {
+          const tableName2 = getTableLikeName(join.table);
+          if (typeof tableName2 === "string" && !is(join.table, SQL)) {
+            const fromFields = this.getTableLikeFields(join.table);
+            fields[tableName2] = fromFields;
+          }
+        }
+      }
+    }
+    this.config.returningFields = fields;
+    this.config.returning = orderSelectedFields(fields);
+    return this;
+  }
+  getSQL() {
+    return this.dialect.buildUpdateQuery(this.config);
+  }
+  toSQL() {
+    const { typings: _typings, ...rest } = this.dialect.sqlToQuery(this.getSQL());
+    return rest;
+  }
+  _prepare(name) {
+    const query = this.session.prepareQuery(this.dialect.sqlToQuery(this.getSQL()), this.config.returning, name, true, undefined, {
+      type: "insert",
+      tables: extractUsedTable(this.config.table)
+    }, this.cacheConfig);
+    query.joinsNotNullableMap = this.joinsNotNullableMap;
+    return query;
+  }
+  prepare(name) {
+    return this._prepare(name);
+  }
+  authToken;
+  setToken(token) {
+    this.authToken = token;
+    return this;
+  }
+  execute = (placeholderValues) => {
+    return this._prepare().execute(placeholderValues, this.authToken);
+  };
+  getSelectedFields() {
+    return this.config.returningFields ? new Proxy(this.config.returningFields, new SelectionProxyHandler({
+      alias: getTableName(this.config.table),
+      sqlAliasedBehavior: "alias",
+      sqlBehavior: "error"
+    })) : undefined;
+  }
+  $dynamic() {
+    return this;
+  }
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/query-builders/count.js
+class PgCountBuilder extends SQL {
+  constructor(params) {
+    super(PgCountBuilder.buildEmbeddedCount(params.source, params.filters).queryChunks);
+    this.params = params;
+    this.mapWith(Number);
+    this.session = params.session;
+    this.sql = PgCountBuilder.buildCount(params.source, params.filters);
+  }
+  sql;
+  token;
+  static [entityKind] = "PgCountBuilder";
+  [Symbol.toStringTag] = "PgCountBuilder";
+  session;
+  static buildEmbeddedCount(source, filters) {
+    return sql`(select count(*) from ${source}${sql.raw(" where ").if(filters)}${filters})`;
+  }
+  static buildCount(source, filters) {
+    return sql`select count(*) as count from ${source}${sql.raw(" where ").if(filters)}${filters};`;
+  }
+  setToken(token) {
+    this.token = token;
+    return this;
+  }
+  then(onfulfilled, onrejected) {
+    return Promise.resolve(this.session.count(this.sql, this.token)).then(onfulfilled, onrejected);
+  }
+  catch(onRejected) {
+    return this.then(undefined, onRejected);
+  }
+  finally(onFinally) {
+    return this.then((value) => {
+      onFinally?.();
+      return value;
+    }, (reason) => {
+      onFinally?.();
+      throw reason;
+    });
+  }
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/query-builders/query.js
+class RelationalQueryBuilder {
+  constructor(fullSchema, schema, tableNamesMap, table, tableConfig, dialect, session) {
+    this.fullSchema = fullSchema;
+    this.schema = schema;
+    this.tableNamesMap = tableNamesMap;
+    this.table = table;
+    this.tableConfig = tableConfig;
+    this.dialect = dialect;
+    this.session = session;
+  }
+  static [entityKind] = "PgRelationalQueryBuilder";
+  findMany(config2) {
+    return new PgRelationalQuery(this.fullSchema, this.schema, this.tableNamesMap, this.table, this.tableConfig, this.dialect, this.session, config2 ? config2 : {}, "many");
+  }
+  findFirst(config2) {
+    return new PgRelationalQuery(this.fullSchema, this.schema, this.tableNamesMap, this.table, this.tableConfig, this.dialect, this.session, config2 ? { ...config2, limit: 1 } : { limit: 1 }, "first");
+  }
+}
+
+class PgRelationalQuery extends QueryPromise {
+  constructor(fullSchema, schema, tableNamesMap, table, tableConfig, dialect, session, config2, mode) {
+    super();
+    this.fullSchema = fullSchema;
+    this.schema = schema;
+    this.tableNamesMap = tableNamesMap;
+    this.table = table;
+    this.tableConfig = tableConfig;
+    this.dialect = dialect;
+    this.session = session;
+    this.config = config2;
+    this.mode = mode;
+  }
+  static [entityKind] = "PgRelationalQuery";
+  _prepare(name) {
+    return tracer.startActiveSpan("drizzle.prepareQuery", () => {
+      const { query, builtQuery } = this._toSQL();
+      return this.session.prepareQuery(builtQuery, undefined, name, true, (rawRows, mapColumnValue) => {
+        const rows = rawRows.map((row) => mapRelationalRow(this.schema, this.tableConfig, row, query.selection, mapColumnValue));
+        if (this.mode === "first") {
+          return rows[0];
+        }
+        return rows;
+      });
+    });
+  }
+  prepare(name) {
+    return this._prepare(name);
+  }
+  _getQuery() {
+    return this.dialect.buildRelationalQueryWithoutPK({
+      fullSchema: this.fullSchema,
+      schema: this.schema,
+      tableNamesMap: this.tableNamesMap,
+      table: this.table,
+      tableConfig: this.tableConfig,
+      queryConfig: this.config,
+      tableAlias: this.tableConfig.tsName
+    });
+  }
+  getSQL() {
+    return this._getQuery().sql;
+  }
+  _toSQL() {
+    const query = this._getQuery();
+    const builtQuery = this.dialect.sqlToQuery(query.sql);
+    return { query, builtQuery };
+  }
+  toSQL() {
+    return this._toSQL().builtQuery;
+  }
+  authToken;
+  setToken(token) {
+    this.authToken = token;
+    return this;
+  }
+  execute() {
+    return tracer.startActiveSpan("drizzle.operation", () => {
+      return this._prepare().execute(undefined, this.authToken);
+    });
+  }
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/query-builders/raw.js
+class PgRaw extends QueryPromise {
+  constructor(execute, sql2, query, mapBatchResult) {
+    super();
+    this.execute = execute;
+    this.sql = sql2;
+    this.query = query;
+    this.mapBatchResult = mapBatchResult;
+  }
+  static [entityKind] = "PgRaw";
+  getSQL() {
+    return this.sql;
+  }
+  getQuery() {
+    return this.query;
+  }
+  mapResult(result, isFromBatch) {
+    return isFromBatch ? this.mapBatchResult(result) : result;
+  }
+  _prepare() {
+    return this;
+  }
+  isResponseInArrayMode() {
+    return false;
+  }
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/db.js
+class PgDatabase {
+  constructor(dialect, session, schema) {
+    this.dialect = dialect;
+    this.session = session;
+    this._ = schema ? {
+      schema: schema.schema,
+      fullSchema: schema.fullSchema,
+      tableNamesMap: schema.tableNamesMap,
+      session
+    } : {
+      schema: undefined,
+      fullSchema: {},
+      tableNamesMap: {},
+      session
+    };
+    this.query = {};
+    if (this._.schema) {
+      for (const [tableName, columns] of Object.entries(this._.schema)) {
+        this.query[tableName] = new RelationalQueryBuilder(schema.fullSchema, this._.schema, this._.tableNamesMap, schema.fullSchema[tableName], columns, dialect, session);
+      }
+    }
+    this.$cache = { invalidate: async (_params) => {} };
+  }
+  static [entityKind] = "PgDatabase";
+  query;
+  $with = (alias, selection) => {
+    const self = this;
+    const as = (qb) => {
+      if (typeof qb === "function") {
+        qb = qb(new QueryBuilder(self.dialect));
+      }
+      return new Proxy(new WithSubquery(qb.getSQL(), selection ?? ("getSelectedFields" in qb ? qb.getSelectedFields() ?? {} : {}), alias, true), new SelectionProxyHandler({ alias, sqlAliasedBehavior: "alias", sqlBehavior: "error" }));
+    };
+    return { as };
+  };
+  $count(source, filters) {
+    return new PgCountBuilder({ source, filters, session: this.session });
+  }
+  $cache;
+  with(...queries) {
+    const self = this;
+    function select2(fields) {
+      return new PgSelectBuilder({
+        fields: fields ?? undefined,
+        session: self.session,
+        dialect: self.dialect,
+        withList: queries
+      });
+    }
+    function selectDistinct(fields) {
+      return new PgSelectBuilder({
+        fields: fields ?? undefined,
+        session: self.session,
+        dialect: self.dialect,
+        withList: queries,
+        distinct: true
+      });
+    }
+    function selectDistinctOn(on, fields) {
+      return new PgSelectBuilder({
+        fields: fields ?? undefined,
+        session: self.session,
+        dialect: self.dialect,
+        withList: queries,
+        distinct: { on }
+      });
+    }
+    function update(table) {
+      return new PgUpdateBuilder(table, self.session, self.dialect, queries);
+    }
+    function insert(table) {
+      return new PgInsertBuilder(table, self.session, self.dialect, queries);
+    }
+    function delete_(table) {
+      return new PgDeleteBase(table, self.session, self.dialect, queries);
+    }
+    return { select: select2, selectDistinct, selectDistinctOn, update, insert, delete: delete_ };
+  }
+  select(fields) {
+    return new PgSelectBuilder({
+      fields: fields ?? undefined,
+      session: this.session,
+      dialect: this.dialect
+    });
+  }
+  selectDistinct(fields) {
+    return new PgSelectBuilder({
+      fields: fields ?? undefined,
+      session: this.session,
+      dialect: this.dialect,
+      distinct: true
+    });
+  }
+  selectDistinctOn(on, fields) {
+    return new PgSelectBuilder({
+      fields: fields ?? undefined,
+      session: this.session,
+      dialect: this.dialect,
+      distinct: { on }
+    });
+  }
+  update(table) {
+    return new PgUpdateBuilder(table, this.session, this.dialect);
+  }
+  insert(table) {
+    return new PgInsertBuilder(table, this.session, this.dialect);
+  }
+  delete(table) {
+    return new PgDeleteBase(table, this.session, this.dialect);
+  }
+  refreshMaterializedView(view) {
+    return new PgRefreshMaterializedView(view, this.session, this.dialect);
+  }
+  authToken;
+  execute(query) {
+    const sequel = typeof query === "string" ? sql.raw(query) : query.getSQL();
+    const builtQuery = this.dialect.sqlToQuery(sequel);
+    const prepared = this.session.prepareQuery(builtQuery, undefined, undefined, false);
+    return new PgRaw(() => prepared.execute(undefined, this.authToken), sequel, builtQuery, (result) => prepared.mapResult(result, true));
+  }
+  transaction(transaction, config2) {
+    return this.session.transaction(transaction, config2);
+  }
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/cache/core/cache.js
+class Cache {
+  static [entityKind] = "Cache";
+}
+
+class NoopCache extends Cache {
+  strategy() {
+    return "all";
+  }
+  static [entityKind] = "NoopCache";
+  async get(_key) {
+    return;
+  }
+  async put(_hashedQuery, _response, _tables, _config) {}
+  async onMutate(_params) {}
+}
+async function hashQuery(sql2, params) {
+  const dataToHash = `${sql2}-${JSON.stringify(params)}`;
+  const encoder = new TextEncoder;
+  const data = encoder.encode(dataToHash);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = [...new Uint8Array(hashBuffer)];
+  const hashHex = hashArray.map((b2) => b2.toString(16).padStart(2, "0")).join("");
+  return hashHex;
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/pg-core/session.js
+class PgPreparedQuery {
+  constructor(query, cache2, queryMetadata, cacheConfig) {
+    this.query = query;
+    this.cache = cache2;
+    this.queryMetadata = queryMetadata;
+    this.cacheConfig = cacheConfig;
+    if (cache2 && cache2.strategy() === "all" && cacheConfig === undefined) {
+      this.cacheConfig = { enable: true, autoInvalidate: true };
+    }
+    if (!this.cacheConfig?.enable) {
+      this.cacheConfig = undefined;
+    }
+  }
+  authToken;
+  getQuery() {
+    return this.query;
+  }
+  mapResult(response, _isFromBatch) {
+    return response;
+  }
+  setToken(token) {
+    this.authToken = token;
+    return this;
+  }
+  static [entityKind] = "PgPreparedQuery";
+  joinsNotNullableMap;
+  async queryWithCache(queryString, params, query) {
+    if (this.cache === undefined || is(this.cache, NoopCache) || this.queryMetadata === undefined) {
+      try {
+        return await query();
+      } catch (e) {
+        throw new DrizzleQueryError(queryString, params, e);
+      }
+    }
+    if (this.cacheConfig && !this.cacheConfig.enable) {
+      try {
+        return await query();
+      } catch (e) {
+        throw new DrizzleQueryError(queryString, params, e);
+      }
+    }
+    if ((this.queryMetadata.type === "insert" || this.queryMetadata.type === "update" || this.queryMetadata.type === "delete") && this.queryMetadata.tables.length > 0) {
+      try {
+        const [res] = await Promise.all([
+          query(),
+          this.cache.onMutate({ tables: this.queryMetadata.tables })
+        ]);
+        return res;
+      } catch (e) {
+        throw new DrizzleQueryError(queryString, params, e);
+      }
+    }
+    if (!this.cacheConfig) {
+      try {
+        return await query();
+      } catch (e) {
+        throw new DrizzleQueryError(queryString, params, e);
+      }
+    }
+    if (this.queryMetadata.type === "select") {
+      const fromCache = await this.cache.get(this.cacheConfig.tag ?? await hashQuery(queryString, params), this.queryMetadata.tables, this.cacheConfig.tag !== undefined, this.cacheConfig.autoInvalidate);
+      if (fromCache === undefined) {
+        let result;
+        try {
+          result = await query();
+        } catch (e) {
+          throw new DrizzleQueryError(queryString, params, e);
+        }
+        await this.cache.put(this.cacheConfig.tag ?? await hashQuery(queryString, params), result, this.cacheConfig.autoInvalidate ? this.queryMetadata.tables : [], this.cacheConfig.tag !== undefined, this.cacheConfig.config);
+        return result;
+      }
+      return fromCache;
+    }
+    try {
+      return await query();
+    } catch (e) {
+      throw new DrizzleQueryError(queryString, params, e);
+    }
+  }
+}
+
+class PgSession {
+  constructor(dialect) {
+    this.dialect = dialect;
+  }
+  static [entityKind] = "PgSession";
+  execute(query, token) {
+    return tracer.startActiveSpan("drizzle.operation", () => {
+      const prepared = tracer.startActiveSpan("drizzle.prepareQuery", () => {
+        return this.prepareQuery(this.dialect.sqlToQuery(query), undefined, undefined, false);
+      });
+      return prepared.setToken(token).execute(undefined, token);
+    });
+  }
+  all(query) {
+    return this.prepareQuery(this.dialect.sqlToQuery(query), undefined, undefined, false).all();
+  }
+  async count(sql2, token) {
+    const res = await this.execute(sql2, token);
+    return Number(res[0]["count"]);
+  }
+}
+
+class PgTransaction extends PgDatabase {
+  constructor(dialect, session, schema, nestedIndex = 0) {
+    super(dialect, session, schema);
+    this.schema = schema;
+    this.nestedIndex = nestedIndex;
+  }
+  static [entityKind] = "PgTransaction";
+  rollback() {
+    throw new TransactionRollbackError;
+  }
+  getTransactionConfigSQL(config2) {
+    const chunks = [];
+    if (config2.isolationLevel) {
+      chunks.push(`isolation level ${config2.isolationLevel}`);
+    }
+    if (config2.accessMode) {
+      chunks.push(config2.accessMode);
+    }
+    if (typeof config2.deferrable === "boolean") {
+      chunks.push(config2.deferrable ? "deferrable" : "not deferrable");
+    }
+    return sql.raw(chunks.join(" "));
+  }
+  setTransaction(config2) {
+    return this.session.execute(sql`set transaction ${this.getTransactionConfigSQL(config2)}`);
+  }
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/postgres-js/session.js
+class PostgresJsPreparedQuery extends PgPreparedQuery {
+  constructor(client, queryString, params, logger, cache2, queryMetadata, cacheConfig, fields, _isResponseInArrayMode, customResultMapper) {
+    super({ sql: queryString, params }, cache2, queryMetadata, cacheConfig);
+    this.client = client;
+    this.queryString = queryString;
+    this.params = params;
+    this.logger = logger;
+    this.fields = fields;
+    this._isResponseInArrayMode = _isResponseInArrayMode;
+    this.customResultMapper = customResultMapper;
+  }
+  static [entityKind] = "PostgresJsPreparedQuery";
+  async execute(placeholderValues = {}) {
+    return tracer.startActiveSpan("drizzle.execute", async (span) => {
+      const params = fillPlaceholders(this.params, placeholderValues);
+      span?.setAttributes({
+        "drizzle.query.text": this.queryString,
+        "drizzle.query.params": JSON.stringify(params)
+      });
+      this.logger.logQuery(this.queryString, params);
+      const { fields, queryString: query, client, joinsNotNullableMap, customResultMapper } = this;
+      if (!fields && !customResultMapper) {
+        return tracer.startActiveSpan("drizzle.driver.execute", () => {
+          return this.queryWithCache(query, params, async () => {
+            return await client.unsafe(query, params);
+          });
+        });
+      }
+      const rows = await tracer.startActiveSpan("drizzle.driver.execute", () => {
+        span?.setAttributes({
+          "drizzle.query.text": query,
+          "drizzle.query.params": JSON.stringify(params)
+        });
+        return this.queryWithCache(query, params, async () => {
+          return await client.unsafe(query, params).values();
+        });
+      });
+      return tracer.startActiveSpan("drizzle.mapResponse", () => {
+        return customResultMapper ? customResultMapper(rows) : rows.map((row) => mapResultRow(fields, row, joinsNotNullableMap));
+      });
+    });
+  }
+  all(placeholderValues = {}) {
+    return tracer.startActiveSpan("drizzle.execute", async (span) => {
+      const params = fillPlaceholders(this.params, placeholderValues);
+      span?.setAttributes({
+        "drizzle.query.text": this.queryString,
+        "drizzle.query.params": JSON.stringify(params)
+      });
+      this.logger.logQuery(this.queryString, params);
+      return tracer.startActiveSpan("drizzle.driver.execute", () => {
+        span?.setAttributes({
+          "drizzle.query.text": this.queryString,
+          "drizzle.query.params": JSON.stringify(params)
+        });
+        return this.queryWithCache(this.queryString, params, async () => {
+          return this.client.unsafe(this.queryString, params);
+        });
+      });
+    });
+  }
+  isResponseInArrayMode() {
+    return this._isResponseInArrayMode;
+  }
+}
+
+class PostgresJsSession extends PgSession {
+  constructor(client, dialect, schema, options = {}) {
+    super(dialect);
+    this.client = client;
+    this.schema = schema;
+    this.options = options;
+    this.logger = options.logger ?? new NoopLogger;
+    this.cache = options.cache ?? new NoopCache;
+  }
+  static [entityKind] = "PostgresJsSession";
+  logger;
+  cache;
+  prepareQuery(query, fields, name, isResponseInArrayMode, customResultMapper, queryMetadata, cacheConfig) {
+    return new PostgresJsPreparedQuery(this.client, query.sql, query.params, this.logger, this.cache, queryMetadata, cacheConfig, fields, isResponseInArrayMode, customResultMapper);
+  }
+  query(query, params) {
+    this.logger.logQuery(query, params);
+    return this.client.unsafe(query, params).values();
+  }
+  queryObjects(query, params) {
+    return this.client.unsafe(query, params);
+  }
+  transaction(transaction, config2) {
+    return this.client.begin(async (client) => {
+      const session = new PostgresJsSession(client, this.dialect, this.schema, this.options);
+      const tx = new PostgresJsTransaction(this.dialect, session, this.schema);
+      if (config2) {
+        await tx.setTransaction(config2);
+      }
+      return transaction(tx);
+    });
+  }
+}
+
+class PostgresJsTransaction extends PgTransaction {
+  constructor(dialect, session, schema, nestedIndex = 0) {
+    super(dialect, session, schema, nestedIndex);
+    this.session = session;
+  }
+  static [entityKind] = "PostgresJsTransaction";
+  transaction(transaction) {
+    return this.session.client.savepoint((client) => {
+      const session = new PostgresJsSession(client, this.dialect, this.schema, this.session.options);
+      const tx = new PostgresJsTransaction(this.dialect, session, this.schema);
+      return transaction(tx);
+    });
+  }
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/postgres-js/driver.js
+class PostgresJsDatabase extends PgDatabase {
+  static [entityKind] = "PostgresJsDatabase";
+}
+function construct(client, config2 = {}) {
+  const transparentParser = (val) => val;
+  for (const type of ["1184", "1082", "1083", "1114", "1182", "1185", "1115", "1231"]) {
+    client.options.parsers[type] = transparentParser;
+    client.options.serializers[type] = transparentParser;
+  }
+  client.options.serializers["114"] = transparentParser;
+  client.options.serializers["3802"] = transparentParser;
+  const dialect = new PgDialect({ casing: config2.casing });
+  let logger;
+  if (config2.logger === true) {
+    logger = new DefaultLogger;
+  } else if (config2.logger !== false) {
+    logger = config2.logger;
+  }
+  let schema;
+  if (config2.schema) {
+    const tablesConfig = extractTablesRelationalConfig(config2.schema, createTableRelationsHelpers);
+    schema = {
+      fullSchema: config2.schema,
+      schema: tablesConfig.tables,
+      tableNamesMap: tablesConfig.tableNamesMap
+    };
+  }
+  const session = new PostgresJsSession(client, dialect, schema, { logger, cache: config2.cache });
+  const db = new PostgresJsDatabase(dialect, session, schema);
+  db.$client = client;
+  db.$cache = config2.cache;
+  if (db.$cache) {
+    db.$cache["invalidate"] = config2.cache?.onMutate;
+  }
+  return db;
+}
+function drizzle(...params) {
+  if (typeof params[0] === "string") {
+    const instance = src_default(params[0]);
+    return construct(instance, params[1]);
+  }
+  if (isConfig(params[0])) {
+    const { connection: connection2, client, ...drizzleConfig } = params[0];
+    if (client)
+      return construct(client, drizzleConfig);
+    if (typeof connection2 === "object" && connection2.url !== undefined) {
+      const { url: url2, ...config2 } = connection2;
+      const instance2 = src_default(url2, config2);
+      return construct(instance2, drizzleConfig);
+    }
+    const instance = src_default(connection2);
+    return construct(instance, drizzleConfig);
+  }
+  return construct(params[0], params[1]);
+}
+((drizzle2) => {
+  function mock(config2) {
+    return construct({
+      options: {
+        parsers: {},
+        serializers: {}
+      }
+    }, config2);
+  }
+  drizzle2.mock = mock;
+})(drizzle || (drizzle = {}));
+
+// src/db/schema.ts
+var exports_schema = {};
+__export(exports_schema, {
+  trackedListings: () => trackedListings,
+  trackedListingTrackingStateEnum: () => trackedListingTrackingStateEnum,
+  trackedListingEtsyStateEnum: () => trackedListingEtsyStateEnum,
+  trackedKeywords: () => trackedKeywords,
+  trackedKeywordTrackingStateEnum: () => trackedKeywordTrackingStateEnum,
+  productKeywordRanks: () => productKeywordRanks,
+  eventLogs: () => eventLogs,
+  eventLogStatusEnum: () => eventLogStatusEnum,
+  eventLogPrimitiveTypeEnum: () => eventLogPrimitiveTypeEnum,
+  eventLogLevelEnum: () => eventLogLevelEnum,
+  etsyOAuthConnections: () => etsyOAuthConnections,
+  etsyApiCallEvents: () => etsyApiCallEvents
+});
+var trackedListingTrackingStateEnum = pgEnum("tracked_listing_tracking_state", [
+  "active",
+  "paused",
+  "error"
+]);
+var trackedKeywordTrackingStateEnum = pgEnum("tracked_keyword_tracking_state", [
+  "active",
+  "paused",
+  "error"
+]);
+var trackedListingEtsyStateEnum = pgEnum("tracked_listing_etsy_state", [
+  "active",
+  "inactive",
+  "sold_out",
+  "draft",
+  "expired"
+]);
+var eventLogLevelEnum = pgEnum("event_log_level", ["info", "warn", "error", "debug"]);
+var eventLogStatusEnum = pgEnum("event_log_status", [
+  "success",
+  "failed",
+  "pending",
+  "retrying",
+  "partial"
+]);
+var eventLogPrimitiveTypeEnum = pgEnum("event_log_primitive_type", [
+  "keyword",
+  "listing",
+  "shop",
+  "system"
+]);
+var trackedListings = pgTable("tracked_listings", {
+  listingId: uuid3("listing_id").primaryKey().defaultRandom(),
+  tenantId: text("tenant_id").notNull(),
+  trackerClerkUserId: text("tracker_clerk_user_id").notNull(),
+  etsyListingId: text("etsy_listing_id").notNull(),
+  shopId: text("shop_id"),
+  shopName: text("shop_name"),
+  title: text("title").notNull(),
+  url: text("url"),
+  thumbnailUrl: text("thumbnail_url"),
+  trackingState: trackedListingTrackingStateEnum("tracking_state").notNull().default("active"),
+  etsyState: trackedListingEtsyStateEnum("etsy_state").notNull().default("inactive"),
+  priceAmount: integer2("price_amount"),
+  priceDivisor: integer2("price_divisor"),
+  priceCurrencyCode: text("price_currency_code"),
+  quantity: integer2("quantity"),
+  views: integer2("views"),
+  numFavorers: integer2("num_favorers"),
+  updatedTimestamp: integer2("updated_timestamp"),
+  lastRefreshedAt: timestamp("last_refreshed_at", { mode: "date" }).notNull().defaultNow(),
+  lastRefreshError: text("last_refresh_error"),
+  createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow()
+}, (table) => ({
+  tenantListingUnique: uniqueIndex("tracked_listings_tenant_listing_unique").on(table.tenantId, table.etsyListingId),
+  tenantIdx: index("tracked_listings_tenant_idx").on(table.tenantId),
+  tenantTrackerIdx: index("tracked_listings_tenant_tracker_idx").on(table.tenantId, table.trackerClerkUserId),
+  trackingStateIdx: index("tracked_listings_tracking_state_idx").on(table.trackingState),
+  updatedAtIdx: index("tracked_listings_updated_at_idx").on(table.updatedAt)
+}));
+var trackedKeywords = pgTable("tracked_keywords", {
+  id: uuid3("id").primaryKey().defaultRandom(),
+  tenantId: text("tenant_id").notNull(),
+  trackerClerkUserId: text("tracker_clerk_user_id").notNull(),
+  keyword: text("keyword").notNull(),
+  normalizedKeyword: text("normalized_keyword").notNull(),
+  trackingState: trackedKeywordTrackingStateEnum("tracking_state").notNull().default("active"),
+  lastRefreshedAt: timestamp("last_refreshed_at", { mode: "date" }).notNull().defaultNow(),
+  nextSyncAt: timestamp("next_sync_at", { mode: "date" }).notNull().defaultNow(),
+  lastRefreshError: text("last_refresh_error"),
+  createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow()
+}, (table) => ({
+  tenantKeywordUnique: uniqueIndex("tracked_keywords_tenant_keyword_unique").on(table.tenantId, table.normalizedKeyword),
+  tenantIdx: index("tracked_keywords_tenant_idx").on(table.tenantId),
+  tenantTrackerIdx: index("tracked_keywords_tenant_tracker_idx").on(table.tenantId, table.trackerClerkUserId),
+  trackingStateIdx: index("tracked_keywords_tracking_state_idx").on(table.trackingState),
+  nextSyncAtIdx: index("tracked_keywords_next_sync_at_idx").on(table.nextSyncAt),
+  updatedAtIdx: index("tracked_keywords_updated_at_idx").on(table.updatedAt)
+}));
+var productKeywordRanks = pgTable("product_keyword_ranks", {
+  id: uuid3("id").primaryKey().defaultRandom(),
+  tenantId: text("tenant_id").notNull(),
+  trackedKeywordId: uuid3("tracked_keyword_id").notNull(),
+  listingId: uuid3("listing_id").notNull().references(() => trackedListings.listingId),
+  observedAt: timestamp("observed_at", { mode: "date" }).notNull().defaultNow(),
+  rank: integer2("rank").notNull(),
+  etsyListingId: text("etsy_listing_id").notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow()
+}, (table) => ({
+  tenantKeywordObservedIdx: index("product_keyword_ranks_tenant_keyword_observed_idx").on(table.tenantId, table.trackedKeywordId, table.observedAt),
+  tenantListingObservedIdx: index("product_keyword_ranks_tenant_listing_observed_idx").on(table.tenantId, table.listingId, table.observedAt),
+  tenantEtsyListingObservedIdx: index("product_keyword_ranks_tenant_etsy_listing_observed_idx").on(table.tenantId, table.etsyListingId, table.observedAt),
+  tenantKeywordRankIdx: index("product_keyword_ranks_tenant_keyword_rank_idx").on(table.tenantId, table.trackedKeywordId, table.rank)
+}));
+var eventLogs = pgTable("event_logs", {
+  id: uuid3("id").primaryKey().defaultRandom(),
+  tenantId: text("tenant_id").notNull(),
+  occurredAt: timestamp("occurred_at", { mode: "date" }).notNull().defaultNow(),
+  level: eventLogLevelEnum("level").notNull(),
+  category: text("category").notNull(),
+  action: text("action").notNull(),
+  status: eventLogStatusEnum("status").notNull(),
+  primitiveType: eventLogPrimitiveTypeEnum("primitive_type").notNull(),
+  primitiveId: text("primitive_id"),
+  listingId: text("listing_id"),
+  shopId: text("shop_id"),
+  keyword: text("keyword"),
+  message: text("message").notNull(),
+  detailsJson: jsonb("details_json").$type().notNull().default({}),
+  monitorRunId: text("monitor_run_id"),
+  requestId: text("request_id"),
+  createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow()
+}, (table) => ({
+  tenantOccurredAtIdx: index("event_logs_tenant_occurred_at_idx").on(table.tenantId, table.occurredAt),
+  tenantPrimitiveOccurredAtIdx: index("event_logs_tenant_primitive_occurred_at_idx").on(table.tenantId, table.primitiveType, table.occurredAt),
+  tenantListingOccurredAtIdx: index("event_logs_tenant_listing_occurred_at_idx").on(table.tenantId, table.listingId, table.occurredAt),
+  tenantShopOccurredAtIdx: index("event_logs_tenant_shop_occurred_at_idx").on(table.tenantId, table.shopId, table.occurredAt),
+  tenantMonitorRunOccurredAtIdx: index("event_logs_tenant_monitor_run_occurred_at_idx").on(table.tenantId, table.monitorRunId, table.occurredAt)
+}));
+var etsyOAuthConnections = pgTable("etsy_oauth_connections", {
+  accessToken: text("access_token").notNull(),
+  clerkUserId: text("clerk_user_id").notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+  expiresAt: timestamp("expires_at", { mode: "date" }).notNull(),
+  refreshToken: text("refresh_token").notNull(),
+  scopes: text("scopes").array().notNull().default(sql`ARRAY[]::text[]`),
+  tenantId: text("tenant_id").notNull(),
+  tokenType: text("token_type").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow()
+}, (table) => ({
+  clerkUserIdx: index("etsy_oauth_connections_clerk_user_idx").on(table.clerkUserId),
+  tenantClerkPk: primaryKey({
+    columns: [table.tenantId, table.clerkUserId],
+    name: "etsy_oauth_connections_tenant_clerk_pk"
+  }),
+  tenantIdx: index("etsy_oauth_connections_tenant_idx").on(table.tenantId)
+}));
+var etsyApiCallEvents = pgTable("etsy_api_call_events", {
+  id: uuid3("id").primaryKey().defaultRandom(),
+  tenantId: text("tenant_id").notNull(),
+  clerkUserId: text("clerk_user_id").notNull(),
+  endpoint: text("endpoint").notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow()
+}, (table) => ({
+  tenantCreatedAtIdx: index("etsy_api_call_events_tenant_created_at_idx").on(table.tenantId, table.createdAt),
+  tenantClerkCreatedAtIdx: index("etsy_api_call_events_tenant_clerk_created_at_idx").on(table.tenantId, table.clerkUserId, table.createdAt)
+}));
+
+// src/db/index.ts
+var queryClient = src_default({
+  database: env.databaseName,
+  host: env.databaseHost,
+  idle_timeout: 10,
+  max: 5,
+  max_lifetime: 30,
+  password: env.databasePassword,
+  port: env.databasePort,
+  user: env.databaseUser
+});
+var db = drizzle(queryClient, {
+  logger: env.NODE_ENV === "development",
+  schema: exports_schema
+});
+var testDbConnection = async () => {
+  await db.execute("SELECT 1");
+};
+
+// src/services/dashboard/get-dashboard-summary.ts
+var countApiCallsSince = async (params) => {
+  const [row] = await db.select({
+    value: sql`count(*)::int`
+  }).from(etsyApiCallEvents).where(and(eq(etsyApiCallEvents.tenantId, params.tenantId), eq(etsyApiCallEvents.clerkUserId, params.clerkUserId), gte(etsyApiCallEvents.createdAt, params.threshold)));
+  return row?.value ?? 0;
+};
+var countTrackedListings = async (params) => {
+  const [row] = await db.select({
+    value: sql`count(*)::int`
+  }).from(trackedListings).where(and(eq(trackedListings.tenantId, params.tenantId), eq(trackedListings.trackerClerkUserId, params.clerkUserId)));
+  return row?.value ?? 0;
+};
+var getDashboardSummary = async (params) => {
+  const now = Date.now();
+  const oneHourAgo = new Date(now - 60 * 60 * 1000);
+  const twentyFourHoursAgo = new Date(now - 24 * 60 * 60 * 1000);
+  const [etsyApiCallsPastHour, etsyApiCallsPast24Hours, totalTrackedListings] = await Promise.all([
+    countApiCallsSince({
+      clerkUserId: params.clerkUserId,
+      tenantId: params.tenantId,
+      threshold: oneHourAgo
+    }),
+    countApiCallsSince({
+      clerkUserId: params.clerkUserId,
+      tenantId: params.tenantId,
+      threshold: twentyFourHoursAgo
+    }),
+    countTrackedListings({
+      clerkUserId: params.clerkUserId,
+      tenantId: params.tenantId
+    })
+  ]);
+  return {
+    etsyApiCallsPast24Hours,
+    etsyApiCallsPastHour,
+    totalTrackedListings
+  };
+};
+
+// src/api/app/dashboard/get-summary.ts
+var dashboardGetSummaryProcedure = appProcedure.input(exports_external.object({})).query(async ({ ctx }) => {
+  return getDashboardSummary({
+    clerkUserId: ctx.user.sub,
+    tenantId: ctx.tenantId
+  });
+});
+
+// src/api/app/dashboard/router.ts
+var dashboardRouter = router({
+  getSummary: dashboardGetSummaryProcedure
+});
 
 // src/services/etsy/bridges/exchange-oauth-token.ts
 var etsyOAuthSuccessResponseSchema = exports_external.object({
@@ -49957,7 +70283,16 @@ var parseScopes = (scopeValue) => {
   if (!scopeValue) {
     return [];
   }
-  return scopeValue.split(/\s+/).filter((scope) => scope.length > 0);
+  return scopeValue.split(/[\s,]+/).map((scope) => scope.trim()).filter((scope) => scope.length > 0);
+};
+var truncateForLog = (input) => {
+  if (input.length <= 512) {
+    return input;
+  }
+  return `${input.slice(0, 512)}...`;
+};
+var logOAuthBridgeDebug = (message, details) => {
+  console.info(`[EtsyOAuthBridge] ${message}`, details);
 };
 var tryParseJson = (input) => {
   if (input.length === 0) {
@@ -49970,6 +70305,9 @@ var tryParseJson = (input) => {
   }
 };
 var exchangeOAuthToken = async (input) => {
+  logOAuthBridgeDebug("starting token exchange", {
+    grantType: input.grantType
+  });
   const response = await fetch("https://api.etsy.com/v3/public/oauth/token", {
     body: buildRequestBody(input),
     headers: {
@@ -49982,26 +70320,45 @@ var exchangeOAuthToken = async (input) => {
   if (!response.ok) {
     const parsedError = etsyOAuthErrorResponseSchema.safeParse(tryParseJson(rawBody) ?? {});
     const errorMessage = parsedError.success ? parsedError.data.error_description ?? parsedError.data.error ?? `Etsy OAuth token exchange failed with HTTP ${response.status}.` : `Etsy OAuth token exchange failed with HTTP ${response.status}.`;
+    logOAuthBridgeDebug("token exchange failed", {
+      grantType: input.grantType,
+      rawBodyPreview: truncateForLog(rawBody),
+      statusCode: response.status
+    });
     throw new EtsyOAuthBridgeError(errorMessage, response.status, rawBody);
   }
   const jsonBody = tryParseJson(rawBody) ?? {};
   const parsed = etsyOAuthSuccessResponseSchema.safeParse(jsonBody);
   if (!parsed.success) {
+    logOAuthBridgeDebug("token exchange response shape was invalid", {
+      grantType: input.grantType,
+      rawBodyPreview: truncateForLog(rawBody),
+      statusCode: response.status
+    });
     throw new EtsyOAuthBridgeError("Etsy OAuth token response was missing required fields.", response.status, rawBody);
   }
+  const parsedScopes = parseScopes(parsed.data.scope);
+  logOAuthBridgeDebug("token exchange succeeded", {
+    grantType: input.grantType,
+    hasScopeField: parsed.data.scope !== undefined,
+    rawScope: parsed.data.scope ?? null,
+    scopeCount: parsedScopes.length,
+    scopes: parsedScopes,
+    statusCode: response.status
+  });
   return {
     accessToken: parsed.data.access_token,
     expiresInSeconds: parsed.data.expires_in,
     refreshToken: parsed.data.refresh_token,
-    scopes: parseScopes(parsed.data.scope),
+    scopes: parsedScopes,
     tokenType: parsed.data.token_type
   };
 };
 
 // src/services/etsy/oauth-pkce.ts
 import { createHash, randomBytes } from "crypto";
-var base64UrlEncode = (buffer) => {
-  return buffer.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+var base64UrlEncode = (buffer2) => {
+  return buffer2.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
 };
 var toCodeChallenge = (codeVerifier) => {
   return base64UrlEncode(createHash("sha256").update(codeVerifier).digest());
@@ -50013,6 +70370,75 @@ var createPkcePair = () => {
     codeChallenge,
     codeVerifier
   };
+};
+
+// src/services/etsy/connection-store.ts
+class InMemoryEtsyOAuthConnectionStore {
+  tokensByConnection = new Map;
+  async clear(key) {
+    this.tokensByConnection.delete(this.toStorageKey(key));
+  }
+  async get(key) {
+    const tokens = this.tokensByConnection.get(this.toStorageKey(key));
+    if (!tokens) {
+      return null;
+    }
+    return {
+      ...tokens,
+      expiresAt: new Date(tokens.expiresAt.getTime()),
+      scopes: [...tokens.scopes]
+    };
+  }
+  async set(key, tokens) {
+    this.tokensByConnection.set(this.toStorageKey(key), {
+      ...tokens,
+      expiresAt: new Date(tokens.expiresAt.getTime()),
+      scopes: [...tokens.scopes]
+    });
+  }
+  toStorageKey(key) {
+    return `${key.tenantId}::${key.clerkUserId}`;
+  }
+}
+var etsyOAuthConnectionStore = {
+  async clear(key) {
+    await db.delete(etsyOAuthConnections).where(and(eq(etsyOAuthConnections.tenantId, key.tenantId), eq(etsyOAuthConnections.clerkUserId, key.clerkUserId)));
+  },
+  async get(key) {
+    const [row] = await db.select().from(etsyOAuthConnections).where(and(eq(etsyOAuthConnections.tenantId, key.tenantId), eq(etsyOAuthConnections.clerkUserId, key.clerkUserId))).limit(1);
+    if (!row) {
+      return null;
+    }
+    return {
+      accessToken: row.accessToken,
+      expiresAt: row.expiresAt,
+      refreshToken: row.refreshToken,
+      scopes: [...row.scopes],
+      tokenType: row.tokenType
+    };
+  },
+  async set(key, tokens) {
+    await db.insert(etsyOAuthConnections).values({
+      accessToken: tokens.accessToken,
+      clerkUserId: key.clerkUserId,
+      expiresAt: tokens.expiresAt,
+      refreshToken: tokens.refreshToken,
+      scopes: tokens.scopes,
+      tenantId: key.tenantId,
+      tokenType: tokens.tokenType,
+      updatedAt: new Date
+    }).onConflictDoUpdate({
+      set: {
+        accessToken: tokens.accessToken,
+        expiresAt: tokens.expiresAt,
+        refreshToken: tokens.refreshToken,
+        scopes: tokens.scopes,
+        tokenType: tokens.tokenType,
+        updatedAt: new Date
+      },
+      target: [etsyOAuthConnections.tenantId, etsyOAuthConnections.clerkUserId]
+    });
+  }
 };
 
 // src/services/etsy/oauth-state-store.ts
@@ -50049,7 +70475,9 @@ class EtsyOAuthStateStore {
     }
     this.states.delete(state);
     return {
-      codeVerifier: found.codeVerifier
+      clerkUserId: found.clerkUserId,
+      codeVerifier: found.codeVerifier,
+      tenantId: found.tenantId
     };
   }
   pruneExpired(nowMs) {
@@ -50061,30 +70489,48 @@ class EtsyOAuthStateStore {
   }
 }
 
-// src/services/etsy/token-store.ts
-class EtsyOAuthTokenStore {
-  tokens = null;
-  get() {
-    return this.tokens;
-  }
-  set(tokens) {
-    this.tokens = {
-      ...tokens,
-      scopes: [...tokens.scopes]
-    };
-  }
-  clear() {
-    this.tokens = null;
-  }
-}
-
 // src/services/etsy/oauth-runtime.ts
 var etsyOAuthStateStore = new EtsyOAuthStateStore(env.ETSY_OAUTH_STATE_TTL_MS);
-var etsyOAuthTokenStore = new EtsyOAuthTokenStore;
+
+// src/services/etsy/record-etsy-api-call.ts
+var recordEtsyApiCall = async (input) => {
+  await db.insert(etsyApiCallEvents).values({
+    clerkUserId: input.clerkUserId,
+    createdAt: input.occurredAt ?? new Date,
+    endpoint: input.endpoint,
+    tenantId: input.tenantId
+  });
+};
+var recordEtsyApiCallBestEffort = async (input) => {
+  try {
+    await recordEtsyApiCall(input);
+  } catch (error48) {
+    console.warn("[EtsyApiCall] Failed to record call event.", {
+      clerkUserId: input.clerkUserId,
+      endpoint: input.endpoint,
+      tenantId: input.tenantId,
+      error: error48
+    });
+  }
+};
 
 // src/services/etsy/oauth-service.ts
-var computeNeedsRefresh = (expiresAt) => {
-  return Date.now() + env.ETSY_OAUTH_REFRESH_SKEW_MS >= expiresAt.getTime();
+var REQUIRED_ETSY_OAUTH_SCOPES2 = ["listings_r"];
+var formatConnectionKeyForLog = (key) => {
+  const tenantPrefix = key.tenantId.slice(0, 8);
+  const userPrefix = key.clerkUserId.slice(0, 8);
+  return `${tenantPrefix}:${userPrefix}`;
+};
+var logOAuthDebug = (message, details) => {
+  console.info(`[EtsyOAuth] ${message}`, details);
+};
+var defaultDependencies = {
+  connectionStore: etsyOAuthConnectionStore,
+  exchangeToken: exchangeOAuthToken,
+  nowMs: () => Date.now(),
+  pkceFactory: createPkcePair,
+  recordApiCall: recordEtsyApiCallBestEffort,
+  stateStore: etsyOAuthStateStore
 };
 var getAuthorizationUrl = (params) => {
   const url2 = new URL("https://www.etsy.com/oauth/connect");
@@ -50099,57 +70545,18 @@ var getAuthorizationUrl = (params) => {
   }).toString();
   return url2.toString();
 };
-var startEtsyOAuthFlow = () => {
-  const pkce = createPkcePair();
-  const stateEntry = etsyOAuthStateStore.issue({
-    codeVerifier: pkce.codeVerifier
-  });
-  return {
-    authorizationUrl: getAuthorizationUrl({
-      codeChallenge: pkce.codeChallenge,
-      state: stateEntry.state
-    }),
-    expiresAt: stateEntry.expiresAt
-  };
-};
-var completeEtsyOAuthFlow = async (params) => {
-  const statePayload = etsyOAuthStateStore.consume(params.state);
-  if (!statePayload) {
+var toInternalError = (error48) => {
+  if (error48 instanceof EtsyOAuthBridgeError) {
     throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: "OAuth state was invalid or expired. Start OAuth again from the dashboard."
+      cause: error48,
+      code: "INTERNAL_SERVER_ERROR",
+      message: error48.message
     });
   }
-  try {
-    const tokenResponse = await exchangeOAuthToken({
-      code: params.code,
-      codeVerifier: statePayload.codeVerifier,
-      grantType: "authorization_code",
-      redirectUri: env.ETSY_OAUTH_REDIRECT_URI
-    });
-    const expiresAt = new Date(Date.now() + tokenResponse.expiresInSeconds * 1000);
-    etsyOAuthTokenStore.set({
-      accessToken: tokenResponse.accessToken,
-      expiresAt,
-      refreshToken: tokenResponse.refreshToken,
-      scopes: tokenResponse.scopes,
-      tokenType: tokenResponse.tokenType
-    });
-    return getEtsyOAuthStatus();
-  } catch (error48) {
-    if (error48 instanceof EtsyOAuthBridgeError) {
-      throw new TRPCError({
-        cause: error48,
-        code: "INTERNAL_SERVER_ERROR",
-        message: error48.message
-      });
-    }
-    throw error48;
-  }
+  throw error48;
 };
-var getEtsyOAuthStatus = () => {
-  const tokens = etsyOAuthTokenStore.get();
-  if (!tokens) {
+var createStatus = (params) => {
+  if (!params.tokens) {
     return {
       connected: false,
       expiresAt: null,
@@ -50159,48 +70566,255 @@ var getEtsyOAuthStatus = () => {
   }
   return {
     connected: true,
-    expiresAt: tokens.expiresAt,
-    needsRefresh: computeNeedsRefresh(tokens.expiresAt),
-    scopes: [...tokens.scopes]
+    expiresAt: params.tokens.expiresAt,
+    needsRefresh: params.nowMs + env.ETSY_OAUTH_REFRESH_SKEW_MS >= params.tokens.expiresAt.getTime(),
+    scopes: [...params.tokens.scopes]
   };
 };
-var refreshEtsyOAuthAccessToken = async () => {
-  const tokens = etsyOAuthTokenStore.get();
-  if (!tokens) {
-    throw new TRPCError({
-      code: "PRECONDITION_FAILED",
-      message: "Etsy OAuth is not connected. Run the start flow first."
+var createEtsyOAuthService = (overrides = {}) => {
+  const dependencies = {
+    ...defaultDependencies,
+    ...overrides
+  };
+  const persistTokens = async (identity2, tokenResponse) => {
+    const nextTokens = {
+      accessToken: tokenResponse.accessToken,
+      expiresAt: new Date(dependencies.nowMs() + tokenResponse.expiresInSeconds * 1000),
+      refreshToken: tokenResponse.refreshToken,
+      scopes: tokenResponse.scopes,
+      tokenType: tokenResponse.tokenType
+    };
+    await dependencies.connectionStore.set(identity2, nextTokens);
+    logOAuthDebug("persisted OAuth tokens", {
+      connectionKey: formatConnectionKeyForLog(identity2),
+      expiresAt: nextTokens.expiresAt.toISOString(),
+      scopeCount: nextTokens.scopes.length,
+      scopes: nextTokens.scopes
     });
-  }
-  try {
-    const refreshed = await exchangeOAuthToken({
-      grantType: "refresh_token",
-      refreshToken: tokens.refreshToken
-    });
-    const expiresAt = new Date(Date.now() + refreshed.expiresInSeconds * 1000);
-    etsyOAuthTokenStore.set({
-      accessToken: refreshed.accessToken,
-      expiresAt,
-      refreshToken: refreshed.refreshToken,
-      scopes: refreshed.scopes,
-      tokenType: refreshed.tokenType
-    });
-  } catch (error48) {
-    if (error48 instanceof EtsyOAuthBridgeError) {
+    return nextTokens;
+  };
+  const refreshTokens = async (params) => {
+    try {
+      await dependencies.recordApiCall({
+        clerkUserId: params.identity.clerkUserId,
+        endpoint: "exchangeOAuthToken",
+        tenantId: params.identity.tenantId
+      });
+      const refreshed = await dependencies.exchangeToken({
+        grantType: "refresh_token",
+        refreshToken: params.refreshToken
+      });
+      logOAuthDebug("received refresh token exchange response", {
+        connectionKey: formatConnectionKeyForLog(params.identity),
+        scopeCount: refreshed.scopes.length,
+        scopes: refreshed.scopes
+      });
+      return persistTokens(params.identity, refreshed);
+    } catch (error48) {
+      return toInternalError(error48);
+    }
+  };
+  const ensureConnectedTokens = async (params) => {
+    const tokens = await dependencies.connectionStore.get(params.identity);
+    if (!tokens) {
       throw new TRPCError({
-        cause: error48,
-        code: "INTERNAL_SERVER_ERROR",
-        message: error48.message
+        code: "PRECONDITION_FAILED",
+        message: "Etsy OAuth is not connected. Run the start flow first."
       });
     }
-    throw error48;
-  }
-  return getEtsyOAuthStatus();
+    return tokens;
+  };
+  const ensureFreshTokens = async (params) => {
+    const tokens = await ensureConnectedTokens(params);
+    const status = createStatus({
+      nowMs: dependencies.nowMs(),
+      tokens
+    });
+    if (!status.needsRefresh) {
+      logOAuthDebug("using existing OAuth tokens without refresh", {
+        connectionKey: formatConnectionKeyForLog(params.identity),
+        expiresAt: tokens.expiresAt.toISOString(),
+        scopes: tokens.scopes
+      });
+      return tokens;
+    }
+    logOAuthDebug("refreshing stale OAuth tokens", {
+      connectionKey: formatConnectionKeyForLog(params.identity),
+      expiresAt: tokens.expiresAt.toISOString(),
+      scopes: tokens.scopes
+    });
+    return refreshTokens({
+      identity: params.identity,
+      refreshToken: tokens.refreshToken
+    });
+  };
+  const getOAuthAccessToken = async (params) => {
+    const tokens = await ensureFreshTokens({
+      identity: params
+    });
+    const hasExplicitScopes = tokens.scopes.length > 0;
+    const missingScopes = REQUIRED_ETSY_OAUTH_SCOPES2.filter((scope) => !tokens.scopes.includes(scope));
+    if (hasExplicitScopes && missingScopes.length > 0) {
+      const missingScopesSummary = missingScopes.join(", ");
+      const reconnectMessage = `Etsy OAuth session is missing required scope(s): ${missingScopesSummary}. ` + "Reconnect Etsy OAuth.";
+      logOAuthDebug("required scope check failed", {
+        connectionKey: formatConnectionKeyForLog(params),
+        missingScopes,
+        scopes: tokens.scopes
+      });
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: reconnectMessage
+      });
+    }
+    if (!hasExplicitScopes) {
+      logOAuthDebug("required scope check skipped because token response omitted scopes", {
+        connectionKey: formatConnectionKeyForLog(params)
+      });
+    }
+    return {
+      accessToken: tokens.accessToken,
+      expiresAt: tokens.expiresAt,
+      scopes: [...tokens.scopes],
+      tokenType: tokens.tokenType
+    };
+  };
+  const getOAuthStatus = async (params) => {
+    const currentTokens = await dependencies.connectionStore.get(params);
+    if (!currentTokens) {
+      return createStatus({
+        nowMs: dependencies.nowMs(),
+        tokens: null
+      });
+    }
+    const tokens = await ensureFreshTokens({
+      identity: params
+    });
+    return createStatus({
+      nowMs: dependencies.nowMs(),
+      tokens
+    });
+  };
+  const startOAuthFlow = (params) => {
+    const pkce = dependencies.pkceFactory();
+    const stateEntry = dependencies.stateStore.issue({
+      clerkUserId: params.clerkUserId,
+      codeVerifier: pkce.codeVerifier,
+      tenantId: params.tenantId
+    });
+    logOAuthDebug("issued OAuth start flow", {
+      connectionKey: formatConnectionKeyForLog(params),
+      expiresAt: stateEntry.expiresAt.toISOString(),
+      scopes: env.etsyOAuthScopes
+    });
+    return {
+      authorizationUrl: getAuthorizationUrl({
+        codeChallenge: pkce.codeChallenge,
+        state: stateEntry.state
+      }),
+      expiresAt: stateEntry.expiresAt
+    };
+  };
+  const completeOAuthFlow = async (params) => {
+    const statePayload = dependencies.stateStore.consume(params.state);
+    if (!statePayload) {
+      logOAuthDebug("OAuth callback state was invalid or expired", {
+        statePrefix: params.state.slice(0, 12)
+      });
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "OAuth state was invalid or expired. Start OAuth again from the dashboard."
+      });
+    }
+    const identity2 = {
+      clerkUserId: statePayload.clerkUserId,
+      tenantId: statePayload.tenantId
+    };
+    try {
+      await dependencies.recordApiCall({
+        clerkUserId: identity2.clerkUserId,
+        endpoint: "exchangeOAuthToken",
+        tenantId: identity2.tenantId
+      });
+      const tokenResponse = await dependencies.exchangeToken({
+        code: params.code,
+        codeVerifier: statePayload.codeVerifier,
+        grantType: "authorization_code",
+        redirectUri: env.ETSY_OAUTH_REDIRECT_URI
+      });
+      logOAuthDebug("received auth code token exchange response", {
+        connectionKey: formatConnectionKeyForLog(identity2),
+        scopeCount: tokenResponse.scopes.length,
+        scopes: tokenResponse.scopes
+      });
+      await persistTokens(identity2, tokenResponse);
+      return getOAuthStatus(identity2);
+    } catch (error48) {
+      return toInternalError(error48);
+    }
+  };
+  const refreshOAuthAccessToken = async (params) => {
+    const tokens = await ensureConnectedTokens({
+      identity: params
+    });
+    logOAuthDebug("manual refresh requested", {
+      connectionKey: formatConnectionKeyForLog(params),
+      expiresAt: tokens.expiresAt.toISOString(),
+      scopes: tokens.scopes
+    });
+    await refreshTokens({
+      identity: params,
+      refreshToken: tokens.refreshToken
+    });
+    return getOAuthStatus(params);
+  };
+  const disconnectOAuthSession = async (params) => {
+    await dependencies.connectionStore.clear(params);
+    logOAuthDebug("cleared OAuth session tokens", {
+      connectionKey: formatConnectionKeyForLog(params)
+    });
+    return createStatus({
+      nowMs: dependencies.nowMs(),
+      tokens: null
+    });
+  };
+  return {
+    completeOAuthFlow,
+    disconnectOAuthSession,
+    getOAuthAccessToken,
+    getOAuthStatus,
+    refreshOAuthAccessToken,
+    startOAuthFlow
+  };
 };
+var etsyOAuthService = createEtsyOAuthService();
+var completeEtsyOAuthFlow = etsyOAuthService.completeOAuthFlow;
+var disconnectEtsyOAuthSession = etsyOAuthService.disconnectOAuthSession;
+var getEtsyOAuthAccessToken = etsyOAuthService.getOAuthAccessToken;
+var getEtsyOAuthStatus = etsyOAuthService.getOAuthStatus;
+var refreshEtsyOAuthAccessToken = etsyOAuthService.refreshOAuthAccessToken;
+var startEtsyOAuthFlow = etsyOAuthService.startOAuthFlow;
+
+// src/api/app/etsy-auth/disconnect.ts
+var etsyAuthDisconnectProcedure = appProcedure.input(exports_external.object({})).mutation(async ({ ctx }) => {
+  const status = await disconnectEtsyOAuthSession({
+    clerkUserId: ctx.user.sub,
+    tenantId: ctx.tenantId
+  });
+  return {
+    connected: status.connected,
+    expiresAt: status.expiresAt ? status.expiresAt.toISOString() : null,
+    needsRefresh: status.needsRefresh,
+    scopes: status.scopes
+  };
+});
 
 // src/api/app/etsy-auth/refresh.ts
-var etsyAuthRefreshProcedure = appProcedure.input(exports_external.object({})).mutation(async () => {
-  const status = await refreshEtsyOAuthAccessToken();
+var etsyAuthRefreshProcedure = appProcedure.input(exports_external.object({})).mutation(async ({ ctx }) => {
+  const status = await refreshEtsyOAuthAccessToken({
+    clerkUserId: ctx.user.sub,
+    tenantId: ctx.tenantId
+  });
   return {
     connected: status.connected,
     expiresAt: status.expiresAt ? status.expiresAt.toISOString() : null,
@@ -50210,8 +70824,11 @@ var etsyAuthRefreshProcedure = appProcedure.input(exports_external.object({})).m
 });
 
 // src/api/app/etsy-auth/start.ts
-var etsyAuthStartProcedure = appProcedure.input(exports_external.object({})).query(async () => {
-  const flow = startEtsyOAuthFlow();
+var etsyAuthStartProcedure = appProcedure.input(exports_external.object({})).mutation(async ({ ctx }) => {
+  const flow = startEtsyOAuthFlow({
+    clerkUserId: ctx.user.sub,
+    tenantId: ctx.tenantId
+  });
   return {
     authorizationUrl: flow.authorizationUrl,
     expiresAt: flow.expiresAt.toISOString()
@@ -50219,8 +70836,11 @@ var etsyAuthStartProcedure = appProcedure.input(exports_external.object({})).que
 });
 
 // src/api/app/etsy-auth/status.ts
-var etsyAuthStatusProcedure = appProcedure.input(exports_external.object({})).query(async () => {
-  const status = getEtsyOAuthStatus();
+var etsyAuthStatusProcedure = appProcedure.input(exports_external.object({})).query(async ({ ctx }) => {
+  const status = await getEtsyOAuthStatus({
+    clerkUserId: ctx.user.sub,
+    tenantId: ctx.tenantId
+  });
   return {
     connected: status.connected,
     expiresAt: status.expiresAt ? status.expiresAt.toISOString() : null,
@@ -50231,14 +70851,6499 @@ var etsyAuthStatusProcedure = appProcedure.input(exports_external.object({})).qu
 
 // src/api/app/etsy-auth/router.ts
 var etsyAuthRouter = router({
+  disconnect: etsyAuthDisconnectProcedure,
   refresh: etsyAuthRefreshProcedure,
   start: etsyAuthStartProcedure,
   status: etsyAuthStatusProcedure
 });
 
+// src/services/etsy/bridges/find-all-listings-active.ts
+var sortOnSchema = exports_external.enum(["created", "price", "updated", "score"]);
+var sortOrderSchema = exports_external.enum(["asc", "ascending", "desc", "descending", "up", "down"]);
+var moneySchema = exports_external.object({
+  amount: exports_external.coerce.number().int(),
+  currency_code: exports_external.string().min(1),
+  divisor: exports_external.coerce.number().int().positive()
+});
+var listingSchema = exports_external.object({
+  images: exports_external.array(exports_external.unknown()).nullable().optional(),
+  listing_id: exports_external.coerce.number().int().positive(),
+  main_image: exports_external.unknown().nullable().optional(),
+  price: moneySchema.nullable().optional(),
+  shop_id: exports_external.coerce.number().int().positive().nullable().optional(),
+  title: exports_external.string().min(1),
+  url: exports_external.string().nullable().optional()
+}).passthrough();
+var responseSchema = exports_external.object({
+  count: exports_external.coerce.number().int().nonnegative(),
+  results: exports_external.array(listingSchema)
+}).passthrough();
+var inputSchema = exports_external.object({
+  accessToken: exports_external.string().min(1),
+  keywords: exports_external.string().min(1).optional(),
+  legacy: exports_external.boolean().optional(),
+  limit: exports_external.coerce.number().int().min(1).max(100).optional(),
+  maxPrice: exports_external.coerce.number().nonnegative().optional(),
+  minPrice: exports_external.coerce.number().nonnegative().optional(),
+  offset: exports_external.coerce.number().int().min(0).optional(),
+  shopLocation: exports_external.string().min(1).optional(),
+  sortOn: sortOnSchema.optional(),
+  sortOrder: sortOrderSchema.optional(),
+  taxonomyId: exports_external.coerce.number().int().positive().optional()
+});
+var etsyErrorSchema = exports_external.object({
+  error: exports_external.string().optional(),
+  error_description: exports_external.string().optional(),
+  message: exports_external.string().optional()
+}).passthrough();
+
+class EtsyFindAllListingsActiveBridgeError extends Error {
+  responseBody;
+  statusCode;
+  constructor(message, statusCode, responseBody) {
+    super(message);
+    this.name = "EtsyFindAllListingsActiveBridgeError";
+    this.statusCode = statusCode;
+    this.responseBody = responseBody;
+  }
+}
+var getApiKeyHeaderValue2 = () => {
+  if (env.ETSY_API_SHARED_SECRET) {
+    return `${env.ETSY_API_KEY}:${env.ETSY_API_SHARED_SECRET}`;
+  }
+  return env.ETSY_API_KEY;
+};
+var tryParseJson2 = (input) => {
+  if (input.length === 0) {
+    return null;
+  }
+  try {
+    return JSON.parse(input);
+  } catch {
+    return null;
+  }
+};
+var extractErrorMessage = (rawBody, statusCode) => {
+  const parsedBody = tryParseJson2(rawBody);
+  const parsedError = etsyErrorSchema.safeParse(parsedBody ?? {});
+  if (parsedError.success) {
+    return parsedError.data.error_description ?? parsedError.data.message ?? parsedError.data.error ?? `Etsy findAllListingsActive failed with HTTP ${statusCode}.`;
+  }
+  return `Etsy findAllListingsActive failed with HTTP ${statusCode}.`;
+};
+var buildEndpoint = (input) => {
+  const url2 = new URL("https://openapi.etsy.com/v3/application/listings/active");
+  if (input.limit !== undefined) {
+    url2.searchParams.set("limit", String(input.limit));
+  }
+  if (input.offset !== undefined) {
+    url2.searchParams.set("offset", String(input.offset));
+  }
+  if (input.keywords) {
+    url2.searchParams.set("keywords", input.keywords);
+  }
+  if (input.sortOn) {
+    url2.searchParams.set("sort_on", input.sortOn);
+  }
+  if (input.sortOrder) {
+    url2.searchParams.set("sort_order", input.sortOrder);
+  }
+  if (input.minPrice !== undefined) {
+    url2.searchParams.set("min_price", String(input.minPrice));
+  }
+  if (input.maxPrice !== undefined) {
+    url2.searchParams.set("max_price", String(input.maxPrice));
+  }
+  if (input.taxonomyId !== undefined) {
+    url2.searchParams.set("taxonomy_id", String(input.taxonomyId));
+  }
+  if (input.shopLocation) {
+    url2.searchParams.set("shop_location", input.shopLocation);
+  }
+  if (input.legacy !== undefined) {
+    url2.searchParams.set("legacy", String(input.legacy));
+  }
+  return url2.toString();
+};
+var extractThumbnailUrlFromImage = (image) => {
+  if (typeof image !== "object" || image === null) {
+    return null;
+  }
+  const record2 = image;
+  const thumbnailUrl = record2.url_170x135 ?? record2.url_75x75 ?? null;
+  return typeof thumbnailUrl === "string" ? thumbnailUrl : null;
+};
+var extractThumbnailUrl = (listing) => {
+  const thumbnailFromMainImage = extractThumbnailUrlFromImage(listing.main_image);
+  if (thumbnailFromMainImage) {
+    return thumbnailFromMainImage;
+  }
+  if (!listing.images || listing.images.length === 0) {
+    return null;
+  }
+  return extractThumbnailUrlFromImage(listing.images[0]);
+};
+var toResponse = (parsed) => {
+  return {
+    count: parsed.count,
+    results: parsed.results.map((item) => ({
+      listingId: String(item.listing_id),
+      price: item.price ? {
+        amount: item.price.amount,
+        currencyCode: item.price.currency_code,
+        divisor: item.price.divisor
+      } : null,
+      shopId: item.shop_id === null || item.shop_id === undefined ? null : String(item.shop_id),
+      thumbnailUrl: extractThumbnailUrl(item),
+      title: item.title,
+      url: item.url ?? null
+    }))
+  };
+};
+var findAllListingsActive = async (input) => {
+  const parsedInput = inputSchema.safeParse(input);
+  if (!parsedInput.success) {
+    throw new EtsyFindAllListingsActiveBridgeError("Invalid findAllListingsActive bridge input.", 400, "");
+  }
+  const response = await fetch(buildEndpoint(parsedInput.data), {
+    headers: {
+      Accept: "application/json",
+      Authorization: `Bearer ${parsedInput.data.accessToken}`,
+      "x-api-key": getApiKeyHeaderValue2()
+    },
+    method: "GET"
+  });
+  const rawBody = await response.text();
+  if (!response.ok) {
+    throw new EtsyFindAllListingsActiveBridgeError(extractErrorMessage(rawBody, response.status), response.status, rawBody);
+  }
+  const parsedJson = tryParseJson2(rawBody) ?? {};
+  const parsedBody = responseSchema.safeParse(parsedJson);
+  if (!parsedBody.success) {
+    throw new EtsyFindAllListingsActiveBridgeError("Etsy findAllListingsActive response was missing required fields.", response.status, rawBody);
+  }
+  return toResponse(parsedBody.data);
+};
+
+// src/services/realtime/emit-event.ts
+import { EventEmitter } from "events";
+var realtimeInvalidationEmitter = new EventEmitter;
+var realtimeInvalidationEventName = "realtime.invalidation";
+realtimeInvalidationEmitter.setMaxListeners(0);
+var realtimeInvalidationQuerySchema = exports_external.enum([
+  "app.keywords.list",
+  "app.listings.list",
+  "app.logs.list"
+]);
+var realtimeInvalidationEventSchema = exports_external.object({
+  clerkUserId: exports_external.string().min(1),
+  queries: exports_external.array(realtimeInvalidationQuerySchema).min(1),
+  tenantId: exports_external.string().min(1)
+});
+var emitEvent = (event) => {
+  const parsedEvent = realtimeInvalidationEventSchema.parse(event);
+  realtimeInvalidationEmitter.emit(realtimeInvalidationEventName, parsedEvent);
+};
+var onEvent = (listener) => {
+  realtimeInvalidationEmitter.on(realtimeInvalidationEventName, listener);
+  return () => {
+    realtimeInvalidationEmitter.off(realtimeInvalidationEventName, listener);
+  };
+};
+
+// src/services/logs/event-log-types.ts
+var eventLogLevels = ["info", "warn", "error", "debug"];
+var eventLogStatuses = ["success", "failed", "pending", "retrying", "partial"];
+var eventLogPrimitiveTypes = ["keyword", "listing", "shop", "system"];
+var eventLogLevelSchema = exports_external.enum(eventLogLevels);
+var eventLogStatusSchema = exports_external.enum(eventLogStatuses);
+var eventLogPrimitiveTypeSchema = exports_external.enum(eventLogPrimitiveTypes);
+var eventLogDetailsSchema = exports_external.record(exports_external.string(), exports_external.unknown());
+
+// src/services/logs/create-event-log.ts
+var createEventLogInputSchema = exports_external.object({
+  clerkUserId: exports_external.string().min(1).nullable().optional().default(null),
+  tenantId: exports_external.string().min(1),
+  occurredAt: exports_external.date().optional(),
+  level: eventLogLevelSchema.default("info"),
+  category: exports_external.string().min(1).default("monitor"),
+  action: exports_external.string().min(1),
+  status: eventLogStatusSchema.default("success"),
+  primitiveType: eventLogPrimitiveTypeSchema,
+  primitiveId: exports_external.string().min(1).nullable().optional().default(null),
+  listingId: exports_external.string().min(1).nullable().optional().default(null),
+  shopId: exports_external.string().min(1).nullable().optional().default(null),
+  keyword: exports_external.string().min(1).nullable().optional().default(null),
+  message: exports_external.string().min(1),
+  detailsJson: eventLogDetailsSchema.optional().default({}),
+  monitorRunId: exports_external.string().min(1).nullable().optional().default(null),
+  requestId: exports_external.string().min(1).nullable().optional().default(null)
+}).strict();
+var toDetailsJson = (value) => {
+  if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+    return value;
+  }
+  return {};
+};
+var toRecord = (row) => {
+  return {
+    id: row.id,
+    tenantId: row.tenantId,
+    occurredAt: row.occurredAt.toISOString(),
+    level: row.level,
+    category: row.category,
+    action: row.action,
+    status: row.status,
+    primitiveType: row.primitiveType,
+    primitiveId: row.primitiveId,
+    listingId: row.listingId,
+    shopId: row.shopId,
+    keyword: row.keyword,
+    message: row.message,
+    detailsJson: toDetailsJson(row.detailsJson),
+    monitorRunId: row.monitorRunId,
+    requestId: row.requestId
+  };
+};
+var toInsertValues = (input) => {
+  const parsed = createEventLogInputSchema.parse(input);
+  return {
+    clerkUserId: parsed.clerkUserId,
+    values: {
+      tenantId: parsed.tenantId,
+      occurredAt: parsed.occurredAt ?? new Date,
+      level: parsed.level,
+      category: parsed.category,
+      action: parsed.action,
+      status: parsed.status,
+      primitiveType: parsed.primitiveType,
+      primitiveId: parsed.primitiveId,
+      listingId: parsed.listingId,
+      shopId: parsed.shopId,
+      keyword: parsed.keyword,
+      message: parsed.message,
+      detailsJson: parsed.detailsJson,
+      monitorRunId: parsed.monitorRunId,
+      requestId: parsed.requestId
+    }
+  };
+};
+var createEventLog = async (input) => {
+  const parsed = toInsertValues(input);
+  const [row] = await db.insert(eventLogs).values(parsed.values).returning();
+  if (parsed.clerkUserId) {
+    emitEvent({
+      clerkUserId: parsed.clerkUserId,
+      queries: ["app.logs.list"],
+      tenantId: parsed.values.tenantId
+    });
+  }
+  return toRecord(row);
+};
+var createEventLogs = async (input) => {
+  if (input.length === 0) {
+    return [];
+  }
+  const parsedValues = input.map((item) => toInsertValues(item));
+  const rows = await db.insert(eventLogs).values(parsedValues.map((value) => value.values)).returning();
+  const invalidationTargets = new Set;
+  for (const value of parsedValues) {
+    if (!value.clerkUserId) {
+      continue;
+    }
+    invalidationTargets.add(JSON.stringify([value.values.tenantId, value.clerkUserId]));
+  }
+  for (const target of invalidationTargets) {
+    const [tenantId, clerkUserId] = JSON.parse(target);
+    emitEvent({
+      clerkUserId,
+      queries: ["app.logs.list"],
+      tenantId
+    });
+  }
+  return rows.map(toRecord);
+};
+
+// src/services/keywords/keyword-rankings-service.ts
+var DAILY_SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000;
+var keywordSyncInvalidationQueries = ["app.keywords.list", "app.listings.list"];
+var computeNextKeywordSyncAt = (now) => {
+  return new Date(now.getTime() + DAILY_SYNC_INTERVAL_MS);
+};
+var buildTrackedListingDiscoveryValues = (params) => {
+  return {
+    etsyListingId: params.rankedListing.listingId,
+    etsyState: "active",
+    shopId: params.rankedListing.shopId,
+    tenantId: params.tenantId,
+    thumbnailUrl: params.rankedListing.thumbnailUrl,
+    title: params.rankedListing.title,
+    trackerClerkUserId: params.clerkUserId,
+    trackingState: "active",
+    updatedAt: params.now,
+    url: params.rankedListing.url
+  };
+};
+var parseListingIdentifier = (rawInput) => {
+  const trimmed = rawInput.trim();
+  if (/^\d+$/.test(trimmed)) {
+    return trimmed;
+  }
+  try {
+    const url2 = new URL(trimmed);
+    if (!url2.hostname.toLowerCase().includes("etsy.com")) {
+      return null;
+    }
+    const match2 = url2.pathname.match(/\/listing\/(\d+)(?:\/|$)/i);
+    if (match2?.[1]) {
+      return match2[1];
+    }
+    const listingIdFromQuery = url2.searchParams.get("listing_id");
+    if (listingIdFromQuery && /^\d+$/.test(listingIdFromQuery)) {
+      return listingIdFromQuery;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
+var toRecord2 = (row) => {
+  return {
+    etsyListingId: row.etsyListingId,
+    listingId: row.listingId,
+    observedAt: row.observedAt.toISOString(),
+    rank: row.rank,
+    trackedKeywordId: row.trackedKeywordId
+  };
+};
+var mapBridgeErrorToTrpcError = (error48) => {
+  if (error48.statusCode === 404) {
+    return new TRPCError({
+      code: "NOT_FOUND",
+      message: "Etsy search endpoint did not return results."
+    });
+  }
+  if (error48.statusCode === 400) {
+    return new TRPCError({
+      code: "BAD_REQUEST",
+      message: error48.message
+    });
+  }
+  if (error48.statusCode === 401 || error48.statusCode === 403) {
+    const genericStatusMessage = `Etsy findAllListingsActive failed with HTTP ${error48.statusCode}.`;
+    return new TRPCError({
+      code: "FORBIDDEN",
+      message: error48.message === genericStatusMessage ? "Etsy access token is invalid or missing required scope." : error48.message
+    });
+  }
+  return new TRPCError({
+    code: "INTERNAL_SERVER_ERROR",
+    message: error48.message
+  });
+};
+var getTrackedKeyword = async (params) => {
+  const [keyword] = await db.select().from(trackedKeywords).where(and(eq(trackedKeywords.id, params.trackedKeywordId), eq(trackedKeywords.tenantId, params.tenantId))).limit(1);
+  if (!keyword) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "Tracked keyword was not found for this tenant."
+    });
+  }
+  return keyword;
+};
+var fetchKeywordRanksFromEtsy = async (params) => {
+  const oauthToken = await getEtsyOAuthAccessToken({
+    clerkUserId: params.clerkUserId,
+    tenantId: params.tenantId
+  });
+  try {
+    await recordEtsyApiCallBestEffort({
+      clerkUserId: params.clerkUserId,
+      endpoint: "findAllListingsActive",
+      tenantId: params.tenantId
+    });
+    return await findAllListingsActive({
+      accessToken: oauthToken.accessToken,
+      keywords: params.keyword,
+      limit: 25,
+      offset: 0,
+      sortOn: "score"
+    });
+  } catch (error48) {
+    if (error48 instanceof EtsyFindAllListingsActiveBridgeError) {
+      throw mapBridgeErrorToTrpcError(error48);
+    }
+    throw error48;
+  }
+};
+var syncRanksForKeyword = async (params) => {
+  const trackedKeyword = await getTrackedKeyword({
+    tenantId: params.tenantId,
+    trackedKeywordId: params.trackedKeywordId
+  });
+  const now = new Date;
+  const nextSyncAt = computeNextKeywordSyncAt(now);
+  try {
+    const response = await fetchKeywordRanksFromEtsy({
+      clerkUserId: params.clerkUserId,
+      keyword: trackedKeyword.keyword,
+      tenantId: params.tenantId
+    });
+    const insertValues = await db.transaction(async (tx) => {
+      const listingIdByEtsyListingId = new Map;
+      const uniqueRankedListingsById = new Map;
+      const newlyDiscoveredEtsyListingIds = [];
+      for (const item of response.results) {
+        if (uniqueRankedListingsById.has(item.listingId)) {
+          continue;
+        }
+        uniqueRankedListingsById.set(item.listingId, item);
+      }
+      const uniqueRankedListings = [...uniqueRankedListingsById.values()];
+      if (uniqueRankedListings.length > 0) {
+        const discoveryValues = uniqueRankedListings.map((rankedListing) => buildTrackedListingDiscoveryValues({
+          clerkUserId: params.clerkUserId,
+          now,
+          rankedListing,
+          tenantId: params.tenantId
+        }));
+        const insertedListings = await tx.insert(trackedListings).values(discoveryValues).onConflictDoNothing({
+          target: [trackedListings.tenantId, trackedListings.etsyListingId]
+        }).returning({
+          etsyListingId: trackedListings.etsyListingId
+        });
+        for (const inserted of insertedListings) {
+          newlyDiscoveredEtsyListingIds.push(inserted.etsyListingId);
+        }
+        const trackedListingRows = await tx.select({
+          etsyListingId: trackedListings.etsyListingId,
+          listingId: trackedListings.listingId
+        }).from(trackedListings).where(and(eq(trackedListings.tenantId, params.tenantId), inArray(trackedListings.etsyListingId, uniqueRankedListings.map((rankedListing) => rankedListing.listingId))));
+        for (const row of trackedListingRows) {
+          listingIdByEtsyListingId.set(row.etsyListingId, row.listingId);
+        }
+      }
+      for (const item of uniqueRankedListings) {
+        const listingId = listingIdByEtsyListingId.get(item.listingId);
+        if (!listingId) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Ranked listing was not available in tracked listings."
+          });
+        }
+      }
+      const values2 = response.results.map((item, index2) => {
+        const listingId = listingIdByEtsyListingId.get(item.listingId);
+        if (!listingId) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Ranked listing was not available in tracked listings."
+          });
+        }
+        return {
+          etsyListingId: item.listingId,
+          listingId,
+          observedAt: now,
+          rank: index2 + 1,
+          tenantId: params.tenantId,
+          trackedKeywordId: trackedKeyword.id
+        };
+      });
+      if (values2.length > 0) {
+        await tx.insert(productKeywordRanks).values(values2);
+      }
+      const discoveredListings = newlyDiscoveredEtsyListingIds.map((etsyListingId) => {
+        const rankedListing = uniqueRankedListingsById.get(etsyListingId);
+        return {
+          etsyListingId,
+          primitiveId: listingIdByEtsyListingId.get(etsyListingId) ?? null,
+          shopId: rankedListing?.shopId ?? null,
+          title: rankedListing?.title ?? null
+        };
+      });
+      return {
+        discoveredListings,
+        newlyDiscoveredEtsyListingIds,
+        values: values2
+      };
+    });
+    await db.update(trackedKeywords).set({
+      lastRefreshError: null,
+      lastRefreshedAt: now,
+      nextSyncAt,
+      trackingState: "active",
+      updatedAt: now
+    }).where(and(eq(trackedKeywords.id, trackedKeyword.id), eq(trackedKeywords.tenantId, params.tenantId)));
+    emitEvent({
+      clerkUserId: params.clerkUserId,
+      queries: [...keywordSyncInvalidationQueries],
+      tenantId: params.tenantId
+    });
+    await createEventLogs([
+      ...insertValues.discoveredListings.map((listing) => ({
+        action: "listing.discovered",
+        category: "listing",
+        clerkUserId: params.clerkUserId,
+        detailsJson: {
+          keyword: trackedKeyword.keyword,
+          title: listing.title
+        },
+        keyword: trackedKeyword.keyword,
+        level: "info",
+        listingId: listing.etsyListingId,
+        message: `Discovered listing ${listing.etsyListingId} from keyword ` + `"${trackedKeyword.keyword}".`,
+        monitorRunId: params.monitorRunId ?? null,
+        primitiveId: listing.primitiveId,
+        primitiveType: "listing",
+        requestId: params.requestId ?? null,
+        shopId: listing.shopId,
+        status: "success",
+        tenantId: params.tenantId
+      })),
+      {
+        action: "keyword.synced",
+        category: "keyword",
+        clerkUserId: params.clerkUserId,
+        detailsJson: {
+          capturedCount: insertValues.values.length,
+          discoveredCount: insertValues.newlyDiscoveredEtsyListingIds.length
+        },
+        keyword: trackedKeyword.keyword,
+        level: "info",
+        message: `Synced keyword "${trackedKeyword.keyword}" with ` + `${insertValues.values.length} captured listings.`,
+        monitorRunId: params.monitorRunId ?? null,
+        primitiveId: trackedKeyword.id,
+        primitiveType: "keyword",
+        requestId: params.requestId ?? null,
+        status: "success",
+        tenantId: params.tenantId
+      }
+    ]);
+    return {
+      keyword: trackedKeyword.keyword,
+      normalizedKeyword: trackedKeyword.normalizedKeyword,
+      newlyDiscoveredEtsyListingIds: insertValues.newlyDiscoveredEtsyListingIds,
+      observedAt: now.toISOString(),
+      trackedKeywordId: trackedKeyword.id,
+      items: insertValues.values.map((item) => ({
+        etsyListingId: item.etsyListingId,
+        listingId: item.listingId,
+        observedAt: now.toISOString(),
+        rank: item.rank,
+        trackedKeywordId: item.trackedKeywordId
+      }))
+    };
+  } catch (error48) {
+    const failureMessage = error48 instanceof TRPCError ? error48.message : "Unexpected daily product rank sync error.";
+    await db.update(trackedKeywords).set({
+      lastRefreshError: failureMessage,
+      lastRefreshedAt: now,
+      nextSyncAt,
+      trackingState: "active",
+      updatedAt: now
+    }).where(and(eq(trackedKeywords.id, trackedKeyword.id), eq(trackedKeywords.tenantId, params.tenantId)));
+    emitEvent({
+      clerkUserId: params.clerkUserId,
+      queries: [...keywordSyncInvalidationQueries],
+      tenantId: params.tenantId
+    });
+    try {
+      await createEventLog({
+        action: "keyword.sync_failed",
+        category: "keyword",
+        clerkUserId: params.clerkUserId,
+        detailsJson: {
+          error: failureMessage
+        },
+        keyword: trackedKeyword.keyword,
+        level: "error",
+        message: `Keyword sync failed for "${trackedKeyword.keyword}": ${failureMessage}`,
+        monitorRunId: params.monitorRunId ?? null,
+        primitiveId: trackedKeyword.id,
+        primitiveType: "keyword",
+        requestId: params.requestId ?? null,
+        status: "failed",
+        tenantId: params.tenantId
+      });
+    } catch {}
+    throw error48;
+  }
+};
+var getDailyProductRanksForKeyword = async (params) => {
+  const trackedKeyword = await getTrackedKeyword({
+    tenantId: params.tenantId,
+    trackedKeywordId: params.trackedKeywordId
+  });
+  const [latest] = await db.select({
+    observedAt: productKeywordRanks.observedAt
+  }).from(productKeywordRanks).where(and(eq(productKeywordRanks.tenantId, params.tenantId), eq(productKeywordRanks.trackedKeywordId, params.trackedKeywordId))).orderBy(desc(productKeywordRanks.observedAt)).limit(1);
+  if (!latest) {
+    return {
+      keyword: trackedKeyword.keyword,
+      normalizedKeyword: trackedKeyword.normalizedKeyword,
+      observedAt: null,
+      trackedKeywordId: trackedKeyword.id,
+      items: []
+    };
+  }
+  const rows = await db.select().from(productKeywordRanks).where(and(eq(productKeywordRanks.tenantId, params.tenantId), eq(productKeywordRanks.trackedKeywordId, params.trackedKeywordId), eq(productKeywordRanks.observedAt, latest.observedAt))).orderBy(asc(productKeywordRanks.rank));
+  return {
+    keyword: trackedKeyword.keyword,
+    normalizedKeyword: trackedKeyword.normalizedKeyword,
+    observedAt: latest.observedAt.toISOString(),
+    trackedKeywordId: trackedKeyword.id,
+    items: rows.map(toRecord2)
+  };
+};
+var getKeywordRanksForProduct = async (params) => {
+  const etsyListingId = parseListingIdentifier(params.listingInput);
+  if (!etsyListingId) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Listing must be an Etsy listing URL or numeric listing id."
+    });
+  }
+  const rows = await db.select({
+    keyword: trackedKeywords.keyword,
+    normalizedKeyword: trackedKeywords.normalizedKeyword,
+    observedAt: productKeywordRanks.observedAt,
+    rank: productKeywordRanks.rank,
+    trackedKeywordId: productKeywordRanks.trackedKeywordId
+  }).from(productKeywordRanks).innerJoin(trackedKeywords, and(eq(trackedKeywords.id, productKeywordRanks.trackedKeywordId), eq(trackedKeywords.tenantId, productKeywordRanks.tenantId))).where(and(eq(productKeywordRanks.tenantId, params.tenantId), eq(productKeywordRanks.etsyListingId, etsyListingId))).orderBy(desc(productKeywordRanks.observedAt), asc(productKeywordRanks.rank));
+  const grouped = new Map;
+  for (const row of rows) {
+    const current = grouped.get(row.trackedKeywordId);
+    const observedDayKey = row.observedAt.toISOString().slice(0, 10);
+    if (!current) {
+      grouped.set(row.trackedKeywordId, {
+        bestRank: row.rank,
+        currentRank: row.rank,
+        firstObservedAt: row.observedAt,
+        keyword: row.keyword,
+        latestObservedAt: row.observedAt,
+        normalizedKeyword: row.normalizedKeyword,
+        seenDays: new Set([observedDayKey]),
+        trackedKeywordId: row.trackedKeywordId
+      });
+      continue;
+    }
+    current.bestRank = Math.min(current.bestRank, row.rank);
+    current.firstObservedAt = row.observedAt < current.firstObservedAt ? row.observedAt : current.firstObservedAt;
+    current.seenDays.add(observedDayKey);
+  }
+  return {
+    etsyListingId,
+    items: [...grouped.values()].map((item) => ({
+      bestRank: item.bestRank,
+      currentRank: item.currentRank,
+      daysSeen: item.seenDays.size,
+      firstObservedAt: item.firstObservedAt.toISOString(),
+      keyword: item.keyword,
+      latestObservedAt: item.latestObservedAt.toISOString(),
+      normalizedKeyword: item.normalizedKeyword,
+      trackedKeywordId: item.trackedKeywordId
+    })).sort((a, b2) => b2.latestObservedAt.localeCompare(a.latestObservedAt))
+  };
+};
+
+// src/api/app/keywords/get-daily-product-ranks-for-keyword.ts
+var keywordsGetDailyProductRanksForKeywordProcedure = appProcedure.input(exports_external.object({
+  trackedKeywordId: exports_external.string().uuid()
+})).query(async ({ ctx, input }) => {
+  return getDailyProductRanksForKeyword({
+    tenantId: ctx.tenantId,
+    trackedKeywordId: input.trackedKeywordId
+  });
+});
+
+// src/services/keywords/tracked-keywords-service.ts
+var normalizeTrackedKeywordInput = (rawInput) => {
+  const trimmed = rawInput.trim();
+  if (trimmed.length === 0) {
+    return null;
+  }
+  const collapsed = trimmed.replace(/\s+/g, " ");
+  return {
+    keyword: collapsed,
+    normalizedKeyword: collapsed.toLowerCase()
+  };
+};
+var toRecord3 = (row) => {
+  return {
+    id: row.id,
+    keyword: row.keyword,
+    lastRefreshError: row.lastRefreshError,
+    lastRefreshedAt: row.lastRefreshedAt.toISOString(),
+    nextSyncAt: row.nextSyncAt.toISOString(),
+    normalizedKeyword: row.normalizedKeyword,
+    tenantId: row.tenantId,
+    trackerClerkUserId: row.trackerClerkUserId,
+    trackingState: row.trackingState,
+    updatedAt: row.updatedAt.toISOString()
+  };
+};
+var listTrackedKeywords = async (params) => {
+  const whereClause = params.trackerClerkUserId ? and(eq(trackedKeywords.tenantId, params.tenantId), eq(trackedKeywords.trackerClerkUserId, params.trackerClerkUserId)) : eq(trackedKeywords.tenantId, params.tenantId);
+  const rows = await db.select().from(trackedKeywords).where(whereClause).orderBy(desc(trackedKeywords.updatedAt));
+  return {
+    items: rows.map(toRecord3)
+  };
+};
+var trackKeyword = async (params) => {
+  const normalized = normalizeTrackedKeywordInput(params.keywordInput);
+  if (!normalized) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Keyword must not be empty."
+    });
+  }
+  const existing = await db.select({
+    id: trackedKeywords.id
+  }).from(trackedKeywords).where(and(eq(trackedKeywords.tenantId, params.tenantId), eq(trackedKeywords.normalizedKeyword, normalized.normalizedKeyword))).limit(1);
+  const now = new Date;
+  const upsertValues = {
+    keyword: normalized.keyword,
+    lastRefreshError: null,
+    lastRefreshedAt: now,
+    nextSyncAt: now,
+    normalizedKeyword: normalized.normalizedKeyword,
+    tenantId: params.tenantId,
+    trackerClerkUserId: params.trackerClerkUserId,
+    trackingState: "active",
+    updatedAt: now
+  };
+  const [row] = await db.insert(trackedKeywords).values(upsertValues).onConflictDoUpdate({
+    set: upsertValues,
+    target: [trackedKeywords.tenantId, trackedKeywords.normalizedKeyword]
+  }).returning();
+  const created = existing.length === 0;
+  const item = toRecord3(row);
+  await createEventLog({
+    action: created ? "keyword.tracked" : "keyword.updated",
+    category: "keyword",
+    clerkUserId: params.trackerClerkUserId,
+    detailsJson: {
+      normalizedKeyword: item.normalizedKeyword
+    },
+    keyword: item.keyword,
+    level: "info",
+    message: created ? `Started tracking keyword "${item.keyword}".` : `Updated tracked keyword "${item.keyword}".`,
+    primitiveId: item.id,
+    primitiveType: "keyword",
+    requestId: params.requestId ?? null,
+    status: "success",
+    tenantId: item.tenantId
+  });
+  return {
+    created,
+    item
+  };
+};
+
+// src/api/app/keywords/list.ts
+var keywordsListProcedure = appProcedure.input(exports_external.object({})).query(async ({ ctx }) => {
+  return listTrackedKeywords({
+    tenantId: ctx.tenantId,
+    trackerClerkUserId: ctx.user.sub
+  });
+});
+
+// ../../node_modules/.bun/pg-boss@12.13.0/node_modules/pg-boss/dist/index.js
+import EventEmitter7 from "events";
+
+// ../../node_modules/.bun/pg-boss@12.13.0/node_modules/pg-boss/dist/attorney.js
+import assert2 from "assert";
+
+// ../../node_modules/.bun/pg-boss@12.13.0/node_modules/pg-boss/dist/plans.js
+var DEFAULT_SCHEMA = "pgboss";
+var MIGRATE_RACE_MESSAGE = "division by zero";
+var CREATE_RACE_MESSAGE = "already exists";
+var SINGLE_QUOTE_REGEX = /'/g;
+var FIFTEEN_MINUTES = 60 * 15;
+var FORTEEN_DAYS = 60 * 60 * 24 * 14;
+var SEVEN_DAYS = 60 * 60 * 24 * 7;
+var JOB_STATES = Object.freeze({
+  created: "created",
+  retry: "retry",
+  active: "active",
+  completed: "completed",
+  cancelled: "cancelled",
+  failed: "failed"
+});
+var QUEUE_POLICIES = Object.freeze({
+  standard: "standard",
+  short: "short",
+  singleton: "singleton",
+  stately: "stately",
+  exclusive: "exclusive",
+  key_strict_fifo: "key_strict_fifo"
+});
+var QUEUE_DEFAULTS = {
+  expire_seconds: FIFTEEN_MINUTES,
+  retention_seconds: FORTEEN_DAYS,
+  deletion_seconds: SEVEN_DAYS,
+  retry_limit: 2,
+  retry_delay: 0,
+  warning_queued: 0,
+  retry_backoff: false,
+  partition: false
+};
+var COMMON_JOB_TABLE = "job_common";
+function create(schema, version3, options) {
+  const commands = [
+    options?.createSchema ? createSchema(schema) : "",
+    createEnumJobState(schema),
+    createTableVersion(schema),
+    createTableQueue(schema),
+    createTableSchedule(schema),
+    createTableSubscription(schema),
+    createTableBam(schema),
+    jobTableFormatFunction(schema),
+    jobTableRunFunction(schema),
+    jobTableRunAsyncFunction(schema),
+    createTableJob(schema),
+    createPrimaryKeyJob(schema),
+    createTableJobCommon(schema),
+    createTableWarning(schema),
+    createIndexWarning(schema),
+    createQueueFunction(schema),
+    deleteQueueFunction(schema),
+    insertVersion(schema, version3)
+  ];
+  return locked(schema, commands);
+}
+function createSchema(schema) {
+  return `CREATE SCHEMA IF NOT EXISTS ${schema}`;
+}
+function createEnumJobState(schema) {
+  return `
+    CREATE TYPE ${schema}.job_state AS ENUM (
+      '${JOB_STATES.created}',
+      '${JOB_STATES.retry}',
+      '${JOB_STATES.active}',
+      '${JOB_STATES.completed}',
+      '${JOB_STATES.cancelled}',
+      '${JOB_STATES.failed}'
+    )
+  `;
+}
+function createTableVersion(schema) {
+  return `
+    CREATE TABLE ${schema}.version (
+      version int primary key,
+      cron_on timestamp with time zone,
+      bam_on timestamp with time zone
+    )
+  `;
+}
+function createTableQueue(schema) {
+  return `
+    CREATE TABLE ${schema}.queue (
+      name text NOT NULL,
+      policy text NOT NULL,
+      retry_limit int NOT NULL,
+      retry_delay int NOT NULL,
+      retry_backoff bool NOT NULL,
+      retry_delay_max int,
+      expire_seconds int NOT NULL,
+      retention_seconds int NOT NULL,
+      deletion_seconds int NOT NULL,
+      dead_letter text REFERENCES ${schema}.queue (name) CHECK (dead_letter IS DISTINCT FROM name),
+      partition bool NOT NULL,
+      table_name text NOT NULL,
+      deferred_count int NOT NULL default 0,
+      queued_count int NOT NULL default 0,
+      warning_queued int NOT NULL default 0,
+      active_count int NOT NULL default 0,
+      total_count int NOT NULL default 0,
+      heartbeat_seconds int,
+      singletons_active text[],
+      monitor_on timestamp with time zone,
+      maintain_on timestamp with time zone,
+      created_on timestamp with time zone not null default now(),
+      updated_on timestamp with time zone not null default now(),
+      PRIMARY KEY (name)
+    )
+  `;
+}
+function createTableSchedule(schema) {
+  return `
+    CREATE TABLE ${schema}.schedule (
+      name text REFERENCES ${schema}.queue ON DELETE CASCADE,
+      key text not null DEFAULT '',
+      cron text not null,
+      timezone text,
+      data jsonb,
+      options jsonb,
+      created_on timestamp with time zone not null default now(),
+      updated_on timestamp with time zone not null default now(),
+      PRIMARY KEY (name, key)
+    )
+  `;
+}
+function createTableSubscription(schema) {
+  return `
+    CREATE TABLE ${schema}.subscription (
+      event text not null,
+      name text not null REFERENCES ${schema}.queue ON DELETE CASCADE,
+      created_on timestamp with time zone not null default now(),
+      updated_on timestamp with time zone not null default now(),
+      PRIMARY KEY(event, name)
+    )
+  `;
+}
+function createTableBam(schema) {
+  return `
+    CREATE TABLE ${schema}.bam (
+      id uuid PRIMARY KEY default gen_random_uuid(),
+      name text NOT NULL,
+      version int NOT NULL,
+      status text NOT NULL DEFAULT 'pending',
+      queue text,
+      table_name text NOT NULL,
+      command text NOT NULL,
+      error text,
+      created_on timestamp with time zone NOT NULL DEFAULT now(),
+      started_on timestamp with time zone,
+      completed_on timestamp with time zone
+    )
+  `;
+}
+function createTableWarning(schema) {
+  return `
+    CREATE TABLE ${schema}.warning (
+      id uuid PRIMARY KEY default gen_random_uuid(),
+      type text NOT NULL,
+      message text NOT NULL,
+      data jsonb,
+      created_on timestamp with time zone NOT NULL DEFAULT now()
+    )
+  `;
+}
+function createIndexWarning(schema) {
+  return `CREATE INDEX warning_i1 ON ${schema}.warning (created_on DESC)`;
+}
+function jobTableFormatFunction(schema) {
+  return `
+    CREATE FUNCTION ${schema}.job_table_format(command text, table_name text)
+    RETURNS text AS
+    $$
+      SELECT format(
+        replace(
+          replace(command, '.job', '.%1$I'),
+          'job_i', '%1$s_i'
+        ),
+        table_name
+      );
+    $$
+    LANGUAGE sql IMMUTABLE;
+  `;
+}
+function jobTableRunFunction(schema) {
+  return `
+    CREATE FUNCTION ${schema}.job_table_run(command text, tbl_name text DEFAULT NULL, queue_name text DEFAULT NULL)
+    RETURNS VOID AS
+    $$
+    DECLARE
+      tbl RECORD;
+    BEGIN
+      IF queue_name IS NOT NULL THEN
+        SELECT table_name INTO tbl_name FROM ${schema}.queue WHERE name = queue_name;
+      END IF;
+
+      IF tbl_name IS NOT NULL THEN
+        EXECUTE ${schema}.job_table_format(command, tbl_name);
+        RETURN;
+      END IF;
+
+      EXECUTE ${schema}.job_table_format(command, '${COMMON_JOB_TABLE}');
+
+      FOR tbl IN SELECT table_name FROM ${schema}.queue WHERE partition = true
+      LOOP
+        EXECUTE ${schema}.job_table_format(command, tbl.table_name);
+      END LOOP;
+    END;
+    $$
+    LANGUAGE plpgsql;
+  `;
+}
+function jobTableRunAsyncFunction(schema) {
+  return `
+    CREATE FUNCTION ${schema}.job_table_run_async(command_name text, version int, command text, tbl_name text DEFAULT NULL, queue_name text DEFAULT NULL)
+    RETURNS VOID AS
+    $$
+    BEGIN
+      IF queue_name IS NOT NULL THEN
+        SELECT table_name INTO tbl_name FROM ${schema}.queue WHERE name = queue_name;
+      END IF;
+
+      IF tbl_name IS NOT NULL THEN
+        INSERT INTO ${schema}.bam (name, version, status, queue, table_name, command)
+        VALUES (
+          command_name,
+          version,
+          'pending',
+          queue_name,
+          tbl_name,
+          ${schema}.job_table_format(command, tbl_name)
+        );
+        RETURN;
+      END IF;
+
+      INSERT INTO ${schema}.bam (name, version, status, queue, table_name, command)
+      SELECT
+        command_name,
+        version,
+        'pending',
+        NULL,
+        '${COMMON_JOB_TABLE}',
+        ${schema}.job_table_format(command, '${COMMON_JOB_TABLE}')
+      UNION ALL
+      SELECT
+        command_name,
+        version,
+        'pending',
+        queue.name,
+        queue.table_name,
+        ${schema}.job_table_format(command, queue.table_name)
+      FROM ${schema}.queue
+      WHERE partition = true;
+    END;
+    $$
+    LANGUAGE plpgsql;
+  `;
+}
+function createTableJob(schema) {
+  return `
+    CREATE TABLE ${schema}.job (
+      id uuid not null default gen_random_uuid(),
+      name text not null,
+      priority integer not null default(0),
+      data jsonb,
+      state ${schema}.job_state not null default '${JOB_STATES.created}',
+      retry_limit integer not null default ${QUEUE_DEFAULTS.retry_limit},
+      retry_count integer not null default 0,
+      retry_delay integer not null default ${QUEUE_DEFAULTS.retry_delay},
+      retry_backoff boolean not null default ${QUEUE_DEFAULTS.retry_backoff},
+      retry_delay_max integer,
+      expire_seconds int not null default ${QUEUE_DEFAULTS.expire_seconds},
+      deletion_seconds int not null default ${QUEUE_DEFAULTS.deletion_seconds},
+      singleton_key text,
+      singleton_on timestamp without time zone,
+      group_id text,
+      group_tier text,
+      start_after timestamp with time zone not null default now(),
+      created_on timestamp with time zone not null default now(),
+      started_on timestamp with time zone,
+      completed_on timestamp with time zone,
+      keep_until timestamp with time zone NOT NULL default now() + interval '${QUEUE_DEFAULTS.retention_seconds}',
+      output jsonb,
+      dead_letter text,
+      policy text,
+      heartbeat_on timestamp with time zone,
+      heartbeat_seconds int
+    ) PARTITION BY LIST (name)
+  `;
+}
+var JOB_COLUMNS_MIN = 'id, name, data, expire_seconds as "expireInSeconds", heartbeat_seconds as "heartbeatSeconds", group_id as "groupId", group_tier as "groupTier"';
+var JOB_COLUMNS_ALL = `${JOB_COLUMNS_MIN},
+  policy,
+  state,
+  priority,
+  retry_limit as "retryLimit",
+  retry_count as "retryCount",
+  retry_delay as "retryDelay",
+  retry_backoff as "retryBackoff",
+  retry_delay_max as "retryDelayMax",
+  start_after as "startAfter",
+  started_on as "startedOn",
+  singleton_key as "singletonKey",
+  singleton_on as "singletonOn",
+  deletion_seconds as "deleteAfterSeconds",
+  heartbeat_on as "heartbeatOn",
+  created_on as "createdOn",
+  completed_on as "completedOn",
+  keep_until as "keepUntil",
+  dead_letter as "deadLetter",
+  output
+`;
+function createTableJobCommon(schema) {
+  return `
+    CREATE TABLE ${schema}.${COMMON_JOB_TABLE} (LIKE ${schema}.job INCLUDING GENERATED INCLUDING DEFAULTS);
+
+    SELECT ${schema}.job_table_run($cmd$${createPrimaryKeyJob(schema)}$cmd$, '${COMMON_JOB_TABLE}');
+    SELECT ${schema}.job_table_run($cmd$${createQueueForeignKeyJob(schema)}$cmd$, '${COMMON_JOB_TABLE}');
+    SELECT ${schema}.job_table_run($cmd$${createQueueForeignKeyJobDeadLetter(schema)}$cmd$, '${COMMON_JOB_TABLE}');
+    SELECT ${schema}.job_table_run($cmd$${createIndexJobPolicyShort(schema)}$cmd$, '${COMMON_JOB_TABLE}');
+    SELECT ${schema}.job_table_run($cmd$${createIndexJobPolicySingleton(schema)}$cmd$, '${COMMON_JOB_TABLE}');
+    SELECT ${schema}.job_table_run($cmd$${createIndexJobPolicyStately(schema)}$cmd$, '${COMMON_JOB_TABLE}');
+    SELECT ${schema}.job_table_run($cmd$${createIndexJobPolicyExclusive(schema)}$cmd$, '${COMMON_JOB_TABLE}');
+    SELECT ${schema}.job_table_run($cmd$${createIndexJobPolicyKeyStrictFifo(schema)}$cmd$, '${COMMON_JOB_TABLE}');
+    SELECT ${schema}.job_table_run($cmd$${createCheckConstraintKeyStrictFifo(schema)}$cmd$, '${COMMON_JOB_TABLE}');
+    SELECT ${schema}.job_table_run($cmd$${createIndexJobThrottle(schema)}$cmd$, '${COMMON_JOB_TABLE}');
+    SELECT ${schema}.job_table_run($cmd$${createIndexJobFetch(schema)}$cmd$, '${COMMON_JOB_TABLE}');
+    SELECT ${schema}.job_table_run($cmd$${createIndexJobGroupConcurrency(schema)}$cmd$, '${COMMON_JOB_TABLE}');
+
+    ALTER TABLE ${schema}.job ATTACH PARTITION ${schema}.${COMMON_JOB_TABLE} DEFAULT;
+  `;
+}
+function createQueueFunction(schema) {
+  return `
+    CREATE FUNCTION ${schema}.create_queue(queue_name text, options jsonb)
+    RETURNS VOID AS
+    $$
+    DECLARE
+      tablename varchar := CASE WHEN options->>'partition' = 'true'
+                            THEN 'j' || encode(sha224(queue_name::bytea), 'hex')
+                            ELSE '${COMMON_JOB_TABLE}'
+                            END;
+      queue_created_on timestamptz;
+    BEGIN
+
+      WITH q as (
+        INSERT INTO ${schema}.queue (
+          name,
+          policy,
+          retry_limit,
+          retry_delay,
+          retry_backoff,
+          retry_delay_max,
+          expire_seconds,
+          retention_seconds,
+          deletion_seconds,
+          warning_queued,
+          dead_letter,
+          partition,
+          table_name,
+          heartbeat_seconds
+        )
+        VALUES (
+          queue_name,
+          options->>'policy',
+          COALESCE((options->>'retryLimit')::int, ${QUEUE_DEFAULTS.retry_limit}),
+          COALESCE((options->>'retryDelay')::int, ${QUEUE_DEFAULTS.retry_delay}),
+          COALESCE((options->>'retryBackoff')::bool, ${QUEUE_DEFAULTS.retry_backoff}),
+          (options->>'retryDelayMax')::int,
+          COALESCE((options->>'expireInSeconds')::int, ${QUEUE_DEFAULTS.expire_seconds}),
+          COALESCE((options->>'retentionSeconds')::int, ${QUEUE_DEFAULTS.retention_seconds}),
+          COALESCE((options->>'deleteAfterSeconds')::int, ${QUEUE_DEFAULTS.deletion_seconds}),
+          COALESCE((options->>'warningQueueSize')::int, ${QUEUE_DEFAULTS.warning_queued}),
+          options->>'deadLetter',
+          COALESCE((options->>'partition')::bool, ${QUEUE_DEFAULTS.partition}),
+          tablename,
+          (options->>'heartbeatSeconds')::int
+        )
+        ON CONFLICT DO NOTHING
+        RETURNING created_on
+      )
+      SELECT created_on into queue_created_on from q;
+
+      IF queue_created_on IS NULL OR options->>'partition' IS DISTINCT FROM 'true' THEN
+        RETURN;
+      END IF;
+
+      EXECUTE format('CREATE TABLE ${schema}.%I (LIKE ${schema}.job INCLUDING DEFAULTS)', tablename);
+
+      EXECUTE ${schema}.job_table_format($cmd$${createPrimaryKeyJob(schema)}$cmd$, tablename);
+      EXECUTE ${schema}.job_table_format($cmd$${createQueueForeignKeyJob(schema)}$cmd$, tablename);
+      EXECUTE ${schema}.job_table_format($cmd$${createQueueForeignKeyJobDeadLetter(schema)}$cmd$, tablename);
+
+      EXECUTE ${schema}.job_table_format($cmd$${createIndexJobFetch(schema)}$cmd$, tablename);
+      EXECUTE ${schema}.job_table_format($cmd$${createIndexJobThrottle(schema)}$cmd$, tablename);
+      EXECUTE ${schema}.job_table_format($cmd$${createIndexJobGroupConcurrency(schema)}$cmd$, tablename);
+
+      IF options->>'policy' = 'short' THEN
+        EXECUTE ${schema}.job_table_format($cmd$${createIndexJobPolicyShort(schema)}$cmd$, tablename);
+      ELSIF options->>'policy' = 'singleton' THEN
+        EXECUTE ${schema}.job_table_format($cmd$${createIndexJobPolicySingleton(schema)}$cmd$, tablename);
+      ELSIF options->>'policy' = 'stately' THEN
+        EXECUTE ${schema}.job_table_format($cmd$${createIndexJobPolicyStately(schema)}$cmd$, tablename);
+      ELSIF options->>'policy' = 'exclusive' THEN
+        EXECUTE ${schema}.job_table_format($cmd$${createIndexJobPolicyExclusive(schema)}$cmd$, tablename);
+      ELSIF options->>'policy' = '${QUEUE_POLICIES.key_strict_fifo}' THEN
+        EXECUTE ${schema}.job_table_format($cmd$${createIndexJobPolicyKeyStrictFifo(schema)}$cmd$, tablename);
+        EXECUTE ${schema}.job_table_format($cmd$${createCheckConstraintKeyStrictFifo(schema)}$cmd$, tablename);
+      END IF;
+
+      EXECUTE format('ALTER TABLE ${schema}.%I ADD CONSTRAINT cjc CHECK (name=%L)', tablename, queue_name);
+      EXECUTE format('ALTER TABLE ${schema}.job ATTACH PARTITION ${schema}.%I FOR VALUES IN (%L)', tablename, queue_name);
+    END;
+    $$
+    LANGUAGE plpgsql;
+  `;
+}
+function deleteQueueFunction(schema) {
+  return `
+    CREATE FUNCTION ${schema}.delete_queue(queue_name text)
+    RETURNS VOID AS
+    $$
+    DECLARE
+      v_table varchar;
+      v_partition bool;
+    BEGIN
+      SELECT table_name, partition
+      FROM ${schema}.queue
+      WHERE name = queue_name
+      INTO v_table, v_partition;
+
+      IF v_partition THEN
+        EXECUTE format('DROP TABLE IF EXISTS ${schema}.%I', v_table);
+      ELSE
+        EXECUTE format('DELETE FROM ${schema}.%I WHERE name = %L', v_table, queue_name);
+      END IF;
+
+      DELETE FROM ${schema}.queue WHERE name = queue_name;
+    END;
+    $$
+    LANGUAGE plpgsql;
+  `;
+}
+function createQueue(schema, name, options) {
+  const sql2 = `SELECT ${schema}.create_queue('${name}', '${JSON.stringify(options)}'::jsonb)`;
+  return locked(schema, sql2, "create-queue");
+}
+function deleteQueue(schema, name) {
+  const sql2 = `SELECT ${schema}.delete_queue('${name}')`;
+  return locked(schema, sql2, "delete-queue");
+}
+function createPrimaryKeyJob(schema) {
+  return `ALTER TABLE ${schema}.job ADD PRIMARY KEY (name, id)`;
+}
+function createQueueForeignKeyJob(schema) {
+  return `ALTER TABLE ${schema}.job ADD CONSTRAINT q_fkey FOREIGN KEY (name) REFERENCES ${schema}.queue (name) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED`;
+}
+function createQueueForeignKeyJobDeadLetter(schema) {
+  return `ALTER TABLE ${schema}.job ADD CONSTRAINT dlq_fkey FOREIGN KEY (dead_letter) REFERENCES ${schema}.queue (name) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED`;
+}
+function createIndexJobPolicyShort(schema) {
+  return `CREATE UNIQUE INDEX job_i1 ON ${schema}.job (name, COALESCE(singleton_key, '')) WHERE state = '${JOB_STATES.created}' AND policy = '${QUEUE_POLICIES.short}'`;
+}
+function createIndexJobPolicySingleton(schema) {
+  return `CREATE UNIQUE INDEX job_i2 ON ${schema}.job (name, COALESCE(singleton_key, '')) WHERE state = '${JOB_STATES.active}' AND policy = '${QUEUE_POLICIES.singleton}'`;
+}
+function createIndexJobPolicyStately(schema) {
+  return `CREATE UNIQUE INDEX job_i3 ON ${schema}.job (name, state, COALESCE(singleton_key, '')) WHERE state <= '${JOB_STATES.active}' AND policy = '${QUEUE_POLICIES.stately}'`;
+}
+function createIndexJobThrottle(schema) {
+  return `CREATE UNIQUE INDEX job_i4 ON ${schema}.job (name, singleton_on, COALESCE(singleton_key, '')) WHERE state <> '${JOB_STATES.cancelled}' AND singleton_on IS NOT NULL`;
+}
+function createIndexJobFetch(schema) {
+  return `CREATE INDEX job_i5 ON ${schema}.job (name, start_after) INCLUDE (priority, created_on, id) WHERE state < '${JOB_STATES.active}'`;
+}
+function createIndexJobPolicyExclusive(schema) {
+  return `CREATE UNIQUE INDEX job_i6 ON ${schema}.job (name, COALESCE(singleton_key, '')) WHERE state <= '${JOB_STATES.active}' AND policy = '${QUEUE_POLICIES.exclusive}'`;
+}
+function createIndexJobPolicyKeyStrictFifo(schema) {
+  return `CREATE UNIQUE INDEX job_i8 ON ${schema}.job (name, singleton_key) WHERE state IN ('${JOB_STATES.active}', '${JOB_STATES.retry}', '${JOB_STATES.failed}') AND policy = '${QUEUE_POLICIES.key_strict_fifo}'`;
+}
+function createCheckConstraintKeyStrictFifo(schema) {
+  return `ALTER TABLE ${schema}.job ADD CONSTRAINT job_key_strict_fifo_singleton_key_check CHECK (NOT (policy = '${QUEUE_POLICIES.key_strict_fifo}' AND singleton_key IS NULL))`;
+}
+function createIndexJobGroupConcurrency(schema) {
+  return `CREATE INDEX job_i7 ON ${schema}.job (name, group_id) WHERE state = '${JOB_STATES.active}' AND group_id IS NOT NULL`;
+}
+function trySetQueueMonitorTime(schema, queues, seconds) {
+  return trySetQueueTimestamp(schema, queues, "monitor_on", seconds);
+}
+function trySetQueueDeletionTime(schema, queues, seconds) {
+  return trySetQueueTimestamp(schema, queues, "maintain_on", seconds);
+}
+function trySetCronTime(schema, seconds) {
+  return trySetTimestamp(schema, "cron_on", seconds);
+}
+function trySetBamTime(schema, seconds) {
+  return trySetTimestamp(schema, "bam_on", seconds);
+}
+function trySetTimestamp(schema, column, seconds) {
+  return `
+    UPDATE ${schema}.version
+    SET ${column} = now()
+    WHERE EXTRACT( EPOCH FROM (now() - COALESCE(${column}, now() - interval '1 week') ) ) > ${seconds}
+    RETURNING true
+  `;
+}
+function trySetQueueTimestamp(schema, queues, column, seconds) {
+  return {
+    text: `
+    UPDATE ${schema}.queue
+    SET ${column} = now()
+    WHERE name = ANY($1::text[])
+      AND EXTRACT( EPOCH FROM (now() - COALESCE(${column}, now() - interval '1 week') ) ) > ${seconds}
+    RETURNING name
+  `,
+    values: [queues]
+  };
+}
+function updateQueue(schema, { deadLetter } = {}) {
+  return `
+    WITH options as (SELECT $2::jsonb as data)
+    UPDATE ${schema}.queue SET
+      retry_limit = COALESCE((o.data->>'retryLimit')::int, retry_limit),
+      retry_delay = COALESCE((o.data->>'retryDelay')::int, retry_delay),
+      retry_backoff = COALESCE((o.data->>'retryBackoff')::bool, retry_backoff),
+      retry_delay_max = CASE WHEN o.data ? 'retryDelayMax'
+        THEN (o.data->>'retryDelayMax')::int
+        ELSE retry_delay_max END,
+      expire_seconds = COALESCE((o.data->>'expireInSeconds')::int, expire_seconds),
+      retention_seconds = COALESCE((o.data->>'retentionSeconds')::int, retention_seconds),
+      deletion_seconds = COALESCE((o.data->>'deleteAfterSeconds')::int, deletion_seconds),
+      warning_queued = COALESCE((o.data->>'warningQueueSize')::int, warning_queued),
+      heartbeat_seconds = CASE WHEN o.data ? 'heartbeatSeconds'
+        THEN (o.data->>'heartbeatSeconds')::int
+        ELSE heartbeat_seconds END,
+      ${deadLetter === undefined ? "" : `dead_letter = CASE WHEN '${deadLetter}' IS DISTINCT FROM dead_letter THEN '${deadLetter}' ELSE dead_letter END,`}
+      updated_on = now()
+    FROM options o
+    WHERE name = $1
+  `;
+}
+function getQueues(schema, names) {
+  const hasNames = names && names.length > 0;
+  return {
+    text: `
+    SELECT
+      q.name,
+      q.policy,
+      q.retry_limit as "retryLimit",
+      q.retry_delay as "retryDelay",
+      q.retry_backoff as "retryBackoff",
+      q.retry_delay_max as "retryDelayMax",
+      q.expire_seconds as "expireInSeconds",
+      q.retention_seconds as "retentionSeconds",
+      q.deletion_seconds as "deleteAfterSeconds",
+      q.partition,
+      q.heartbeat_seconds as "heartbeatSeconds",
+      q.dead_letter as "deadLetter",
+      q.deferred_count as "deferredCount",
+      q.warning_queued as "warningQueueSize",
+      q.queued_count as "queuedCount",
+      q.active_count as "activeCount",
+      q.total_count as "totalCount",
+      q.singletons_active as "singletonsActive",
+      q.table_name as "table",
+      q.created_on as "createdOn",
+      q.updated_on as "updatedOn"
+    FROM ${schema}.queue q
+    ${hasNames ? "WHERE q.name = ANY($1::text[])" : ""}
+   `,
+    values: hasNames ? [names] : []
+  };
+}
+function deleteJobsById(schema, table) {
+  return `
+    WITH results as (
+      DELETE FROM ${schema}.${table}
+      WHERE name = $1
+        AND id IN (SELECT UNNEST($2::uuid[]))        
+      RETURNING 1
+    )
+    SELECT COUNT(*) from results
+  `;
+}
+function deleteQueuedJobs(schema, table) {
+  return `DELETE from ${schema}.${table} WHERE name = $1 and state < '${JOB_STATES.active}'`;
+}
+function deleteStoredJobs(schema, table) {
+  return `DELETE from ${schema}.${table} WHERE name = $1 and state > '${JOB_STATES.active}'`;
+}
+function truncateTable(schema, table) {
+  return `TRUNCATE ${schema}.${table}`;
+}
+function deleteAllJobs(schema, table) {
+  return `DELETE from ${schema}.${table} WHERE name = $1`;
+}
+function getSchedules(schema) {
+  return `SELECT * FROM ${schema}.schedule ORDER BY name, key`;
+}
+function getSchedulesByQueue(schema) {
+  return `SELECT * FROM ${schema}.schedule WHERE name = $1 AND COALESCE(key, '') = $2`;
+}
+function schedule(schema) {
+  return `
+    INSERT INTO ${schema}.schedule (name, key, cron, timezone, data, options)
+    VALUES ($1, $2, $3, $4, $5, $6)
+    ON CONFLICT (name, key) DO UPDATE SET
+      cron = EXCLUDED.cron,
+      timezone = EXCLUDED.timezone,
+      data = EXCLUDED.data,
+      options = EXCLUDED.options,
+      updated_on = now()
+  `;
+}
+function unschedule(schema) {
+  return `
+    DELETE FROM ${schema}.schedule
+    WHERE name = $1
+      AND COALESCE(key, '') = $2
+  `;
+}
+function subscribe(schema) {
+  return `
+    INSERT INTO ${schema}.subscription (event, name)
+    VALUES ($1, $2)
+    ON CONFLICT (event, name) DO UPDATE SET
+      event = EXCLUDED.event,
+      name = EXCLUDED.name,
+      updated_on = now()
+  `;
+}
+function unsubscribe(schema) {
+  return `
+    DELETE FROM ${schema}.subscription
+    WHERE event = $1 and name = $2
+  `;
+}
+function getQueuesForEvent(schema) {
+  return `
+    SELECT name FROM ${schema}.subscription
+    WHERE event = $1
+  `;
+}
+function getTime() {
+  return "SELECT round(date_part('epoch', now()) * 1000) as time";
+}
+function insertWarning(schema) {
+  return `
+    INSERT INTO ${schema}.warning (type, message, data)
+    VALUES ($1, $2, $3)
+  `;
+}
+function deleteOldWarnings(schema, days) {
+  return `
+    DELETE FROM ${schema}.warning
+    WHERE created_on < now() - interval '${days} days'
+  `;
+}
+function getVersion(schema) {
+  return `SELECT version from ${schema}.version`;
+}
+function setVersion(schema, version3) {
+  return `UPDATE ${schema}.version SET version = '${version3}'`;
+}
+function versionTableExists(schema) {
+  return `SELECT to_regclass('${schema}.version') as name`;
+}
+function insertVersion(schema, version3) {
+  return `INSERT INTO ${schema}.version(version) VALUES ('${version3}')`;
+}
+function buildFetchParams(options) {
+  const { ignoreSingletons, ignoreGroups, groupConcurrency } = options;
+  const hasIgnoreSingletons = ignoreSingletons != null && ignoreSingletons.length > 0;
+  const hasIgnoreGroups = ignoreGroups != null && ignoreGroups.length > 0;
+  const hasGroupConcurrency = groupConcurrency != null;
+  const groupConcurrencyConfig = hasGroupConcurrency ? typeof groupConcurrency === "number" ? { default: groupConcurrency } : groupConcurrency : null;
+  const hasTiers = groupConcurrencyConfig?.tiers && Object.keys(groupConcurrencyConfig.tiers).length > 0;
+  const values2 = [];
+  let paramIndex = 0;
+  let ignoreSingletonsParam = "";
+  let ignoreGroupsParam = "";
+  let defaultGroupLimitParam = "";
+  let tiersParam = "";
+  if (hasIgnoreSingletons) {
+    paramIndex++;
+    ignoreSingletonsParam = `$${paramIndex}::text[]`;
+    values2.push(ignoreSingletons);
+  }
+  if (hasIgnoreGroups) {
+    paramIndex++;
+    ignoreGroupsParam = `$${paramIndex}::text[]`;
+    values2.push(ignoreGroups);
+  }
+  if (hasGroupConcurrency && groupConcurrencyConfig) {
+    paramIndex++;
+    defaultGroupLimitParam = `$${paramIndex}::int`;
+    values2.push(groupConcurrencyConfig.default);
+    if (hasTiers) {
+      paramIndex++;
+      tiersParam = `$${paramIndex}::jsonb`;
+      values2.push(JSON.stringify(groupConcurrencyConfig.tiers));
+    }
+  }
+  return { values: values2, ignoreSingletonsParam, ignoreGroupsParam, defaultGroupLimitParam, tiersParam };
+}
+function fetchNextJob(options) {
+  const { schema, table, name, policy, limit, includeMetadata, priority = true, orderByCreatedOn = true, ignoreStartAfter = false, groupConcurrency } = options;
+  const singletonFetch = limit > 1 && (policy === QUEUE_POLICIES.singleton || policy === QUEUE_POLICIES.stately);
+  const hasIgnoreSingletons = options.ignoreSingletons != null && options.ignoreSingletons.length > 0;
+  const hasIgnoreGroups = options.ignoreGroups != null && options.ignoreGroups.length > 0;
+  const hasGroupConcurrency = groupConcurrency != null;
+  const hasTiers = hasGroupConcurrency && typeof groupConcurrency === "object" && groupConcurrency.tiers && Object.keys(groupConcurrency.tiers).length > 0;
+  const params = buildFetchParams(options);
+  const whereConditions = [
+    `name = '${name}'`,
+    `state < '${JOB_STATES.active}'`,
+    !ignoreStartAfter ? "start_after < now()" : "",
+    hasIgnoreSingletons ? `singleton_key <> ALL(${params.ignoreSingletonsParam})` : "",
+    hasIgnoreGroups ? `(group_id IS NULL OR group_id <> ALL(${params.ignoreGroupsParam}))` : ""
+  ].filter(Boolean).join(" AND ");
+  const selectCols = [
+    "id",
+    singletonFetch ? "singleton_key" : "",
+    hasGroupConcurrency ? "group_id, group_tier" : ""
+  ].filter(Boolean).join(", ");
+  const activeGroupCountsCte = hasGroupConcurrency ? `active_group_counts AS (
+        SELECT group_id, COUNT(*)::int as active_cnt
+        FROM ${schema}.${table}
+        WHERE name = '${name}' AND state = '${JOB_STATES.active}' AND group_id IS NOT NULL
+        GROUP BY group_id
+      ), ` : "";
+  const nextCte = `
+      next AS (
+        SELECT ${selectCols}
+        FROM ${schema}.${table}
+        WHERE ${whereConditions}
+        ORDER BY ${priority ? "priority desc, " : ""}${orderByCreatedOn ? "created_on, " : ""}id
+        LIMIT ${limit}
+        FOR UPDATE SKIP LOCKED
+      )`;
+  const singletonCte = singletonFetch ? `, singleton_ranking AS (
+        SELECT id, ${hasGroupConcurrency ? "group_id, group_tier, " : ""}
+          row_number() OVER (PARTITION BY singleton_key) as singleton_rn
+        FROM next
+      )` : "";
+  const groupConcurrencyCtes = hasGroupConcurrency ? `,
+      group_ranking AS (
+        SELECT t.id
+          , t.group_id
+          , t.group_tier
+          ${singletonFetch ? ", singleton_rn" : ""}
+          , ROW_NUMBER() OVER (PARTITION BY t.group_id ORDER BY t.id) as group_rn
+          , COALESCE(agc.active_cnt, 0) as active_cnt
+        FROM ${singletonFetch ? "singleton_ranking" : "next"} t
+        LEFT JOIN active_group_counts agc ON t.group_id = agc.group_id
+        ${singletonFetch ? "WHERE singleton_rn = 1" : ""}
+      ),
+      group_filtered AS (
+        SELECT id FROM group_ranking
+        WHERE group_id IS NULL
+          OR (active_cnt + group_rn) <= ${hasTiers ? `COALESCE((${params.tiersParam} ->> group_tier)::int, ${params.defaultGroupLimitParam})` : params.defaultGroupLimitParam}
+      )` : "";
+  const finalCte = hasGroupConcurrency ? "group_filtered" : singletonFetch ? "singleton_ranking" : "next";
+  return {
+    text: `
+      WITH
+      ${activeGroupCountsCte}
+      ${nextCte}
+      ${singletonCte}
+      ${groupConcurrencyCtes}
+      UPDATE ${schema}.${table} j SET
+        state = '${JOB_STATES.active}',
+        started_on = now(),
+        heartbeat_on = now(),
+        retry_count = CASE WHEN started_on IS NOT NULL THEN retry_count + 1 ELSE retry_count END
+      FROM ${finalCte}
+      WHERE name = '${name}' AND j.id = ${finalCte}.id
+      ${singletonFetch && !hasGroupConcurrency ? "AND singleton_rn = 1" : ""}
+      RETURNING j.${includeMetadata ? JOB_COLUMNS_ALL : JOB_COLUMNS_MIN}
+    `,
+    values: params.values
+  };
+}
+function completeJobs(schema, table, includeQueued) {
+  const stateFilter = includeQueued ? `state < '${JOB_STATES.completed}'` : `state = '${JOB_STATES.active}'`;
+  return `
+    WITH results AS (
+      UPDATE ${schema}.${table}
+      SET completed_on = now(),
+        state = '${JOB_STATES.completed}',
+        output = $3::jsonb
+      WHERE name = $1
+        AND id IN (SELECT UNNEST($2::uuid[]))
+        AND ${stateFilter}
+      RETURNING *
+    )
+    SELECT COUNT(*) FROM results
+  `;
+}
+function cancelJobs(schema, table) {
+  return `
+    WITH results as (
+      UPDATE ${schema}.${table}
+      SET completed_on = now(),
+        state = '${JOB_STATES.cancelled}'
+      WHERE name = $1
+        AND id IN (SELECT UNNEST($2::uuid[]))
+        AND state < '${JOB_STATES.completed}'
+      RETURNING 1
+    )
+    SELECT COUNT(*) from results
+  `;
+}
+function resumeJobs(schema, table) {
+  return `
+    WITH results as (
+      UPDATE ${schema}.${table}
+      SET completed_on = NULL,
+        state = '${JOB_STATES.created}'
+      WHERE name = $1
+        AND id IN (SELECT UNNEST($2::uuid[]))
+        AND state = '${JOB_STATES.cancelled}'
+      RETURNING 1
+    )
+    SELECT COUNT(*) from results
+  `;
+}
+function restoreJobs(schema, table) {
+  return `
+    UPDATE ${schema}.${table}
+    SET state = '${JOB_STATES.created}'
+    WHERE name = $1
+      AND id IN (SELECT UNNEST($2::uuid[]))
+  `;
+}
+function insertJobs(schema, { table, name, returnId = true }) {
+  const sql2 = `
+    INSERT INTO ${schema}.${table} (
+      id,
+      name,
+      data,
+      priority,
+      start_after,
+      singleton_key,
+      singleton_on,
+      group_id,
+      group_tier,
+      expire_seconds,
+      deletion_seconds,
+      keep_until,
+      retry_limit,
+      retry_delay,
+      retry_backoff,
+      retry_delay_max,
+      policy,
+      dead_letter,
+      heartbeat_seconds
+    )
+    SELECT
+      COALESCE(id, gen_random_uuid()) as id,
+      '${name}' as name,
+      data,
+      COALESCE(priority, 0) as priority,
+      j.start_after,
+      "singletonKey",
+      CASE
+        WHEN "singletonSeconds" IS NOT NULL THEN 'epoch'::timestamp + '1s'::interval * ("singletonSeconds" * floor(( date_part('epoch', now()) + COALESCE("singletonOffset",0)) / "singletonSeconds" ))
+        ELSE NULL
+        END as singleton_on,
+      "groupId" as group_id,
+      "groupTier" as group_tier,
+      COALESCE("expireInSeconds", q.expire_seconds) as expire_seconds,
+      COALESCE("deleteAfterSeconds", q.deletion_seconds) as deletion_seconds,
+      j.start_after + (COALESCE("retentionSeconds", q.retention_seconds) * interval '1s') as keep_until,
+      COALESCE("retryLimit", q.retry_limit) as retry_limit,
+      COALESCE("retryDelay", q.retry_delay) as retry_delay,
+      COALESCE("retryBackoff", q.retry_backoff, false) as retry_backoff,
+      COALESCE("retryDelayMax", q.retry_delay_max) as retry_delay_max,
+      q.policy,
+      COALESCE("deadLetter", q.dead_letter) as dead_letter,
+      COALESCE("heartbeatSeconds", q.heartbeat_seconds) as heartbeat_seconds
+    FROM (
+      SELECT *,
+        CASE
+          WHEN right("startAfter", 1) = 'Z' THEN CAST("startAfter" as timestamp with time zone)
+          ELSE now() + CAST(COALESCE("startAfter",'0') as interval)
+          END as start_after
+      FROM json_to_recordset($1::json) as x (
+        id uuid,
+        priority integer,
+        data jsonb,
+        "startAfter" text,
+        "retryLimit" integer,
+        "retryDelay" integer,
+        "retryDelayMax" integer,
+        "retryBackoff" boolean,
+        "singletonKey" text,
+        "singletonSeconds" integer,
+        "singletonOffset" integer,
+        "groupId" text,
+        "groupTier" text,
+        "expireInSeconds" integer,
+        "deleteAfterSeconds" integer,
+        "retentionSeconds" integer,
+        "deadLetter" text,
+        "heartbeatSeconds" integer
+      )
+    ) j
+    JOIN ${schema}.queue q ON q.name = '${name}'
+    ON CONFLICT DO NOTHING
+    ${returnId ? "RETURNING id" : ""}
+  `;
+  return sql2;
+}
+function failJobsById(schema, table) {
+  const where = `name = $1 AND id IN (SELECT UNNEST($2::uuid[])) AND state < '${JOB_STATES.completed}'`;
+  const output = "$3::jsonb";
+  return failJobs(schema, table, where, output);
+}
+function failJobsByTimeout(schema, table, queues) {
+  const where = `state = '${JOB_STATES.active}'
+            AND (started_on + expire_seconds * interval '1s') < now()
+            AND name = ANY(${serializeArrayParam(queues)})`;
+  const output = `'{ "value": { "message": "job timed out" } }'::jsonb`;
+  return locked(schema, failJobs(schema, table, where, output), table + "failJobsByTimeout");
+}
+function failJobsByHeartbeat(schema, table, queues) {
+  const where = `state = '${JOB_STATES.active}'
+            AND heartbeat_seconds IS NOT NULL
+            AND (heartbeat_on + heartbeat_seconds * interval '1s') < now()
+            AND name = ANY(${serializeArrayParam(queues)})`;
+  const output = `'{ "value": { "message": "job heartbeat timeout" } }'::jsonb`;
+  return locked(schema, failJobs(schema, table, where, output), table + "failJobsByHeartbeat");
+}
+function touchJobs(schema, table) {
+  return `
+    WITH results AS (
+      UPDATE ${schema}.${table}
+      SET heartbeat_on = now()
+      WHERE name = $1
+        AND id IN (SELECT UNNEST($2::uuid[]))
+        AND state = '${JOB_STATES.active}'
+      RETURNING 1
+    )
+    SELECT COUNT(*) FROM results
+  `;
+}
+function failJobs(schema, table, where, output) {
+  return `
+    WITH deleted_jobs AS (
+      DELETE FROM ${schema}.${table}
+      WHERE ${where}
+      RETURNING *
+    ),
+    retried_jobs AS (
+      INSERT INTO ${schema}.${table} (
+        id,
+        name,
+        priority,
+        data,
+        state,
+        retry_limit,
+        retry_count,
+        retry_delay,
+        retry_backoff,
+        retry_delay_max,
+        start_after,
+        started_on,
+        singleton_key,
+        singleton_on,
+        group_id,
+        group_tier,
+        expire_seconds,
+        deletion_seconds,
+        created_on,
+        completed_on,
+        keep_until,
+        policy,
+        output,
+        dead_letter,
+        heartbeat_on,
+        heartbeat_seconds
+      )
+      SELECT
+        id,
+        name,
+        priority,
+        data,
+        CASE
+          WHEN retry_count < retry_limit THEN '${JOB_STATES.retry}'::${schema}.job_state
+          ELSE '${JOB_STATES.failed}'::${schema}.job_state
+          END as state,
+        retry_limit,
+        retry_count,
+        retry_delay,
+        retry_backoff,
+        retry_delay_max,
+        CASE WHEN retry_count = retry_limit THEN start_after
+             WHEN NOT retry_backoff THEN now() + retry_delay * interval '1'
+             ELSE now() + LEAST(
+               retry_delay_max,
+               retry_delay * (
+                2 ^ LEAST(16, retry_count + 1) / 2 +
+                2 ^ LEAST(16, retry_count + 1) / 2 * random()
+               )
+             ) * interval '1s'
+        END as start_after,
+        started_on,
+        singleton_key,
+        singleton_on,
+        group_id,
+        group_tier,
+        expire_seconds,
+        deletion_seconds,
+        created_on,
+        CASE WHEN retry_count < retry_limit THEN NULL ELSE now() END as completed_on,
+        keep_until,
+        policy,
+        ${output},
+        dead_letter,
+        NULL as heartbeat_on,
+        heartbeat_seconds
+      FROM deleted_jobs
+      ON CONFLICT DO NOTHING
+      RETURNING *
+    ),
+    failed_jobs as (
+      INSERT INTO ${schema}.${table} (
+        id,
+        name,
+        priority,
+        data,
+        state,
+        retry_limit,
+        retry_count,
+        retry_delay,
+        retry_backoff,
+        retry_delay_max,
+        start_after,
+        started_on,
+        singleton_key,
+        singleton_on,
+        group_id,
+        group_tier,
+        expire_seconds,
+        deletion_seconds,
+        created_on,
+        completed_on,
+        keep_until,
+        policy,
+        output,
+        dead_letter,
+        heartbeat_on,
+        heartbeat_seconds
+      )
+      SELECT
+        id,
+        name,
+        priority,
+        data,
+        '${JOB_STATES.failed}'::${schema}.job_state as state,
+        retry_limit,
+        retry_count,
+        retry_delay,
+        retry_backoff,
+        retry_delay_max,
+        start_after,
+        started_on,
+        singleton_key,
+        singleton_on,
+        group_id,
+        group_tier,
+        expire_seconds,
+        deletion_seconds,
+        created_on,
+        now() as completed_on,
+        keep_until,
+        policy,
+        ${output},
+        dead_letter,
+        NULL as heartbeat_on,
+        heartbeat_seconds
+      FROM deleted_jobs
+      WHERE id NOT IN (SELECT id from retried_jobs)
+      RETURNING *
+    ),
+    results as (
+      SELECT * FROM retried_jobs
+      UNION ALL
+      SELECT * FROM failed_jobs
+    ),
+    dlq_jobs as (
+      INSERT INTO ${schema}.job (name, data, output, retry_limit, retry_backoff, retry_delay, keep_until, deletion_seconds)
+      SELECT
+        r.dead_letter,
+        data,
+        output,
+        q.retry_limit,
+        q.retry_backoff,
+        q.retry_delay,
+        now() + q.retention_seconds * interval '1s',
+        q.deletion_seconds
+      FROM results r
+        JOIN ${schema}.queue q ON q.name = r.dead_letter
+      WHERE state = '${JOB_STATES.failed}'
+    )
+    SELECT COUNT(*) FROM results
+  `;
+}
+function deletion(schema, table, queues) {
+  const sql2 = `
+    DELETE FROM ${schema}.${table}
+    WHERE name = ANY(${serializeArrayParam(queues)})
+      AND
+      (
+        (deletion_seconds > 0 AND completed_on + deletion_seconds * interval '1s' < now())
+        OR
+        (state < '${JOB_STATES.active}' AND keep_until < now())
+      )
+  `;
+  return locked(schema, sql2, table + "deletion");
+}
+function retryJobs(schema, table) {
+  return `
+    WITH results as (
+      UPDATE ${schema}.job
+      SET state = '${JOB_STATES.retry}',
+        retry_limit = retry_limit + 1
+      WHERE name = $1
+        AND id IN (SELECT UNNEST($2::uuid[]))
+        AND state = '${JOB_STATES.failed}'
+      RETURNING 1
+    )
+    SELECT COUNT(*) from results
+  `;
+}
+function getQueueStats(schema, table, queues) {
+  return {
+    text: `
+    SELECT
+        name,
+        (count(*) FILTER (WHERE start_after > now()))::int as "deferredCount",
+        (count(*) FILTER (WHERE state < '${JOB_STATES.active}'))::int as "queuedCount",
+        (count(*) FILTER (WHERE state = '${JOB_STATES.active}'))::int as "activeCount",
+        count(*)::int as "totalCount",
+        array_agg(singleton_key) FILTER (WHERE policy IN ('${QUEUE_POLICIES.singleton}','${QUEUE_POLICIES.stately}') AND state = '${JOB_STATES.active}') as "singletonsActive"
+      FROM ${schema}.${table}
+      WHERE name = ANY($1::text[])
+      GROUP BY 1
+  `,
+    values: [queues]
+  };
+}
+function cacheQueueStats(schema, table, queues) {
+  const statsQuery = getQueueStats(schema, table, queues);
+  const statsText = statsQuery.text.replace("$1::text[]", serializeArrayParam(queues));
+  const sql2 = `
+    WITH stats AS (${statsText})
+    UPDATE ${schema}.queue SET
+      deferred_count = COALESCE(stats."deferredCount", 0),
+      queued_count = COALESCE(stats."queuedCount", 0),
+      active_count = COALESCE(stats."activeCount", 0),
+      total_count = COALESCE(stats."totalCount", 0),
+      singletons_active = stats."singletonsActive"
+    FROM (
+      SELECT q.name
+      FROM unnest(${serializeArrayParam(queues)}) AS q(name)
+    ) q
+    LEFT JOIN stats ON stats.name = q.name
+    WHERE queue.name = q.name
+    RETURNING
+      queue.name,
+      queue.queued_count as "queuedCount",
+      queue.warning_queued as "warningQueueSize"
+  `;
+  return locked(schema, sql2, "queue-stats");
+}
+function serializeArrayParam(values2) {
+  const escaped = values2.map((v) => `'${v.replace(SINGLE_QUOTE_REGEX, "''")}'`);
+  return `ARRAY[${escaped.join(",")}]::text[]`;
+}
+function locked(schema, query, key) {
+  const sql2 = Array.isArray(query) ? query.join(`;
+`) : query;
+  return `
+    BEGIN;
+    SET LOCAL lock_timeout = 30000;
+    SET LOCAL idle_in_transaction_session_timeout = 30000;
+    ${advisoryLock(schema, key)};
+    ${sql2};
+    COMMIT;
+  `;
+}
+function advisoryLock(schema, key) {
+  return `SELECT pg_advisory_xact_lock(
+      ('x' || encode(sha224((current_database() || '.pgboss.${schema}${key || ""}')::bytea), 'hex'))::bit(64)::bigint
+  )`;
+}
+function assertMigration(schema, version3) {
+  return `SELECT version::int/(version::int-${version3}) from ${schema}.version`;
+}
+function findJobs(schema, table, options) {
+  const { queued, byKey, byData, byId } = options;
+  let paramIndex = 1;
+  const whereConditions = [];
+  if (byId) {
+    ++paramIndex;
+    whereConditions.push(`AND id = $${paramIndex}`);
+  }
+  if (byKey) {
+    ++paramIndex;
+    whereConditions.push(`AND singleton_key = $${paramIndex}`);
+  }
+  if (byData) {
+    ++paramIndex;
+    whereConditions.push(`AND data @> $${paramIndex}`);
+  }
+  if (queued) {
+    whereConditions.push(`AND state < '${JOB_STATES.active}'`);
+  }
+  return `
+    SELECT ${JOB_COLUMNS_ALL}
+    FROM ${schema}.${table}
+    WHERE name = $1
+      ${whereConditions.join(`
+      `)}
+    `;
+}
+function getJobById(schema, table) {
+  return `
+    SELECT ${JOB_COLUMNS_ALL}
+    FROM ${schema}.${table}
+    WHERE name = $1
+      AND id = $2
+    `;
+}
+function getBlockedKeys(schema, table) {
+  return `
+    SELECT DISTINCT singleton_key as "singletonKey"
+    FROM ${schema}.${table}
+    WHERE name = $1
+      AND state = '${JOB_STATES.failed}'
+      AND policy = '${QUEUE_POLICIES.key_strict_fifo}'
+    `;
+}
+function getNextBamCommand(schema) {
+  return `
+    UPDATE ${schema}.bam
+    SET status = 'in_progress', started_on = now()
+    WHERE id = (
+      SELECT id FROM ${schema}.bam
+      WHERE status IN ('pending', 'failed')
+        AND NOT EXISTS (SELECT 1 FROM ${schema}.bam WHERE status = 'in_progress')
+      ORDER BY created_on
+      LIMIT 1
+    )
+    RETURNING id, name, version, status, queue, table_name as "table", command, error,
+              created_on as "createdOn", started_on as "startedOn", completed_on as "completedOn"
+  `;
+}
+function setBamCompleted(schema, id) {
+  return `
+    UPDATE ${schema}.bam
+    SET status = 'completed', completed_on = now()
+    WHERE id = '${id}'
+  `;
+}
+function setBamFailed(schema, id, error48) {
+  const escapedError = error48.replace(/'/g, "''");
+  return `
+    UPDATE ${schema}.bam
+    SET status = 'failed', error = '${escapedError}', completed_on = now()
+    WHERE id = '${id}'
+  `;
+}
+function getBamStatus(schema) {
+  return `
+    SELECT status, count(*)::int as count, max(created_on) as "lastCreatedOn"
+    FROM ${schema}.bam
+    GROUP BY status
+  `;
+}
+function getBamEntries(schema) {
+  return `
+    SELECT id, name, version, status, queue, table_name as "table", command, error,
+           created_on as "createdOn", started_on as "startedOn", completed_on as "completedOn"
+    FROM ${schema}.bam
+    ORDER BY version, created_on
+  `;
+}
+
+// ../../node_modules/.bun/pg-boss@12.13.0/node_modules/pg-boss/dist/attorney.js
+var POLICY = {
+  MAX_EXPIRATION_HOURS: 24,
+  MIN_POLLING_INTERVAL_MS: 500,
+  MAX_RETENTION_DAYS: 365
+};
+function assertObjectName(value, name = "Name") {
+  assert2(/^[\w.\-/]+$/.test(value), `${name} can only contain alphanumeric characters, underscores, hyphens, periods, or forward slashes`);
+}
+function validateQueueArgs(config2 = {}) {
+  assert2(!("deadLetter" in config2) || config2.deadLetter === null || typeof config2.deadLetter === "string", "deadLetter must be a string");
+  if (config2.deadLetter) {
+    assertObjectName(config2.deadLetter, "deadLetter");
+  }
+  validateRetryConfig(config2);
+  validateExpirationConfig(config2);
+  validateRetentionConfig(config2);
+  validateDeletionConfig(config2);
+  validateHeartbeatConfig(config2);
+}
+function checkSendArgs(args) {
+  let name, data, options;
+  if (typeof args[0] === "string") {
+    name = args[0];
+    data = args[1];
+    assert2(typeof data !== "function", "send() cannot accept a function as the payload.  Did you intend to use work()?");
+    options = args[2];
+  } else if (typeof args[0] === "object") {
+    assert2(args.length === 1, "send object API only accepts 1 argument");
+    const job = args[0];
+    assert2(job, "boss requires all jobs to have a name");
+    name = job.name;
+    data = job.data;
+    options = job.options;
+  }
+  options = options || {};
+  assert2(name, "boss requires all jobs to have a queue name");
+  assert2(typeof options === "object", "options should be an object");
+  options = { ...options };
+  assert2(!("priority" in options) || Number.isInteger(options.priority), "priority must be an integer");
+  options.priority = options.priority || 0;
+  options.startAfter = options.startAfter instanceof Date && typeof options.startAfter.toISOString === "function" ? options.startAfter.toISOString() : +options.startAfter > 0 ? "" + options.startAfter : typeof options.startAfter === "string" ? options.startAfter : undefined;
+  validateRetryConfig(options);
+  validateExpirationConfig(options);
+  validateRetentionConfig(options);
+  validateDeletionConfig(options);
+  validateGroupConfig(options);
+  validateHeartbeatConfig(options);
+  return { name, data, options };
+}
+function validateGroupConfig(config2) {
+  if (!("group" in config2) || config2.group === undefined || config2.group === null) {
+    return;
+  }
+  assert2(typeof config2.group === "object", "group must be an object");
+  assert2(typeof config2.group.id === "string" && config2.group.id.length > 0, "group.id must be a non-empty string");
+  assert2(!("tier" in config2.group) || typeof config2.group.tier === "string" && config2.group.tier.length > 0, "group.tier must be a non-empty string if provided");
+}
+function validateGroupConcurrencyValue(value, optionName) {
+  if (typeof value === "number") {
+    assert2(Number.isInteger(value) && value >= 1, `${optionName} must be an integer >= 1`);
+    return;
+  }
+  assert2(typeof value === "object", `${optionName} must be a number or an object with { default, tiers? }`);
+  assert2(Number.isInteger(value.default) && value.default >= 1, `${optionName}.default must be an integer >= 1`);
+  if ("tiers" in value && value.tiers) {
+    assert2(typeof value.tiers === "object", `${optionName}.tiers must be an object`);
+    for (const [tier, limit] of Object.entries(value.tiers)) {
+      assert2(typeof tier === "string" && tier.length > 0, `${optionName} tier keys must be non-empty strings`);
+      assert2(Number.isInteger(limit) && limit >= 1, `${optionName}.tiers["${tier}"] must be an integer >= 1`);
+    }
+  }
+}
+function validateGroupConcurrencyConfig(config2) {
+  const hasGlobal = config2.groupConcurrency != null;
+  const hasLocal = config2.localGroupConcurrency != null;
+  assert2(!(hasGlobal && hasLocal), "cannot specify both groupConcurrency and localGroupConcurrency - choose one");
+  if (hasGlobal)
+    validateGroupConcurrencyValue(config2.groupConcurrency, "groupConcurrency");
+  if (hasLocal) {
+    validateGroupConcurrencyValue(config2.localGroupConcurrency, "localGroupConcurrency");
+    validateLocalGroupConcurrencyLimit(config2.localGroupConcurrency, config2.localConcurrency);
+  }
+}
+function validateLocalGroupConcurrencyLimit(localGroupConcurrency, localConcurrency) {
+  const effectiveLocalConcurrency = localConcurrency ?? 1;
+  if (typeof localGroupConcurrency === "number") {
+    assert2(localGroupConcurrency <= effectiveLocalConcurrency, `localGroupConcurrency (${localGroupConcurrency}) cannot exceed localConcurrency (${effectiveLocalConcurrency})`);
+  } else if (typeof localGroupConcurrency === "object") {
+    assert2(localGroupConcurrency.default <= effectiveLocalConcurrency, `localGroupConcurrency.default (${localGroupConcurrency.default}) cannot exceed localConcurrency (${effectiveLocalConcurrency})`);
+    if (localGroupConcurrency.tiers) {
+      for (const [tier, limit] of Object.entries(localGroupConcurrency.tiers)) {
+        assert2(limit <= effectiveLocalConcurrency, `localGroupConcurrency.tiers["${tier}"] (${limit}) cannot exceed localConcurrency (${effectiveLocalConcurrency})`);
+      }
+    }
+  }
+}
+function checkWorkArgs(name, args) {
+  let options, callback;
+  assert2(name, "queue name is required");
+  if (args.length === 1) {
+    callback = args[0];
+    options = {};
+  } else if (args.length > 1) {
+    options = args[0] || {};
+    callback = args[1];
+  }
+  assert2(typeof callback === "function", "expected callback to be a function");
+  assert2(typeof options === "object", "expected config to be an object");
+  options = { ...options };
+  applyPollingInterval(options);
+  assert2(!("batchSize" in options) || Number.isInteger(options.batchSize) && options.batchSize >= 1, "batchSize must be an integer > 0");
+  assert2(!("includeMetadata" in options) || typeof options.includeMetadata === "boolean", "includeMetadata must be a boolean");
+  assert2(!("priority" in options) || typeof options.priority === "boolean", "priority must be a boolean");
+  assert2(!("localConcurrency" in options) || Number.isInteger(options.localConcurrency) && options.localConcurrency >= 1, "localConcurrency must be an integer >= 1");
+  validateGroupConcurrencyConfig(options);
+  validateHeartbeatRefreshConfig(options);
+  return { options, callback };
+}
+function checkFetchArgs(name, options) {
+  assert2(name, "missing queue name");
+  assert2(!("batchSize" in options) || Number.isInteger(options.batchSize) && options.batchSize >= 1, "batchSize must be an integer > 0");
+  assert2(!("includeMetadata" in options) || typeof options.includeMetadata === "boolean", "includeMetadata must be a boolean");
+  assert2(!("priority" in options) || typeof options.priority === "boolean", "priority must be a boolean");
+  assert2(!("ignoreStartAfter" in options) || typeof options.ignoreStartAfter === "boolean", "ignoreStartAfter must be a boolean");
+}
+function getConfig(value) {
+  assert2(value && (typeof value === "object" || typeof value === "string"), "configuration assert: string or config object is required to connect to postgres");
+  const config2 = typeof value === "string" ? { connectionString: value } : { ...value };
+  config2.schedule = "schedule" in config2 ? config2.schedule : true;
+  config2.supervise = "supervise" in config2 ? config2.supervise : true;
+  config2.migrate = "migrate" in config2 ? config2.migrate : true;
+  config2.createSchema = "createSchema" in config2 ? config2.createSchema : true;
+  applySchemaConfig(config2);
+  applyOpsConfig(config2);
+  applyScheduleConfig(config2);
+  applyBamConfig(config2);
+  validateWarningConfig(config2);
+  return config2;
+}
+function applySchemaConfig(config2) {
+  if (config2.schema) {
+    assertPostgresObjectName(config2.schema);
+  }
+  config2.schema = config2.schema || DEFAULT_SCHEMA;
+}
+function validateWarningConfig(config2) {
+  assert2(!("warningQueueSize" in config2) || config2.warningQueueSize >= 1, "configuration assert: warningQueueSize must be at least 1");
+  assert2(!("warningSlowQuerySeconds" in config2) || config2.warningSlowQuerySeconds >= 1, "configuration assert: warningSlowQuerySeconds must be at least 1");
+  assert2(!("warningRetentionDays" in config2) || Number.isInteger(config2.warningRetentionDays) && config2.warningRetentionDays >= 1, "configuration assert: warningRetentionDays must be an integer >= 1");
+  assert2(!("warningRetentionDays" in config2) || config2.warningRetentionDays <= POLICY.MAX_RETENTION_DAYS, `configuration assert: warningRetentionDays cannot exceed ${POLICY.MAX_RETENTION_DAYS} days`);
+}
+function assertPostgresObjectName(name) {
+  assert2(typeof name === "string", "Name must be a string");
+  assert2(name.length <= 50, "Name cannot exceed 50 characters");
+  assert2(!/\W/.test(name), "Name can only contain alphanumeric characters or underscores");
+  assert2(!/^\d/.test(name), "Name cannot start with a number");
+}
+function assertQueueName(name) {
+  assert2(name, "Name is required");
+  assert2(typeof name === "string", "Name must be a string");
+  assertObjectName(name);
+}
+function assertKey(key) {
+  if (!key)
+    return;
+  assert2(typeof key === "string", "Key must be a string");
+  assertObjectName(key, "Key");
+}
+function validateRetentionConfig(config2) {
+  assert2(!("retentionSeconds" in config2) || config2.retentionSeconds >= 1, "configuration assert: retentionSeconds must be at least every second");
+}
+function validateExpirationConfig(config2) {
+  assert2(!("expireInSeconds" in config2) || config2.expireInSeconds >= 1, "configuration assert: expireInSeconds must be at least every second");
+  assert2(!config2.expireInSeconds || config2.expireInSeconds / 60 / 60 < POLICY.MAX_EXPIRATION_HOURS, `configuration assert: expiration cannot exceed ${POLICY.MAX_EXPIRATION_HOURS} hours`);
+}
+function validateRetryConfig(config2) {
+  assert2(!("retryDelay" in config2) || Number.isInteger(config2.retryDelay) && config2.retryDelay >= 0, "retryDelay must be an integer >= 0");
+  assert2(!("retryLimit" in config2) || Number.isInteger(config2.retryLimit) && config2.retryLimit >= 0, "retryLimit must be an integer >= 0");
+  assert2(!("retryBackoff" in config2) || (config2.retryBackoff === true || config2.retryBackoff === false), "retryBackoff must be either true or false");
+  assert2(!("retryDelayMax" in config2) || config2.retryDelayMax === null || config2.retryBackoff === true, "retryDelayMax can only be set if retryBackoff is true");
+  assert2(!("retryDelayMax" in config2) || config2.retryDelayMax === null || Number.isInteger(config2.retryDelayMax) && config2.retryDelayMax >= 0, "retryDelayMax must be an integer >= 0");
+}
+function validateHeartbeatConfig(config2) {
+  assert2(!("heartbeatSeconds" in config2) || config2.heartbeatSeconds === null || Number.isInteger(config2.heartbeatSeconds) && config2.heartbeatSeconds >= 10, "heartbeatSeconds must be an integer >= 10");
+}
+function validateHeartbeatRefreshConfig(config2) {
+  if (!("heartbeatRefreshSeconds" in config2) || config2.heartbeatRefreshSeconds == null)
+    return;
+  assert2(typeof config2.heartbeatRefreshSeconds === "number" && config2.heartbeatRefreshSeconds > 0, "heartbeatRefreshSeconds must be a number > 0");
+}
+function applyPollingInterval(config2) {
+  assert2(!("pollingIntervalSeconds" in config2) || config2.pollingIntervalSeconds >= POLICY.MIN_POLLING_INTERVAL_MS / 1000, `configuration assert: pollingIntervalSeconds must be at least every ${POLICY.MIN_POLLING_INTERVAL_MS}ms`);
+  config2.pollingInterval = "pollingIntervalSeconds" in config2 ? config2.pollingIntervalSeconds * 1000 : 2000;
+}
+function applyOpsConfig(config2) {
+  assert2(!("superviseIntervalSeconds" in config2) || config2.superviseIntervalSeconds >= 1, "configuration assert: superviseIntervalSeconds must be at least every second");
+  config2.superviseIntervalSeconds = config2.superviseIntervalSeconds || 60;
+  assert2(config2.superviseIntervalSeconds / 60 / 60 <= POLICY.MAX_EXPIRATION_HOURS, `configuration assert: superviseIntervalSeconds cannot exceed ${POLICY.MAX_EXPIRATION_HOURS} hours`);
+  assert2(!("maintenanceIntervalSeconds" in config2) || config2.maintenanceIntervalSeconds >= 1, "configuration assert: maintenanceIntervalSeconds must be at least every second");
+  config2.maintenanceIntervalSeconds = config2.maintenanceIntervalSeconds || POLICY.MAX_EXPIRATION_HOURS * 60 * 60;
+  assert2(config2.maintenanceIntervalSeconds / 60 / 60 <= POLICY.MAX_EXPIRATION_HOURS, `configuration assert: maintenanceIntervalSeconds cannot exceed ${POLICY.MAX_EXPIRATION_HOURS} hours`);
+  assert2(!("monitorIntervalSeconds" in config2) || config2.monitorIntervalSeconds >= 1, "configuration assert: monitorIntervalSeconds must be at least every second");
+  config2.monitorIntervalSeconds = config2.monitorIntervalSeconds || 60;
+  assert2(config2.monitorIntervalSeconds / 60 / 60 <= POLICY.MAX_EXPIRATION_HOURS, `configuration assert: monitorIntervalSeconds cannot exceed ${POLICY.MAX_EXPIRATION_HOURS} hours`);
+  assert2(!("queueCacheIntervalSeconds" in config2) || config2.queueCacheIntervalSeconds >= 1, "configuration assert: queueCacheIntervalSeconds must be at least every second");
+  config2.queueCacheIntervalSeconds = config2.queueCacheIntervalSeconds || 60;
+  assert2(config2.queueCacheIntervalSeconds / 60 / 60 <= POLICY.MAX_EXPIRATION_HOURS, `configuration assert: queueCacheIntervalSeconds cannot exceed ${POLICY.MAX_EXPIRATION_HOURS} hours`);
+}
+function validateDeletionConfig(config2) {
+  assert2(!("deleteAfterSeconds" in config2) || config2.deleteAfterSeconds >= 0, "configuration assert: deleteAfterSeconds must be at least 0 (0 disables deletion)");
+}
+function applyScheduleConfig(config2) {
+  assert2(!("clockMonitorIntervalSeconds" in config2) || config2.clockMonitorIntervalSeconds >= 1 && config2.clockMonitorIntervalSeconds <= 600, "configuration assert: clockMonitorIntervalSeconds must be between 1 second and 10 minutes");
+  config2.clockMonitorIntervalSeconds = config2.clockMonitorIntervalSeconds || 600;
+  assert2(!("cronMonitorIntervalSeconds" in config2) || config2.cronMonitorIntervalSeconds >= 1 && config2.cronMonitorIntervalSeconds <= 45, "configuration assert: cronMonitorIntervalSeconds must be between 1 and 45 seconds");
+  config2.cronMonitorIntervalSeconds = config2.cronMonitorIntervalSeconds || 30;
+  assert2(!("cronWorkerIntervalSeconds" in config2) || config2.cronWorkerIntervalSeconds >= 1 && config2.cronWorkerIntervalSeconds <= 45, "configuration assert: cronWorkerIntervalSeconds must be between 1 and 45 seconds");
+  config2.cronWorkerIntervalSeconds = config2.cronWorkerIntervalSeconds || 5;
+}
+function applyBamConfig(config2) {
+  const minInterval = config2.__test__bypass_bam_interval_check ? 1 : 10;
+  assert2(!("bamIntervalSeconds" in config2) || config2.bamIntervalSeconds >= minInterval, `configuration assert: bamIntervalSeconds must be at least ${minInterval} seconds`);
+  config2.bamIntervalSeconds = config2.bamIntervalSeconds || 60;
+}
+
+// ../../node_modules/.bun/pg-boss@12.13.0/node_modules/pg-boss/dist/contractor.js
+import assert4 from "assert";
+
+// ../../node_modules/.bun/pg-boss@12.13.0/node_modules/pg-boss/dist/migrationStore.js
+import assert3 from "assert";
+function flatten(schema, commands, version3) {
+  commands.unshift(assertMigration(schema, version3));
+  commands.push(setVersion(schema, version3));
+  return locked(schema, commands);
+}
+function rollback(schema, version3, migrations) {
+  migrations = migrations || getAll(schema);
+  const result = migrations.find((i) => i.version === version3);
+  assert3(result, `Version ${version3} not found.`);
+  return flatten(schema, result.uninstall || [], result.previous);
+}
+function next(schema, version3, migrations) {
+  migrations = migrations || getAll(schema);
+  const result = migrations.find((i) => i.previous === version3);
+  assert3(result, `Version ${version3} not found.`);
+  return flatten(schema, result.install, result.version);
+}
+function migrate(schema, version3, migrations) {
+  migrations = migrations || getAll(schema);
+  const result = migrations.filter((i) => i.previous >= version3).sort((a, b2) => a.version - b2.version).reduce((acc, migration) => {
+    acc.install = acc.install.concat(migration.install);
+    if (migration.async) {
+      const bamCommands = migration.async.map((cmd) => cmd.replace(/\$VERSION\$/g, String(migration.version)));
+      acc.install = acc.install.concat(bamCommands);
+    }
+    acc.version = migration.version;
+    return acc;
+  }, { install: [], version: version3 });
+  assert3(result.install.length > 0, `Version ${version3} not found.`);
+  return flatten(schema, result.install, result.version);
+}
+function getAll(schema) {
+  return [
+    {
+      release: "11.1.0",
+      version: 26,
+      previous: 25,
+      install: [
+        `
+        CREATE OR REPLACE FUNCTION ${schema}.create_queue(queue_name text, options jsonb)
+        RETURNS VOID AS
+        $$
+        DECLARE
+          tablename varchar := CASE WHEN options->>'partition' = 'true'
+                                THEN 'j' || encode(sha224(queue_name::bytea), 'hex')
+                                ELSE 'job_common'
+                                END;
+          queue_created_on timestamptz;
+        BEGIN
+
+          WITH q as (
+            INSERT INTO ${schema}.queue (
+              name,
+              policy,
+              retry_limit,
+              retry_delay,
+              retry_backoff,
+              retry_delay_max,
+              expire_seconds,
+              retention_seconds,
+              deletion_seconds,
+              warning_queued,
+              dead_letter,
+              partition,
+              table_name
+            )
+            VALUES (
+              queue_name,
+              options->>'policy',
+              COALESCE((options->>'retryLimit')::int, 2),
+              COALESCE((options->>'retryDelay')::int, 0),
+              COALESCE((options->>'retryBackoff')::bool, false),
+              (options->>'retryDelayMax')::int,
+              COALESCE((options->>'expireInSeconds')::int, 900),
+              COALESCE((options->>'retentionSeconds')::int, 1209600),
+              COALESCE((options->>'deleteAfterSeconds')::int, 604800),
+              COALESCE((options->>'warningQueueSize')::int, 0),
+              options->>'deadLetter',
+              COALESCE((options->>'partition')::bool, false),
+              tablename
+            )
+            ON CONFLICT DO NOTHING
+            RETURNING created_on
+          )
+          SELECT created_on into queue_created_on from q;
+
+          IF queue_created_on IS NULL OR options->>'partition' IS DISTINCT FROM 'true' THEN
+            RETURN;
+          END IF;
+
+          EXECUTE format('CREATE TABLE ${schema}.%I (LIKE ${schema}.job INCLUDING DEFAULTS)', tablename);
+
+          EXECUTE format('ALTER TABLE ${schema}.%1$I ADD PRIMARY KEY (name, id)', tablename);
+          EXECUTE format('ALTER TABLE ${schema}.%1$I ADD CONSTRAINT q_fkey FOREIGN KEY (name) REFERENCES ${schema}.queue (name) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED', tablename);
+          EXECUTE format('ALTER TABLE ${schema}.%1$I ADD CONSTRAINT dlq_fkey FOREIGN KEY (dead_letter) REFERENCES ${schema}.queue (name) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED', tablename);
+
+          EXECUTE format('CREATE INDEX %1$s_i5 ON ${schema}.%1$I (name, start_after) INCLUDE (priority, created_on, id) WHERE state < ''active''', tablename);
+          EXECUTE format('CREATE UNIQUE INDEX %1$s_i4 ON ${schema}.%1$I (name, singleton_on, COALESCE(singleton_key, '''')) WHERE state <> ''cancelled'' AND singleton_on IS NOT NULL', tablename);
+
+          IF options->>'policy' = 'short' THEN
+            EXECUTE format('CREATE UNIQUE INDEX %1$s_i1 ON ${schema}.%1$I (name, COALESCE(singleton_key, '''')) WHERE state = ''created'' AND policy = ''short''', tablename);
+          ELSIF options->>'policy' = 'singleton' THEN
+            EXECUTE format('CREATE UNIQUE INDEX %1$s_i2 ON ${schema}.%1$I (name, COALESCE(singleton_key, '''')) WHERE state = ''active'' AND policy = ''singleton''', tablename);
+          ELSIF options->>'policy' = 'stately' THEN
+            EXECUTE format('CREATE UNIQUE INDEX %1$s_i3 ON ${schema}.%1$I (name, state, COALESCE(singleton_key, '''')) WHERE state <= ''active'' AND policy = ''stately''', tablename);
+          ELSIF options->>'policy' = 'exclusive' THEN
+            EXECUTE format('CREATE UNIQUE INDEX %1$s_i6 ON ${schema}.%1$I (name, COALESCE(singleton_key, '''')) WHERE state <= ''active'' AND policy = ''exclusive''', tablename);
+          END IF;
+
+          EXECUTE format('ALTER TABLE ${schema}.%I ADD CONSTRAINT cjc CHECK (name=%L)', tablename, queue_name);
+          EXECUTE format('ALTER TABLE ${schema}.job ATTACH PARTITION ${schema}.%I FOR VALUES IN (%L)', tablename, queue_name);
+        END;
+        $$
+        LANGUAGE plpgsql;
+        `,
+        `CREATE UNIQUE INDEX job_i6 ON ${schema}.job_common (name, COALESCE(singleton_key, '')) WHERE state <= 'active' AND policy = 'exclusive'`
+      ],
+      uninstall: [
+        `DROP INDEX ${schema}.job_i6`
+      ]
+    },
+    {
+      release: "12.6.0",
+      version: 27,
+      previous: 26,
+      install: [
+        `ALTER TABLE ${schema}.version ADD COLUMN IF NOT EXISTS bam_on timestamp with time zone`,
+        `
+        CREATE TABLE IF NOT EXISTS ${schema}.bam (
+          id uuid PRIMARY KEY default gen_random_uuid(),
+          name text NOT NULL,
+          version int NOT NULL,
+          status text NOT NULL DEFAULT 'pending',
+          queue text,
+          table_name text NOT NULL,
+          command text NOT NULL,
+          error text,
+          created_on timestamp with time zone NOT NULL DEFAULT now(),
+          started_on timestamp with time zone,
+          completed_on timestamp with time zone
+        )
+        `,
+        `CREATE FUNCTION ${schema}.job_table_format(command text, table_name text)
+          RETURNS text AS
+          $$
+            SELECT format(
+              replace(
+                replace(command, '.job', '.%1$I'),
+                'job_i', '%1$s_i'
+              ),
+              table_name
+            );
+          $$
+          LANGUAGE sql IMMUTABLE;
+        `,
+        `
+        CREATE OR REPLACE FUNCTION ${schema}.job_table_run_async(command_name text, version int, command text, tbl_name text DEFAULT NULL, queue_name text DEFAULT NULL)
+        RETURNS VOID AS
+        $$
+        BEGIN
+          IF queue_name IS NOT NULL THEN
+            SELECT table_name INTO tbl_name FROM ${schema}.queue WHERE name = queue_name;
+          END IF;
+
+          IF tbl_name IS NOT NULL THEN
+            INSERT INTO ${schema}.bam (name, version, status, queue, table_name, command)
+            VALUES (
+              command_name,
+              version,
+              'pending',
+              queue_name,
+              tbl_name,
+              ${schema}.job_table_format(command, tbl_name)
+            );
+            RETURN;
+          END IF;
+
+          INSERT INTO ${schema}.bam (name, version, status, queue, table_name, command)
+          SELECT
+            command_name,
+            version,
+            'pending',
+            NULL,
+            'job_common',
+            ${schema}.job_table_format(command, 'job_common')
+          UNION ALL
+          SELECT
+            command_name,
+            version,
+            'pending',
+            queue.name,
+            queue.table_name,
+            ${schema}.job_table_format(command, queue.table_name)
+          FROM ${schema}.queue
+          WHERE partition = true;
+        END;
+        $$
+        LANGUAGE plpgsql;
+        `,
+        `
+        CREATE OR REPLACE FUNCTION ${schema}.job_table_run(command text, tbl_name text DEFAULT NULL, queue_name text DEFAULT NULL)
+        RETURNS VOID AS
+        $$
+        DECLARE
+          tbl RECORD;
+        BEGIN
+          IF queue_name IS NOT NULL THEN
+            SELECT table_name INTO tbl_name FROM ${schema}.queue WHERE name = queue_name;
+          END IF;
+
+          IF tbl_name IS NOT NULL THEN
+            EXECUTE ${schema}.job_table_format(command, tbl_name);
+            RETURN;
+          END IF;
+
+          EXECUTE ${schema}.job_table_format(command, 'job_common');
+
+          FOR tbl IN SELECT table_name FROM ${schema}.queue WHERE partition = true
+          LOOP
+            EXECUTE ${schema}.job_table_format(command, tbl.table_name);
+          END LOOP;
+        END;
+        $$
+        LANGUAGE plpgsql;
+        `,
+        `ALTER TABLE ${schema}.job ADD COLUMN IF NOT EXISTS group_id text`,
+        `ALTER TABLE ${schema}.job ADD COLUMN IF NOT EXISTS group_tier text`,
+        `
+        CREATE OR REPLACE FUNCTION ${schema}.create_queue(queue_name text, options jsonb)
+        RETURNS VOID AS
+        $$
+        DECLARE
+          tablename varchar := CASE WHEN options->>'partition' = 'true'
+                                THEN 'j' || encode(sha224(queue_name::bytea), 'hex')
+                                ELSE 'job_common'
+                                END;
+          queue_created_on timestamptz;
+        BEGIN
+
+          WITH q as (
+            INSERT INTO ${schema}.queue (
+              name,
+              policy,
+              retry_limit,
+              retry_delay,
+              retry_backoff,
+              retry_delay_max,
+              expire_seconds,
+              retention_seconds,
+              deletion_seconds,
+              warning_queued,
+              dead_letter,
+              partition,
+              table_name
+            )
+            VALUES (
+              queue_name,
+              options->>'policy',
+              COALESCE((options->>'retryLimit')::int, 2),
+              COALESCE((options->>'retryDelay')::int, 0),
+              COALESCE((options->>'retryBackoff')::bool, false),
+              (options->>'retryDelayMax')::int,
+              COALESCE((options->>'expireInSeconds')::int, 900),
+              COALESCE((options->>'retentionSeconds')::int, 1209600),
+              COALESCE((options->>'deleteAfterSeconds')::int, 604800),
+              COALESCE((options->>'warningQueueSize')::int, 0),
+              options->>'deadLetter',
+              COALESCE((options->>'partition')::bool, false),
+              tablename
+            )
+            ON CONFLICT DO NOTHING
+            RETURNING created_on
+          )
+          SELECT created_on into queue_created_on from q;
+
+          IF queue_created_on IS NULL OR options->>'partition' IS DISTINCT FROM 'true' THEN
+            RETURN;
+          END IF;
+
+          EXECUTE format('CREATE TABLE ${schema}.%I (LIKE ${schema}.job INCLUDING DEFAULTS)', tablename);
+
+          EXECUTE ${schema}.job_table_format($cmd$ALTER TABLE ${schema}.job ADD PRIMARY KEY (name, id)$cmd$, tablename);
+          EXECUTE ${schema}.job_table_format($cmd$ALTER TABLE ${schema}.job ADD CONSTRAINT q_fkey FOREIGN KEY (name) REFERENCES ${schema}.queue (name) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED$cmd$, tablename);
+          EXECUTE ${schema}.job_table_format($cmd$ALTER TABLE ${schema}.job ADD CONSTRAINT dlq_fkey FOREIGN KEY (dead_letter) REFERENCES ${schema}.queue (name) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED$cmd$, tablename);
+
+          EXECUTE ${schema}.job_table_format($cmd$CREATE INDEX job_i5 ON ${schema}.job (name, start_after) INCLUDE (priority, created_on, id) WHERE state < 'active'$cmd$, tablename);
+          EXECUTE ${schema}.job_table_format($cmd$CREATE UNIQUE INDEX job_i4 ON ${schema}.job (name, singleton_on, COALESCE(singleton_key, '')) WHERE state <> 'cancelled' AND singleton_on IS NOT NULL$cmd$, tablename);
+          EXECUTE ${schema}.job_table_format($cmd$CREATE INDEX job_i7 ON ${schema}.job (name, group_id) WHERE state = 'active' AND group_id IS NOT NULL$cmd$, tablename);
+
+          IF options->>'policy' = 'short' THEN
+            EXECUTE ${schema}.job_table_format($cmd$CREATE UNIQUE INDEX job_i1 ON ${schema}.job (name, COALESCE(singleton_key, '')) WHERE state = 'created' AND policy = 'short'$cmd$, tablename);
+          ELSIF options->>'policy' = 'singleton' THEN
+            EXECUTE ${schema}.job_table_format($cmd$CREATE UNIQUE INDEX job_i2 ON ${schema}.job (name, COALESCE(singleton_key, '')) WHERE state = 'active' AND policy = 'singleton'$cmd$, tablename);
+          ELSIF options->>'policy' = 'stately' THEN
+            EXECUTE ${schema}.job_table_format($cmd$CREATE UNIQUE INDEX job_i3 ON ${schema}.job (name, state, COALESCE(singleton_key, '')) WHERE state <= 'active' AND policy = 'stately'$cmd$, tablename);
+          ELSIF options->>'policy' = 'exclusive' THEN
+            EXECUTE ${schema}.job_table_format($cmd$CREATE UNIQUE INDEX job_i6 ON ${schema}.job (name, COALESCE(singleton_key, '')) WHERE state <= 'active' AND policy = 'exclusive'$cmd$, tablename);
+          END IF;
+
+          EXECUTE format('ALTER TABLE ${schema}.%I ADD CONSTRAINT cjc CHECK (name=%L)', tablename, queue_name);
+          EXECUTE format('ALTER TABLE ${schema}.job ATTACH PARTITION ${schema}.%I FOR VALUES IN (%L)', tablename, queue_name);
+        END;
+        $$
+        LANGUAGE plpgsql;
+        `,
+        `ALTER INDEX IF EXISTS ${schema}.job_i1 RENAME TO job_common_i1`,
+        `ALTER INDEX IF EXISTS ${schema}.job_i2 RENAME TO job_common_i2`,
+        `ALTER INDEX IF EXISTS ${schema}.job_i3 RENAME TO job_common_i3`,
+        `ALTER INDEX IF EXISTS ${schema}.job_i4 RENAME TO job_common_i4`,
+        `ALTER INDEX IF EXISTS ${schema}.job_i5 RENAME TO job_common_i5`,
+        `ALTER INDEX IF EXISTS ${schema}.job_i6 RENAME TO job_common_i6`,
+        `ALTER INDEX IF EXISTS ${schema}.job_i7 RENAME TO job_common_i7`
+      ],
+      async: [
+        `SELECT ${schema}.job_table_run_async(
+          'group_concurency_index',
+          $VERSION$,
+          $$
+          CREATE INDEX CONCURRENTLY job_i7 ON ${schema}.job (name, group_id) WHERE state = 'active' AND group_id IS NOT NULL
+          $$
+        )`
+      ],
+      uninstall: [
+        `ALTER INDEX ${schema}.job_common_i6 RENAME TO job_i6`,
+        `ALTER INDEX ${schema}.job_common_i5 RENAME TO job_i5`,
+        `ALTER INDEX ${schema}.job_common_i4 RENAME TO job_i4`,
+        `ALTER INDEX ${schema}.job_common_i3 RENAME TO job_i3`,
+        `ALTER INDEX ${schema}.job_common_i2 RENAME TO job_i2`,
+        `ALTER INDEX ${schema}.job_common_i1 RENAME TO job_i1`,
+        `SELECT ${schema}.job_table_run('DROP INDEX ${schema}.job_i7')`,
+        `
+        CREATE OR REPLACE FUNCTION ${schema}.create_queue(queue_name text, options jsonb)
+        RETURNS VOID AS
+        $$
+        DECLARE
+          tablename varchar := CASE WHEN options->>'partition' = 'true'
+                                THEN 'j' || encode(sha224(queue_name::bytea), 'hex')
+                                ELSE 'job_common'
+                                END;
+          queue_created_on timestamptz;
+        BEGIN
+
+          WITH q as (
+            INSERT INTO ${schema}.queue (
+              name,
+              policy,
+              retry_limit,
+              retry_delay,
+              retry_backoff,
+              retry_delay_max,
+              expire_seconds,
+              retention_seconds,
+              deletion_seconds,
+              warning_queued,
+              dead_letter,
+              partition,
+              table_name
+            )
+            VALUES (
+              queue_name,
+              options->>'policy',
+              COALESCE((options->>'retryLimit')::int, 2),
+              COALESCE((options->>'retryDelay')::int, 0),
+              COALESCE((options->>'retryBackoff')::bool, false),
+              (options->>'retryDelayMax')::int,
+              COALESCE((options->>'expireInSeconds')::int, 900),
+              COALESCE((options->>'retentionSeconds')::int, 1209600),
+              COALESCE((options->>'deleteAfterSeconds')::int, 604800),
+              COALESCE((options->>'warningQueueSize')::int, 0),
+              options->>'deadLetter',
+              COALESCE((options->>'partition')::bool, false),
+              tablename
+            )
+            ON CONFLICT DO NOTHING
+            RETURNING created_on
+          )
+          SELECT created_on into queue_created_on from q;
+
+          IF queue_created_on IS NULL OR options->>'partition' IS DISTINCT FROM 'true' THEN
+            RETURN;
+          END IF;
+
+          EXECUTE format('CREATE TABLE ${schema}.%I (LIKE ${schema}.job INCLUDING DEFAULTS)', tablename);
+
+          EXECUTE format('ALTER TABLE ${schema}.%1$I ADD PRIMARY KEY (name, id)', tablename);
+          EXECUTE format('ALTER TABLE ${schema}.%1$I ADD CONSTRAINT q_fkey FOREIGN KEY (name) REFERENCES ${schema}.queue (name) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED', tablename);
+          EXECUTE format('ALTER TABLE ${schema}.%1$I ADD CONSTRAINT dlq_fkey FOREIGN KEY (dead_letter) REFERENCES ${schema}.queue (name) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED', tablename);
+
+          EXECUTE format('CREATE INDEX %1$s_i5 ON ${schema}.%1$I (name, start_after) INCLUDE (priority, created_on, id) WHERE state < ''active''', tablename);
+          EXECUTE format('CREATE UNIQUE INDEX %1$s_i4 ON ${schema}.%1$I (name, singleton_on, COALESCE(singleton_key, '''')) WHERE state <> ''cancelled'' AND singleton_on IS NOT NULL', tablename);
+
+          IF options->>'policy' = 'short' THEN
+            EXECUTE format('CREATE UNIQUE INDEX %1$s_i1 ON ${schema}.%1$I (name, COALESCE(singleton_key, '''')) WHERE state = ''created'' AND policy = ''short''', tablename);
+          ELSIF options->>'policy' = 'singleton' THEN
+            EXECUTE format('CREATE UNIQUE INDEX %1$s_i2 ON ${schema}.%1$I (name, COALESCE(singleton_key, '''')) WHERE state = ''active'' AND policy = ''singleton''', tablename);
+          ELSIF options->>'policy' = 'stately' THEN
+            EXECUTE format('CREATE UNIQUE INDEX %1$s_i3 ON ${schema}.%1$I (name, state, COALESCE(singleton_key, '''')) WHERE state <= ''active'' AND policy = ''stately''', tablename);
+          ELSIF options->>'policy' = 'exclusive' THEN
+            EXECUTE format('CREATE UNIQUE INDEX %1$s_i6 ON ${schema}.%1$I (name, COALESCE(singleton_key, '''')) WHERE state <= ''active'' AND policy = ''exclusive''', tablename);
+          END IF;
+
+          EXECUTE format('ALTER TABLE ${schema}.%I ADD CONSTRAINT cjc CHECK (name=%L)', tablename, queue_name);
+          EXECUTE format('ALTER TABLE ${schema}.job ATTACH PARTITION ${schema}.%I FOR VALUES IN (%L)', tablename, queue_name);
+        END;
+        $$
+        LANGUAGE plpgsql;
+        `,
+        `DROP FUNCTION ${schema}.job_table_run(text, text, text)`,
+        `DROP FUNCTION ${schema}.job_table_run_async(text, int, text, text, text)`,
+        `DROP FUNCTION ${schema}.job_table_format(text, text)`,
+        `DROP TABLE ${schema}.bam`,
+        `ALTER TABLE ${schema}.version DROP COLUMN bam_on`,
+        `ALTER TABLE ${schema}.job DROP COLUMN group_tier`,
+        `ALTER TABLE ${schema}.job DROP COLUMN group_id`
+      ]
+    },
+    {
+      release: "12.10.0",
+      version: 28,
+      previous: 27,
+      install: [
+        `SELECT ${schema}.job_table_run($cmd$ALTER TABLE ${schema}.job ADD CONSTRAINT job_key_strict_fifo_singleton_key_check CHECK (NOT (policy = 'key_strict_fifo' AND singleton_key IS NULL))$cmd$, 'job_common')`,
+        `
+        CREATE OR REPLACE FUNCTION ${schema}.create_queue(queue_name text, options jsonb)
+        RETURNS VOID AS
+        $$
+        DECLARE
+          tablename varchar := CASE WHEN options->>'partition' = 'true'
+                                THEN 'j' || encode(sha224(queue_name::bytea), 'hex')
+                                ELSE 'job_common'
+                                END;
+          queue_created_on timestamptz;
+        BEGIN
+
+          WITH q as (
+            INSERT INTO ${schema}.queue (
+              name,
+              policy,
+              retry_limit,
+              retry_delay,
+              retry_backoff,
+              retry_delay_max,
+              expire_seconds,
+              retention_seconds,
+              deletion_seconds,
+              warning_queued,
+              dead_letter,
+              partition,
+              table_name
+            )
+            VALUES (
+              queue_name,
+              options->>'policy',
+              COALESCE((options->>'retryLimit')::int, 2),
+              COALESCE((options->>'retryDelay')::int, 0),
+              COALESCE((options->>'retryBackoff')::bool, false),
+              (options->>'retryDelayMax')::int,
+              COALESCE((options->>'expireInSeconds')::int, 900),
+              COALESCE((options->>'retentionSeconds')::int, 1209600),
+              COALESCE((options->>'deleteAfterSeconds')::int, 604800),
+              COALESCE((options->>'warningQueueSize')::int, 0),
+              options->>'deadLetter',
+              COALESCE((options->>'partition')::bool, false),
+              tablename
+            )
+            ON CONFLICT DO NOTHING
+            RETURNING created_on
+          )
+          SELECT created_on into queue_created_on from q;
+
+          IF queue_created_on IS NULL OR options->>'partition' IS DISTINCT FROM 'true' THEN
+            RETURN;
+          END IF;
+
+          EXECUTE format('CREATE TABLE ${schema}.%I (LIKE ${schema}.job INCLUDING DEFAULTS)', tablename);
+
+          EXECUTE ${schema}.job_table_format($cmd$ALTER TABLE ${schema}.job ADD PRIMARY KEY (name, id)$cmd$, tablename);
+          EXECUTE ${schema}.job_table_format($cmd$ALTER TABLE ${schema}.job ADD CONSTRAINT q_fkey FOREIGN KEY (name) REFERENCES ${schema}.queue (name) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED$cmd$, tablename);
+          EXECUTE ${schema}.job_table_format($cmd$ALTER TABLE ${schema}.job ADD CONSTRAINT dlq_fkey FOREIGN KEY (dead_letter) REFERENCES ${schema}.queue (name) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED$cmd$, tablename);
+
+          EXECUTE ${schema}.job_table_format($cmd$CREATE INDEX job_i5 ON ${schema}.job (name, start_after) INCLUDE (priority, created_on, id) WHERE state < 'active'$cmd$, tablename);
+          EXECUTE ${schema}.job_table_format($cmd$CREATE UNIQUE INDEX job_i4 ON ${schema}.job (name, singleton_on, COALESCE(singleton_key, '')) WHERE state <> 'cancelled' AND singleton_on IS NOT NULL$cmd$, tablename);
+          EXECUTE ${schema}.job_table_format($cmd$CREATE INDEX job_i7 ON ${schema}.job (name, group_id) WHERE state = 'active' AND group_id IS NOT NULL$cmd$, tablename);
+
+          IF options->>'policy' = 'short' THEN
+            EXECUTE ${schema}.job_table_format($cmd$CREATE UNIQUE INDEX job_i1 ON ${schema}.job (name, COALESCE(singleton_key, '')) WHERE state = 'created' AND policy = 'short'$cmd$, tablename);
+          ELSIF options->>'policy' = 'singleton' THEN
+            EXECUTE ${schema}.job_table_format($cmd$CREATE UNIQUE INDEX job_i2 ON ${schema}.job (name, COALESCE(singleton_key, '')) WHERE state = 'active' AND policy = 'singleton'$cmd$, tablename);
+          ELSIF options->>'policy' = 'stately' THEN
+            EXECUTE ${schema}.job_table_format($cmd$CREATE UNIQUE INDEX job_i3 ON ${schema}.job (name, state, COALESCE(singleton_key, '')) WHERE state <= 'active' AND policy = 'stately'$cmd$, tablename);
+          ELSIF options->>'policy' = 'exclusive' THEN
+            EXECUTE ${schema}.job_table_format($cmd$CREATE UNIQUE INDEX job_i6 ON ${schema}.job (name, COALESCE(singleton_key, '')) WHERE state <= 'active' AND policy = 'exclusive'$cmd$, tablename);
+          ELSIF options->>'policy' = 'key_strict_fifo' THEN
+            EXECUTE ${schema}.job_table_format($cmd$CREATE UNIQUE INDEX job_i8 ON ${schema}.job (name, singleton_key) WHERE state IN ('active', 'retry', 'failed') AND policy = 'key_strict_fifo'$cmd$, tablename);
+            EXECUTE ${schema}.job_table_format($cmd$ALTER TABLE ${schema}.job ADD CONSTRAINT job_key_strict_fifo_singleton_key_check CHECK (NOT (policy = 'key_strict_fifo' AND singleton_key IS NULL))$cmd$, tablename);
+          END IF;
+
+          EXECUTE format('ALTER TABLE ${schema}.%I ADD CONSTRAINT cjc CHECK (name=%L)', tablename, queue_name);
+          EXECUTE format('ALTER TABLE ${schema}.job ATTACH PARTITION ${schema}.%I FOR VALUES IN (%L)', tablename, queue_name);
+        END;
+        $$
+        LANGUAGE plpgsql;
+        `
+      ],
+      async: [
+        `SELECT ${schema}.job_table_run_async(
+          'key_strict_fifo_index',
+          $VERSION$,
+          $$
+          CREATE UNIQUE INDEX CONCURRENTLY job_i8 ON ${schema}.job (name, singleton_key) WHERE state IN ('active', 'retry', 'failed') AND policy = 'key_strict_fifo'
+          $$
+        , 'job_common')`
+      ],
+      uninstall: [
+        `SELECT ${schema}.job_table_run('DROP INDEX IF EXISTS ${schema}.job_i8')`,
+        `SELECT ${schema}.job_table_run('ALTER TABLE ${schema}.job DROP CONSTRAINT IF EXISTS job_key_strict_fifo_singleton_key_check')`,
+        `
+        CREATE OR REPLACE FUNCTION ${schema}.create_queue(queue_name text, options jsonb)
+        RETURNS VOID AS
+        $$
+        DECLARE
+          tablename varchar := CASE WHEN options->>'partition' = 'true'
+                                THEN 'j' || encode(sha224(queue_name::bytea), 'hex')
+                                ELSE 'job_common'
+                                END;
+          queue_created_on timestamptz;
+        BEGIN
+
+          WITH q as (
+            INSERT INTO ${schema}.queue (
+              name,
+              policy,
+              retry_limit,
+              retry_delay,
+              retry_backoff,
+              retry_delay_max,
+              expire_seconds,
+              retention_seconds,
+              deletion_seconds,
+              warning_queued,
+              dead_letter,
+              partition,
+              table_name
+            )
+            VALUES (
+              queue_name,
+              options->>'policy',
+              COALESCE((options->>'retryLimit')::int, 2),
+              COALESCE((options->>'retryDelay')::int, 0),
+              COALESCE((options->>'retryBackoff')::bool, false),
+              (options->>'retryDelayMax')::int,
+              COALESCE((options->>'expireInSeconds')::int, 900),
+              COALESCE((options->>'retentionSeconds')::int, 1209600),
+              COALESCE((options->>'deleteAfterSeconds')::int, 604800),
+              COALESCE((options->>'warningQueueSize')::int, 0),
+              options->>'deadLetter',
+              COALESCE((options->>'partition')::bool, false),
+              tablename
+            )
+            ON CONFLICT DO NOTHING
+            RETURNING created_on
+          )
+          SELECT created_on into queue_created_on from q;
+
+          IF queue_created_on IS NULL OR options->>'partition' IS DISTINCT FROM 'true' THEN
+            RETURN;
+          END IF;
+
+          EXECUTE format('CREATE TABLE ${schema}.%I (LIKE ${schema}.job INCLUDING DEFAULTS)', tablename);
+
+          EXECUTE ${schema}.job_table_format($cmd$ALTER TABLE ${schema}.job ADD PRIMARY KEY (name, id)$cmd$, tablename);
+          EXECUTE ${schema}.job_table_format($cmd$ALTER TABLE ${schema}.job ADD CONSTRAINT q_fkey FOREIGN KEY (name) REFERENCES ${schema}.queue (name) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED$cmd$, tablename);
+          EXECUTE ${schema}.job_table_format($cmd$ALTER TABLE ${schema}.job ADD CONSTRAINT dlq_fkey FOREIGN KEY (dead_letter) REFERENCES ${schema}.queue (name) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED$cmd$, tablename);
+
+          EXECUTE ${schema}.job_table_format($cmd$CREATE INDEX job_i5 ON ${schema}.job (name, start_after) INCLUDE (priority, created_on, id) WHERE state < 'active'$cmd$, tablename);
+          EXECUTE ${schema}.job_table_format($cmd$CREATE UNIQUE INDEX job_i4 ON ${schema}.job (name, singleton_on, COALESCE(singleton_key, '')) WHERE state <> 'cancelled' AND singleton_on IS NOT NULL$cmd$, tablename);
+          EXECUTE ${schema}.job_table_format($cmd$CREATE INDEX job_i7 ON ${schema}.job (name, group_id) WHERE state = 'active' AND group_id IS NOT NULL$cmd$, tablename);
+
+          IF options->>'policy' = 'short' THEN
+            EXECUTE ${schema}.job_table_format($cmd$CREATE UNIQUE INDEX job_i1 ON ${schema}.job (name, COALESCE(singleton_key, '')) WHERE state = 'created' AND policy = 'short'$cmd$, tablename);
+          ELSIF options->>'policy' = 'singleton' THEN
+            EXECUTE ${schema}.job_table_format($cmd$CREATE UNIQUE INDEX job_i2 ON ${schema}.job (name, COALESCE(singleton_key, '')) WHERE state = 'active' AND policy = 'singleton'$cmd$, tablename);
+          ELSIF options->>'policy' = 'stately' THEN
+            EXECUTE ${schema}.job_table_format($cmd$CREATE UNIQUE INDEX job_i3 ON ${schema}.job (name, state, COALESCE(singleton_key, '')) WHERE state <= 'active' AND policy = 'stately'$cmd$, tablename);
+          ELSIF options->>'policy' = 'exclusive' THEN
+            EXECUTE ${schema}.job_table_format($cmd$CREATE UNIQUE INDEX job_i6 ON ${schema}.job (name, COALESCE(singleton_key, '')) WHERE state <= 'active' AND policy = 'exclusive'$cmd$, tablename);
+          END IF;
+
+          EXECUTE format('ALTER TABLE ${schema}.%I ADD CONSTRAINT cjc CHECK (name=%L)', tablename, queue_name);
+          EXECUTE format('ALTER TABLE ${schema}.job ATTACH PARTITION ${schema}.%I FOR VALUES IN (%L)', tablename, queue_name);
+        END;
+        $$
+        LANGUAGE plpgsql;
+        `
+      ]
+    },
+    {
+      release: "12.11.0",
+      version: 29,
+      previous: 28,
+      install: [
+        `CREATE TABLE ${schema}.warning (
+          id uuid PRIMARY KEY default gen_random_uuid(),
+          type text NOT NULL,
+          message text NOT NULL,
+          data jsonb,
+          created_on timestamp with time zone NOT NULL DEFAULT now()
+        )`,
+        `CREATE INDEX warning_i1 ON ${schema}.warning (created_on DESC)`
+      ],
+      uninstall: [
+        `DROP INDEX ${schema}.warning_i1`,
+        `DROP TABLE ${schema}.warning`
+      ]
+    },
+    {
+      release: "12.12.0",
+      version: 30,
+      previous: 29,
+      install: [
+        `ALTER TABLE ${schema}.job ADD COLUMN heartbeat_on timestamp with time zone`,
+        `ALTER TABLE ${schema}.job ADD COLUMN heartbeat_seconds int`,
+        `ALTER TABLE ${schema}.queue ADD COLUMN heartbeat_seconds int`,
+        `
+        CREATE OR REPLACE FUNCTION ${schema}.create_queue(queue_name text, options jsonb)
+        RETURNS VOID AS
+        $$
+        DECLARE
+          tablename varchar := CASE WHEN options->>'partition' = 'true'
+                                THEN 'j' || encode(sha224(queue_name::bytea), 'hex')
+                                ELSE 'job_common'
+                                END;
+          queue_created_on timestamptz;
+        BEGIN
+
+          WITH q as (
+            INSERT INTO ${schema}.queue (
+              name,
+              policy,
+              retry_limit,
+              retry_delay,
+              retry_backoff,
+              retry_delay_max,
+              expire_seconds,
+              retention_seconds,
+              deletion_seconds,
+              warning_queued,
+              dead_letter,
+              partition,
+              table_name,
+              heartbeat_seconds
+            )
+            VALUES (
+              queue_name,
+              options->>'policy',
+              COALESCE((options->>'retryLimit')::int, 2),
+              COALESCE((options->>'retryDelay')::int, 0),
+              COALESCE((options->>'retryBackoff')::bool, false),
+              (options->>'retryDelayMax')::int,
+              COALESCE((options->>'expireInSeconds')::int, 900),
+              COALESCE((options->>'retentionSeconds')::int, 1209600),
+              COALESCE((options->>'deleteAfterSeconds')::int, 604800),
+              COALESCE((options->>'warningQueueSize')::int, 0),
+              options->>'deadLetter',
+              COALESCE((options->>'partition')::bool, false),
+              tablename,
+              (options->>'heartbeatSeconds')::int
+            )
+            ON CONFLICT DO NOTHING
+            RETURNING created_on
+          )
+          SELECT created_on into queue_created_on from q;
+
+          IF queue_created_on IS NULL OR options->>'partition' IS DISTINCT FROM 'true' THEN
+            RETURN;
+          END IF;
+
+          EXECUTE format('CREATE TABLE ${schema}.%I (LIKE ${schema}.job INCLUDING DEFAULTS)', tablename);
+
+          EXECUTE ${schema}.job_table_format($cmd$ALTER TABLE ${schema}.job ADD PRIMARY KEY (name, id)$cmd$, tablename);
+          EXECUTE ${schema}.job_table_format($cmd$ALTER TABLE ${schema}.job ADD CONSTRAINT q_fkey FOREIGN KEY (name) REFERENCES ${schema}.queue (name) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED$cmd$, tablename);
+          EXECUTE ${schema}.job_table_format($cmd$ALTER TABLE ${schema}.job ADD CONSTRAINT dlq_fkey FOREIGN KEY (dead_letter) REFERENCES ${schema}.queue (name) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED$cmd$, tablename);
+
+          EXECUTE ${schema}.job_table_format($cmd$CREATE INDEX job_i5 ON ${schema}.job (name, start_after) INCLUDE (priority, created_on, id) WHERE state < 'active'$cmd$, tablename);
+          EXECUTE ${schema}.job_table_format($cmd$CREATE UNIQUE INDEX job_i4 ON ${schema}.job (name, singleton_on, COALESCE(singleton_key, '')) WHERE state <> 'cancelled' AND singleton_on IS NOT NULL$cmd$, tablename);
+          EXECUTE ${schema}.job_table_format($cmd$CREATE INDEX job_i7 ON ${schema}.job (name, group_id) WHERE state = 'active' AND group_id IS NOT NULL$cmd$, tablename);
+
+          IF options->>'policy' = 'short' THEN
+            EXECUTE ${schema}.job_table_format($cmd$CREATE UNIQUE INDEX job_i1 ON ${schema}.job (name, COALESCE(singleton_key, '')) WHERE state = 'created' AND policy = 'short'$cmd$, tablename);
+          ELSIF options->>'policy' = 'singleton' THEN
+            EXECUTE ${schema}.job_table_format($cmd$CREATE UNIQUE INDEX job_i2 ON ${schema}.job (name, COALESCE(singleton_key, '')) WHERE state = 'active' AND policy = 'singleton'$cmd$, tablename);
+          ELSIF options->>'policy' = 'stately' THEN
+            EXECUTE ${schema}.job_table_format($cmd$CREATE UNIQUE INDEX job_i3 ON ${schema}.job (name, state, COALESCE(singleton_key, '')) WHERE state <= 'active' AND policy = 'stately'$cmd$, tablename);
+          ELSIF options->>'policy' = 'exclusive' THEN
+            EXECUTE ${schema}.job_table_format($cmd$CREATE UNIQUE INDEX job_i6 ON ${schema}.job (name, COALESCE(singleton_key, '')) WHERE state <= 'active' AND policy = 'exclusive'$cmd$, tablename);
+          ELSIF options->>'policy' = 'key_strict_fifo' THEN
+            EXECUTE ${schema}.job_table_format($cmd$CREATE UNIQUE INDEX job_i8 ON ${schema}.job (name, singleton_key) WHERE state IN ('active', 'retry', 'failed') AND policy = 'key_strict_fifo'$cmd$, tablename);
+            EXECUTE ${schema}.job_table_format($cmd$ALTER TABLE ${schema}.job ADD CONSTRAINT job_key_strict_fifo_singleton_key_check CHECK (NOT (policy = 'key_strict_fifo' AND singleton_key IS NULL))$cmd$, tablename);
+          END IF;
+
+          EXECUTE format('ALTER TABLE ${schema}.%I ADD CONSTRAINT cjc CHECK (name=%L)', tablename, queue_name);
+          EXECUTE format('ALTER TABLE ${schema}.job ATTACH PARTITION ${schema}.%I FOR VALUES IN (%L)', tablename, queue_name);
+        END;
+        $$
+        LANGUAGE plpgsql;
+        `
+      ],
+      uninstall: [
+        `
+        CREATE OR REPLACE FUNCTION ${schema}.create_queue(queue_name text, options jsonb)
+        RETURNS VOID AS
+        $$
+        DECLARE
+          tablename varchar := CASE WHEN options->>'partition' = 'true'
+                                THEN 'j' || encode(sha224(queue_name::bytea), 'hex')
+                                ELSE 'job_common'
+                                END;
+          queue_created_on timestamptz;
+        BEGIN
+
+          WITH q as (
+            INSERT INTO ${schema}.queue (
+              name,
+              policy,
+              retry_limit,
+              retry_delay,
+              retry_backoff,
+              retry_delay_max,
+              expire_seconds,
+              retention_seconds,
+              deletion_seconds,
+              warning_queued,
+              dead_letter,
+              partition,
+              table_name
+            )
+            VALUES (
+              queue_name,
+              options->>'policy',
+              COALESCE((options->>'retryLimit')::int, 2),
+              COALESCE((options->>'retryDelay')::int, 0),
+              COALESCE((options->>'retryBackoff')::bool, false),
+              (options->>'retryDelayMax')::int,
+              COALESCE((options->>'expireInSeconds')::int, 900),
+              COALESCE((options->>'retentionSeconds')::int, 1209600),
+              COALESCE((options->>'deleteAfterSeconds')::int, 604800),
+              COALESCE((options->>'warningQueueSize')::int, 0),
+              options->>'deadLetter',
+              COALESCE((options->>'partition')::bool, false),
+              tablename
+            )
+            ON CONFLICT DO NOTHING
+            RETURNING created_on
+          )
+          SELECT created_on into queue_created_on from q;
+
+          IF queue_created_on IS NULL OR options->>'partition' IS DISTINCT FROM 'true' THEN
+            RETURN;
+          END IF;
+
+          EXECUTE format('CREATE TABLE ${schema}.%I (LIKE ${schema}.job INCLUDING DEFAULTS)', tablename);
+
+          EXECUTE ${schema}.job_table_format($cmd$ALTER TABLE ${schema}.job ADD PRIMARY KEY (name, id)$cmd$, tablename);
+          EXECUTE ${schema}.job_table_format($cmd$ALTER TABLE ${schema}.job ADD CONSTRAINT q_fkey FOREIGN KEY (name) REFERENCES ${schema}.queue (name) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED$cmd$, tablename);
+          EXECUTE ${schema}.job_table_format($cmd$ALTER TABLE ${schema}.job ADD CONSTRAINT dlq_fkey FOREIGN KEY (dead_letter) REFERENCES ${schema}.queue (name) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED$cmd$, tablename);
+
+          EXECUTE ${schema}.job_table_format($cmd$CREATE INDEX job_i5 ON ${schema}.job (name, start_after) INCLUDE (priority, created_on, id) WHERE state < 'active'$cmd$, tablename);
+          EXECUTE ${schema}.job_table_format($cmd$CREATE UNIQUE INDEX job_i4 ON ${schema}.job (name, singleton_on, COALESCE(singleton_key, '')) WHERE state <> 'cancelled' AND singleton_on IS NOT NULL$cmd$, tablename);
+          EXECUTE ${schema}.job_table_format($cmd$CREATE INDEX job_i7 ON ${schema}.job (name, group_id) WHERE state = 'active' AND group_id IS NOT NULL$cmd$, tablename);
+
+          IF options->>'policy' = 'short' THEN
+            EXECUTE ${schema}.job_table_format($cmd$CREATE UNIQUE INDEX job_i1 ON ${schema}.job (name, COALESCE(singleton_key, '')) WHERE state = 'created' AND policy = 'short'$cmd$, tablename);
+          ELSIF options->>'policy' = 'singleton' THEN
+            EXECUTE ${schema}.job_table_format($cmd$CREATE UNIQUE INDEX job_i2 ON ${schema}.job (name, COALESCE(singleton_key, '')) WHERE state = 'active' AND policy = 'singleton'$cmd$, tablename);
+          ELSIF options->>'policy' = 'stately' THEN
+            EXECUTE ${schema}.job_table_format($cmd$CREATE UNIQUE INDEX job_i3 ON ${schema}.job (name, state, COALESCE(singleton_key, '')) WHERE state <= 'active' AND policy = 'stately'$cmd$, tablename);
+          ELSIF options->>'policy' = 'exclusive' THEN
+            EXECUTE ${schema}.job_table_format($cmd$CREATE UNIQUE INDEX job_i6 ON ${schema}.job (name, COALESCE(singleton_key, '')) WHERE state <= 'active' AND policy = 'exclusive'$cmd$, tablename);
+          ELSIF options->>'policy' = 'key_strict_fifo' THEN
+            EXECUTE ${schema}.job_table_format($cmd$CREATE UNIQUE INDEX job_i8 ON ${schema}.job (name, singleton_key) WHERE state IN ('active', 'retry', 'failed') AND policy = 'key_strict_fifo'$cmd$, tablename);
+            EXECUTE ${schema}.job_table_format($cmd$ALTER TABLE ${schema}.job ADD CONSTRAINT job_key_strict_fifo_singleton_key_check CHECK (NOT (policy = 'key_strict_fifo' AND singleton_key IS NULL))$cmd$, tablename);
+          END IF;
+
+          EXECUTE format('ALTER TABLE ${schema}.%I ADD CONSTRAINT cjc CHECK (name=%L)', tablename, queue_name);
+          EXECUTE format('ALTER TABLE ${schema}.job ATTACH PARTITION ${schema}.%I FOR VALUES IN (%L)', tablename, queue_name);
+        END;
+        $$
+        LANGUAGE plpgsql;
+        `,
+        `ALTER TABLE ${schema}.queue DROP COLUMN heartbeat_seconds`,
+        `ALTER TABLE ${schema}.job DROP COLUMN heartbeat_seconds`,
+        `ALTER TABLE ${schema}.job DROP COLUMN heartbeat_on`
+      ]
+    }
+  ];
+}
+// ../../node_modules/.bun/pg-boss@12.13.0/node_modules/pg-boss/package.json
+var package_default = {
+  name: "pg-boss",
+  version: "12.13.0",
+  description: "Queueing jobs in Postgres from Node.js like a boss",
+  type: "module",
+  main: "./dist/index.js",
+  types: "./dist/index.d.ts",
+  bin: {
+    "pg-boss": "./dist/cli.js"
+  },
+  engines: {
+    node: ">=22.12.0"
+  },
+  dependencies: {
+    "cron-parser": "^5.5.0",
+    pg: "^8.18.0",
+    "serialize-error": "^13.0.1"
+  },
+  devDependencies: {
+    "@tsconfig/node-ts": "^23.6.3",
+    "@tsconfig/node22": "^22.0.5",
+    "@types/luxon": "^3.7.1",
+    "@types/node": "^22.19.11",
+    "@types/pg": "^8.16.0",
+    "@vitest/coverage-v8": "^4.0.18",
+    "cli-testlab": "^5.1.0",
+    eslint: "^9.39.2",
+    luxon: "^3.7.2",
+    neostandard: "^0.12.2",
+    tsx: "^4.21.0",
+    typescript: "^5.9.3",
+    vitest: "^4.0.18"
+  },
+  scripts: {
+    build: "npm run clean && tsc --project tsconfig.build.json",
+    clean: `node -e "fs.rmSync('dist',{recursive:true,force:true})"`,
+    prepublishOnly: "npm install && npm test && npm run build",
+    test: "eslint . && vitest run",
+    "lint:fix": "eslint . --fix",
+    cover: "vitest run --coverage",
+    tsc: "tsc --noEmit",
+    readme: "node ./examples/readme.js",
+    "db:migrate": `node --import=tsx -e 'console.log(require("./src").getMigrationPlans())'`,
+    "db:construct": `node --import=tsx -e 'console.log(require("./src").getConstructionPlans())'`
+  },
+  pgboss: {
+    schema: 30
+  },
+  repository: {
+    type: "git",
+    url: "git+https://github.com/timgit/pg-boss.git"
+  },
+  author: "timgit",
+  license: "MIT",
+  bugs: {
+    url: "https://github.com/timgit/pg-boss/issues"
+  },
+  homepage: "https://timgit.github.io/pg-boss",
+  keywords: [
+    "postgresql",
+    "postgres",
+    "queue",
+    "job"
+  ],
+  files: [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "package.json"
+  ]
+};
+
+// ../../node_modules/.bun/pg-boss@12.13.0/node_modules/pg-boss/dist/contractor.js
+var schemaVersion = package_default.pgboss.schema;
+
+class Contractor {
+  static constructionPlans(schema = DEFAULT_SCHEMA, options = { createSchema: true }) {
+    return create(schema, schemaVersion, options);
+  }
+  static migrationPlans(schema = DEFAULT_SCHEMA, version3 = schemaVersion - 1) {
+    return migrate(schema, version3);
+  }
+  static rollbackPlans(schema = DEFAULT_SCHEMA, version3 = schemaVersion) {
+    return rollback(schema, version3);
+  }
+  config;
+  db;
+  migrations;
+  constructor(db2, config2) {
+    this.config = config2;
+    this.db = db2;
+    this.migrations = this.config.migrations || getAll(this.config.schema);
+  }
+  async schemaVersion() {
+    const result = await this.db.executeSql(getVersion(this.config.schema));
+    return result.rows.length ? parseInt(result.rows[0].version) : null;
+  }
+  async isInstalled() {
+    const result = await this.db.executeSql(versionTableExists(this.config.schema));
+    return !!result.rows[0].name;
+  }
+  async start() {
+    const installed = await this.isInstalled();
+    if (installed) {
+      const version3 = await this.schemaVersion();
+      if (version3 !== null && schemaVersion > version3) {
+        await this.migrate(version3);
+      }
+    } else {
+      await this.create();
+    }
+  }
+  async check() {
+    const installed = await this.isInstalled();
+    if (!installed) {
+      throw new Error("pg-boss is not installed");
+    }
+    const version3 = await this.schemaVersion();
+    if (schemaVersion !== version3) {
+      throw new Error("pg-boss database requires migrations");
+    }
+  }
+  async create() {
+    try {
+      const commands = create(this.config.schema, schemaVersion, this.config);
+      await this.db.executeSql(commands);
+    } catch (err) {
+      assert4(err.message.includes(CREATE_RACE_MESSAGE), err);
+    }
+  }
+  async migrate(version3) {
+    try {
+      const commands = migrate(this.config.schema, version3, this.migrations);
+      await this.db.executeSql(commands);
+    } catch (err) {
+      assert4(err.message.includes(MIGRATE_RACE_MESSAGE), err);
+    }
+  }
+  async next(version3) {
+    const commands = next(this.config.schema, version3, this.migrations);
+    await this.db.executeSql(commands);
+  }
+  async rollback(version3) {
+    const commands = rollback(this.config.schema, version3, this.migrations);
+    await this.db.executeSql(commands);
+  }
+}
+var contractor_default = Contractor;
+
+// ../../node_modules/.bun/pg-boss@12.13.0/node_modules/pg-boss/dist/manager.js
+import assert5, { notStrictEqual } from "assert";
+import { randomUUID } from "crypto";
+import EventEmitter3 from "events";
+
+// ../../node_modules/.bun/non-error@0.1.0/node_modules/non-error/index.js
+var isNonErrorSymbol = Symbol("isNonError");
+function defineProperty(object2, key, value) {
+  Object.defineProperty(object2, key, {
+    value,
+    writable: false,
+    enumerable: false,
+    configurable: false
+  });
+}
+function stringify3(value) {
+  if (value === undefined) {
+    return "undefined";
+  }
+  if (value === null) {
+    return "null";
+  }
+  if (typeof value === "string") {
+    return value;
+  }
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  if (typeof value === "bigint") {
+    return `${value}n`;
+  }
+  if (typeof value === "symbol") {
+    return value.toString();
+  }
+  if (typeof value === "function") {
+    return `[Function${value.name ? ` ${value.name}` : " (anonymous)"}]`;
+  }
+  if (value instanceof Error) {
+    try {
+      return String(value);
+    } catch {
+      return "<Unserializable error>";
+    }
+  }
+  try {
+    return JSON.stringify(value);
+  } catch {
+    try {
+      return String(value);
+    } catch {
+      return "<Unserializable value>";
+    }
+  }
+}
+
+class NonError extends Error {
+  constructor(value, { superclass: Superclass = Error } = {}) {
+    if (NonError.isNonError(value)) {
+      return value;
+    }
+    if (value instanceof Error) {
+      throw new TypeError("Do not pass Error instances to NonError. Throw the error directly instead.");
+    }
+    super(`Non-error value: ${stringify3(value)}`);
+    if (Superclass !== Error) {
+      Object.setPrototypeOf(this, Superclass.prototype);
+    }
+    defineProperty(this, "name", "NonError");
+    defineProperty(this, isNonErrorSymbol, true);
+    defineProperty(this, "isNonError", true);
+    defineProperty(this, "value", value);
+  }
+  static isNonError(value) {
+    return value?.[isNonErrorSymbol] === true;
+  }
+  static #handleCallback(callback, arguments_) {
+    try {
+      const result = callback(...arguments_);
+      if (result && typeof result.then === "function") {
+        return (async () => {
+          try {
+            return await result;
+          } catch (error48) {
+            if (error48 instanceof Error) {
+              throw error48;
+            }
+            throw new NonError(error48);
+          }
+        })();
+      }
+      return result;
+    } catch (error48) {
+      if (error48 instanceof Error) {
+        throw error48;
+      }
+      throw new NonError(error48);
+    }
+  }
+  static try(callback) {
+    return NonError.#handleCallback(callback, []);
+  }
+  static wrap(callback) {
+    return (...arguments_) => NonError.#handleCallback(callback, arguments_);
+  }
+  static [Symbol.hasInstance](instance) {
+    return NonError.isNonError(instance);
+  }
+}
+
+// ../../node_modules/.bun/serialize-error@13.0.1/node_modules/serialize-error/error-constructors.js
+var list = [
+  Error,
+  EvalError,
+  RangeError,
+  ReferenceError,
+  SyntaxError,
+  TypeError,
+  URIError,
+  AggregateError,
+  globalThis.DOMException,
+  globalThis.AssertionError,
+  globalThis.SystemError
+].filter(Boolean).map((constructor) => [constructor.name, constructor]);
+var errorConstructors = new Map(list);
+var errorFactories = new Map;
+
+// ../../node_modules/.bun/serialize-error@13.0.1/node_modules/serialize-error/index.js
+var errorProperties = [
+  {
+    property: "name",
+    enumerable: false
+  },
+  {
+    property: "message",
+    enumerable: false
+  },
+  {
+    property: "stack",
+    enumerable: false
+  },
+  {
+    property: "code",
+    enumerable: true
+  },
+  {
+    property: "cause",
+    enumerable: false
+  },
+  {
+    property: "errors",
+    enumerable: false
+  }
+];
+var toJsonWasCalled = new WeakSet;
+var toJSON = (from) => {
+  toJsonWasCalled.add(from);
+  const json3 = from.toJSON();
+  toJsonWasCalled.delete(from);
+  return json3;
+};
+var newError = (name) => {
+  if (name === "NonError") {
+    return new NonError;
+  }
+  const factory = errorFactories.get(name);
+  if (factory) {
+    return factory();
+  }
+  const ErrorConstructor = errorConstructors.get(name) ?? Error;
+  return ErrorConstructor === AggregateError ? new ErrorConstructor([]) : new ErrorConstructor;
+};
+var destroyCircular = ({
+  from,
+  seen,
+  to,
+  forceEnumerable,
+  maxDepth,
+  depth,
+  useToJSON,
+  serialize
+}) => {
+  if (!to) {
+    if (Array.isArray(from)) {
+      to = [];
+    } else if (!serialize && isErrorLike(from)) {
+      to = newError(from.name);
+    } else {
+      to = {};
+    }
+  }
+  seen.add(from);
+  if (depth >= maxDepth) {
+    seen.delete(from);
+    return to;
+  }
+  if (useToJSON && typeof from.toJSON === "function" && !toJsonWasCalled.has(from)) {
+    seen.delete(from);
+    return toJSON(from);
+  }
+  const continueDestroyCircular = (value) => destroyCircular({
+    from: value,
+    seen,
+    forceEnumerable,
+    maxDepth,
+    depth: depth + 1,
+    useToJSON,
+    serialize
+  });
+  for (const key of Object.keys(from)) {
+    const value = from[key];
+    if (value && value instanceof Uint8Array && value.constructor.name === "Buffer") {
+      to[key] = serialize ? "[object Buffer]" : value;
+      continue;
+    }
+    if (value !== null && typeof value === "object" && typeof value.pipe === "function") {
+      to[key] = serialize ? "[object Stream]" : value;
+      continue;
+    }
+    if (typeof value === "function") {
+      if (!serialize) {
+        to[key] = value;
+      }
+      continue;
+    }
+    if (serialize && typeof value === "bigint") {
+      to[key] = `${value}n`;
+      continue;
+    }
+    if (!value || typeof value !== "object") {
+      try {
+        to[key] = value;
+      } catch {}
+      continue;
+    }
+    if (!seen.has(value)) {
+      to[key] = continueDestroyCircular(value);
+      continue;
+    }
+    to[key] = "[Circular]";
+  }
+  if (serialize || to instanceof Error) {
+    for (const { property, enumerable } of errorProperties) {
+      const value = from[property];
+      if (value === undefined || value === null) {
+        continue;
+      }
+      const descriptor = Object.getOwnPropertyDescriptor(to, property);
+      if (descriptor?.configurable === false) {
+        continue;
+      }
+      let processedValue = value;
+      if (typeof value === "object") {
+        processedValue = seen.has(value) ? "[Circular]" : continueDestroyCircular(value);
+      }
+      Object.defineProperty(to, property, {
+        value: processedValue,
+        enumerable: forceEnumerable || enumerable,
+        configurable: true,
+        writable: true
+      });
+    }
+  }
+  seen.delete(from);
+  return to;
+};
+function serializeError(value, options = {}) {
+  const {
+    maxDepth = Number.POSITIVE_INFINITY,
+    useToJSON = true
+  } = options;
+  if (typeof value === "object" && value !== null) {
+    return destroyCircular({
+      from: value,
+      seen: new Set,
+      forceEnumerable: true,
+      maxDepth,
+      depth: 0,
+      useToJSON,
+      serialize: true
+    });
+  }
+  if (typeof value === "function") {
+    value = "<Function>";
+  }
+  return destroyCircular({
+    from: new NonError(value),
+    seen: new Set,
+    forceEnumerable: true,
+    maxDepth,
+    depth: 0,
+    useToJSON,
+    serialize: true
+  });
+}
+function isErrorLike(value) {
+  return Boolean(value) && typeof value === "object" && typeof value.name === "string" && typeof value.message === "string" && typeof value.stack === "string";
+}
+
+// ../../node_modules/.bun/pg-boss@12.13.0/node_modules/pg-boss/dist/timekeeper.js
+var import_cron_parser = __toESM(require_dist6(), 1);
+import EventEmitter2 from "events";
+
+// ../../node_modules/.bun/pg-boss@12.13.0/node_modules/pg-boss/dist/warning.js
+async function emitAndPersistWarning(ctx, type, message, data) {
+  ctx.emitter.emit(ctx.warningEvent, { message, data });
+  if (ctx.persistWarnings) {
+    try {
+      const sql2 = insertWarning(ctx.schema);
+      await ctx.db.executeSql(sql2, [type, message, JSON.stringify(data)]);
+    } catch (err) {
+      ctx.emitter.emit(ctx.errorEvent, err);
+    }
+  }
+}
+
+// ../../node_modules/.bun/pg-boss@12.13.0/node_modules/pg-boss/dist/timekeeper.js
+var QUEUES = {
+  SEND_IT: "__pgboss__send-it"
+};
+var EVENTS = {
+  error: "error",
+  schedule: "schedule",
+  warning: "warning"
+};
+var WARNINGS = {
+  CLOCK_SKEW: {
+    message: "Warning: Clock skew between this instance and the database server. This will not break scheduling, but is emitted any time the skew exceeds 60 seconds."
+  }
+};
+var WARNING_TYPES = {
+  CLOCK_SKEW: "clock_skew"
+};
+
+class Timekeeper extends EventEmitter2 {
+  db;
+  config;
+  manager;
+  stopped = true;
+  cronMonitorInterval;
+  skewMonitorInterval;
+  timekeeping;
+  clockSkew = 0;
+  events = EVENTS;
+  constructor(db2, manager, config2) {
+    super();
+    this.db = db2;
+    this.config = config2;
+    this.manager = manager;
+  }
+  get warningContext() {
+    return {
+      emitter: this,
+      db: this.db,
+      schema: this.config.schema,
+      persistWarnings: this.config.persistWarnings,
+      warningEvent: this.events.warning,
+      errorEvent: this.events.error
+    };
+  }
+  async start() {
+    this.stopped = false;
+    await this.cacheClockSkew();
+    await this.manager.createQueue(QUEUES.SEND_IT);
+    const options = {
+      pollingIntervalSeconds: this.config.cronWorkerIntervalSeconds,
+      batchSize: 50
+    };
+    await this.manager.work(QUEUES.SEND_IT, options, (jobs) => this.onSendIt(jobs));
+    setImmediate(() => this.onCron());
+    this.cronMonitorInterval = setInterval(async () => await this.onCron(), this.config.cronMonitorIntervalSeconds * 1000);
+    this.skewMonitorInterval = setInterval(async () => await this.cacheClockSkew(), this.config.clockMonitorIntervalSeconds * 1000);
+  }
+  async stop() {
+    if (this.stopped) {
+      return;
+    }
+    this.stopped = true;
+    await this.manager.offWork(QUEUES.SEND_IT, { wait: true });
+    if (this.skewMonitorInterval) {
+      clearInterval(this.skewMonitorInterval);
+      this.skewMonitorInterval = null;
+    }
+    if (this.cronMonitorInterval) {
+      clearInterval(this.cronMonitorInterval);
+      this.cronMonitorInterval = null;
+    }
+  }
+  async cacheClockSkew() {
+    let skew = 0;
+    try {
+      if (this.config.__test__force_clock_monitoring_error) {
+        throw new Error(this.config.__test__force_clock_monitoring_error);
+      }
+      const { rows } = await this.db.executeSql(getTime());
+      const local = Date.now();
+      const dbTime = parseFloat(rows[0].time);
+      skew = dbTime - local;
+      const skewSeconds = Math.abs(skew) / 1000;
+      if (skewSeconds >= 60 || this.config.__test__force_clock_skew_warning) {
+        await emitAndPersistWarning(this.warningContext, WARNING_TYPES.CLOCK_SKEW, WARNINGS.CLOCK_SKEW.message, { seconds: skewSeconds, direction: skew > 0 ? "slower" : "faster" });
+      }
+    } catch (err) {
+      this.emit(this.events.error, err);
+    } finally {
+      this.clockSkew = skew;
+    }
+  }
+  async onCron() {
+    try {
+      if (this.stopped || this.timekeeping)
+        return;
+      if (this.config.__test__force_cron_monitoring_error) {
+        throw new Error(this.config.__test__force_cron_monitoring_error);
+      }
+      this.timekeeping = true;
+      const sql2 = trySetCronTime(this.config.schema, this.config.cronMonitorIntervalSeconds);
+      if (!this.stopped) {
+        const { rows } = await this.db.executeSql(sql2);
+        if (!this.stopped && rows.length === 1) {
+          await this.cron();
+        }
+      }
+    } catch (err) {
+      this.emit(this.events.error, err);
+    } finally {
+      this.timekeeping = false;
+    }
+  }
+  async cron() {
+    const schedules = await this.getSchedules();
+    const scheduled = schedules.filter((i) => this.shouldSendIt(i.cron, i.timezone)).map(({ name, key, data, options }) => ({ data: { name, data, options }, singletonKey: `${name}__${key}`, singletonSeconds: 60 }));
+    if (scheduled.length > 0 && !this.stopped) {
+      await this.manager.insert(QUEUES.SEND_IT, scheduled);
+    }
+  }
+  shouldSendIt(cron, tz) {
+    const interval2 = import_cron_parser.CronExpressionParser.parse(cron, { tz, strict: false });
+    const prevTime = interval2.prev();
+    const databaseTime = Date.now() + this.clockSkew;
+    const prevDiff = (databaseTime - prevTime.getTime()) / 1000;
+    return prevDiff < 60;
+  }
+  async onSendIt(jobs) {
+    await Promise.allSettled(jobs.map(({ data }) => this.manager.send(data)));
+  }
+  async getSchedules(name, key = "") {
+    let sql2 = getSchedules(this.config.schema);
+    let params = [];
+    if (name) {
+      sql2 = getSchedulesByQueue(this.config.schema);
+      params = [name, key];
+    }
+    const { rows } = await this.db.executeSql(sql2, params);
+    return rows;
+  }
+  async schedule(name, cron, data, options = {}) {
+    const { tz = "UTC", key = "", ...rest } = options;
+    import_cron_parser.CronExpressionParser.parse(cron, { tz, strict: false });
+    checkSendArgs([name, data, { ...rest }]);
+    assertKey(key);
+    try {
+      const sql2 = schedule(this.config.schema);
+      await this.db.executeSql(sql2, [name, key, cron, tz, data, options]);
+    } catch (err) {
+      if (err.message.includes("foreign key")) {
+        err.message = `Queue ${name} not found`;
+      }
+      throw err;
+    }
+  }
+  async unschedule(name, key = "") {
+    const sql2 = unschedule(this.config.schema);
+    await this.db.executeSql(sql2, [name, key]);
+  }
+}
+var timekeeper_default = Timekeeper;
+
+// ../../node_modules/.bun/pg-boss@12.13.0/node_modules/pg-boss/dist/tools.js
+import { setTimeout as setTimeout2 } from "timers/promises";
+function unwrapSQLResult(result) {
+  if (Array.isArray(result)) {
+    return { rows: result.flatMap((i) => i.rows) };
+  }
+  return result;
+}
+function delay(ms, error48, abortController) {
+  const ac = abortController || new AbortController;
+  const promise2 = new Promise((resolve, reject) => {
+    setTimeout2(ms, null, { signal: ac.signal }).then(() => {
+      if (error48) {
+        reject(new Error(error48));
+      } else {
+        resolve();
+      }
+    }).catch(resolve);
+  });
+  promise2.abort = () => {
+    if (!ac.signal.aborted) {
+      ac.abort();
+    }
+  };
+  return promise2;
+}
+async function resolveWithinSeconds(promise2, seconds, message, abortController) {
+  const timeout = Math.max(1, seconds) * 1000;
+  const reject = delay(timeout, message, abortController);
+  let result;
+  try {
+    result = await Promise.race([promise2, reject]);
+  } finally {
+    reject.abort();
+  }
+  return result;
+}
+
+// ../../node_modules/.bun/pg-boss@12.13.0/node_modules/pg-boss/dist/worker.js
+var WORKER_STATES = {
+  created: "created",
+  active: "active",
+  stopping: "stopping",
+  stopped: "stopped"
+};
+
+class Worker {
+  id;
+  name;
+  options;
+  fetch;
+  onFetch;
+  onError;
+  interval;
+  jobs = [];
+  createdOn = Date.now();
+  state = WORKER_STATES.created;
+  lastFetchedOn = null;
+  lastJobStartedOn = null;
+  lastJobEndedOn = null;
+  lastJobDuration = null;
+  lastError = null;
+  lastErrorOn = null;
+  stopping = false;
+  stopped = false;
+  abortController = null;
+  loopDelayPromise = null;
+  beenNotified = false;
+  runPromise = null;
+  constructor({ id, name, options, interval: interval2, fetch: fetch2, onFetch, onError }) {
+    this.id = id;
+    this.name = name;
+    this.options = options;
+    this.fetch = fetch2;
+    this.onFetch = onFetch;
+    this.onError = onError;
+    this.interval = interval2;
+  }
+  start() {
+    this.runPromise = this.run();
+  }
+  async run() {
+    this.state = WORKER_STATES.active;
+    while (!this.stopping) {
+      const started = Date.now();
+      try {
+        this.beenNotified = false;
+        const jobs = await this.fetch();
+        this.lastFetchedOn = Date.now();
+        if (jobs) {
+          this.jobs = jobs;
+          this.lastJobStartedOn = this.lastFetchedOn;
+          await this.onFetch(jobs);
+          this.lastJobEndedOn = Date.now();
+          this.jobs = [];
+        }
+      } catch (err) {
+        this.lastErrorOn = Date.now();
+        this.lastError = err;
+        err.message = `${err.message} (Queue: ${this.name}, Worker: ${this.id})`;
+        this.onError(err);
+      }
+      const duration3 = Date.now() - started;
+      this.lastJobDuration = duration3;
+      if (!this.stopping && !this.beenNotified && this.interval - duration3 > 100) {
+        this.loopDelayPromise = delay(this.interval - duration3);
+        await this.loopDelayPromise;
+        this.loopDelayPromise = null;
+      }
+    }
+    this.stopping = false;
+    this.stopped = true;
+    this.state = WORKER_STATES.stopped;
+  }
+  notify() {
+    this.beenNotified = true;
+    if (this.loopDelayPromise) {
+      this.loopDelayPromise.abort();
+    }
+  }
+  async stop() {
+    this.stopping = true;
+    this.state = WORKER_STATES.stopping;
+    if (this.loopDelayPromise) {
+      this.loopDelayPromise.abort();
+    }
+    await this.runPromise;
+  }
+  abort() {
+    if (this.abortController && !this.abortController.signal.aborted) {
+      this.abortController.abort();
+    }
+  }
+  toWipData() {
+    return {
+      id: this.id,
+      name: this.name,
+      options: this.options,
+      state: this.state,
+      count: this.jobs.length,
+      createdOn: this.createdOn,
+      lastFetchedOn: this.lastFetchedOn,
+      lastJobStartedOn: this.lastJobStartedOn,
+      lastJobEndedOn: this.lastJobEndedOn,
+      lastError: this.lastError,
+      lastErrorOn: this.lastErrorOn,
+      lastJobDuration: this.lastJobDuration
+    };
+  }
+}
+var worker_default = Worker;
+
+// ../../node_modules/.bun/pg-boss@12.13.0/node_modules/pg-boss/dist/spy.js
+class JobSpy {
+  #jobResults = new Map;
+  #pendingPromises = [];
+  clear() {
+    this.#jobResults.clear();
+    this.#pendingPromises = [];
+  }
+  waitForJobWithId(id, awaitedState) {
+    return this.waitForJob(() => true, awaitedState, id);
+  }
+  waitForJob(dataSelector, awaitedState, specificId) {
+    const selector = (job) => {
+      if (specificId && job.id !== specificId) {
+        return false;
+      }
+      return dataSelector(job.data);
+    };
+    for (const job of this.#jobResults.values()) {
+      if (job.state === awaitedState && selector(job)) {
+        return Promise.resolve(this.#cloneJob(job));
+      }
+    }
+    return this.#registerPromise(selector, awaitedState);
+  }
+  #registerPromise(selector, awaitedState) {
+    let resolve;
+    const promise2 = new Promise((_resolve) => {
+      resolve = _resolve;
+    });
+    this.#pendingPromises.push({ selector, awaitedState, resolve });
+    return promise2;
+  }
+  #getJobResultKey(id, state) {
+    return `${id}:${state}`;
+  }
+  #cloneJob(job) {
+    return {
+      id: job.id,
+      name: job.name,
+      data: structuredClone(job.data),
+      state: job.state,
+      output: job.output ? structuredClone(job.output) : undefined
+    };
+  }
+  addJob(id, name, data, state, output) {
+    const job = {
+      id,
+      name,
+      data: structuredClone(data),
+      state,
+      output: output ? structuredClone(output) : undefined
+    };
+    const key = this.#getJobResultKey(id, state);
+    this.#jobResults.set(key, job);
+    const matchingPromises = [];
+    const remainingPromises = [];
+    for (const pending of this.#pendingPromises) {
+      if (pending.awaitedState === state && pending.selector(job)) {
+        matchingPromises.push(pending);
+      } else {
+        remainingPromises.push(pending);
+      }
+    }
+    this.#pendingPromises = remainingPromises;
+    for (const pending of matchingPromises) {
+      pending.resolve(this.#cloneJob(job));
+    }
+  }
+}
+
+// ../../node_modules/.bun/pg-boss@12.13.0/node_modules/pg-boss/dist/manager.js
+var INTERNAL_QUEUES = Object.values(QUEUES).reduce((acc, i) => ({ ...acc, [i]: i }), {});
+var events = {
+  error: "error",
+  wip: "wip"
+};
+
+class Manager extends EventEmitter3 {
+  events = events;
+  db;
+  config;
+  wipTs;
+  workers;
+  stopped;
+  queueCacheInterval;
+  timekeeper;
+  queues;
+  pendingOffWorkCleanups;
+  #spies;
+  #localGroupActive;
+  #localGroupConfig;
+  constructor(db2, config2) {
+    super();
+    this.config = config2;
+    this.db = db2;
+    this.wipTs = Date.now();
+    this.workers = new Map;
+    this.queues = null;
+    this.pendingOffWorkCleanups = new Set;
+    this.#spies = new Map;
+    this.#localGroupActive = new Map;
+    this.#localGroupConfig = new Map;
+  }
+  getSpy(name) {
+    if (!this.config.__test__enableSpies) {
+      throw new Error("Spy is not enabled. Set __test__enableSpies: true in constructor options to use spies.");
+    }
+    let spy = this.#spies.get(name);
+    if (!spy) {
+      spy = new JobSpy;
+      this.#spies.set(name, spy);
+    }
+    return spy;
+  }
+  clearSpies() {
+    for (const spy of this.#spies.values()) {
+      spy.clear();
+    }
+    this.#spies.clear();
+  }
+  #getLocalGroupLimit(queueName, groupTier) {
+    const config2 = this.#localGroupConfig.get(queueName);
+    if (!config2)
+      return Infinity;
+    if (groupTier && config2.tiers && groupTier in config2.tiers) {
+      return config2.tiers[groupTier];
+    }
+    return config2.default;
+  }
+  #getGroupsAtLocalCapacity(queueName) {
+    const config2 = this.#localGroupConfig.get(queueName);
+    if (!config2)
+      return [];
+    const queueGroups = this.#localGroupActive.get(queueName);
+    if (!queueGroups)
+      return [];
+    const atCapacity = [];
+    for (const [groupId, activeCount] of queueGroups.entries()) {
+      const limit = config2.default;
+      if (activeCount >= limit) {
+        atCapacity.push(groupId);
+      }
+    }
+    return atCapacity;
+  }
+  #incrementLocalGroupCount(queueName, groupId) {
+    let queueGroups = this.#localGroupActive.get(queueName);
+    if (!queueGroups) {
+      queueGroups = new Map;
+      this.#localGroupActive.set(queueName, queueGroups);
+    }
+    const current = queueGroups.get(groupId) || 0;
+    queueGroups.set(groupId, current + 1);
+  }
+  #decrementLocalGroupCount(queueName, groupId) {
+    const queueGroups = this.#localGroupActive.get(queueName);
+    if (!queueGroups)
+      return;
+    const current = queueGroups.get(groupId) || 0;
+    if (current <= 1) {
+      queueGroups.delete(groupId);
+    } else {
+      queueGroups.set(groupId, current - 1);
+    }
+  }
+  #trackJobsActive(name, jobs) {
+    const spy = this.config.__test__enableSpies ? this.#spies.get(name) : undefined;
+    if (spy) {
+      for (const job of jobs) {
+        spy.addJob(job.id, name, job.data, "active");
+      }
+    }
+  }
+  #trackJobsCompleted(name, jobs, result) {
+    const spy = this.config.__test__enableSpies ? this.#spies.get(name) : undefined;
+    if (spy) {
+      const output = jobs.length === 1 ? result : undefined;
+      for (const job of jobs) {
+        spy.addJob(job.id, name, job.data, "completed", output);
+      }
+    }
+  }
+  #trackJobsFailed(name, jobs, err) {
+    const spy = this.config.__test__enableSpies ? this.#spies.get(name) : undefined;
+    if (spy) {
+      for (const job of jobs) {
+        spy.addJob(job.id, name, job.data, "failed", { message: err?.message, stack: err?.stack });
+      }
+    }
+  }
+  #storeLocalGroupConfig(name, localGroupConcurrency) {
+    const config2 = typeof localGroupConcurrency === "number" ? { default: localGroupConcurrency } : localGroupConcurrency;
+    this.#localGroupConfig.set(name, config2);
+  }
+  #cleanupLocalGroupTracking(name) {
+    const hasWorkersForQueue = this.getWorkers().some((w) => w.name === name && !w.stopping && !w.stopped);
+    if (!hasWorkersForQueue) {
+      this.#localGroupConfig.delete(name);
+      this.#localGroupActive.delete(name);
+    }
+  }
+  #trackLocalGroupStart(name, jobs) {
+    const allowed = [];
+    const excess = [];
+    const groupedJobs = [];
+    for (const job of jobs) {
+      if (!job.groupId) {
+        allowed.push(job);
+        continue;
+      }
+      const currentCount = this.#localGroupActive.get(name)?.get(job.groupId) || 0;
+      const limit = this.#getLocalGroupLimit(name, job.groupTier);
+      if (currentCount < limit) {
+        this.#incrementLocalGroupCount(name, job.groupId);
+        allowed.push(job);
+        groupedJobs.push(job);
+      } else {
+        excess.push(job);
+      }
+    }
+    return { allowed, excess, groupedJobs };
+  }
+  #trackLocalGroupEnd(name, groupedJobs) {
+    for (const job of groupedJobs) {
+      if (job.groupId) {
+        this.#decrementLocalGroupCount(name, job.groupId);
+      }
+    }
+  }
+  async#processJobs(name, jobs, callback, worker, heartbeatRefreshSeconds) {
+    const jobIds = jobs.map((job) => job.id);
+    const maxExpiration = jobs.reduce((acc, i) => Math.max(acc, i.expireInSeconds), 0);
+    const heartbeatSeconds = jobs.reduce((acc, j) => Math.max(acc, j.heartbeatSeconds || 0), 0);
+    const ac = new AbortController;
+    jobs.forEach((job) => {
+      job.signal = ac.signal;
+    });
+    if (worker) {
+      worker.abortController = ac;
+    }
+    let heartbeatTimer = null;
+    if (heartbeatSeconds > 0) {
+      const refreshSeconds = heartbeatRefreshSeconds ?? heartbeatSeconds / 2;
+      const intervalMs = refreshSeconds * 1000;
+      heartbeatTimer = setInterval(async () => {
+        try {
+          await this.touch(name, jobIds);
+        } catch (err) {
+          this.emit(events.error, err);
+        }
+      }, intervalMs);
+    }
+    try {
+      const result = await resolveWithinSeconds(callback(jobs), maxExpiration, `handler execution exceeded ${maxExpiration}s`, ac);
+      await this.complete(name, jobIds, jobIds.length === 1 ? result : undefined);
+      this.#trackJobsCompleted(name, jobs, result);
+    } catch (err) {
+      await this.fail(name, jobIds, err);
+      this.#trackJobsFailed(name, jobs, err);
+    } finally {
+      if (heartbeatTimer)
+        clearInterval(heartbeatTimer);
+      if (worker) {
+        worker.abortController = null;
+      }
+    }
+  }
+  async start() {
+    this.stopped = false;
+    this.queueCacheInterval = setInterval(() => this.onCacheQueues({ emit: true }), this.config.queueCacheIntervalSeconds * 1000);
+    await this.onCacheQueues();
+  }
+  async onCacheQueues({ emit = false } = {}) {
+    try {
+      assert5(!this.config.__test__throw_queueCache, "test error");
+      const queues = await this.getQueues();
+      this.queues = queues.reduce((acc, i) => {
+        acc[i.name] = i;
+        return acc;
+      }, {});
+    } catch (error48) {
+      emit && this.emit(events.error, { ...error48, message: error48.message, stack: error48.stack });
+    }
+  }
+  async getQueueCache(name) {
+    assert5(this.queues, "Queue cache is not initialized");
+    let queue = this.queues[name];
+    if (queue) {
+      return queue;
+    }
+    queue = await this.getQueue(name);
+    if (!queue) {
+      throw new Error(`Queue ${name} does not exist`);
+    }
+    this.queues[name] = queue;
+    return queue;
+  }
+  async stop() {
+    this.stopped = true;
+    clearInterval(this.queueCacheInterval);
+    await Promise.allSettled([...this.workers.values()].filter((worker) => !INTERNAL_QUEUES[worker.name]).map(async (worker) => await this.offWork(worker.name, { wait: false })));
+    this.#localGroupConfig.clear();
+    this.#localGroupActive.clear();
+  }
+  async failWip() {
+    for (const worker of this.workers.values()) {
+      const jobIds = worker.jobs.map((j) => j.id);
+      if (jobIds.length) {
+        await this.fail(worker.name, jobIds, "pg-boss shut down while active");
+      }
+      worker.abort();
+    }
+  }
+  async work(name, ...args) {
+    const { options, callback } = checkWorkArgs(name, args);
+    if (this.stopped) {
+      throw new Error("Workers are disabled. pg-boss is stopped");
+    }
+    const { pollingInterval: interval2, batchSize = 1, includeMetadata = false, priority = true, localConcurrency = 1, localGroupConcurrency, groupConcurrency, orderByCreatedOn = true, heartbeatRefreshSeconds } = options;
+    if (localGroupConcurrency != null) {
+      this.#storeLocalGroupConfig(name, localGroupConcurrency);
+    }
+    const firstWorkerId = randomUUID({ disableEntropyCache: true });
+    const createWorker = (workerId) => {
+      const fetch2 = () => {
+        const ignoreGroups = localGroupConcurrency != null ? this.#getGroupsAtLocalCapacity(name) : undefined;
+        return this.fetch(name, { batchSize, includeMetadata, priority, orderByCreatedOn, groupConcurrency, ignoreGroups });
+      };
+      const onFetch = async (jobs) => {
+        if (!jobs.length)
+          return;
+        if (this.config.__test__throw_worker)
+          throw new Error("__test__throw_worker");
+        this.emitWip(name);
+        this.#trackJobsActive(name, jobs);
+        const worker = this.workers.get(workerId);
+        if (localGroupConcurrency == null) {
+          await this.#processJobs(name, jobs, callback, worker, heartbeatRefreshSeconds);
+        } else {
+          const { allowed, excess, groupedJobs } = this.#trackLocalGroupStart(name, jobs);
+          if (excess.length > 0) {
+            const excessIds = excess.map((job) => job.id);
+            await this.restore(name, excessIds);
+          }
+          if (allowed.length > 0) {
+            try {
+              await this.#processJobs(name, allowed, callback, worker, heartbeatRefreshSeconds);
+            } finally {
+              this.#trackLocalGroupEnd(name, groupedJobs);
+            }
+          }
+        }
+        this.emitWip(name);
+      };
+      const onError = (error48) => {
+        this.emit(events.error, { ...error48, message: error48.message, stack: error48.stack, queue: name, worker: workerId });
+      };
+      return new worker_default({ id: workerId, name, options, interval: interval2, fetch: fetch2, onFetch, onError });
+    };
+    for (let i = 0;i < localConcurrency; i++) {
+      const workerId = i === 0 ? firstWorkerId : randomUUID({ disableEntropyCache: true });
+      const worker = createWorker(workerId);
+      this.addWorker(worker);
+      worker.start();
+    }
+    return firstWorkerId;
+  }
+  addWorker(worker) {
+    this.workers.set(worker.id, worker);
+  }
+  removeWorker(worker) {
+    this.workers.delete(worker.id);
+  }
+  getWorkers() {
+    return Array.from(this.workers.values());
+  }
+  emitWip(name) {
+    if (!INTERNAL_QUEUES[name]) {
+      const now = Date.now();
+      if (now - this.wipTs > 2000) {
+        this.emit(events.wip, this.getWipData());
+        this.wipTs = now;
+      }
+    }
+  }
+  getWipData(options = {}) {
+    const { includeInternal = false } = options;
+    const data = this.getWorkers().map((i) => i.toWipData()).filter((i) => i.state !== "stopped" && (!INTERNAL_QUEUES[i.name] || includeInternal));
+    return data;
+  }
+  hasPendingCleanups() {
+    return this.pendingOffWorkCleanups.size > 0;
+  }
+  async offWork(name, options = { wait: true }) {
+    assert5(name, "queue name is required");
+    assert5(typeof name === "string", "queue name must be a string");
+    const query = (i) => options?.id ? i.id === options.id : i.name === name;
+    const workers = this.getWorkers().filter((i) => query(i) && !i.stopping && !i.stopped);
+    if (workers.length === 0) {
+      return;
+    }
+    const cleanupPromise = Promise.allSettled(workers.map(async (worker) => {
+      await worker.stop();
+      this.removeWorker(worker);
+    }));
+    if (options.wait) {
+      await cleanupPromise;
+      this.#cleanupLocalGroupTracking(name);
+    } else {
+      this.pendingOffWorkCleanups.add(cleanupPromise);
+      cleanupPromise.finally(() => {
+        this.pendingOffWorkCleanups.delete(cleanupPromise);
+        this.#cleanupLocalGroupTracking(name);
+      });
+    }
+  }
+  notifyWorker(workerId) {
+    this.workers.get(workerId)?.notify();
+  }
+  async subscribe(event, name) {
+    assert5(event, "Missing required argument");
+    assert5(name, "Missing required argument");
+    const sql2 = subscribe(this.config.schema);
+    await this.db.executeSql(sql2, [event, name]);
+  }
+  async unsubscribe(event, name) {
+    assert5(event, "Missing required argument");
+    assert5(name, "Missing required argument");
+    const sql2 = unsubscribe(this.config.schema);
+    await this.db.executeSql(sql2, [event, name]);
+  }
+  async publish(event, data, options) {
+    assert5(event, "Missing required argument");
+    const sql2 = getQueuesForEvent(this.config.schema);
+    const { rows } = await this.db.executeSql(sql2, [event]);
+    await Promise.allSettled(rows.map(({ name }) => this.send(name, data, options)));
+  }
+  async send(...args) {
+    const result = checkSendArgs(args);
+    return await this.createJob(result);
+  }
+  async sendAfter(name, data, options, after) {
+    options = options ? { ...options } : {};
+    options.startAfter = after;
+    const result = checkSendArgs([name, data, options]);
+    return await this.createJob(result);
+  }
+  async sendThrottled(name, data, options, seconds, key) {
+    options = options ? { ...options } : {};
+    options.singletonSeconds = seconds;
+    options.singletonNextSlot = false;
+    options.singletonKey = key;
+    const result = checkSendArgs([name, data, options]);
+    return await this.createJob(result);
+  }
+  async sendDebounced(name, data, options, seconds, key) {
+    options = options ? { ...options } : {};
+    options.singletonSeconds = seconds;
+    options.singletonNextSlot = true;
+    options.singletonKey = key;
+    const result = checkSendArgs([name, data, options]);
+    return await this.createJob(result);
+  }
+  async createJob(request) {
+    const { name, data = null, options = {} } = request;
+    const { id = null, db: wrapper, priority, startAfter, singletonKey = null, singletonSeconds, singletonNextSlot, expireInSeconds, deleteAfterSeconds, retentionSeconds, keepUntil, retryLimit, retryDelay, retryBackoff, retryDelayMax, heartbeatSeconds, group, deadLetter = null } = options;
+    const job = {
+      id,
+      name,
+      data,
+      priority,
+      startAfter,
+      singletonKey,
+      singletonSeconds,
+      singletonOffset: 0,
+      groupId: group?.id ?? null,
+      groupTier: group?.tier ?? null,
+      expireInSeconds,
+      deleteAfterSeconds,
+      retentionSeconds,
+      keepUntil,
+      retryLimit,
+      retryDelay,
+      retryBackoff,
+      retryDelayMax,
+      heartbeatSeconds,
+      deadLetter
+    };
+    const db2 = wrapper || this.db;
+    const { table, policy } = await this.getQueueCache(name);
+    if (policy === QUEUE_POLICIES.key_strict_fifo && !singletonKey) {
+      throw new Error(`${QUEUE_POLICIES.key_strict_fifo} queues require a singletonKey`);
+    }
+    const sql2 = insertJobs(this.config.schema, { table, name, returnId: true });
+    const { rows: try1 } = await db2.executeSql(sql2, [JSON.stringify([job])]);
+    if (try1.length === 1) {
+      const jobId = try1[0].id;
+      if (this.config.__test__enableSpies) {
+        const spy = this.#spies.get(name);
+        if (spy) {
+          spy.addJob(jobId, name, data || {}, "created");
+        }
+      }
+      return jobId;
+    }
+    if (singletonNextSlot) {
+      job.startAfter = this.getDebounceStartAfter(singletonSeconds, this.timekeeper.clockSkew);
+      job.singletonOffset = singletonSeconds;
+      const { rows: try2 } = await db2.executeSql(sql2, [JSON.stringify([job])]);
+      if (try2.length === 1) {
+        const jobId = try2[0].id;
+        if (this.config.__test__enableSpies) {
+          const spy = this.#spies.get(name);
+          if (spy) {
+            spy.addJob(jobId, name, data || {}, "created");
+          }
+        }
+        return jobId;
+      }
+    }
+    return null;
+  }
+  async insert(name, jobs, options = {}) {
+    assert5(Array.isArray(jobs), "jobs argument should be an array");
+    const { table, policy } = await this.getQueueCache(name);
+    if (policy === QUEUE_POLICIES.key_strict_fifo) {
+      for (const job of jobs) {
+        if (!job.singletonKey) {
+          throw new Error(`${QUEUE_POLICIES.key_strict_fifo} queues require a singletonKey`);
+        }
+      }
+    }
+    const db2 = this.assertDb(options);
+    const spy = this.config.__test__enableSpies ? this.#spies.get(name) : undefined;
+    const returnId = !!spy || !!options.returnId;
+    const sql2 = insertJobs(this.config.schema, { table, name, returnId });
+    const { rows } = await db2.executeSql(sql2, [JSON.stringify(jobs)]);
+    if (rows.length) {
+      if (spy) {
+        for (let i = 0;i < rows.length; i++) {
+          spy.addJob(rows[i].id, name, jobs[i].data || {}, "created");
+        }
+      }
+      return rows.map((i) => i.id);
+    }
+    return null;
+  }
+  getDebounceStartAfter(singletonSeconds, clockOffset) {
+    const debounceInterval = singletonSeconds * 1000;
+    const now = Date.now() + clockOffset;
+    const slot = Math.floor(now / debounceInterval) * debounceInterval;
+    let startAfter = singletonSeconds - Math.floor((now - slot) / 1000) || 1;
+    if (singletonSeconds > 1) {
+      startAfter++;
+    }
+    return startAfter;
+  }
+  async fetch(name, options = {}) {
+    checkFetchArgs(name, options);
+    const db2 = this.assertDb(options);
+    const { table, policy, singletonsActive } = await this.getQueueCache(name);
+    const fetchOptions = {
+      ...options,
+      schema: this.config.schema,
+      table,
+      name,
+      policy,
+      limit: options.batchSize || 1,
+      ignoreSingletons: singletonsActive
+    };
+    const query = fetchNextJob(fetchOptions);
+    let result;
+    try {
+      result = await db2.executeSql(query.text, query.values);
+    } catch (err) {}
+    return result?.rows || [];
+  }
+  mapCompletionIdArg(id, funcName) {
+    const errorMessage = `${funcName}() requires an id`;
+    assert5(id, errorMessage);
+    const ids = Array.isArray(id) ? id : [id];
+    assert5(ids.length, errorMessage);
+    return ids;
+  }
+  mapCompletionDataArg(data) {
+    if (data === null || typeof data === "undefined" || typeof data === "function") {
+      return null;
+    }
+    const result = typeof data === "object" && !Array.isArray(data) ? data : { value: data };
+    return serializeError(result);
+  }
+  mapCommandResponse(ids, result) {
+    return {
+      jobs: ids,
+      requested: ids.length,
+      affected: result && result.rows ? parseInt(result.rows[0].count) : 0
+    };
+  }
+  async complete(name, id, data, options = {}) {
+    assertQueueName(name);
+    const db2 = this.assertDb(options);
+    const ids = this.mapCompletionIdArg(id, "complete");
+    const { table } = await this.getQueueCache(name);
+    const sql2 = completeJobs(this.config.schema, table, options.includeQueued);
+    const result = await db2.executeSql(sql2, [name, ids, this.mapCompletionDataArg(data)]);
+    return this.mapCommandResponse(ids, result);
+  }
+  async fail(name, id, data, options = {}) {
+    assertQueueName(name);
+    const db2 = this.assertDb(options);
+    const ids = this.mapCompletionIdArg(id, "fail");
+    const { table } = await this.getQueueCache(name);
+    const sql2 = failJobsById(this.config.schema, table);
+    const result = await db2.executeSql(sql2, [name, ids, this.mapCompletionDataArg(data)]);
+    return this.mapCommandResponse(ids, result);
+  }
+  async deleteJob(name, id, options = {}) {
+    assertQueueName(name);
+    const db2 = this.assertDb(options);
+    const ids = this.mapCompletionIdArg(id, "deleteJob");
+    const { table } = await this.getQueueCache(name);
+    const sql2 = deleteJobsById(this.config.schema, table);
+    const result = await db2.executeSql(sql2, [name, ids]);
+    return this.mapCommandResponse(ids, result);
+  }
+  async cancel(name, id, options = {}) {
+    assertQueueName(name);
+    const db2 = this.assertDb(options);
+    const ids = this.mapCompletionIdArg(id, "cancel");
+    const { table } = await this.getQueueCache(name);
+    const sql2 = cancelJobs(this.config.schema, table);
+    const result = await db2.executeSql(sql2, [name, ids]);
+    return this.mapCommandResponse(ids, result);
+  }
+  async resume(name, id, options = {}) {
+    assertQueueName(name);
+    const db2 = this.assertDb(options);
+    const ids = this.mapCompletionIdArg(id, "resume");
+    const { table } = await this.getQueueCache(name);
+    const sql2 = resumeJobs(this.config.schema, table);
+    const result = await db2.executeSql(sql2, [name, ids]);
+    return this.mapCommandResponse(ids, result);
+  }
+  async restore(name, id, options = {}) {
+    assertQueueName(name);
+    const db2 = this.assertDb(options);
+    const ids = this.mapCompletionIdArg(id, "restore");
+    const { table } = await this.getQueueCache(name);
+    const sql2 = restoreJobs(this.config.schema, table);
+    await db2.executeSql(sql2, [name, ids]);
+  }
+  async retry(name, id, options = {}) {
+    assertQueueName(name);
+    const db2 = options.db || this.db;
+    const ids = this.mapCompletionIdArg(id, "retry");
+    const { table } = await this.getQueueCache(name);
+    const sql2 = retryJobs(this.config.schema, table);
+    const result = await db2.executeSql(sql2, [name, ids]);
+    return this.mapCommandResponse(ids, result);
+  }
+  async touch(name, id, options = {}) {
+    assertQueueName(name);
+    const db2 = this.assertDb(options);
+    const ids = this.mapCompletionIdArg(id, "touch");
+    const { table } = await this.getQueueCache(name);
+    const sql2 = touchJobs(this.config.schema, table);
+    const result = await db2.executeSql(sql2, [name, ids]);
+    return this.mapCommandResponse(ids, result);
+  }
+  async createQueue(name, options = {}) {
+    name = name || options.name;
+    assertQueueName(name);
+    const policy = options.policy || QUEUE_POLICIES.standard;
+    assert5(policy in QUEUE_POLICIES, `${policy} is not a valid queue policy`);
+    validateQueueArgs(options);
+    if (options.deadLetter) {
+      assertQueueName(options.deadLetter);
+      notStrictEqual(name, options.deadLetter, "deadLetter cannot be itself");
+      await this.getQueueCache(options.deadLetter);
+    }
+    const sql2 = createQueue(this.config.schema, name, { ...options, policy });
+    await this.db.executeSql(sql2);
+  }
+  async getBlockedKeys(name) {
+    assertQueueName(name);
+    const { table, policy } = await this.getQueueCache(name);
+    if (policy !== QUEUE_POLICIES.key_strict_fifo) {
+      throw new Error(`getBlockedKeys is only available for ${QUEUE_POLICIES.key_strict_fifo} queues`);
+    }
+    const sql2 = getBlockedKeys(this.config.schema, table);
+    const { rows } = await this.db.executeSql(sql2, [name]);
+    return rows.map((row) => row.singletonKey);
+  }
+  async getQueues(names) {
+    names = Array.isArray(names) ? names : typeof names === "string" ? [names] : undefined;
+    if (names) {
+      for (const name of names) {
+        assertQueueName(name);
+      }
+    }
+    const query = getQueues(this.config.schema, names);
+    const { rows } = await this.db.executeSql(query.text, query.values);
+    return rows;
+  }
+  async updateQueue(name, options = {}) {
+    assertQueueName(name);
+    assert5(Object.keys(options).length > 0, "no properties found to update");
+    if ("policy" in options) {
+      throw new Error("queue policy cannot be changed after creation");
+    }
+    if ("partition" in options) {
+      throw new Error("queue partitioning cannot be changed after creation");
+    }
+    validateQueueArgs(options);
+    const { deadLetter } = options;
+    if (deadLetter) {
+      assertQueueName(deadLetter);
+      notStrictEqual(name, deadLetter, "deadLetter cannot be itself");
+    }
+    const sql2 = updateQueue(this.config.schema, { deadLetter });
+    await this.db.executeSql(sql2, [name, options]);
+  }
+  async getQueue(name) {
+    assertQueueName(name);
+    const query = getQueues(this.config.schema, [name]);
+    const { rows } = await this.db.executeSql(query.text, query.values);
+    return rows[0] || null;
+  }
+  async deleteQueue(name) {
+    assertQueueName(name);
+    try {
+      await this.getQueueCache(name);
+      const sql2 = deleteQueue(this.config.schema, name);
+      await this.db.executeSql(sql2);
+    } catch {}
+  }
+  async deleteQueuedJobs(name) {
+    assertQueueName(name);
+    const { table } = await this.getQueueCache(name);
+    const sql2 = deleteQueuedJobs(this.config.schema, table);
+    await this.db.executeSql(sql2, [name]);
+  }
+  async deleteStoredJobs(name) {
+    assertQueueName(name);
+    const { table } = await this.getQueueCache(name);
+    const sql2 = deleteStoredJobs(this.config.schema, table);
+    await this.db.executeSql(sql2, [name]);
+  }
+  async deleteAllJobs(name) {
+    if (!name) {
+      const sql2 = truncateTable(this.config.schema, "job");
+      await this.db.executeSql(sql2);
+      return;
+    }
+    assertQueueName(name);
+    const { table, partition } = await this.getQueueCache(name);
+    if (partition) {
+      const sql2 = truncateTable(this.config.schema, table);
+      await this.db.executeSql(sql2);
+    } else {
+      const sql2 = deleteAllJobs(this.config.schema, table);
+      await this.db.executeSql(sql2, [name]);
+    }
+  }
+  async getQueueStats(name) {
+    assertQueueName(name);
+    const queue = await this.getQueueCache(name);
+    const query = getQueueStats(this.config.schema, queue.table, [name]);
+    const { rows } = await this.db.executeSql(query.text, query.values);
+    return Object.assign(queue, rows.at(0) || {
+      deferredCount: 0,
+      queuedCount: 0,
+      activeCount: 0,
+      totalCount: 0
+    });
+  }
+  async getJobById(name, id, options = {}) {
+    assertQueueName(name);
+    const db2 = this.assertDb(options);
+    const { table } = await this.getQueueCache(name);
+    const sql2 = getJobById(this.config.schema, table);
+    const result1 = await db2.executeSql(sql2, [name, id]);
+    if (result1?.rows?.length === 1) {
+      return result1.rows[0];
+    } else {
+      return null;
+    }
+  }
+  async findJobs(name, options = {}) {
+    assertQueueName(name);
+    const db2 = this.assertDb(options);
+    const { table } = await this.getQueueCache(name);
+    const { id, key, data, queued = false } = options;
+    const sql2 = findJobs(this.config.schema, table, {
+      byId: id !== undefined,
+      byKey: key !== undefined,
+      byData: data !== undefined,
+      queued
+    });
+    const values2 = [name];
+    if (id !== undefined)
+      values2.push(id);
+    if (key !== undefined)
+      values2.push(key);
+    if (data !== undefined)
+      values2.push(JSON.stringify(data));
+    const result = await db2.executeSql(sql2, values2);
+    return result?.rows || [];
+  }
+  assertDb(options) {
+    if (options.db) {
+      return options.db;
+    }
+    if (this.db._pgbdb) {
+      assert5(this.db.opened, "Database connection is not opened");
+    }
+    return this.db;
+  }
+}
+var manager_default = Manager;
+
+// ../../node_modules/.bun/pg-boss@12.13.0/node_modules/pg-boss/dist/boss.js
+import EventEmitter4 from "events";
+var events2 = {
+  error: "error",
+  warning: "warning"
+};
+var WARNINGS2 = {
+  SLOW_QUERY: { seconds: 30, message: "Warning: slow query. Your queues and/or database server should be reviewed" },
+  LARGE_QUEUE: { size: 1e4, message: "Warning: large queue backlog. Your queue should be reviewed" }
+};
+var WARNING_TYPES2 = {
+  SLOW_QUERY: "slow_query",
+  QUEUE_BACKLOG: "queue_backlog"
+};
+
+class Boss extends EventEmitter4 {
+  #stopped;
+  #stopping;
+  #maintaining;
+  #superviseInterval;
+  #db;
+  #config;
+  #manager;
+  events = events2;
+  constructor(db2, manager, config2) {
+    super();
+    this.#db = db2;
+    this.#config = config2;
+    this.#manager = manager;
+    this.#stopped = true;
+    this.#stopping = false;
+    if (config2.warningSlowQuerySeconds) {
+      WARNINGS2.SLOW_QUERY.seconds = config2.warningSlowQuerySeconds;
+    }
+    if (config2.warningQueueSize) {
+      WARNINGS2.LARGE_QUEUE.size = config2.warningQueueSize;
+    }
+  }
+  async start() {
+    if (this.#stopped) {
+      this.#stopping = false;
+      this.#superviseInterval = setInterval(() => this.#onSupervise(), this.#config.superviseIntervalSeconds * 1000);
+      this.#stopped = false;
+    }
+  }
+  async stop() {
+    if (!this.#stopped) {
+      this.#stopping = true;
+      if (this.#superviseInterval)
+        clearInterval(this.#superviseInterval);
+      this.#stopped = true;
+    }
+  }
+  get #warningContext() {
+    return {
+      emitter: this,
+      db: this.#db,
+      schema: this.#config.schema,
+      persistWarnings: this.#config.persistWarnings,
+      warningEvent: events2.warning,
+      errorEvent: events2.error
+    };
+  }
+  async#executeQuery(query) {
+    if (typeof query === "string") {
+      query = { text: query, values: [] };
+    }
+    const started = Date.now();
+    const result = unwrapSQLResult(await this.#db.executeSql(query.text, query.values));
+    const elapsed = (Date.now() - started) / 1000;
+    if (elapsed > WARNINGS2.SLOW_QUERY.seconds || this.#config.__test__warn_slow_query) {
+      await emitAndPersistWarning(this.#warningContext, WARNING_TYPES2.SLOW_QUERY, WARNINGS2.SLOW_QUERY.message, { elapsed, sql: query.text, values: query.values });
+    }
+    return result;
+  }
+  async#onSupervise() {
+    try {
+      if (this.#stopped)
+        return;
+      if (this.#maintaining)
+        return;
+      if (this.#config.__test__throw_maint) {
+        throw new Error(this.#config.__test__throw_maint);
+      }
+      this.#maintaining = true;
+      const queues = await this.#manager.getQueues();
+      !this.#stopped && await this.supervise(queues);
+      !this.#stopped && await this.#maintainWarnings();
+    } catch (err) {
+      this.emit(events2.error, err);
+    } finally {
+      this.#maintaining = false;
+    }
+  }
+  async#maintainWarnings() {
+    if (!this.#config.persistWarnings || !this.#config.warningRetentionDays) {
+      return;
+    }
+    const sql2 = deleteOldWarnings(this.#config.schema, this.#config.warningRetentionDays);
+    await this.#executeQuery(sql2);
+  }
+  async supervise(value) {
+    let queues;
+    if (Array.isArray(value)) {
+      queues = value;
+    } else {
+      queues = await this.#manager.getQueues(value);
+    }
+    const queueGroups = queues.reduce((acc, q) => {
+      const { table } = q;
+      acc[table] = acc[table] || { table, queues: [] };
+      acc[table].queues.push(q);
+      return acc;
+    }, {});
+    const heartbeatQueueNames = new Set(queues.filter((q) => q.heartbeatSeconds != null).map((q) => q.name));
+    for (const queueGroup of Object.values(queueGroups)) {
+      if (this.#stopping)
+        return;
+      const { table, queues: queues2 } = queueGroup;
+      const names = queues2.map((i) => i.name);
+      while (names.length) {
+        if (this.#stopping)
+          return;
+        const chunk = names.splice(0, 100);
+        await this.#monitor(table, chunk, heartbeatQueueNames);
+        await this.#maintain(table, chunk);
+      }
+    }
+  }
+  async#monitor(table, names, heartbeatQueueNames) {
+    if (this.#stopping)
+      return;
+    const command = trySetQueueMonitorTime(this.#config.schema, names, this.#config.monitorIntervalSeconds);
+    const { rows } = await this.#executeQuery(command);
+    if (this.#stopping)
+      return;
+    if (rows.length) {
+      const queues = rows.map((q) => q.name);
+      const cacheStatsSql = cacheQueueStats(this.#config.schema, table, queues);
+      const { rows: rowsCacheStats } = await this.#executeQuery(cacheStatsSql);
+      if (this.#stopping)
+        return;
+      const warnings = rowsCacheStats.filter((i) => i.queuedCount > (i.warningQueueSize || WARNINGS2.LARGE_QUEUE.size));
+      for (const warning of warnings) {
+        await emitAndPersistWarning(this.#warningContext, WARNING_TYPES2.QUEUE_BACKLOG, WARNINGS2.LARGE_QUEUE.message, warning);
+      }
+      const sql2 = failJobsByTimeout(this.#config.schema, table, queues);
+      await this.#executeQuery(sql2);
+      if (this.#stopping)
+        return;
+      const heartbeatQueues = queues.filter((q) => heartbeatQueueNames.has(q));
+      if (heartbeatQueues.length) {
+        const heartbeatSql = failJobsByHeartbeat(this.#config.schema, table, heartbeatQueues);
+        await this.#executeQuery(heartbeatSql);
+      }
+    }
+  }
+  async#maintain(table, names) {
+    if (this.#stopping)
+      return;
+    const command = trySetQueueDeletionTime(this.#config.schema, names, this.#config.maintenanceIntervalSeconds);
+    const { rows } = await this.#executeQuery(command);
+    if (this.#stopping)
+      return;
+    if (rows.length) {
+      const queues = rows.map((q) => q.name);
+      const sql2 = deletion(this.#config.schema, table, queues);
+      await this.#executeQuery(sql2);
+    }
+  }
+}
+var boss_default = Boss;
+
+// ../../node_modules/.bun/pg-boss@12.13.0/node_modules/pg-boss/dist/bam.js
+import EventEmitter5 from "events";
+var events3 = {
+  error: "error",
+  bam: "bam"
+};
+
+class Bam extends EventEmitter5 {
+  #stopped;
+  #working;
+  #pollInterval;
+  #db;
+  #config;
+  events = events3;
+  constructor(db2, config2) {
+    super();
+    this.#db = db2;
+    this.#config = config2;
+    this.#stopped = true;
+    this.#working = false;
+  }
+  async start() {
+    if (!this.#stopped)
+      return;
+    this.#stopped = false;
+    setImmediate(() => this.#onPoll());
+    this.#pollInterval = setInterval(() => this.#onPoll(), this.#config.bamIntervalSeconds * 1000);
+  }
+  async stop() {
+    if (this.#stopped)
+      return;
+    this.#stopped = true;
+    if (this.#pollInterval) {
+      clearInterval(this.#pollInterval);
+      this.#pollInterval = undefined;
+    }
+  }
+  async#onPoll() {
+    if (this.#stopped || this.#working || !this.#config.migrate)
+      return;
+    this.#working = true;
+    try {
+      if (this.#config.__test__throw_bam) {
+        throw new Error(this.#config.__test__throw_bam);
+      }
+      const sql2 = trySetBamTime(this.#config.schema, this.#config.bamIntervalSeconds);
+      const { rows } = await this.#db.executeSql(sql2);
+      if (rows.length === 1) {
+        await this.#processCommands();
+      }
+    } catch (err) {
+      this.emit(events3.error, err);
+    } finally {
+      this.#working = false;
+    }
+  }
+  async#processCommands() {
+    if (this.#stopped)
+      return;
+    const entry = await this.#getNextCommand();
+    if (!entry || this.#stopped)
+      return;
+    this.emit(events3.bam, {
+      id: entry.id,
+      name: entry.name,
+      status: "in_progress",
+      queue: entry.queue,
+      table: entry.table
+    });
+    try {
+      await this.#db.executeSql(entry.command);
+      if (this.#stopped)
+        return;
+      await this.#markCompleted(entry.id);
+      this.emit(events3.bam, {
+        id: entry.id,
+        name: entry.name,
+        status: "completed",
+        queue: entry.queue,
+        table: entry.table
+      });
+    } catch (err) {
+      if (this.#stopped)
+        return;
+      await this.#markFailed(entry.id, err);
+      this.emit(events3.error, err);
+      this.emit(events3.bam, {
+        id: entry.id,
+        name: entry.name,
+        status: "failed",
+        queue: entry.queue,
+        table: entry.table,
+        error: String(err)
+      });
+    }
+  }
+  async#getNextCommand() {
+    const sql2 = getNextBamCommand(this.#config.schema);
+    const { rows } = await this.#db.executeSql(sql2);
+    return rows[0] || null;
+  }
+  async#markCompleted(id) {
+    const sql2 = setBamCompleted(this.#config.schema, id);
+    await this.#db.executeSql(sql2);
+  }
+  async#markFailed(id, error48) {
+    const sql2 = setBamFailed(this.#config.schema, id, String(error48));
+    await this.#db.executeSql(sql2);
+  }
+}
+var bam_default = Bam;
+
+// ../../node_modules/.bun/pg-boss@12.13.0/node_modules/pg-boss/dist/db.js
+import EventEmitter6 from "events";
+
+// ../../node_modules/.bun/pg@8.18.0+32ccf17b773ffb11/node_modules/pg/esm/index.mjs
+var import_lib = __toESM(require_lib3(), 1);
+var Client = import_lib.default.Client;
+var Pool = import_lib.default.Pool;
+var Connection2 = import_lib.default.Connection;
+var types2 = import_lib.default.types;
+var Query2 = import_lib.default.Query;
+var DatabaseError = import_lib.default.DatabaseError;
+var escapeIdentifier2 = import_lib.default.escapeIdentifier;
+var escapeLiteral = import_lib.default.escapeLiteral;
+var Result2 = import_lib.default.Result;
+var TypeOverrides = import_lib.default.TypeOverrides;
+var defaults = import_lib.default.defaults;
+var esm_default = import_lib.default;
+
+// ../../node_modules/.bun/pg-boss@12.13.0/node_modules/pg-boss/dist/db.js
+import assert6 from "assert";
+
+class Db extends EventEmitter6 {
+  pool;
+  config;
+  _pgbdb;
+  opened;
+  constructor(config2) {
+    super();
+    config2.application_name = config2.application_name || "pgboss";
+    config2.connectionTimeoutMillis = config2.connectionTimeoutMillis || 1e4;
+    this.config = config2;
+    this._pgbdb = true;
+    this.opened = false;
+  }
+  events = {
+    error: "error"
+  };
+  async open() {
+    this.pool = new esm_default.Pool(this.config);
+    this.pool.on("error", (error48) => this.emit("error", error48));
+    this.opened = true;
+  }
+  async close() {
+    if (!this.pool.ending) {
+      this.opened = false;
+      await this.pool.end();
+    }
+  }
+  async executeSql(text2, values2) {
+    assert6(this.opened, "Database not opened. Call open() before executing SQL.");
+    return await this.pool.query(text2, values2);
+  }
+}
+var db_default = Db;
+
+// ../../node_modules/.bun/pg-boss@12.13.0/node_modules/pg-boss/dist/index.js
+var events4 = Object.freeze({
+  error: "error",
+  warning: "warning",
+  wip: "wip",
+  stopped: "stopped",
+  bam: "bam"
+});
+class PgBoss extends EventEmitter7 {
+  #stoppingOn;
+  #stopped;
+  #starting;
+  #started;
+  #config;
+  #db;
+  #boss;
+  #contractor;
+  #manager;
+  #timekeeper;
+  #bam;
+  constructor(value) {
+    super();
+    this.#stoppingOn = null;
+    this.#stopped = true;
+    const config2 = getConfig(value);
+    this.#config = config2;
+    const db2 = this.getDb();
+    this.#db = db2;
+    if ("_pgbdb" in this.#db && this.#db._pgbdb) {
+      this.#promoteEvents(this.#db);
+    }
+    const contractor = new contractor_default(db2, config2);
+    const manager = new manager_default(db2, config2);
+    const boss = new boss_default(db2, manager, config2);
+    const timekeeper = new timekeeper_default(db2, manager, config2);
+    manager.timekeeper = timekeeper;
+    const bam = new bam_default(db2, config2);
+    this.#promoteEvents(manager);
+    this.#promoteEvents(boss);
+    this.#promoteEvents(timekeeper);
+    this.#promoteEvents(bam);
+    this.#boss = boss;
+    this.#contractor = contractor;
+    this.#manager = manager;
+    this.#timekeeper = timekeeper;
+    this.#bam = bam;
+  }
+  #promoteEvents(emitter) {
+    for (const event of Object.values(emitter?.events)) {
+      emitter.on(event, (arg) => this.emit(event, arg));
+    }
+  }
+  async start() {
+    if (this.#starting || this.#started) {
+      return this;
+    }
+    this.#starting = true;
+    if (this.#db._pgbdb && !this.#db.opened) {
+      await this.#db.open();
+    }
+    if (this.#config.migrate) {
+      await this.#contractor.start();
+    } else {
+      await this.#contractor.check();
+    }
+    await this.#manager.start();
+    if (this.#config.supervise) {
+      await this.#boss.start();
+    }
+    if (this.#config.schedule) {
+      await this.#timekeeper.start();
+    }
+    if (this.#config.migrate) {
+      await this.#bam.start();
+    }
+    this.#starting = false;
+    this.#started = true;
+    this.#stopped = false;
+    return this;
+  }
+  async stop(options = {}) {
+    if (this.#stoppingOn || this.#stopped) {
+      return;
+    }
+    let { close = true, graceful = true, timeout = 30000 } = options;
+    timeout = Math.max(timeout, 1000);
+    this.#stoppingOn = Date.now();
+    await this.#manager.stop();
+    await this.#timekeeper.stop();
+    await this.#boss.stop();
+    await this.#bam.stop();
+    const shutdown = async () => {
+      await this.#manager.failWip();
+      if (this.#db._pgbdb && this.#db.opened && close) {
+        await this.#db.close();
+        await delay(10);
+      }
+      this.#stopped = true;
+      this.#stoppingOn = null;
+      this.#started = false;
+      this.emit(events4.stopped);
+    };
+    if (!graceful) {
+      return await shutdown();
+    }
+    while (Date.now() - this.#stoppingOn < timeout && this.#manager.hasPendingCleanups()) {
+      await delay(500);
+    }
+    await shutdown();
+  }
+  async send(...args) {
+    return await this.#manager.send(...args);
+  }
+  async sendAfter(name, data, options, after) {
+    return this.#manager.sendAfter(name, data, options, after);
+  }
+  sendThrottled(name, data, options, seconds, key) {
+    return this.#manager.sendThrottled(name, data, options, seconds, key);
+  }
+  sendDebounced(name, data, options, seconds, key) {
+    return this.#manager.sendDebounced(name, data, options, seconds, key);
+  }
+  insert(name, jobs, options) {
+    return this.#manager.insert(name, jobs, options);
+  }
+  fetch(name, options = {}) {
+    return this.#manager.fetch(name, options);
+  }
+  work(...args) {
+    return this.#manager.work(...args);
+  }
+  offWork(name, options) {
+    return this.#manager.offWork(name, options);
+  }
+  notifyWorker(workerId) {
+    return this.#manager.notifyWorker(workerId);
+  }
+  subscribe(event, name) {
+    return this.#manager.subscribe(event, name);
+  }
+  unsubscribe(event, name) {
+    return this.#manager.unsubscribe(event, name);
+  }
+  publish(event, data, options) {
+    return this.#manager.publish(event, data, options);
+  }
+  cancel(name, id, options) {
+    return this.#manager.cancel(name, id, options);
+  }
+  resume(name, id, options) {
+    return this.#manager.resume(name, id, options);
+  }
+  retry(name, id, options) {
+    return this.#manager.retry(name, id, options);
+  }
+  deleteJob(name, id, options) {
+    return this.#manager.deleteJob(name, id, options);
+  }
+  deleteQueuedJobs(name) {
+    return this.#manager.deleteQueuedJobs(name);
+  }
+  deleteStoredJobs(name) {
+    return this.#manager.deleteStoredJobs(name);
+  }
+  deleteAllJobs(name) {
+    return this.#manager.deleteAllJobs(name);
+  }
+  complete(name, id, data, options) {
+    return this.#manager.complete(name, id, data, options);
+  }
+  fail(name, id, data, options) {
+    return this.#manager.fail(name, id, data, options);
+  }
+  touch(name, id, options) {
+    return this.#manager.touch(name, id, options);
+  }
+  getJobById(name, id, options) {
+    return this.#manager.getJobById(name, id, options);
+  }
+  findJobs(name, options) {
+    return this.#manager.findJobs(name, options);
+  }
+  createQueue(name, options) {
+    return this.#manager.createQueue(name, options);
+  }
+  getBlockedKeys(name) {
+    return this.#manager.getBlockedKeys(name);
+  }
+  updateQueue(name, options) {
+    return this.#manager.updateQueue(name, options);
+  }
+  deleteQueue(name) {
+    return this.#manager.deleteQueue(name);
+  }
+  getQueues(names) {
+    return this.#manager.getQueues();
+  }
+  getQueue(name) {
+    return this.#manager.getQueue(name);
+  }
+  getQueueStats(name) {
+    return this.#manager.getQueueStats(name);
+  }
+  supervise(name) {
+    return this.#boss.supervise(name);
+  }
+  getSpy(name) {
+    return this.#manager.getSpy(name);
+  }
+  clearSpies() {
+    this.#manager.clearSpies();
+  }
+  isInstalled() {
+    return this.#contractor.isInstalled();
+  }
+  schemaVersion() {
+    return this.#contractor.schemaVersion();
+  }
+  schedule(name, cron, data, options) {
+    return this.#timekeeper.schedule(name, cron, data, options);
+  }
+  unschedule(name, key) {
+    return this.#timekeeper.unschedule(name, key);
+  }
+  getSchedules(name, key) {
+    return this.#timekeeper.getSchedules(name, key);
+  }
+  async getBamStatus() {
+    const sql2 = getBamStatus(this.#config.schema);
+    const { rows } = await this.#db.executeSql(sql2);
+    return rows;
+  }
+  async getBamEntries() {
+    const sql2 = getBamEntries(this.#config.schema);
+    const { rows } = await this.#db.executeSql(sql2);
+    return rows;
+  }
+  getDb() {
+    if (this.#db) {
+      return this.#db;
+    }
+    if (this.#config.db) {
+      return this.#config.db;
+    }
+    return new db_default(this.#config);
+  }
+}
+
+// src/jobs/jobs-logger.ts
+var toLogPayload = (scope, payload) => {
+  if (typeof payload === "object" && payload !== null) {
+    return {
+      scope,
+      ...payload
+    };
+  }
+  return {
+    payload,
+    scope
+  };
+};
+var createJobsLogger = (params) => {
+  const scope = params?.scope ?? "jobs";
+  const baseLogger = params?.baseLogger;
+  if (!baseLogger) {
+    return {
+      error(payload, message) {
+        console.error(message ?? "Job error", toLogPayload(scope, payload));
+      },
+      info(payload, message) {
+        console.info(message ?? "Job info", toLogPayload(scope, payload));
+      },
+      warn(payload, message) {
+        console.warn(message ?? "Job warning", toLogPayload(scope, payload));
+      }
+    };
+  }
+  return {
+    error(payload, message) {
+      baseLogger.error(toLogPayload(scope, payload), message);
+    },
+    info(payload, message) {
+      baseLogger.info(toLogPayload(scope, payload), message);
+    },
+    warn(payload, message) {
+      baseLogger.warn(toLogPayload(scope, payload), message);
+    }
+  };
+};
+
+// src/jobs/job-runtime-utils.ts
+var formatInterval = (everyMs) => {
+  if (everyMs % (60 * 60 * 1000) === 0) {
+    return `${everyMs / (60 * 60 * 1000)}h`;
+  }
+  if (everyMs % (60 * 1000) === 0) {
+    return `${everyMs / (60 * 1000)}m`;
+  }
+  if (everyMs % 1000 === 0) {
+    return `${everyMs / 1000}s`;
+  }
+  return `${everyMs}ms`;
+};
+var buildStartupSummary = (schedule2, sendOptions) => {
+  if (!schedule2) {
+    return "triggered manually";
+  }
+  if (schedule2.type === "cron") {
+    return `cron: ${schedule2.cron}`;
+  }
+  const intervalLabel = `interval: ${formatInterval(schedule2.everyMs)}`;
+  const singletonKey = schedule2.sendOptions?.singletonKey ?? sendOptions.singletonKey;
+  if (typeof singletonKey === "string" && singletonKey.length > 0) {
+    return `${intervalLabel}, singleton`;
+  }
+  return intervalLabel;
+};
+var createJobLog = (jobName, logger) => {
+  return (message, context, level = "info") => {
+    const payload = {
+      context: context ?? null,
+      jobName
+    };
+    if (level === "warn") {
+      logger.warn(payload, message);
+      return;
+    }
+    if (level === "error") {
+      logger.error(payload, message);
+      return;
+    }
+    logger.info(payload, message);
+  };
+};
+
+// src/jobs/job-router.ts
+var defaultJobsLogger = createJobsLogger({
+  scope: "jobs.router"
+});
+var registeredJobsByName = new Map;
+var hasStartedJobsRuntime = false;
+
+class JobBuilder {
+  inputSchema = exports_external.unknown();
+  jobName;
+  persistSuccess;
+  startupSummary;
+  schedule;
+  sendOptions = {};
+  workerOptions;
+  constructor(jobName, options) {
+    this.jobName = jobName;
+    this.persistSuccess = options?.persistSuccess ?? "always";
+    this.startupSummary = options?.startupSummary;
+  }
+  input(schema) {
+    this.inputSchema = schema;
+    return this;
+  }
+  options(options) {
+    this.sendOptions = {
+      ...this.sendOptions,
+      ...options
+    };
+    return this;
+  }
+  workOptions(options) {
+    this.workerOptions = options;
+    return this;
+  }
+  interval(params) {
+    this.schedule = {
+      type: "interval",
+      everyMs: params.everyMs,
+      payload: params.payload ?? {},
+      sendOptions: params.sendOptions
+    };
+    return this;
+  }
+  cron(params) {
+    this.schedule = {
+      type: "cron",
+      cron: params.cron,
+      payload: params.payload ?? {},
+      scheduleOptions: params.scheduleOptions
+    };
+    return this;
+  }
+  work(workFn) {
+    const definition = {
+      jobName: this.jobName,
+      parseInput: (input) => this.inputSchema.parse(input),
+      persistSuccess: this.persistSuccess,
+      schedule: this.schedule,
+      sendOptions: this.sendOptions,
+      startupSummary: this.startupSummary ?? buildStartupSummary(this.schedule, this.sendOptions),
+      work: workFn,
+      workOptions: this.workerOptions
+    };
+    const existingDefinition = registeredJobsByName.get(this.jobName);
+    if (existingDefinition && existingDefinition !== definition) {
+      throw new Error(`Job already registered: ${this.jobName}`);
+    }
+    registeredJobsByName.set(this.jobName, definition);
+    return definition;
+  }
+}
+var defineJob = (jobName, options) => {
+  return new JobBuilder(jobName, options);
+};
+var startRegisteredJobs = async (params) => {
+  if (hasStartedJobsRuntime) {
+    throw new Error("[Jobs] startRegisteredJobs() can only be called once per process.");
+  }
+  const logger = params.logger ? createJobsLogger({
+    baseLogger: params.logger,
+    scope: "jobs.router"
+  }) : defaultJobsLogger;
+  const jobs = Array.from(registeredJobsByName.values());
+  const intervalTimers = [];
+  const createdQueues = new Set;
+  for (const jobDefinition of jobs) {
+    if (createdQueues.has(jobDefinition.jobName)) {
+      continue;
+    }
+    await params.boss.createQueue(jobDefinition.jobName);
+    createdQueues.add(jobDefinition.jobName);
+  }
+  for (const jobDefinition of jobs) {
+    const worker = async (incomingJobs) => {
+      const queuedJobs = Array.isArray(incomingJobs) ? incomingJobs : [incomingJobs];
+      for (const queuedJob of queuedJobs) {
+        let parsedInput;
+        try {
+          parsedInput = jobDefinition.parseInput(queuedJob.data);
+        } catch (error48) {
+          logger.warn({
+            error: error48,
+            jobId: queuedJob.id,
+            jobName: jobDefinition.jobName
+          }, "Skipping job with invalid payload.");
+          continue;
+        }
+        const typedJob = {
+          ...queuedJob,
+          data: parsedInput
+        };
+        const signal = new AbortController().signal;
+        const log = createJobLog(jobDefinition.jobName, logger);
+        try {
+          const result = await jobDefinition.work(typedJob, signal, log, {
+            boss: params.boss
+          });
+          if (jobDefinition.persistSuccess === "didWork") {
+            if (typeof result === "object" && result !== null && "didWork" in result) {
+              const didWork = result.didWork;
+              if (didWork !== true) {
+                continue;
+              }
+            }
+          }
+        } catch (error48) {
+          logger.error({
+            error: error48,
+            jobId: queuedJob.id,
+            jobName: jobDefinition.jobName
+          }, "Job execution failed.");
+          throw error48;
+        }
+      }
+    };
+    if (jobDefinition.workOptions) {
+      await params.boss.work(jobDefinition.jobName, jobDefinition.workOptions, worker);
+    } else {
+      await params.boss.work(jobDefinition.jobName, worker);
+    }
+    if (!jobDefinition.schedule) {
+      continue;
+    }
+    if (jobDefinition.schedule.type === "interval") {
+      const intervalSchedule = jobDefinition.schedule;
+      const timer2 = setInterval(() => {
+        params.boss.send(jobDefinition.jobName, intervalSchedule.payload, {
+          ...jobDefinition.sendOptions,
+          ...intervalSchedule.sendOptions
+        }).catch((error48) => {
+          logger.error({
+            error: error48,
+            jobName: jobDefinition.jobName
+          }, "Failed to enqueue interval job.");
+        });
+      }, jobDefinition.schedule.everyMs);
+      intervalTimers.push(timer2);
+      continue;
+    }
+    await params.boss.schedule(jobDefinition.jobName, jobDefinition.schedule.cron, jobDefinition.schedule.payload, {
+      ...jobDefinition.sendOptions,
+      ...jobDefinition.schedule.scheduleOptions
+    });
+  }
+  hasStartedJobsRuntime = true;
+  return {
+    startupSummary: jobs.map((jobDefinition) => {
+      return `${jobDefinition.jobName} (${jobDefinition.startupSummary})`;
+    }),
+    stop: async () => {
+      for (const timer2 of intervalTimers) {
+        clearInterval(timer2);
+      }
+      hasStartedJobsRuntime = false;
+    }
+  };
+};
+
+// src/jobs/sync-keyword-shared.ts
+var SYNC_STALE_KEYWORDS_CRON = "* * * * *";
+var SYNC_STALE_KEYWORDS_BATCH_SIZE = 100;
+var SYNC_KEYWORD_JOB_NAME = "sync-keyword";
+var SYNC_STALE_KEYWORDS_JOB_NAME = "sync-stale-keywords";
+var syncKeywordJobInputSchema = exports_external.object({
+  clerkUserId: exports_external.string().min(1),
+  tenantId: exports_external.string().min(1),
+  trackedKeywordId: exports_external.string().uuid()
+});
+var syncStaleKeywordsJobInputSchema = exports_external.record(exports_external.string(), exports_external.unknown());
+
+// src/services/keywords/enqueue-sync-keyword-job.ts
+var enqueueSyncKeywordJob = async (params) => {
+  return params.boss.send(SYNC_KEYWORD_JOB_NAME, params.payload, {
+    retryLimit: 0
+  });
+};
+
+// src/jobs/sync-listing-shared.ts
+var SYNC_LISTING_JOB_NAME = "sync-listing";
+var syncListingJobInputSchema = exports_external.object({
+  clerkUserId: exports_external.string().min(1),
+  etsyListingId: exports_external.string().min(1),
+  tenantId: exports_external.string().min(1)
+});
+
+// src/services/etsy/bridges/get-listing.ts
+var getListingIncludeSchema = exports_external.enum([
+  "Shipping",
+  "Images",
+  "Shop",
+  "User",
+  "Translations",
+  "Inventory",
+  "Videos",
+  "Personalization"
+]);
+var listingStateSchema = exports_external.enum(["active", "inactive", "sold_out", "draft", "expired"]);
+var moneySchema2 = exports_external.object({
+  amount: exports_external.coerce.number().int(),
+  currency_code: exports_external.string().min(1),
+  divisor: exports_external.coerce.number().int().positive()
+});
+var shopSchema = exports_external.object({
+  name: exports_external.string().min(1).nullable().optional(),
+  shop_id: exports_external.coerce.number().int().positive().nullable().optional(),
+  shop_name: exports_external.string().min(1).nullable().optional()
+}).passthrough();
+var listingResponseSchema = exports_external.object({
+  created_timestamp: exports_external.coerce.number().int().nullable().optional(),
+  creation_timestamp: exports_external.coerce.number().int().nullable().optional(),
+  description: exports_external.string().nullable().optional(),
+  images: exports_external.array(exports_external.unknown()).nullable().optional(),
+  inventory: exports_external.unknown().nullable().optional(),
+  language: exports_external.string().nullable().optional(),
+  last_modified_timestamp: exports_external.coerce.number().int().nullable().optional(),
+  listing_id: exports_external.coerce.number().int().positive(),
+  listing_type: exports_external.string().nullable().optional(),
+  materials: exports_external.array(exports_external.string()).nullable().optional(),
+  num_favorers: exports_external.coerce.number().int().nonnegative().nullable().optional(),
+  original_creation_timestamp: exports_external.coerce.number().int().nullable().optional(),
+  personalization: exports_external.unknown().nullable().optional(),
+  price: moneySchema2.nullable().optional(),
+  quantity: exports_external.coerce.number().int().nonnegative().nullable().optional(),
+  shipping_profile: exports_external.unknown().nullable().optional(),
+  shop: shopSchema.nullable().optional(),
+  shop_id: exports_external.coerce.number().int().positive().nullable().optional(),
+  skus: exports_external.array(exports_external.string()).nullable().optional(),
+  state: listingStateSchema,
+  state_timestamp: exports_external.coerce.number().int().nullable().optional(),
+  suggested_title: exports_external.string().nullable().optional(),
+  tags: exports_external.array(exports_external.string()).nullable().optional(),
+  title: exports_external.string().min(1),
+  translations: exports_external.array(exports_external.unknown()).nullable().optional(),
+  updated_timestamp: exports_external.coerce.number().int().nullable().optional(),
+  url: exports_external.string().url().nullable().optional(),
+  user: exports_external.unknown().nullable().optional(),
+  user_id: exports_external.coerce.number().int().positive().nullable().optional(),
+  videos: exports_external.array(exports_external.unknown()).nullable().optional(),
+  views: exports_external.coerce.number().int().nonnegative().nullable().optional()
+}).passthrough();
+var getListingInputSchema = exports_external.object({
+  accessToken: exports_external.string().min(1),
+  allowSuggestedTitle: exports_external.boolean().optional(),
+  includes: exports_external.array(getListingIncludeSchema).optional(),
+  language: exports_external.string().min(1).optional(),
+  legacy: exports_external.boolean().optional(),
+  listingId: exports_external.coerce.number().int().positive()
+});
+var etsyErrorSchema2 = exports_external.object({
+  error: exports_external.string().optional(),
+  error_description: exports_external.string().optional(),
+  message: exports_external.string().optional()
+}).passthrough();
+
+class EtsyGetListingBridgeError extends Error {
+  responseBody;
+  statusCode;
+  constructor(message, statusCode, responseBody) {
+    super(message);
+    this.name = "EtsyGetListingBridgeError";
+    this.statusCode = statusCode;
+    this.responseBody = responseBody;
+  }
+}
+var getApiKeyHeaderValue3 = () => {
+  if (env.ETSY_API_SHARED_SECRET) {
+    return `${env.ETSY_API_KEY}:${env.ETSY_API_SHARED_SECRET}`;
+  }
+  return env.ETSY_API_KEY;
+};
+var tryParseJson3 = (input) => {
+  if (input.length === 0) {
+    return null;
+  }
+  try {
+    return JSON.parse(input);
+  } catch {
+    return null;
+  }
+};
+var extractErrorMessage2 = (rawBody, statusCode) => {
+  const parsedBody = tryParseJson3(rawBody);
+  const parsedError = etsyErrorSchema2.safeParse(parsedBody ?? {});
+  if (parsedError.success) {
+    return parsedError.data.error_description ?? parsedError.data.message ?? parsedError.data.error ?? `Etsy getListing failed with HTTP ${statusCode}.`;
+  }
+  return `Etsy getListing failed with HTTP ${statusCode}.`;
+};
+var buildEndpoint2 = (input) => {
+  const url2 = new URL(`https://openapi.etsy.com/v3/application/listings/${input.listingId}`);
+  if (input.includes && input.includes.length > 0) {
+    for (const include of input.includes) {
+      url2.searchParams.append("includes", include);
+    }
+  }
+  if (input.language) {
+    url2.searchParams.set("language", input.language);
+  }
+  if (input.legacy !== undefined) {
+    url2.searchParams.set("legacy", String(input.legacy));
+  }
+  if (input.allowSuggestedTitle !== undefined) {
+    url2.searchParams.set("allow_suggested_title", String(input.allowSuggestedTitle));
+  }
+  return url2.toString();
+};
+var extractThumbnailUrl2 = (images) => {
+  if (!images || images.length === 0) {
+    return null;
+  }
+  const first = images[0];
+  if (typeof first !== "object" || first === null) {
+    return null;
+  }
+  const record2 = first;
+  const url2 = record2.url_170x135 ?? record2.url_75x75 ?? null;
+  return typeof url2 === "string" ? url2 : null;
+};
+var toResponse2 = (parsed) => {
+  const normalizedShopId = parsed.shop_id ?? parsed.shop?.shop_id ?? null;
+  return {
+    createdTimestamp: parsed.created_timestamp ?? null,
+    creationTimestamp: parsed.creation_timestamp ?? null,
+    description: parsed.description ?? null,
+    etsyState: parsed.state,
+    images: parsed.images ?? [],
+    inventory: parsed.inventory ?? null,
+    language: parsed.language ?? null,
+    lastModifiedTimestamp: parsed.last_modified_timestamp ?? null,
+    listingId: String(parsed.listing_id),
+    listingType: parsed.listing_type ?? null,
+    materials: parsed.materials ?? [],
+    numFavorers: parsed.num_favorers ?? null,
+    originalCreationTimestamp: parsed.original_creation_timestamp ?? null,
+    personalization: parsed.personalization ?? null,
+    price: parsed.price ? {
+      amount: parsed.price.amount,
+      currencyCode: parsed.price.currency_code,
+      divisor: parsed.price.divisor
+    } : null,
+    quantity: parsed.quantity ?? null,
+    shippingProfile: parsed.shipping_profile ?? null,
+    shop: parsed.shop ?? null,
+    shopId: normalizedShopId !== undefined && normalizedShopId !== null ? String(normalizedShopId) : null,
+    shopName: parsed.shop?.shop_name ?? parsed.shop?.name ?? null,
+    skus: parsed.skus ?? [],
+    stateTimestamp: parsed.state_timestamp ?? null,
+    suggestedTitle: parsed.suggested_title ?? null,
+    tags: parsed.tags ?? [],
+    thumbnailUrl: extractThumbnailUrl2(parsed.images),
+    title: parsed.title,
+    translations: parsed.translations ?? [],
+    updatedTimestamp: parsed.updated_timestamp ?? null,
+    url: parsed.url ?? null,
+    user: parsed.user ?? null,
+    userId: parsed.user_id !== undefined && parsed.user_id !== null ? String(parsed.user_id) : null,
+    videos: parsed.videos ?? [],
+    views: parsed.views ?? null
+  };
+};
+var getListing = async (input) => {
+  const parsedInput = getListingInputSchema.safeParse(input);
+  if (!parsedInput.success) {
+    throw new EtsyGetListingBridgeError("Invalid getListing bridge input.", 400, "");
+  }
+  const response = await fetch(buildEndpoint2(parsedInput.data), {
+    headers: {
+      Accept: "application/json",
+      Authorization: `Bearer ${parsedInput.data.accessToken}`,
+      "x-api-key": getApiKeyHeaderValue3()
+    },
+    method: "GET"
+  });
+  const rawBody = await response.text();
+  if (!response.ok) {
+    throw new EtsyGetListingBridgeError(extractErrorMessage2(rawBody, response.status), response.status, rawBody);
+  }
+  const parsedJson = tryParseJson3(rawBody) ?? {};
+  const parsedBody = listingResponseSchema.safeParse(parsedJson);
+  if (!parsedBody.success) {
+    throw new EtsyGetListingBridgeError("Etsy getListing response was missing required fields.", response.status, rawBody);
+  }
+  return toResponse2(parsedBody.data);
+};
+
+// src/services/listings/tracked-listings-service.ts
+var mapBridgeErrorToTrpcError2 = (error48) => {
+  if (error48.statusCode === 404) {
+    return new TRPCError({
+      code: "NOT_FOUND",
+      message: "Etsy listing was not found."
+    });
+  }
+  if (error48.statusCode === 400) {
+    return new TRPCError({
+      code: "BAD_REQUEST",
+      message: error48.message
+    });
+  }
+  if (error48.statusCode === 401 || error48.statusCode === 403) {
+    const genericStatusMessage = `Etsy getListing failed with HTTP ${error48.statusCode}.`;
+    return new TRPCError({
+      code: "FORBIDDEN",
+      message: error48.message === genericStatusMessage ? "Etsy access token is invalid or missing required scope." : error48.message
+    });
+  }
+  return new TRPCError({
+    code: "INTERNAL_SERVER_ERROR",
+    message: error48.message
+  });
+};
+var parseListingIdentifier2 = (rawInput) => {
+  const trimmed = rawInput.trim();
+  if (/^\d+$/.test(trimmed)) {
+    return trimmed;
+  }
+  try {
+    const url2 = new URL(trimmed);
+    if (!url2.hostname.toLowerCase().includes("etsy.com")) {
+      return null;
+    }
+    const match2 = url2.pathname.match(/\/listing\/(\d+)(?:\/|$)/i);
+    if (match2?.[1]) {
+      return match2[1];
+    }
+    const listingIdFromQuery = url2.searchParams.get("listing_id");
+    if (listingIdFromQuery && /^\d+$/.test(listingIdFromQuery)) {
+      return listingIdFromQuery;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
+var toRecord4 = (row) => {
+  let price = null;
+  if (row.priceAmount !== null && row.priceDivisor !== null && row.priceCurrencyCode !== null && row.priceDivisor > 0) {
+    price = {
+      amount: row.priceAmount,
+      currencyCode: row.priceCurrencyCode,
+      divisor: row.priceDivisor,
+      value: row.priceAmount / row.priceDivisor
+    };
+  }
+  return {
+    etsyListingId: row.etsyListingId,
+    etsyState: row.etsyState,
+    id: row.listingId,
+    lastRefreshError: row.lastRefreshError,
+    lastRefreshedAt: row.lastRefreshedAt.toISOString(),
+    numFavorers: row.numFavorers,
+    price,
+    quantity: row.quantity,
+    shopId: row.shopId,
+    shopName: row.shopName,
+    tenantId: row.tenantId,
+    thumbnailUrl: row.thumbnailUrl ?? null,
+    title: row.title,
+    trackerClerkUserId: row.trackerClerkUserId,
+    trackingState: row.trackingState,
+    updatedAt: row.updatedAt.toISOString(),
+    updatedTimestamp: row.updatedTimestamp,
+    url: row.url,
+    views: row.views
+  };
+};
+var bridgeToUpsertValues = (params) => {
+  return {
+    etsyListingId: params.bridgeResponse.listingId,
+    etsyState: params.bridgeResponse.etsyState,
+    lastRefreshError: null,
+    lastRefreshedAt: params.now,
+    numFavorers: params.bridgeResponse.numFavorers,
+    priceAmount: params.bridgeResponse.price?.amount ?? null,
+    priceCurrencyCode: params.bridgeResponse.price?.currencyCode ?? null,
+    priceDivisor: params.bridgeResponse.price?.divisor ?? null,
+    quantity: params.bridgeResponse.quantity,
+    shopId: params.bridgeResponse.shopId,
+    shopName: params.bridgeResponse.shopName,
+    tenantId: params.tenantId,
+    thumbnailUrl: params.bridgeResponse.thumbnailUrl,
+    title: params.bridgeResponse.title,
+    trackerClerkUserId: params.trackerClerkUserId,
+    trackingState: "active",
+    updatedAt: params.now,
+    updatedTimestamp: params.bridgeResponse.updatedTimestamp,
+    url: params.bridgeResponse.url,
+    views: params.bridgeResponse.views
+  };
+};
+var fetchListingFromEtsy = async (params) => {
+  const oauthToken = await getEtsyOAuthAccessToken({
+    clerkUserId: params.clerkUserId,
+    tenantId: params.tenantId
+  });
+  try {
+    await recordEtsyApiCallBestEffort({
+      clerkUserId: params.clerkUserId,
+      endpoint: "getListing",
+      tenantId: params.tenantId
+    });
+    return await getListing({
+      accessToken: oauthToken.accessToken,
+      includes: ["Images"],
+      listingId: params.etsyListingId
+    });
+  } catch (error48) {
+    if (error48 instanceof EtsyGetListingBridgeError) {
+      throw mapBridgeErrorToTrpcError2(error48);
+    }
+    throw error48;
+  }
+};
+var upsertTrackedListingFromBridgeResponse = async (params) => {
+  const upsertValues = bridgeToUpsertValues({
+    bridgeResponse: params.bridgeResponse,
+    now: params.now,
+    tenantId: params.tenantId,
+    trackerClerkUserId: params.trackerClerkUserId
+  });
+  const [row] = await db.insert(trackedListings).values(upsertValues).onConflictDoUpdate({
+    set: upsertValues,
+    target: [trackedListings.tenantId, trackedListings.etsyListingId]
+  }).returning();
+  if (!row) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Unable to upsert tracked listing."
+    });
+  }
+  return row;
+};
+var syncTrackedListingFromEtsy = async (params) => {
+  const listingFromEtsy = await fetchListingFromEtsy({
+    clerkUserId: params.clerkUserId,
+    etsyListingId: params.etsyListingId,
+    tenantId: params.tenantId
+  });
+  return upsertTrackedListingFromBridgeResponse({
+    bridgeResponse: listingFromEtsy,
+    now: new Date,
+    tenantId: params.tenantId,
+    trackerClerkUserId: params.trackerClerkUserId
+  });
+};
+var listTrackedListings = async (params) => {
+  const whereClause = params.trackerClerkUserId ? and(eq(trackedListings.tenantId, params.tenantId), eq(trackedListings.trackerClerkUserId, params.trackerClerkUserId)) : eq(trackedListings.tenantId, params.tenantId);
+  const rows = await db.select().from(trackedListings).where(whereClause).orderBy(desc(trackedListings.updatedAt));
+  return {
+    items: rows.map(toRecord4)
+  };
+};
+var trackListing = async (params) => {
+  const etsyListingId = parseListingIdentifier2(params.listingInput);
+  if (!etsyListingId) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Listing must be an Etsy listing URL or numeric listing id."
+    });
+  }
+  const existing = await db.select({
+    listingId: trackedListings.listingId
+  }).from(trackedListings).where(and(eq(trackedListings.tenantId, params.tenantId), eq(trackedListings.etsyListingId, etsyListingId))).limit(1);
+  const row = await syncTrackedListingFromEtsy({
+    clerkUserId: params.trackerClerkUserId,
+    etsyListingId,
+    tenantId: params.tenantId,
+    trackerClerkUserId: params.trackerClerkUserId
+  });
+  const created = existing.length === 0;
+  const item = toRecord4(row);
+  await createEventLog({
+    action: created ? "listing.tracked" : "listing.updated",
+    category: "listing",
+    clerkUserId: params.trackerClerkUserId,
+    detailsJson: {
+      title: item.title
+    },
+    level: "info",
+    listingId: item.etsyListingId,
+    message: created ? `Started tracking listing ${item.etsyListingId}.` : `Updated tracked listing ${item.etsyListingId}.`,
+    primitiveId: item.id,
+    primitiveType: "listing",
+    requestId: params.requestId ?? null,
+    shopId: item.shopId,
+    status: "success",
+    tenantId: item.tenantId
+  });
+  return {
+    created,
+    item
+  };
+};
+var refreshTrackedListing = async (params) => {
+  const [current] = await db.select().from(trackedListings).where(and(eq(trackedListings.listingId, params.trackedListingId), eq(trackedListings.tenantId, params.tenantId))).limit(1);
+  if (!current) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "Tracked listing was not found for this tenant."
+    });
+  }
+  try {
+    const updated = await syncTrackedListingFromEtsy({
+      clerkUserId: params.clerkUserId,
+      etsyListingId: current.etsyListingId,
+      tenantId: params.tenantId,
+      trackerClerkUserId: params.trackerClerkUserId
+    });
+    await createEventLog({
+      action: "listing.synced",
+      category: "listing",
+      clerkUserId: params.clerkUserId,
+      detailsJson: {
+        etsyState: updated.etsyState,
+        title: updated.title
+      },
+      level: "info",
+      listingId: updated.etsyListingId,
+      message: `Synced listing ${updated.etsyListingId}.`,
+      primitiveId: updated.listingId,
+      primitiveType: "listing",
+      requestId: params.requestId ?? null,
+      shopId: updated.shopId,
+      status: "success",
+      tenantId: updated.tenantId
+    });
+    return toRecord4(updated);
+  } catch (error48) {
+    const failureMessage = error48 instanceof TRPCError ? error48.message : "Unexpected listing refresh error.";
+    const [updated] = await db.update(trackedListings).set({
+      lastRefreshError: failureMessage,
+      lastRefreshedAt: new Date,
+      trackingState: "error",
+      updatedAt: new Date
+    }).where(eq(trackedListings.listingId, current.listingId)).returning();
+    if (!updated) {
+      throw error48;
+    }
+    try {
+      await createEventLog({
+        action: "listing.sync_failed",
+        category: "listing",
+        clerkUserId: params.clerkUserId,
+        detailsJson: {
+          error: failureMessage
+        },
+        level: "error",
+        listingId: updated.etsyListingId,
+        message: `Listing sync failed for ${updated.etsyListingId}: ${failureMessage}`,
+        primitiveId: updated.listingId,
+        primitiveType: "listing",
+        requestId: params.requestId ?? null,
+        shopId: updated.shopId,
+        status: "failed",
+        tenantId: updated.tenantId
+      });
+    } catch {}
+    throw error48;
+  }
+};
+
+// src/jobs/sync-listing.ts
+var syncListingJob = defineJob(SYNC_LISTING_JOB_NAME, {
+  persistSuccess: "didWork",
+  startupSummary: "triggered by keyword discovery"
+}).input(syncListingJobInputSchema).work(async (job, signal, log) => {
+  await syncTrackedListingFromEtsy({
+    clerkUserId: job.data.clerkUserId,
+    etsyListingId: job.data.etsyListingId,
+    tenantId: job.data.tenantId,
+    trackerClerkUserId: job.data.clerkUserId
+  });
+  log("Synced listing from Etsy.", {
+    etsyListingId: job.data.etsyListingId
+  });
+  return {
+    didWork: true,
+    etsyListingId: job.data.etsyListingId
+  };
+});
+
+// src/services/listings/enqueue-sync-listing-job.ts
+var enqueueSyncListingJob = async (params) => {
+  return params.boss.send(SYNC_LISTING_JOB_NAME, params.payload, {
+    retryLimit: 0,
+    singletonKey: `${params.payload.tenantId}:${params.payload.etsyListingId}`
+  });
+};
+
+// src/jobs/sync-keyword.ts
+var syncKeywordJob = defineJob(SYNC_KEYWORD_JOB_NAME, {
+  persistSuccess: "didWork",
+  startupSummary: "triggered by stale keyword sync job"
+}).input(syncKeywordJobInputSchema).work(async (job, signal, log, context) => {
+  const syncResult = await syncRanksForKeyword({
+    clerkUserId: job.data.clerkUserId,
+    monitorRunId: job.id,
+    tenantId: job.data.tenantId,
+    trackedKeywordId: job.data.trackedKeywordId
+  });
+  for (const etsyListingId of syncResult.newlyDiscoveredEtsyListingIds) {
+    await enqueueSyncListingJob({
+      boss: context.boss,
+      payload: {
+        clerkUserId: job.data.clerkUserId,
+        etsyListingId,
+        tenantId: job.data.tenantId
+      }
+    });
+  }
+  log("Synced keyword ranks.", {
+    discoveredListingsCount: syncResult.newlyDiscoveredEtsyListingIds.length,
+    trackedKeywordId: job.data.trackedKeywordId
+  });
+  return {
+    didWork: true,
+    discoveredListingsCount: syncResult.newlyDiscoveredEtsyListingIds.length,
+    trackedKeywordId: job.data.trackedKeywordId
+  };
+});
+
+// src/services/keywords/find-stale-keywords.ts
+var findStaleKeywords = async (params) => {
+  const now = params?.now ?? new Date;
+  const rows = await db.select({
+    clerkUserId: trackedKeywords.trackerClerkUserId,
+    tenantId: trackedKeywords.tenantId,
+    trackedKeywordId: trackedKeywords.id
+  }).from(trackedKeywords).where(and(ne(trackedKeywords.trackingState, "paused"), lte(trackedKeywords.nextSyncAt, now))).orderBy(asc(trackedKeywords.nextSyncAt)).limit(SYNC_STALE_KEYWORDS_BATCH_SIZE);
+  const items = [];
+  for (const row of rows) {
+    const parsedInput = syncKeywordJobInputSchema.safeParse(row);
+    if (!parsedInput.success) {
+      continue;
+    }
+    items.push(parsedInput.data);
+  }
+  return items;
+};
+
+// src/services/keywords/sync-stale-keywords.ts
+var syncStaleKeywords = async (params) => {
+  const staleKeywords = await findStaleKeywords();
+  let queuedCount = 0;
+  for (const staleKeyword of staleKeywords) {
+    const jobId = await enqueueSyncKeywordJob({
+      boss: params.boss,
+      payload: staleKeyword
+    });
+    if (jobId) {
+      queuedCount += 1;
+    }
+  }
+  return queuedCount;
+};
+
+// src/jobs/sync-stale-keywords.ts
+var syncStaleKeywordsJob = defineJob(SYNC_STALE_KEYWORDS_JOB_NAME, {
+  persistSuccess: "didWork"
+}).input(syncStaleKeywordsJobInputSchema).options({
+  retryLimit: 0,
+  singletonKey: SYNC_STALE_KEYWORDS_JOB_NAME
+}).cron({
+  cron: SYNC_STALE_KEYWORDS_CRON,
+  payload: {}
+}).work(async (job, signal, log, context) => {
+  const queuedCount = await syncStaleKeywords({
+    boss: context.boss
+  });
+  if (queuedCount > 0) {
+    log("Queued stale keyword sync jobs.", {
+      queuedCount
+    });
+  }
+  return {
+    didWork: queuedCount > 0,
+    queuedCount
+  };
+});
+
+// src/jobs/sync-keyword-jobs.ts
+var defaultLogger = createJobsLogger({
+  scope: "jobs.sync-keyword"
+});
+var boss = null;
+var jobsRuntime = null;
+var logger = defaultLogger;
+var startPromise = null;
+var getBoss = () => {
+  if (!boss) {
+    boss = new PgBoss({
+      database: env.databaseName,
+      host: env.databaseHost,
+      password: env.databasePassword,
+      port: env.databasePort,
+      user: env.databaseUser
+    });
+    boss.on("error", (error48) => {
+      logger.error({ error: error48 }, "pg-boss emitted an error event.");
+    });
+  }
+  return boss;
+};
+var sendKeywordSyncJob = async (payload) => {
+  if (!boss) {
+    return null;
+  }
+  return enqueueSyncKeywordJob({
+    boss,
+    payload
+  });
+};
+var startKeywordSyncJobs = async (params) => {
+  if (startPromise) {
+    await startPromise;
+    return;
+  }
+  logger = createJobsLogger({
+    baseLogger: params?.logger,
+    scope: "jobs.sync-keyword"
+  });
+  startPromise = (async () => {
+    const queue = getBoss();
+    await queue.start();
+    jobsRuntime = await startRegisteredJobs({
+      boss: queue,
+      logger
+    });
+    logger.info({
+      startupSummary: jobsRuntime.startupSummary
+    }, "Keyword sync automation jobs started.");
+  })();
+  await startPromise;
+};
+var stopKeywordSyncJobs = async () => {
+  if (!boss) {
+    return;
+  }
+  if (jobsRuntime) {
+    await jobsRuntime.stop();
+    jobsRuntime = null;
+  }
+  await boss.stop();
+  boss = null;
+  startPromise = null;
+};
+var enqueueKeywordSyncJob = async (payload) => {
+  return sendKeywordSyncJob(payload);
+};
+
+// src/api/app/keywords/track.ts
+var keywordsTrackProcedure = appProcedure.input(exports_external.object({
+  keyword: exports_external.string().min(1)
+})).mutation(async ({ ctx, input }) => {
+  const trackedKeyword = await trackKeyword({
+    keywordInput: input.keyword,
+    requestId: ctx.requestId,
+    tenantId: ctx.tenantId,
+    trackerClerkUserId: ctx.user.sub
+  });
+  const monitorRunId = await enqueueKeywordSyncJob({
+    clerkUserId: trackedKeyword.item.trackerClerkUserId,
+    tenantId: trackedKeyword.item.tenantId,
+    trackedKeywordId: trackedKeyword.item.id
+  });
+  await createEventLog({
+    action: "keyword.sync_queued",
+    category: "keyword",
+    clerkUserId: ctx.user.sub,
+    detailsJson: {
+      keyword: trackedKeyword.item.keyword
+    },
+    keyword: trackedKeyword.item.keyword,
+    level: monitorRunId ? "info" : "warn",
+    message: monitorRunId ? `Queued keyword sync for "${trackedKeyword.item.keyword}".` : `Keyword sync queue was unavailable for "${trackedKeyword.item.keyword}".`,
+    monitorRunId,
+    primitiveId: trackedKeyword.item.id,
+    primitiveType: "keyword",
+    requestId: ctx.requestId,
+    status: monitorRunId ? "pending" : "failed",
+    tenantId: trackedKeyword.item.tenantId
+  });
+  return trackedKeyword;
+});
+
+// src/api/app/keywords/router.ts
+var keywordsRouter = router({
+  getDailyProductRanksForKeyword: keywordsGetDailyProductRanksForKeywordProcedure,
+  list: keywordsListProcedure,
+  track: keywordsTrackProcedure
+});
+
+// src/api/app/listings/get-keyword-ranks-for-product.ts
+var listingsGetKeywordRanksForProductProcedure = appProcedure.input(exports_external.object({
+  listing: exports_external.string().min(1)
+})).query(async ({ ctx, input }) => {
+  return getKeywordRanksForProduct({
+    listingInput: input.listing,
+    tenantId: ctx.tenantId
+  });
+});
+
+// src/api/app/listings/list.ts
+var listingsListProcedure = appProcedure.input(exports_external.object({})).query(async ({ ctx }) => {
+  return listTrackedListings({
+    tenantId: ctx.tenantId,
+    trackerClerkUserId: ctx.user.sub
+  });
+});
+
+// src/api/app/listings/refresh.ts
+var listingsRefreshProcedure = appProcedure.input(exports_external.object({
+  trackedListingId: exports_external.string().uuid()
+})).mutation(async ({ ctx, input }) => {
+  return refreshTrackedListing({
+    clerkUserId: ctx.user.sub,
+    requestId: ctx.requestId,
+    tenantId: ctx.tenantId,
+    trackedListingId: input.trackedListingId,
+    trackerClerkUserId: ctx.user.sub
+  });
+});
+
+// src/api/app/listings/track.ts
+var listingsTrackProcedure = appProcedure.input(exports_external.object({
+  listing: exports_external.string().min(1)
+})).mutation(async ({ ctx, input }) => {
+  return trackListing({
+    listingInput: input.listing,
+    requestId: ctx.requestId,
+    tenantId: ctx.tenantId,
+    trackerClerkUserId: ctx.user.sub
+  });
+});
+
+// src/api/app/listings/router.ts
+var listingsRouter = router({
+  getKeywordRanksForProduct: listingsGetKeywordRanksForProductProcedure,
+  list: listingsListProcedure,
+  refresh: listingsRefreshProcedure,
+  track: listingsTrackProcedure
+});
+
+// src/services/logs/list-event-logs.ts
+var listEventLogsInputSchema = exports_external.object({
+  tenantId: exports_external.string().min(1),
+  limit: exports_external.number().int().min(1).max(100).default(20),
+  cursor: exports_external.object({
+    occurredAt: exports_external.string().datetime(),
+    id: exports_external.string().uuid()
+  }).optional(),
+  search: exports_external.string().trim().min(1).optional(),
+  levels: exports_external.array(eventLogLevelSchema).optional(),
+  statuses: exports_external.array(eventLogStatusSchema).optional(),
+  primitiveTypes: exports_external.array(eventLogPrimitiveTypeSchema).optional(),
+  actions: exports_external.array(exports_external.string().min(1)).optional(),
+  listingId: exports_external.string().min(1).optional(),
+  shopId: exports_external.string().min(1).optional(),
+  keyword: exports_external.string().min(1).optional(),
+  monitorRunId: exports_external.string().min(1).optional()
+}).strict();
+var toDetailsJson2 = (value) => {
+  if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+    return value;
+  }
+  return {};
+};
+var toRecord5 = (row) => {
+  return {
+    id: row.id,
+    tenantId: row.tenantId,
+    occurredAt: row.occurredAt.toISOString(),
+    level: row.level,
+    category: row.category,
+    action: row.action,
+    status: row.status,
+    primitiveType: row.primitiveType,
+    primitiveId: row.primitiveId,
+    listingId: row.listingId,
+    shopId: row.shopId,
+    keyword: row.keyword,
+    message: row.message,
+    detailsJson: toDetailsJson2(row.detailsJson),
+    monitorRunId: row.monitorRunId,
+    requestId: row.requestId
+  };
+};
+var listEventLogs = async (input) => {
+  const parsed = listEventLogsInputSchema.parse(input);
+  const conditions = [eq(eventLogs.tenantId, parsed.tenantId)];
+  if (parsed.levels && parsed.levels.length > 0) {
+    conditions.push(inArray(eventLogs.level, parsed.levels));
+  }
+  if (parsed.statuses && parsed.statuses.length > 0) {
+    conditions.push(inArray(eventLogs.status, parsed.statuses));
+  }
+  if (parsed.primitiveTypes && parsed.primitiveTypes.length > 0) {
+    conditions.push(inArray(eventLogs.primitiveType, parsed.primitiveTypes));
+  }
+  if (parsed.actions && parsed.actions.length > 0) {
+    conditions.push(inArray(eventLogs.action, parsed.actions));
+  }
+  if (parsed.listingId) {
+    conditions.push(eq(eventLogs.listingId, parsed.listingId));
+  }
+  if (parsed.shopId) {
+    conditions.push(eq(eventLogs.shopId, parsed.shopId));
+  }
+  if (parsed.keyword) {
+    conditions.push(eq(eventLogs.keyword, parsed.keyword));
+  }
+  if (parsed.monitorRunId) {
+    conditions.push(eq(eventLogs.monitorRunId, parsed.monitorRunId));
+  }
+  if (parsed.search) {
+    const partialMatch = `%${parsed.search}%`;
+    conditions.push(or(ilike(eventLogs.message, partialMatch), ilike(eventLogs.action, partialMatch), ilike(eventLogs.keyword, partialMatch), eq(eventLogs.listingId, parsed.search), eq(eventLogs.shopId, parsed.search), eq(eventLogs.monitorRunId, parsed.search), eq(eventLogs.requestId, parsed.search)));
+  }
+  if (parsed.cursor) {
+    const cursorOccurredAt = new Date(parsed.cursor.occurredAt);
+    conditions.push(or(lt(eventLogs.occurredAt, cursorOccurredAt), and(eq(eventLogs.occurredAt, cursorOccurredAt), lt(eventLogs.id, parsed.cursor.id))));
+  }
+  const rows = await db.select().from(eventLogs).where(and(...conditions)).orderBy(desc(eventLogs.occurredAt), desc(eventLogs.id)).limit(parsed.limit + 1);
+  const hasMore = rows.length > parsed.limit;
+  const pageRows = hasMore ? rows.slice(0, parsed.limit) : rows;
+  const items = pageRows.map(toRecord5);
+  const tail = pageRows[pageRows.length - 1];
+  return {
+    items,
+    nextCursor: hasMore && tail ? {
+      id: tail.id,
+      occurredAt: tail.occurredAt.toISOString()
+    } : null
+  };
+};
+
+// src/api/app/logs/list.ts
+var listLogsInputSchema = exports_external.object({
+  limit: exports_external.number().int().min(1).max(100).default(20),
+  cursor: exports_external.object({
+    occurredAt: exports_external.string().datetime(),
+    id: exports_external.string().uuid()
+  }).optional(),
+  search: exports_external.string().trim().min(1).optional(),
+  levels: exports_external.array(eventLogLevelSchema).optional(),
+  statuses: exports_external.array(eventLogStatusSchema).optional(),
+  primitiveTypes: exports_external.array(eventLogPrimitiveTypeSchema).optional(),
+  actions: exports_external.array(exports_external.string().min(1)).optional(),
+  listingId: exports_external.string().min(1).optional(),
+  shopId: exports_external.string().min(1).optional(),
+  keyword: exports_external.string().min(1).optional(),
+  monitorRunId: exports_external.string().min(1).optional()
+});
+var logsListProcedure = appProcedure.input(listLogsInputSchema).query(async ({ ctx, input }) => {
+  return listEventLogs({
+    ...input,
+    tenantId: ctx.tenantId
+  });
+});
+
+// src/api/app/logs/router.ts
+var logsRouter = router({
+  list: logsListProcedure
+});
+
 // src/api/app/router.ts
 var appRouter = router({
-  etsyAuth: etsyAuthRouter
+  admin: adminRouter,
+  dashboard: dashboardRouter,
+  etsyAuth: etsyAuthRouter,
+  keywords: keywordsRouter,
+  listings: listingsRouter,
+  logs: logsRouter
 });
 
 // src/api/public/router.ts
@@ -50250,14 +77355,78 @@ var rootRouter = router({
   public: publicRouter
 });
 
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/migrator.js
+import crypto3 from "crypto";
+import fs2 from "fs";
+function readMigrationFiles(config2) {
+  const migrationFolderTo = config2.migrationsFolder;
+  const migrationQueries = [];
+  const journalPath = `${migrationFolderTo}/meta/_journal.json`;
+  if (!fs2.existsSync(journalPath)) {
+    throw new Error(`Can't find meta/_journal.json file`);
+  }
+  const journalAsString = fs2.readFileSync(`${migrationFolderTo}/meta/_journal.json`).toString();
+  const journal = JSON.parse(journalAsString);
+  for (const journalEntry of journal.entries) {
+    const migrationPath = `${migrationFolderTo}/${journalEntry.tag}.sql`;
+    try {
+      const query = fs2.readFileSync(`${migrationFolderTo}/${journalEntry.tag}.sql`).toString();
+      const result = query.split("--> statement-breakpoint").map((it) => {
+        return it;
+      });
+      migrationQueries.push({
+        sql: result,
+        bps: journalEntry.breakpoints,
+        folderMillis: journalEntry.when,
+        hash: crypto3.createHash("sha256").update(query).digest("hex")
+      });
+    } catch {
+      throw new Error(`No file ${migrationPath} found in ${migrationFolderTo} folder`);
+    }
+  }
+  return migrationQueries;
+}
+
+// ../../node_modules/.bun/drizzle-orm@0.44.7+1fba9833a38c294a/node_modules/drizzle-orm/postgres-js/migrator.js
+async function migrate2(db2, config2) {
+  const migrations = readMigrationFiles(config2);
+  await db2.dialect.migrate(migrations, db2.session, config2);
+}
+
+// src/db/migrate.ts
+var runMigrations = async () => {
+  const migrationClient = src_default({
+    database: env.databaseName,
+    host: env.databaseHost,
+    max: 1,
+    password: env.databasePassword,
+    port: env.databasePort,
+    user: env.databaseUser
+  });
+  try {
+    const migrationDb = drizzle(migrationClient);
+    await migrate2(migrationDb, {
+      migrationsFolder: "./drizzle",
+      migrationsTable: "__drizzle_migrations"
+    });
+  } finally {
+    await migrationClient.end();
+  }
+};
+
 // src/services/etsy/oauth-html.ts
+var escapeHtml = (input) => {
+  return input.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;");
+};
 var baseHtml = (title, description) => {
+  const safeTitle = escapeHtml(title);
+  const safeDescription = escapeHtml(description);
   return `<!DOCTYPE html>
 <html lang="en">
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>${title}</title>
+        <title>${safeTitle}</title>
         <style>
             body {
                 font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
@@ -50290,12 +77459,15 @@ var baseHtml = (title, description) => {
     </head>
     <body>
         <main>
-            <h1>${title}</h1>
-            <p>${description}</p>
+            <h1>${safeTitle}</h1>
+            <p>${safeDescription}</p>
         </main>
         <script>
             if (window.opener && typeof window.opener.postMessage === 'function') {
-                window.opener.postMessage({ type: 'etsy-oauth-complete', title: ${JSON.stringify(title)} }, '*');
+                window.opener.postMessage(
+                    { type: 'etsy-oauth-complete', title: ${JSON.stringify(title)} },
+                    '*'
+                );
             }
         </script>
     </body>
@@ -50308,6 +77480,144 @@ var renderOAuthErrorHtml = (message) => {
   return baseHtml("Etsy connection failed", message);
 };
 
+// src/services/realtime/start-websocket-runtime.ts
+import { WebSocket, WebSocketServer } from "ws";
+var normalizeOrigin = (origin) => {
+  return origin.trim().replace(/\/+$/, "");
+};
+var parsePathname = (request) => {
+  const url2 = new URL(request.url ?? "", "http://localhost");
+  return url2.pathname;
+};
+var parseToken = (request) => {
+  const url2 = new URL(request.url ?? "", "http://localhost");
+  const token = url2.searchParams.get("token")?.trim();
+  if (!token) {
+    return null;
+  }
+  return token;
+};
+var isAllowedOrigin = (request) => {
+  const requestOrigin = request.headers.origin;
+  if (!requestOrigin) {
+    return true;
+  }
+  return normalizeOrigin(requestOrigin) === normalizeOrigin(env.APP_ORIGIN);
+};
+var rejectUpgrade = (socket, statusLine) => {
+  if (socket.destroyed) {
+    return;
+  }
+  socket.write(`HTTP/1.1 ${statusLine}\r
+Connection: close\r
+\r
+`);
+  socket.destroy();
+};
+var deriveIdentityFromToken = async (token) => {
+  try {
+    const payload = await verifyToken2(token, {
+      secretKey: env.CLERK_SECRET_KEY
+    });
+    const subject = typeof payload.sub === "string" ? payload.sub.trim() : "";
+    if (!subject) {
+      return null;
+    }
+    const orgId = typeof payload.org_id === "string" ? payload.org_id.trim() : "";
+    const tenantId = orgId.length > 0 ? orgId : subject;
+    return {
+      clerkUserId: subject,
+      tenantId
+    };
+  } catch {
+    return null;
+  }
+};
+var shouldDeliverEvent = (event, connectionIdentity) => {
+  return event.clerkUserId === connectionIdentity.clerkUserId && event.tenantId === connectionIdentity.tenantId;
+};
+var startWebsocketRuntime = (params) => {
+  const websocketServer = new WebSocketServer({
+    noServer: true
+  });
+  const identityByConnection = new Map;
+  const removeInvalidationListener = onEvent((event) => {
+    const payload = JSON.stringify({
+      queries: event.queries,
+      type: "query.invalidate"
+    });
+    for (const [connection2, connectionIdentity] of identityByConnection.entries()) {
+      if (!shouldDeliverEvent(event, connectionIdentity)) {
+        continue;
+      }
+      if (connection2.readyState !== WebSocket.OPEN) {
+        continue;
+      }
+      connection2.send(payload, (error48) => {
+        if (!error48) {
+          return;
+        }
+        params.server.log.warn({
+          clerkUserId: event.clerkUserId,
+          error: error48,
+          tenantId: event.tenantId
+        }, "Failed to send realtime invalidation event.");
+      });
+    }
+  });
+  const onUpgrade = (request, socket, head) => {
+    if (parsePathname(request) !== "/ws") {
+      return;
+    }
+    if (!isAllowedOrigin(request)) {
+      rejectUpgrade(socket, "403 Forbidden");
+      return;
+    }
+    const token = parseToken(request);
+    if (!token) {
+      rejectUpgrade(socket, "401 Unauthorized");
+      return;
+    }
+    deriveIdentityFromToken(token).then((connectionIdentity) => {
+      if (!connectionIdentity) {
+        rejectUpgrade(socket, "401 Unauthorized");
+        return;
+      }
+      if (socket.destroyed) {
+        return;
+      }
+      websocketServer.handleUpgrade(request, socket, head, (connection2) => {
+        identityByConnection.set(connection2, connectionIdentity);
+        websocketServer.emit("connection", connection2, request);
+      });
+    });
+  };
+  websocketServer.on("connection", (connection2) => {
+    connection2.on("close", () => {
+      identityByConnection.delete(connection2);
+    });
+    connection2.on("error", () => {
+      identityByConnection.delete(connection2);
+    });
+  });
+  params.server.server.on("upgrade", onUpgrade);
+  return {
+    stop: async () => {
+      params.server.server.off("upgrade", onUpgrade);
+      removeInvalidationListener();
+      for (const connection2 of websocketServer.clients) {
+        connection2.close();
+      }
+      await new Promise((resolve) => {
+        websocketServer.close(() => {
+          resolve();
+        });
+      });
+      identityByConnection.clear();
+    }
+  };
+};
+
 // src/index.ts
 var callbackQuerySchema = exports_external.object({
   code: exports_external.string().optional(),
@@ -50315,68 +77625,99 @@ var callbackQuerySchema = exports_external.object({
   error_description: exports_external.string().optional(),
   state: exports_external.string().optional()
 });
-var server = import_fastify2.default({
-  logger: {
+var buildServer = async (options = {}) => {
+  const completeOAuthFlow = options.completeOAuthFlow ?? completeEtsyOAuthFlow;
+  const logger2 = options.logger === undefined ? {
     level: env.NODE_ENV === "development" ? "info" : "warn"
-  }
-});
-await server.register(import_cors.default, {
-  credentials: true,
-  origin: [env.APP_ORIGIN]
-});
-await server.register(fastifyTRPCPlugin, {
-  prefix: "/api",
-  trpcOptions: {
-    createContext: createTrpcContext,
-    onError({
-      error: error48,
-      path
-    }) {
-      server.log.error({ error: error48, path }, "tRPC procedure failed");
-    },
-    router: rootRouter
-  }
-});
-server.get("/healthz", async () => {
-  return {
-    service: "etsy-sentry-server",
-    status: "ok"
-  };
-});
-server.get("/auth/etsy/callback", async (request, reply) => {
-  const parsedQuery = callbackQuerySchema.safeParse(request.query);
-  if (!parsedQuery.success) {
-    return reply.status(400).type("text/html").send(renderOAuthErrorHtml("OAuth callback query was invalid. Please retry from the dashboard."));
-  }
-  const { code, error: error48, error_description: errorDescription, state } = parsedQuery.data;
-  if (error48) {
-    server.log.warn({ error: error48, errorDescription }, "Etsy OAuth callback returned an OAuth error");
-    return reply.status(400).type("text/html").send(renderOAuthErrorHtml(errorDescription ?? error48));
-  }
-  if (!code || !state) {
-    return reply.status(400).type("text/html").send(renderOAuthErrorHtml("OAuth callback was missing the required code or state."));
-  }
-  try {
-    await completeEtsyOAuthFlow({
-      code,
-      state
-    });
-    return reply.status(200).type("text/html").send(renderOAuthSuccessHtml());
-  } catch (callbackError) {
-    server.log.error({ callbackError }, "Etsy OAuth callback failed");
-    if (callbackError instanceof TRPCError && callbackError.code === "BAD_REQUEST") {
-      return reply.status(400).type("text/html").send(renderOAuthErrorHtml(callbackError.message));
+  } : options.logger;
+  const server = import_fastify2.default({
+    logger: logger2
+  });
+  await server.register(import_cors.default, {
+    credentials: true,
+    origin: [env.APP_ORIGIN]
+  });
+  await server.register(fastifyTRPCPlugin, {
+    prefix: "/api",
+    trpcOptions: {
+      createContext: createTrpcContext,
+      onError({
+        error: error48,
+        path
+      }) {
+        server.log.error({ error: error48, path }, "tRPC procedure failed");
+      },
+      router: rootRouter
     }
-    return reply.status(500).type("text/html").send(renderOAuthErrorHtml("Token exchange failed. Start the Etsy connection flow again."));
-  }
-});
-server.log.info({
-  apiPrefix: "/api",
-  callbackPath: "/auth/etsy/callback",
-  oauthScopes: env.etsyOAuthScopes,
-  port: env.PORT
-}, "Startup status summary");
-await server.listen({
-  host: "0.0.0.0",
-  port: env.PORT
-});
+  });
+  const realtimeRuntime = startWebsocketRuntime({
+    server
+  });
+  server.addHook("onClose", async () => {
+    await realtimeRuntime.stop();
+  });
+  server.get("/healthz", async () => {
+    return {
+      service: "etsy-sentry-server",
+      status: "ok"
+    };
+  });
+  server.get("/auth/etsy/callback", async (request, reply) => {
+    const parsedQuery = callbackQuerySchema.safeParse(request.query);
+    if (!parsedQuery.success) {
+      return reply.status(400).type("text/html").send(renderOAuthErrorHtml("OAuth callback query was invalid. Please retry from the dashboard."));
+    }
+    const { code, error: error48, error_description: errorDescription, state } = parsedQuery.data;
+    if (error48) {
+      server.log.warn({ error: error48, errorDescription }, "Etsy OAuth callback returned an OAuth error");
+      return reply.status(400).type("text/html").send(renderOAuthErrorHtml(errorDescription ?? error48));
+    }
+    if (!code || !state) {
+      return reply.status(400).type("text/html").send(renderOAuthErrorHtml("OAuth callback was missing the required code or state."));
+    }
+    try {
+      await completeOAuthFlow({
+        code,
+        state
+      });
+      return reply.status(200).type("text/html").send(renderOAuthSuccessHtml());
+    } catch (callbackError) {
+      server.log.error({ callbackError }, "Etsy OAuth callback failed");
+      if (callbackError instanceof TRPCError && callbackError.code === "BAD_REQUEST") {
+        return reply.status(400).type("text/html").send(renderOAuthErrorHtml(callbackError.message));
+      }
+      return reply.status(500).type("text/html").send(renderOAuthErrorHtml("Token exchange failed. Start the Etsy connection flow again."));
+    }
+  });
+  return server;
+};
+if (import.meta.main) {
+  await runMigrations();
+  await testDbConnection();
+  const server = await buildServer();
+  await startKeywordSyncJobs({
+    logger: server.log
+  });
+  server.addHook("onClose", async () => {
+    await stopKeywordSyncJobs();
+  });
+  server.log.info({
+    apiPrefix: "/api",
+    adminEmail: env.ADMIN_EMAIL,
+    authProvider: "clerk",
+    callbackPath: "/auth/etsy/callback",
+    callbackUrl: env.ETSY_OAUTH_REDIRECT_URI,
+    databaseHost: env.databaseHost,
+    databaseName: env.databaseName,
+    databasePort: env.databasePort,
+    oauthScopes: env.etsyOAuthScopes,
+    port: env.PORT
+  }, "Startup status summary");
+  await server.listen({
+    host: "0.0.0.0",
+    port: env.PORT
+  });
+}
+export {
+  buildServer
+};
