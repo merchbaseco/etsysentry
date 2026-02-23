@@ -262,8 +262,8 @@ export function ListingsTab() {
                     <table className="w-full table-fixed text-xs">
                         <thead className="sticky top-0 z-10 bg-card">
                             <tr className="border-b border-border">
-                                <th className="w-10 px-3 py-2 text-left text-[10px] uppercase tracking-wider text-muted-foreground" />
-                                <th className="px-2 py-2 text-left text-[10px] uppercase tracking-wider text-muted-foreground">
+                                <th className="w-[68px] pl-2 pr-3 py-2 text-left text-[10px] uppercase tracking-wider text-muted-foreground" />
+                                <th className="pl-2 pr-2 py-2 text-left text-[10px] uppercase tracking-wider text-muted-foreground">
                                     Title
                                 </th>
                                 <th className="w-[100px] px-2 py-2 text-left text-[10px] uppercase tracking-wider text-muted-foreground">
@@ -292,18 +292,18 @@ export function ListingsTab() {
 
                                 return (
                                     <tr key={item.id} className="border-b border-border/50">
-                                        <td className="w-10 px-3 py-1.5">
-                                            {item.thumbnailUrl ? (
-                                                <img
-                                                    src={item.thumbnailUrl}
-                                                    alt=""
-                                                    className="size-8 rounded object-cover"
-                                                />
-                                            ) : (
-                                                <div className="size-8 rounded bg-secondary" />
-                                            )}
+                                        <td className="w-[68px] pl-2 pr-3 py-1.5">
+                                            <div className="size-12 overflow-hidden rounded bg-secondary">
+                                                {item.thumbnailUrl ? (
+                                                    <img
+                                                        src={item.thumbnailUrl}
+                                                        alt=""
+                                                        className="size-full max-w-none origin-center scale-[1.2] object-cover"
+                                                    />
+                                                ) : null}
+                                            </div>
                                         </td>
-                                        <td className="px-2 py-1.5 text-foreground">
+                                        <td className="pl-2 pr-2 py-1.5 text-foreground">
                                             <a
                                                 href={item.url ?? undefined}
                                                 target="_blank"
