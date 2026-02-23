@@ -18,6 +18,7 @@ import {
     formatNumber,
     timeAgo
 } from './shared';
+import { MouseThumbnailTooltip } from './mouse-thumbnail-tooltip';
 
 const trackedListingsQueryKey = trpc.app.listings.list.queryOptions({}).queryKey;
 const trackedListingsQueryKeyJson = JSON.stringify(trackedListingsQueryKey);
@@ -323,14 +324,20 @@ export function ListingsTab() {
                                         </td>
                                         <td className="pl-2 pr-2 py-1.5 text-foreground">
                                             <div className="space-y-0.5">
-                                                <a
-                                                    href={item.url ?? undefined}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="block truncate hover:text-primary"
+                                                <MouseThumbnailTooltip
+                                                    className="block min-w-0"
+                                                    imageAlt={item.title}
+                                                    imageUrl={item.thumbnailUrl}
                                                 >
-                                                    {item.title}
-                                                </a>
+                                                    <a
+                                                        href={item.url ?? undefined}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="block truncate hover:text-primary"
+                                                    >
+                                                        {item.title}
+                                                    </a>
+                                                </MouseThumbnailTooltip>
                                                 <div className="truncate font-semibold text-foreground">
                                                     {item.shopName ?? '--'}
                                                 </div>
