@@ -14,8 +14,13 @@ Implemented scaffold:
 - Tracked listings app API (`api.app.listings.list|track|refresh`)
 - Tracked keywords app API (`api.app.keywords.list|track`)
 - Keyword rank read API (`api.app.keywords.getDailyProductRanksForKeyword`)
-- Keyword rank sync now upserts discovered ranked listings into `tracked_listings`
-  before inserting `product_keyword_ranks`
+- Keyword rank sync inserts a `tracked_listings` row only when a ranked listing is not already
+  tracked, then inserts `product_keyword_ranks`
+- Newly discovered listings from keyword sync enqueue `sync-listing` jobs to hydrate canonical
+  listing snapshot fields
+- Canonical listing snapshot fields (`price*`, `quantity`, `views`, `numFavorers`, `shopName`,
+  `etsyState`, `updatedTimestamp`, `lastRefreshedAt`, `lastRefreshError`) are owned by listing
+  sync (`track|refresh`) paths
 - Product keyword-rank query (`api.app.listings.getKeywordRanksForProduct`)
 - First Etsy bridge file:
   - `apps/server/src/services/etsy/bridges/exchange-oauth-token.ts`

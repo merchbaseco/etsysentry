@@ -13,7 +13,9 @@ const moneySchema = z.object({
 
 const listingSchema = z
     .object({
+        images: z.array(z.unknown()).nullable().optional(),
         listing_id: z.coerce.number().int().positive(),
+        main_image: z.unknown().nullable().optional(),
         price: moneySchema.nullable().optional(),
         shop_id: z.coerce.number().int().positive().nullable().optional(),
         title: z.string().min(1),
@@ -77,6 +79,7 @@ export type FindAllListingsActiveBridgeResponse = {
             divisor: number;
         } | null;
         shopId: string | null;
+        thumbnailUrl: string | null;
         title: string;
         url: string | null;
     }>;
@@ -176,6 +179,31 @@ const buildEndpoint = (input: z.infer<typeof inputSchema>): string => {
     return url.toString();
 };
 
+const extractThumbnailUrlFromImage = (image: unknown): string | null => {
+    if (typeof image !== 'object' || image === null) {
+        return null;
+    }
+
+    const record = image as Record<string, unknown>;
+    const thumbnailUrl = record.url_170x135 ?? record.url_75x75 ?? null;
+
+    return typeof thumbnailUrl === 'string' ? thumbnailUrl : null;
+};
+
+const extractThumbnailUrl = (listing: z.infer<typeof listingSchema>): string | null => {
+    const thumbnailFromMainImage = extractThumbnailUrlFromImage(listing.main_image);
+
+    if (thumbnailFromMainImage) {
+        return thumbnailFromMainImage;
+    }
+
+    if (!listing.images || listing.images.length === 0) {
+        return null;
+    }
+
+    return extractThumbnailUrlFromImage(listing.images[0]);
+};
+
 const toResponse = (parsed: z.infer<typeof responseSchema>): FindAllListingsActiveBridgeResponse => {
     return {
         count: parsed.count,
@@ -189,6 +217,7 @@ const toResponse = (parsed: z.infer<typeof responseSchema>): FindAllListingsActi
                   }
                 : null,
             shopId: item.shop_id === null || item.shop_id === undefined ? null : String(item.shop_id),
+            thumbnailUrl: extractThumbnailUrl(item),
             title: item.title,
             url: item.url ?? null
         }))

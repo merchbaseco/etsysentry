@@ -24,6 +24,9 @@ current and historical data for analysis.
 - API organization: mirror RankWrangler tRPC organization with `api.public.*` and `api.app.*`.
 - API naming: user-intent-first names (for example: `track`,
   `getDailyProductRanksForKeyword`, `getKeywordRanksForProduct`).
+- Listing field ownership:
+  - keyword monitoring owns rank data and listing discovery insertion only
+  - listing monitoring is the canonical source for listing snapshot fields
 
 ## Primitives
 
@@ -59,8 +62,11 @@ Each primitive must be creatable, listable, retrievable, and monitorable.
   - Query Etsy search for the keyword.
   - Capture first-page results each run.
   - Persist listing ranking observations with a single absolute rank per listing.
-  - Auto-add newly discovered listings.
+  - Auto-add newly discovered listings only when the tracked listing does not already exist.
+  - Enqueue listing sync jobs for newly discovered listings so canonical listing snapshots are
+    hydrated.
 - Listing monitoring:
+  - Is the canonical source of truth for listing snapshot fields.
   - Store/update listing profile data separately from metric snapshots.
   - Capture snapshot fields at each run (at minimum: review count, review average, favorers, price).
   - Add additional quantitative fields from Etsy listing responses where useful.
