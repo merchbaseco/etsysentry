@@ -8,8 +8,10 @@ import {
     type FindAllListingsActiveBridgeResponse
 } from '../etsy/bridges/find-all-listings-active';
 import { getEtsyOAuthAccessToken } from '../etsy/oauth-service';
+import { emitEvent } from '../realtime/emit-event';
 
 const DAILY_SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000;
+const keywordSyncInvalidationQueries = ['app.keywords.list', 'app.listings.list'] as const;
 
 export const computeNextKeywordSyncAt = (now: Date): Date => {
     return new Date(now.getTime() + DAILY_SYNC_INTERVAL_MS);
@@ -318,6 +320,12 @@ export const syncRanksForKeyword = async (params: {
                 )
             );
 
+        emitEvent({
+            clerkUserId: params.clerkUserId,
+            queries: [...keywordSyncInvalidationQueries],
+            tenantId: params.tenantId
+        });
+
         return {
             keyword: trackedKeyword.keyword,
             normalizedKeyword: trackedKeyword.normalizedKeyword,
@@ -350,6 +358,12 @@ export const syncRanksForKeyword = async (params: {
                     eq(trackedKeywords.tenantId, params.tenantId)
                 )
             );
+
+        emitEvent({
+            clerkUserId: params.clerkUserId,
+            queries: [...keywordSyncInvalidationQueries],
+            tenantId: params.tenantId
+        });
 
         throw error;
     }

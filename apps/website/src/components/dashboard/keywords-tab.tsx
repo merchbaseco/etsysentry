@@ -24,6 +24,7 @@ import {
 } from './shared';
 
 const trackedKeywordsQueryKey = trpc.app.keywords.list.queryOptions({}).queryKey;
+const trackedKeywordsQueryKeyJson = JSON.stringify(trackedKeywordsQueryKey);
 
 const toErrorMessage = (error: unknown): string => {
     if (error instanceof TrpcRequestError) {
@@ -93,6 +94,23 @@ export function KeywordsTab() {
     useEffect(() => {
         void loadKeywords();
     }, [loadKeywords]);
+
+    useEffect(() => {
+        return queryClient.getQueryCache().subscribe((event) => {
+            if (JSON.stringify(event.query.queryKey) !== trackedKeywordsQueryKeyJson) {
+                return;
+            }
+
+            const data = event.query.state.data as ListTrackedKeywordsOutput | undefined;
+
+            if (!data) {
+                return;
+            }
+
+            setItems(data.items);
+            setIsLoading(false);
+        });
+    }, []);
 
     useEffect(() => {
         const intervalId = window.setInterval(() => {

@@ -20,6 +20,7 @@ import {
 } from './shared';
 
 const trackedListingsQueryKey = trpc.app.listings.list.queryOptions({}).queryKey;
+const trackedListingsQueryKeyJson = JSON.stringify(trackedListingsQueryKey);
 
 const formatPrice = (item: TrackedListingItem): string => {
     if (!item.price) {
@@ -97,6 +98,23 @@ export function ListingsTab() {
     useEffect(() => {
         void loadListings();
     }, [loadListings]);
+
+    useEffect(() => {
+        return queryClient.getQueryCache().subscribe((event) => {
+            if (JSON.stringify(event.query.queryKey) !== trackedListingsQueryKeyJson) {
+                return;
+            }
+
+            const data = event.query.state.data as ListTrackedListingsOutput | undefined;
+
+            if (!data) {
+                return;
+            }
+
+            setItems(data.items);
+            setIsLoading(false);
+        });
+    }, []);
 
     const filtered = useMemo(() => {
         const query = search.trim().toLowerCase();
