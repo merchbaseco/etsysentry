@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { decorateTrackedListingWithUsd } from '../../../services/currency/decorate-tracked-listings-with-usd';
 import { trackListing } from '../../../services/listings/tracked-listings-service';
 import { appProcedure } from '../../trpc';
 
@@ -9,10 +10,15 @@ export const listingsTrackProcedure = appProcedure
         })
     )
     .mutation(async ({ ctx, input }) => {
-        return trackListing({
+        const response = await trackListing({
             listingInput: input.listing,
             requestId: ctx.requestId,
             tenantId: ctx.tenantId,
             trackerClerkUserId: ctx.user.sub
         });
+
+        return {
+            created: response.created,
+            item: await decorateTrackedListingWithUsd(response.item)
+        };
     });

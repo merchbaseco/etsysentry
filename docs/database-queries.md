@@ -65,6 +65,10 @@ psql -h "$DATABASE_HOST" -p "$DATABASE_PORT" -U "$DATABASE_USER" -d "$DATABASE_N
 # Etsy OAuth connections by tenant/user
 psql -h "$DATABASE_HOST" -p "$DATABASE_PORT" -U "$DATABASE_USER" -d "$DATABASE_NAME" -c \
   "SELECT tenant_id, clerk_user_id, expires_at, updated_at FROM etsy_oauth_connections ORDER BY updated_at DESC LIMIT 50;"
+
+# USD conversion rates cache status
+psql -h "$DATABASE_HOST" -p "$DATABASE_PORT" -U "$DATABASE_USER" -d "$DATABASE_NAME" -c \
+  "SELECT base_currency, provider, fetched_at, next_refresh_at, last_refresh_error, updated_at FROM currency_rates ORDER BY updated_at DESC LIMIT 10;"
 ```
 
 ### Container-local query (when logged into deployment host)

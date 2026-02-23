@@ -13,6 +13,8 @@ current and historical data for analysis.
   - store listing profile data (title, seller/shop identity, tags, descriptive metadata)
   - store listing metrics snapshots separately (review count, average rating, favorites/favorers, and
     other useful quantitative fields from listing APIs)
+  - persist native Etsy listing price fields as source of truth; derive USD-converted price at
+    request time from server-managed FX cache
 - Raw payload retention: do not retain raw Etsy payloads; retain normalized fields only.
 - Monitoring orchestration: continuous spacing with pg-boss jobs (not one global fixed daily run).
 - Tenancy: multi-tenant from the start.
