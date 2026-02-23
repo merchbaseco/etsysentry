@@ -36,12 +36,8 @@ const formatPrice = (item: TrackedListingItem): string => {
             ? item.priceUsdValue.toFixed(2)
             : null;
 
-    if (item.price.currencyCode === 'USD' && usdValue !== null) {
-        return `$${usdValue}`;
-    }
-
     if (usdValue !== null) {
-        return `$${usdValue} (${item.price.currencyCode} ${nativeValue})`;
+        return `$${usdValue}`;
     }
 
     if (item.price.currencyCode === 'USD') {
