@@ -304,14 +304,19 @@ export function ListingsTab() {
                                             </div>
                                         </td>
                                         <td className="pl-2 pr-2 py-1.5 text-foreground">
-                                            <a
-                                                href={item.url ?? undefined}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                className="block truncate hover:text-primary"
-                                            >
-                                                {item.title}
-                                            </a>
+                                            <div className="space-y-0.5">
+                                                <a
+                                                    href={item.url ?? undefined}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="block truncate hover:text-primary"
+                                                >
+                                                    {item.title}
+                                                </a>
+                                                <div className="truncate font-semibold text-foreground">
+                                                    {item.shopName ?? '--'}
+                                                </div>
+                                            </div>
                                         </td>
                                         <td className="truncate px-2 py-1.5">
                                             {item.shopName ?? '--'}
