@@ -34,7 +34,7 @@ export const trackedListingEtsyStateEnum = pgEnum('tracked_listing_etsy_state', 
 export const trackedListings = pgTable(
     'tracked_listings',
     {
-        id: uuid('id').primaryKey().defaultRandom(),
+        listingId: uuid('listing_id').primaryKey().defaultRandom(),
         tenantId: text('tenant_id').notNull(),
         trackerClerkUserId: text('tracker_clerk_user_id').notNull(),
         etsyListingId: text('etsy_listing_id').notNull(),
@@ -109,6 +109,9 @@ export const productKeywordRanks = pgTable(
         id: uuid('id').primaryKey().defaultRandom(),
         tenantId: text('tenant_id').notNull(),
         trackedKeywordId: uuid('tracked_keyword_id').notNull(),
+        listingId: uuid('listing_id')
+            .notNull()
+            .references(() => trackedListings.listingId),
         observedAt: timestamp('observed_at', { mode: 'date' }).notNull().defaultNow(),
         rank: integer('rank').notNull(),
         etsyListingId: text('etsy_listing_id').notNull(),
@@ -121,6 +124,13 @@ export const productKeywordRanks = pgTable(
             table.observedAt
         ),
         tenantListingObservedIdx: index('product_keyword_ranks_tenant_listing_observed_idx').on(
+            table.tenantId,
+            table.listingId,
+            table.observedAt
+        ),
+        tenantEtsyListingObservedIdx: index(
+            'product_keyword_ranks_tenant_etsy_listing_observed_idx'
+        ).on(
             table.tenantId,
             table.etsyListingId,
             table.observedAt

@@ -121,7 +121,7 @@ const toRecord = (row: typeof trackedListings.$inferSelect): TrackedListingRecor
     return {
         etsyListingId: row.etsyListingId,
         etsyState: row.etsyState,
-        id: row.id,
+        id: row.listingId,
         lastRefreshError: row.lastRefreshError,
         lastRefreshedAt: row.lastRefreshedAt.toISOString(),
         numFavorers: row.numFavorers,
@@ -237,7 +237,7 @@ export const trackListing = async (params: {
 
     const existing = await db
         .select({
-            id: trackedListings.id
+            listingId: trackedListings.listingId
         })
         .from(trackedListings)
         .where(
@@ -288,7 +288,7 @@ export const refreshTrackedListing = async (params: {
         .from(trackedListings)
         .where(
             and(
-                eq(trackedListings.id, params.trackedListingId),
+                eq(trackedListings.listingId, params.trackedListingId),
                 eq(trackedListings.tenantId, params.tenantId)
             )
         )
@@ -319,7 +319,7 @@ export const refreshTrackedListing = async (params: {
         const [updated] = await db
             .update(trackedListings)
             .set(updateValues)
-            .where(eq(trackedListings.id, current.id))
+            .where(eq(trackedListings.listingId, current.listingId))
             .returning();
 
         return toRecord(updated);
@@ -335,7 +335,7 @@ export const refreshTrackedListing = async (params: {
                 trackingState: 'error',
                 updatedAt: new Date()
             })
-            .where(eq(trackedListings.id, current.id))
+            .where(eq(trackedListings.listingId, current.listingId))
             .returning();
 
         if (!updated) {

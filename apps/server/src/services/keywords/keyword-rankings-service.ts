@@ -1,10 +1,11 @@
 import { TRPCError } from '@trpc/server';
 import { and, asc, desc, eq } from 'drizzle-orm';
 import { db } from '../../db';
-import { productKeywordRanks, trackedKeywords } from '../../db/schema';
+import { productKeywordRanks, trackedKeywords, trackedListings } from '../../db/schema';
 import {
     EtsyFindAllListingsActiveBridgeError,
-    findAllListingsActive
+    findAllListingsActive,
+    type FindAllListingsActiveBridgeResponse
 } from '../etsy/bridges/find-all-listings-active';
 import { getEtsyOAuthAccessToken } from '../etsy/oauth-service';
 
@@ -16,6 +17,7 @@ export const computeNextKeywordSyncAt = (now: Date): Date => {
 
 export type ProductKeywordRankRecord = {
     etsyListingId: string;
+    listingId: string;
     observedAt: string;
     rank: number;
     trackedKeywordId: string;
@@ -38,6 +40,38 @@ export type KeywordRankForProduct = {
     latestObservedAt: string;
     normalizedKeyword: string;
     trackedKeywordId: string;
+};
+
+type RankedListingResult = FindAllListingsActiveBridgeResponse['results'][number];
+
+export const buildTrackedListingUpsertValues = (params: {
+    clerkUserId: string;
+    now: Date;
+    rankedListing: RankedListingResult;
+    tenantId: string;
+}) => {
+    return {
+        etsyListingId: params.rankedListing.listingId,
+        etsyState: 'active' as const,
+        lastRefreshError: null,
+        lastRefreshedAt: params.now,
+        numFavorers: null,
+        priceAmount: params.rankedListing.price?.amount ?? null,
+        priceCurrencyCode: params.rankedListing.price?.currencyCode ?? null,
+        priceDivisor: params.rankedListing.price?.divisor ?? null,
+        quantity: null,
+        shopId: params.rankedListing.shopId,
+        shopName: null,
+        tenantId: params.tenantId,
+        thumbnailUrl: null,
+        title: params.rankedListing.title,
+        trackerClerkUserId: params.clerkUserId,
+        trackingState: 'active' as const,
+        updatedAt: params.now,
+        updatedTimestamp: null,
+        url: params.rankedListing.url,
+        views: null
+    };
 };
 
 const parseListingIdentifier = (rawInput: string): string | null => {
@@ -77,6 +111,7 @@ const toRecord = (
 ): ProductKeywordRankRecord => {
     return {
         etsyListingId: row.etsyListingId,
+        listingId: row.listingId,
         observedAt: row.observedAt.toISOString(),
         rank: row.rank,
         trackedKeywordId: row.trackedKeywordId
@@ -190,17 +225,82 @@ export const syncRanksForKeyword = async (params: {
             tenantId: params.tenantId
         });
 
-        const insertValues = response.results.map((item, index) => ({
-            etsyListingId: item.listingId,
-            observedAt: now,
-            rank: index + 1,
-            tenantId: params.tenantId,
-            trackedKeywordId: trackedKeyword.id
-        }));
+        const insertValues = await db.transaction(async (tx) => {
+            const listingIdByEtsyListingId = new Map<string, string>();
 
-        if (insertValues.length > 0) {
-            await db.insert(productKeywordRanks).values(insertValues);
-        }
+            for (const item of response.results) {
+                if (listingIdByEtsyListingId.has(item.listingId)) {
+                    continue;
+                }
+
+                const upsertValues = buildTrackedListingUpsertValues({
+                    clerkUserId: params.clerkUserId,
+                    now,
+                    rankedListing: item,
+                    tenantId: params.tenantId
+                });
+
+                const [upsertedListing] = await tx
+                    .insert(trackedListings)
+                    .values(upsertValues)
+                    .onConflictDoUpdate({
+                        set: {
+                            etsyState: upsertValues.etsyState,
+                            lastRefreshError: upsertValues.lastRefreshError,
+                            lastRefreshedAt: upsertValues.lastRefreshedAt,
+                            priceAmount: upsertValues.priceAmount,
+                            priceCurrencyCode: upsertValues.priceCurrencyCode,
+                            priceDivisor: upsertValues.priceDivisor,
+                            shopId: upsertValues.shopId,
+                            title: upsertValues.title,
+                            trackerClerkUserId: upsertValues.trackerClerkUserId,
+                            trackingState: upsertValues.trackingState,
+                            updatedAt: upsertValues.updatedAt,
+                            url: upsertValues.url
+                        },
+                        target: [trackedListings.tenantId, trackedListings.etsyListingId]
+                    })
+                    .returning({
+                        etsyListingId: trackedListings.etsyListingId,
+                        listingId: trackedListings.listingId
+                    });
+
+                if (!upsertedListing) {
+                    throw new TRPCError({
+                        code: 'INTERNAL_SERVER_ERROR',
+                        message: 'Unable to upsert tracked listing during keyword rank sync.'
+                    });
+                }
+
+                listingIdByEtsyListingId.set(upsertedListing.etsyListingId, upsertedListing.listingId);
+            }
+
+            const values = response.results.map((item, index) => {
+                const listingId = listingIdByEtsyListingId.get(item.listingId);
+
+                if (!listingId) {
+                    throw new TRPCError({
+                        code: 'INTERNAL_SERVER_ERROR',
+                        message: 'Ranked listing was not available in tracked listings.'
+                    });
+                }
+
+                return {
+                    etsyListingId: item.listingId,
+                    listingId,
+                    observedAt: now,
+                    rank: index + 1,
+                    tenantId: params.tenantId,
+                    trackedKeywordId: trackedKeyword.id
+                };
+            });
+
+            if (values.length > 0) {
+                await tx.insert(productKeywordRanks).values(values);
+            }
+
+            return values;
+        });
 
         await db
             .update(trackedKeywords)
@@ -225,6 +325,7 @@ export const syncRanksForKeyword = async (params: {
             trackedKeywordId: trackedKeyword.id,
             items: insertValues.map((item) => ({
                 etsyListingId: item.etsyListingId,
+                listingId: item.listingId,
                 observedAt: now.toISOString(),
                 rank: item.rank,
                 trackedKeywordId: item.trackedKeywordId

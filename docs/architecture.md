@@ -92,7 +92,8 @@ docs/
   - handles Etsy search query wiring (pagination optional by caller)
 - `keyword-rankings-service.ts`:
   - calls the active listings search bridge for daily product ranks by keyword
-  - persists rank facts into `product_keyword_ranks` (append-only)
+  - upserts discovered listings into `tracked_listings`
+  - persists rank facts into `product_keyword_ranks` (append-only) with `listingId` FK linkage
   - updates tracked keyword refresh state/errors
 - `etsy-listing-service.ts`:
   - calls listing bridges
@@ -164,7 +165,7 @@ docs/
 
 - `product_keyword_ranks`
   - purpose: append-only rank facts only (no listing metadata snapshots)
-  - `tenantId`, `trackedKeywordId`, `etsyListingId`, `observedAt`, `rank`
+  - `tenantId`, `trackedKeywordId`, `listingId`, `etsyListingId`, `observedAt`, `rank`
 - `listing_metric_snapshots`
   - `tenantId`, `listingId`, `observedAt`, `reviewCount`, `reviewAverage`, `favorerCount`,
     `price`, `currency`, `views`, `quantity`, `estimatedSales`

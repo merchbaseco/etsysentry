@@ -305,7 +305,7 @@ export function KeywordsTab() {
                                 >
                                     <td className="px-3 py-1.5 text-foreground">
                                         <div className="font-medium">{item.keyword}</div>
-                                        <div className="text-[10px] text-terminal-dim">
+                                        <div className="text-[11px] text-terminal-dim">
                                             {item.normalizedKeyword}
                                         </div>
                                     </td>
@@ -335,7 +335,7 @@ export function KeywordsTab() {
                             <span className="text-muted-foreground">Latest Rankings:</span>{' '}
                             <span className="font-medium text-foreground">{selectedKeyword.keyword}</span>
                             {selectedDailyProductRanks?.observedAt ? (
-                                <span className="ml-2 text-[10px] text-terminal-dim">
+                                <span className="ml-2 text-[11px] text-terminal-dim">
                                     Captured {timeAgo(selectedDailyProductRanks.observedAt)}
                                 </span>
                             ) : null}
@@ -373,7 +373,7 @@ export function KeywordsTab() {
                                     {selectedDailyProductRanks.items.map((item) => (
                                         <tr key={`${item.trackedKeywordId}:${item.rank}`} className="border-b border-border/50">
                                             <td className="px-3 py-1.5 text-terminal-green">{item.rank}</td>
-                                            <td className="px-2 py-1.5 font-mono text-[10px] text-terminal-dim">
+                                            <td className="px-2 py-1.5 font-mono text-[11px] text-terminal-dim">
                                                 <a
                                                     href={`https://www.etsy.com/listing/${item.etsyListingId}`}
                                                     target="_blank"
@@ -391,7 +391,7 @@ export function KeywordsTab() {
                                                     type="button"
                                                     onClick={() => void loadReverseKeywords(item.etsyListingId)}
                                                     className={cn(
-                                                        'h-7 rounded border border-border bg-secondary px-2 text-[10px] uppercase tracking-wider',
+                                                        'h-7 rounded border border-border bg-secondary px-2 text-[11px] uppercase tracking-wider',
                                                         'transition-colors hover:text-foreground'
                                                     )}
                                                 >

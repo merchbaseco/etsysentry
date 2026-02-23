@@ -14,6 +14,8 @@ Implemented scaffold:
 - Tracked listings app API (`api.app.listings.list|track|refresh`)
 - Tracked keywords app API (`api.app.keywords.list|track`)
 - Keyword rank read API (`api.app.keywords.getDailyProductRanksForKeyword`)
+- Keyword rank sync now upserts discovered ranked listings into `tracked_listings`
+  before inserting `product_keyword_ranks`
 - Product keyword-rank query (`api.app.listings.getKeywordRanksForProduct`)
 - First Etsy bridge file:
   - `apps/server/src/services/etsy/bridges/exchange-oauth-token.ts`
