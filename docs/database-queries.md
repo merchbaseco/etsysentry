@@ -89,3 +89,16 @@ Always report exactly what changed and why.
 
 - Primary schema source: `apps/server/src/db/schema.ts`
 - Migration history: `apps/server/drizzle/`
+
+## One-Time Migration Prep (Approved)
+
+For the `product_keyword_ranks.listing_id` NOT NULL + FK rollout, historical rank rows may not have
+`listing_id` populated yet. If data loss for keyword rank history is acceptable, clear the table
+before running server migrations in production:
+
+```bash
+unset PGOPTIONS
+psql -h "$DATABASE_HOST" -p "$DATABASE_PORT" -U "$DATABASE_USER" -d "$DATABASE_NAME" -c \
+  'TRUNCATE TABLE product_keyword_ranks;'
+export PGOPTIONS='-c default_transaction_read_only=on'
+```
