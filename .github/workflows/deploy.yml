@@ -25,3 +25,168 @@ jobs:
 
           # Show status
           docker compose -p etsysentry --env-file /Users/zknicker/srv/etsysentry/.env ps
+
+      - name: Notify Discord
+        if: always()
+        continue-on-error: true
+        working-directory: /Users/zknicker/srv/etsysentry
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_DEPLOY_WEBHOOK_URL }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          REPO: ${{ github.repository }}
+          REPO_NAME: ${{ github.event.repository.name }}
+          BRANCH: ${{ github.ref_name }}
+          ACTOR: ${{ github.actor }}
+          BEFORE_SHA: ${{ github.event.before }}
+          AFTER_SHA: ${{ github.sha }}
+          JOB_STATUS: ${{ job.status }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import subprocess
+          import urllib.request
+
+
+          def env(name: str, default: str = "") -> str:
+              return (os.getenv(name) or default).strip()
+
+
+          def git(*args: str) -> str:
+              return subprocess.check_output(["git", *args], text=True).strip()
+
+
+          def post_discord(payload: dict) -> None:
+              webhook = env("DISCORD_WEBHOOK_URL")
+              if not webhook:
+                  print("DISCORD_DEPLOY_WEBHOOK_URL is not set; skipping Discord notification.")
+                  return
+              req = urllib.request.Request(
+                  webhook,
+                  data=json.dumps(payload).encode("utf-8"),
+                  headers={"Content-Type": "application/json"},
+              )
+              with urllib.request.urlopen(req, timeout=15) as resp:
+                  print(f"Discord webhook response: {resp.status}")
+
+
+          def build_commits(before_sha: str, after_sha: str) -> tuple[list[dict], str]:
+              zero = "0" * 40
+              has_before = bool(before_sha) and before_sha != zero
+              has_after = bool(after_sha)
+              if has_before and has_after:
+                  rev = f"{before_sha}..{after_sha}"
+              elif has_after:
+                  rev = after_sha
+              else:
+                  rev = "HEAD"
+
+              try:
+                  raw = git("log", "--no-merges", "--max-count=8", f"--pretty=format:%h%x1f%s%x1f%an", rev)
+              except Exception:
+                  raw = ""
+              commits = []
+              if raw:
+                  for line in raw.splitlines():
+                      parts = line.split("\x1f")
+                      if len(parts) != 3:
+                          continue
+                      short_sha, subject, author = parts
+                      commits.append({"short_sha": short_sha, "subject": subject.strip(), "author": author.strip()})
+              return commits, rev
+
+
+          def generate_summary(commits: list[dict], repo_name: str, branch: str, actor: str) -> str:
+              fallback = "Deployed successfully."
+              if commits:
+                  highlights = ", ".join(c["subject"] for c in commits[:3])
+                  fallback = f"Deployed {len(commits)} commit(s): {highlights}."
+
+              api_key = env("OPENAI_API_KEY")
+              if not api_key:
+                  return fallback
+
+              prompt_payload = {
+                  "repo": repo_name,
+                  "branch": branch,
+                  "actor": actor,
+                  "commits": commits,
+                  "task": "Summarize what was deployed and the user-visible/operational impact in <=2 short sentences.",
+              }
+
+              body = {
+                  "model": "gpt-4.1-mini",
+                  "temperature": 0.2,
+                  "max_output_tokens": 120,
+                  "input": [
+                      {
+                          "role": "system",
+                          "content": "You write concise deployment summaries for engineers. Plain text only, no markdown.",
+                      },
+                      {"role": "user", "content": json.dumps(prompt_payload)},
+                  ],
+              }
+
+              try:
+                  req = urllib.request.Request(
+                      "https://api.openai.com/v1/responses",
+                      data=json.dumps(body).encode("utf-8"),
+                      headers={
+                          "Content-Type": "application/json",
+                          "Authorization": f"Bearer {api_key}",
+                      },
+                  )
+                  with urllib.request.urlopen(req, timeout=30) as resp:
+                      data = json.loads(resp.read().decode("utf-8"))
+                  text = (data.get("output_text") or "").strip()
+                  return text or fallback
+              except Exception as exc:
+                  print(f"OpenAI summary failed, using fallback: {exc}")
+                  return fallback
+
+
+          repo = env("REPO")
+          repo_name = env("REPO_NAME") or repo.split("/")[-1]
+          branch = env("BRANCH")
+          actor = env("ACTOR")
+          before_sha = env("BEFORE_SHA")
+          after_sha = env("AFTER_SHA")
+          run_url = env("RUN_URL")
+          status = env("JOB_STATUS", "unknown").lower()
+
+          if status != "success":
+              post_discord(
+                  {
+                      "content": (
+                          f"❌ **{repo_name}** deploy failed on `{branch}`.\n"
+                          f"Actor: `{actor}` • Run: {run_url}"
+                      )
+                  }
+              )
+              raise SystemExit(0)
+
+          commits, _rev = build_commits(before_sha, after_sha)
+          summary = generate_summary(commits, repo_name, branch, actor)
+
+          compare_url = ""
+          zero = "0" * 40
+          if before_sha and before_sha != zero and after_sha:
+              compare_url = f"https://github.com/{repo}/compare/{before_sha}...{after_sha}"
+          elif after_sha:
+              compare_url = f"https://github.com/{repo}/commit/{after_sha}"
+
+          commit_lines = [f"- `{c['short_sha']}` {c['subject']} ({c['author']})" for c in commits[:5]]
+          if not commit_lines:
+              commit_lines = ["- No commit list available (manual dispatch or shallow history)."]
+          commits_block = "\n".join(commit_lines)
+
+          link_line = f"\nChanges: {compare_url}" if compare_url else ""
+          content = (
+              f"✅ **{repo_name}** deployed successfully to `{branch}`.\n"
+              f"{summary}\n"
+              f"Actor: `{actor}` • Run: {run_url}{link_line}\n"
+              f"Recent commits:\n{commits_block}"
+          )
+          post_discord({"content": content[:1900]})
+          PY
