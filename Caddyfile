@@ -1,7 +1,7 @@
 :80 {
     encode zstd gzip
 
-    @server path /api* /auth* /healthz
+    @server path /api* /auth* /healthz /ws*
     reverse_proxy @server server:8080
 
     reverse_proxy website:3000 {
