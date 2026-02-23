@@ -14,6 +14,7 @@ import {
 } from './jobs/sync-keyword-jobs';
 import { completeEtsyOAuthFlow } from './services/etsy/oauth-service';
 import { renderOAuthErrorHtml, renderOAuthSuccessHtml } from './services/etsy/oauth-html';
+import { startWebsocketRuntime } from './services/realtime/start-websocket-runtime';
 
 const callbackQuerySchema = z.object({
     code: z.string().optional(),
@@ -60,6 +61,14 @@ export const buildServer = async (options: BuildServerOptions = {}) => {
             },
             router: rootRouter
         }
+    });
+
+    const realtimeRuntime = startWebsocketRuntime({
+        server
+    });
+
+    server.addHook('onClose', async () => {
+        await realtimeRuntime.stop();
     });
 
     server.get('/healthz', async () => {

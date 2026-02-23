@@ -7,6 +7,7 @@ Fastify + tRPC API for EtsySentry Etsy API v3 integrations and monitoring jobs.
 Implemented scaffold:
 
 - Fastify runtime with tRPC mounted at `/api`
+- WebSocket realtime invalidation endpoint at `/ws`
 - OAuth callback endpoint at `/auth/etsy/callback`
 - Etsy OAuth PKCE flow (`api.app.etsyAuth.*`)
 - PostgreSQL + Drizzle foundation (schema, migrations, runtime connection)
@@ -84,6 +85,7 @@ Optional:
 ## API Structure
 
 - tRPC routes under `/api`
+- Realtime invalidation websocket under `/ws`
 - `api.public.*` - CLI/agent endpoints (placeholder router currently)
 - `api.app.*` - dashboard/admin endpoints
 
@@ -114,6 +116,9 @@ Current app surface:
 ## Operational Notes
 
 - Startup logs include a status summary with API prefix, callback path, and OAuth scopes.
+- `/ws` requires a Clerk bearer token passed as `token` query param during websocket connect.
+- Realtime websocket payloads are invalidation-only events (no record payloads), currently targeting
+  `app.keywords.list` and `app.listings.list`.
 - Keyword ranks are auto-synced by `pg-boss` workers:
   - immediate enqueue when a keyword is tracked
   - daily scheduled dispatch for due tracked keywords

@@ -127,21 +127,24 @@ Use this checklist whenever adding or updating an Etsy bridge:
 
 Use explicit, action-first names that describe exactly what code does.
 
-1. Lead with a verb for jobs, services, and utility files.
+1. Prioritize concise names with no filler words.
+   - Prefer short, specific names that are still unambiguous.
+   - Avoid unnecessarily long names when a shorter precise name exists.
+2. Lead with a verb for jobs, services, and utility files.
    - Prefer: `sync-keyword`, `sync-stale-keywords`, `find-stale-keywords.ts`
    - Avoid: noun-first or vague names like `keyword-sync` or `keyword-sync-dispatch`
-2. Avoid ambiguous orchestration words such as `dispatch` when a clearer action exists.
+3. Avoid ambiguous orchestration words such as `dispatch` when a clearer action exists.
    - Prefer explicit intent: `sync`, `find`, `enqueue`, `refresh`, `track`
-3. Job queue names, job definition filenames, and exported job symbols should align semantically.
+4. Job queue names, job definition filenames, and exported job symbols should align semantically.
    - Example: queue `sync-keyword` in `sync-keyword.ts` exported as `syncKeywordJob`
-4. Service/utility filenames must state one concrete responsibility.
+5. Service/utility filenames must state one concrete responsibility.
    - Example split: `find-stale-keywords.ts`, `enqueue-sync-keyword-job.ts`,
      `sync-stale-keywords.ts`
-5. Each job file should contain only the job definition and its direct wiring.
+6. Each job file should contain only the job definition and its direct wiring.
    - Move query/enqueue/business logic into focused service files.
-6. Router filenames are resource/domain-oriented, not necessarily verb-first.
+7. Router filenames are resource/domain-oriented, not necessarily verb-first.
    - Prefer router filenames like `keywords/router.ts`, `listings/router.ts`
-7. Actual route/procedure names should be verb-first.
+8. Actual route/procedure names should be verb-first.
    - Prefer procedure names/files like `track.ts`, `sync.ts`, `refresh.ts`, `list.ts`, `get-*.ts`
 
 ## Database and Migration Expectations
