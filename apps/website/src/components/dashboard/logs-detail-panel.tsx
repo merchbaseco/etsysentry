@@ -8,7 +8,7 @@ import {
     getTargetLabel,
     toDetailValue
 } from './logs-ui';
-import { DetailPanel, DetailRow, StatusBadge } from './shared';
+import { DetailPanel, DetailRow, StatusBadge } from '@/components/ui/dashboard';
 
 export function LogsDetailPanel({
     selectedLog,

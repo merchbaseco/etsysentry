@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Download, Pause, Play } from 'lucide-react';
 import {
     listEventLogs,
     type EventLogCursor,
@@ -24,16 +25,13 @@ import {
     getTargetLabel
 } from './logs-ui';
 import {
-    Download,
     EmptyState,
     FilterBar,
     FilterChip,
     FilterGroup,
-    Pause,
-    Play,
     StatusBadge,
     TopToolbar
-} from './shared';
+} from '@/components/ui/dashboard';
 
 const PAGE_SIZE = 20;
 

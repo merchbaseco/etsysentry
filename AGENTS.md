@@ -122,6 +122,13 @@ Use this checklist whenever adding or updating an Etsy bridge:
    this limit.
 10. Keep files singularly focused and cohesive; prefer small, composable modules over multi-purpose
    files.
+11. UI component organization must use shared, scoped component folders:
+   - Put reusable presentational UI in `apps/website/src/components/ui/*`.
+   - Put domain-scoped shared UI in `apps/website/src/components/ui/<scope>/*` (for example:
+     `components/ui/dashboard/*`).
+   - Keep feature-only composition/stateful components in their feature folders
+     (for example: `components/dashboard/*`).
+   - Do not create or keep catch-all files like `shared.tsx` in feature folders.
 
 ## Naming Conventions
 

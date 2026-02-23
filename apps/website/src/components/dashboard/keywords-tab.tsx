@@ -22,7 +22,7 @@ import {
     TopToolbar,
     timeAgo,
     timeUntil
-} from './shared';
+} from '@/components/ui/dashboard';
 
 const trackedKeywordsQueryKey = trpc.app.keywords.list.queryOptions({}).queryKey;
 const trackedKeywordsQueryKeyJson = JSON.stringify(trackedKeywordsQueryKey);

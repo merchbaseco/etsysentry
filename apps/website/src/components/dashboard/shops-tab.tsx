@@ -17,7 +17,7 @@ import {
   timeAgo,
   timeUntil,
   formatNumber,
-} from "./shared"
+} from "@/components/ui/dashboard"
 
 const PAGE_SIZE = 15
 
