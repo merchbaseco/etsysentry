@@ -262,7 +262,7 @@ export function ListingsTab() {
                     <table className="w-full table-fixed text-xs">
                         <thead className="sticky top-0 z-10 bg-card">
                             <tr className="border-b border-border">
-                                <th className="w-[68px] pl-2 pr-3 py-2 text-left text-[10px] uppercase tracking-wider text-muted-foreground" />
+                                <th className="w-[68px] pl-3 pr-3 py-2 text-left text-[10px] uppercase tracking-wider text-muted-foreground" />
                                 <th className="pl-2 pr-2 py-2 text-left text-[10px] uppercase tracking-wider text-muted-foreground">
                                     Title
                                 </th>
@@ -292,7 +292,7 @@ export function ListingsTab() {
 
                                 return (
                                     <tr key={item.id} className="border-b border-border/50">
-                                        <td className="w-[68px] pl-2 pr-3 py-1.5">
+                                        <td className="w-[68px] pl-3 pr-3 py-1.5">
                                             <div className="size-12 overflow-hidden rounded bg-secondary">
                                                 {item.thumbnailUrl ? (
                                                     <img
