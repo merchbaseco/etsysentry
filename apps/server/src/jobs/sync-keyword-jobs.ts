@@ -9,6 +9,7 @@ import {
     type SyncKeywordJobInput
 } from './sync-keyword-shared';
 import { enqueueSyncKeywordJob } from '../services/keywords/enqueue-sync-keyword-job';
+import './sync-currency-rates';
 import './sync-listing';
 import './sync-keyword';
 import './sync-stale-keywords';

@@ -150,6 +150,10 @@ docs/
 - `etsy_oauth_connections`
   - `tenantId`, `clerkUserId`, `accessToken`, `refreshToken`, `tokenType`, `scopes`, `expiresAt`,
     `createdAt`, `updatedAt`
+- `currency_rates`
+  - server-managed USD conversion cache from external FX provider
+  - `baseCurrency`, `provider`, `ratesJson`, `fetchedAt`, `nextRefreshAt`, `lastRefreshError`,
+    `updatedAt`
 - `primitives`
   - `id`, `tenantId`, `type`, `value`, `status`, `source`, `createdAt`, `updatedAt`
 - `listing_profiles`
@@ -208,6 +212,7 @@ Primitive cadence policy (v1):
 - `listing`: adaptive cadence from `updated_timestamp` rules.
 - `keyword`: fixed daily cadence.
 - `shop`: fixed daily cadence.
+- `currency rates`: fixed 6-hour refresh cadence.
 
 Cadence policy (listing `updated_timestamp` aware):
 

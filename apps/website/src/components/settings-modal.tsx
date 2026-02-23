@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTheme } from 'next-themes';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import {
+    ArrowDownUp,
+    Banknote,
     CheckCircle2,
     Cog,
     Info,
@@ -21,10 +23,12 @@ import {
 } from 'lucide-react';
 import type { EtsyOAuthConnectionState } from '@/hooks/use-etsy-oauth-connection';
 import type { RealtimeWebsocketState } from '@/hooks/use-realtime-query-invalidations';
+import { getCurrencyStatus, refreshCurrencyRates, type CurrencyStatus } from '@/lib/currency-api';
+import { TrpcRequestError } from '@/lib/trpc-http';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
-type SettingsPage = 'general' | 'etsy-api';
+type SettingsPage = 'general' | 'etsy-api' | 'currency';
 
 type SettingsModalProps = {
     connection: EtsyOAuthConnectionState;
@@ -34,6 +38,7 @@ type SettingsModalProps = {
 const navItems: { id: SettingsPage; label: string; icon: typeof Settings }[] = [
     { id: 'general', label: 'General', icon: Cog },
     { id: 'etsy-api', label: 'Etsy API', icon: Key },
+    { id: 'currency', label: 'Currency', icon: ArrowDownUp },
 ];
 
 const formatTimestamp = (value: string | null): string => {
@@ -104,6 +109,34 @@ const getRealtimeStatusClassName = (realtime: RealtimeWebsocketState): string =>
     }
 
     return 'bg-terminal-yellow/10 text-terminal-yellow';
+};
+
+const formatErrorMessage = (error: unknown): string => {
+    if (error instanceof TrpcRequestError) {
+        return error.message;
+    }
+
+    if (error instanceof Error && error.message.length > 0) {
+        return error.message;
+    }
+
+    return 'Unexpected currency conversion request failure.';
+};
+
+const getCurrencyStateLabel = (status: CurrencyStatus | null): string => {
+    if (!status) {
+        return 'Unknown';
+    }
+
+    if (!status.hasRates) {
+        return 'Not Initialized';
+    }
+
+    if (status.isStale) {
+        return 'Stale';
+    }
+
+    return 'Healthy';
 };
 
 function GeneralSettingsPage() {
@@ -415,9 +448,199 @@ function EtsyApiSettingsPage({
     );
 }
 
+function CurrencySettingsPage({
+    errorMessage,
+    isLoadingStatus,
+    isRefreshingRates,
+    onCheckStatus,
+    onRefreshRates,
+    status,
+}: {
+    errorMessage: string | null;
+    isLoadingStatus: boolean;
+    isRefreshingRates: boolean;
+    onCheckStatus: () => Promise<void>;
+    onRefreshRates: () => Promise<void>;
+    status: CurrencyStatus | null;
+}) {
+    const statusLabel = getCurrencyStateLabel(status);
+    const statusClassName =
+        statusLabel === 'Healthy'
+            ? 'bg-terminal-green/10 text-terminal-green'
+            : statusLabel === 'Stale'
+              ? 'bg-terminal-yellow/10 text-terminal-yellow'
+              : 'bg-terminal-dim/10 text-terminal-dim';
+    const isActionBusy = isLoadingStatus || isRefreshingRates;
+    const actionButtonClassName =
+        'inline-flex cursor-pointer items-center gap-1.5 rounded border border-border bg-card ' +
+        'px-2.5 py-1.5 text-[10px] font-medium uppercase tracking-wider text-foreground ' +
+        'transition-colors hover:border-primary/40 hover:text-primary disabled:cursor-default ' +
+        'disabled:opacity-50';
+
+    return (
+        <div className="space-y-6">
+            <div>
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground">
+                    Currency Conversion
+                </h3>
+                <p className="mt-1 text-[10px] text-muted-foreground">
+                    USD conversion rates are server-managed and applied at request time.
+                </p>
+            </div>
+
+            <div className="rounded border border-border bg-secondary/40 p-4">
+                <div className="flex items-center gap-3">
+                    <div className="flex size-8 items-center justify-center rounded border border-border bg-card">
+                        <Banknote className="size-4 text-terminal-blue" />
+                    </div>
+                    <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs font-semibold text-foreground">
+                                Conversion Status
+                            </span>
+                            <span
+                                className={cn(
+                                    'rounded px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider',
+                                    statusClassName
+                                )}
+                            >
+                                {statusLabel}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                {errorMessage ? (
+                    <p className="mt-3 text-[10px] text-terminal-red">{errorMessage}</p>
+                ) : null}
+            </div>
+
+            <div className="space-y-2">
+                <span className="text-[10px] font-medium uppercase tracking-wider text-terminal-dim">
+                    Cache Details
+                </span>
+                <div className="space-y-1">
+                    <div className="flex items-center justify-between rounded border border-border bg-secondary/40 px-3 py-2">
+                        <span className="text-[10px] text-muted-foreground">Provider</span>
+                        <span className="text-[10px] font-medium text-foreground">
+                            {status?.provider ?? 'N/A'}
+                        </span>
+                    </div>
+                    <div className="flex items-center justify-between rounded border border-border bg-secondary/40 px-3 py-2">
+                        <span className="text-[10px] text-muted-foreground">Base Currency</span>
+                        <span className="text-[10px] font-medium text-foreground">
+                            {status?.baseCurrency ?? 'USD'}
+                        </span>
+                    </div>
+                    <div className="flex items-center justify-between rounded border border-border bg-secondary/40 px-3 py-2">
+                        <span className="text-[10px] text-muted-foreground">Rates Loaded</span>
+                        <span className="text-[10px] font-medium text-foreground">
+                            {status?.rateCount ?? 0}
+                        </span>
+                    </div>
+                    <div className="flex items-center justify-between rounded border border-border bg-secondary/40 px-3 py-2">
+                        <span className="text-[10px] text-muted-foreground">Last Sync</span>
+                        <span className="text-[10px] font-medium text-foreground">
+                            {formatTimestamp(status?.fetchedAt ?? null)}
+                        </span>
+                    </div>
+                    <div className="flex items-center justify-between rounded border border-border bg-secondary/40 px-3 py-2">
+                        <span className="text-[10px] text-muted-foreground">Next Refresh</span>
+                        <span className="text-[10px] font-medium text-foreground">
+                            {formatTimestamp(status?.nextRefreshAt ?? null)}
+                        </span>
+                    </div>
+                    <div className="flex items-center justify-between rounded border border-border bg-secondary/40 px-3 py-2">
+                        <span className="text-[10px] text-muted-foreground">Last Error</span>
+                        <span className="text-[10px] font-medium text-foreground">
+                            {status?.lastRefreshError ?? 'None'}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div className="border-t border-border pt-6">
+                <span className="text-[10px] font-medium uppercase tracking-wider text-terminal-dim">
+                    Actions
+                </span>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <button
+                        type="button"
+                        className={actionButtonClassName}
+                        disabled={isActionBusy}
+                        onClick={() => {
+                            void onCheckStatus();
+                        }}
+                    >
+                        <CheckCircle2 className="size-3" />
+                        Check Status
+                    </button>
+
+                    <button
+                        type="button"
+                        className={actionButtonClassName}
+                        disabled={isActionBusy}
+                        onClick={() => {
+                            void onRefreshRates();
+                        }}
+                    >
+                        <RefreshCw
+                            className={cn(
+                                'size-3',
+                                isRefreshingRates ? 'animate-spin' : undefined
+                            )}
+                        />
+                        Refresh Rates
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export function SettingsModal({ connection, realtime }: SettingsModalProps) {
     const [open, setOpen] = useState(false);
     const [activePage, setActivePage] = useState<SettingsPage>('general');
+    const [currencyStatus, setCurrencyStatus] = useState<CurrencyStatus | null>(null);
+    const [isLoadingCurrencyStatus, setIsLoadingCurrencyStatus] = useState(false);
+    const [isRefreshingCurrencyRates, setIsRefreshingCurrencyRates] = useState(false);
+    const [currencyErrorMessage, setCurrencyErrorMessage] = useState<string | null>(null);
+
+    const loadCurrencyStatus = useCallback(async () => {
+        setIsLoadingCurrencyStatus(true);
+
+        try {
+            const status = await getCurrencyStatus();
+            setCurrencyStatus(status);
+            setCurrencyErrorMessage(null);
+        } catch (error) {
+            setCurrencyErrorMessage(formatErrorMessage(error));
+        } finally {
+            setIsLoadingCurrencyStatus(false);
+        }
+    }, []);
+
+    const handleRefreshCurrencyRates = useCallback(async () => {
+        setIsRefreshingCurrencyRates(true);
+
+        try {
+            const status = await refreshCurrencyRates();
+            setCurrencyStatus(status);
+            setCurrencyErrorMessage(null);
+        } catch (error) {
+            setCurrencyErrorMessage(formatErrorMessage(error));
+        } finally {
+            setIsRefreshingCurrencyRates(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (!open || activePage !== 'currency') {
+            return;
+        }
+
+        void loadCurrencyStatus();
+    }, [activePage, loadCurrencyStatus, open]);
 
     return (
         <DialogPrimitive.Root open={open} onOpenChange={setOpen}>
@@ -515,11 +738,20 @@ export function SettingsModal({ connection, realtime }: SettingsModalProps) {
 
                         {/* Content */}
                         <div className="min-h-0 flex-1 overflow-y-auto p-6">
-                            {activePage === 'general' ? (
-                                <GeneralSettingsPage />
-                            ) : (
+                            {activePage === 'general' ? <GeneralSettingsPage /> : null}
+                            {activePage === 'etsy-api' ? (
                                 <EtsyApiSettingsPage connection={connection} realtime={realtime} />
-                            )}
+                            ) : null}
+                            {activePage === 'currency' ? (
+                                <CurrencySettingsPage
+                                    errorMessage={currencyErrorMessage}
+                                    isLoadingStatus={isLoadingCurrencyStatus}
+                                    isRefreshingRates={isRefreshingCurrencyRates}
+                                    onCheckStatus={loadCurrencyStatus}
+                                    onRefreshRates={handleRefreshCurrencyRates}
+                                    status={currencyStatus}
+                                />
+                            ) : null}
                         </div>
                     </div>
                 </DialogPrimitive.Content>

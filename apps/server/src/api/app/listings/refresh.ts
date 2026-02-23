@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { decorateTrackedListingWithUsd } from '../../../services/currency/decorate-tracked-listings-with-usd';
 import { refreshTrackedListing } from '../../../services/listings/tracked-listings-service';
 import { appProcedure } from '../../trpc';
 
@@ -9,11 +10,13 @@ export const listingsRefreshProcedure = appProcedure
         })
     )
     .mutation(async ({ ctx, input }) => {
-        return refreshTrackedListing({
+        const item = await refreshTrackedListing({
             clerkUserId: ctx.user.sub,
             requestId: ctx.requestId,
             tenantId: ctx.tenantId,
             trackedListingId: input.trackedListingId,
             trackerClerkUserId: ctx.user.sub
         });
+
+        return decorateTrackedListingWithUsd(item);
     });
