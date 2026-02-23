@@ -18,7 +18,7 @@ import {
     TopToolbar,
     formatNumber,
     timeAgo
-} from './shared';
+} from '@/components/ui/dashboard';
 import { MouseThumbnailTooltip } from './mouse-thumbnail-tooltip';
 import { RangeFilter } from './range-filter';
 
