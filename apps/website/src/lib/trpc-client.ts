@@ -21,7 +21,18 @@ const getApiBaseUrl = (): string => {
     return `${configuredOrigin.replace(/\/+$/, '')}/api`;
 };
 
-export const queryClient = new QueryClient();
+const DEFAULT_QUERY_STALE_TIME_MS = 30_000;
+const DEFAULT_QUERY_GC_TIME_MS = 10 * 60_000;
+
+export const queryClient = new QueryClient({
+    defaultOptions: {
+        queries: {
+            staleTime: DEFAULT_QUERY_STALE_TIME_MS,
+            gcTime: DEFAULT_QUERY_GC_TIME_MS,
+            refetchOnWindowFocus: false
+        }
+    }
+});
 
 export const trpcClient = createTRPCClient<RootRouter>({
     links: [

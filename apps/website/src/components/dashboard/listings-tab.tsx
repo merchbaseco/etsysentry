@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import {
+    type ListTrackedListingsOutput,
     listTrackedListings,
     refreshTrackedListing,
     trackListing,
@@ -8,6 +9,7 @@ import {
 } from '@/lib/listings-api';
 import { Button } from '@/components/ui/button';
 import { TrpcRequestError } from '@/lib/trpc-http';
+import { queryClient, trpc } from '@/lib/trpc-client';
 import { cn } from '@/lib/utils';
 import {
     EmptyState,
@@ -16,6 +18,8 @@ import {
     formatNumber,
     timeAgo
 } from './shared';
+
+const trackedListingsQueryKey = trpc.app.listings.list.queryOptions({}).queryKey;
 
 const formatPrice = (item: TrackedListingItem): string => {
     if (!item.price) {
@@ -57,6 +61,11 @@ const upsertById = (items: TrackedListingItem[], nextItem: TrackedListingItem): 
 };
 
 export function ListingsTab() {
+    const cachedTrackedListings = queryClient.getQueryData<ListTrackedListingsOutput>(
+        trackedListingsQueryKey
+    );
+    const initialItems = cachedTrackedListings?.items ?? [];
+
     const [search, setSearch] = useState('');
     const [trackingStateFilter, setTrackingStateFilter] = useState<
         'active' | 'paused' | 'error' | null
@@ -64,20 +73,19 @@ export function ListingsTab() {
     const [etsyStateFilter, setEtsyStateFilter] = useState<
         'active' | 'inactive' | 'sold_out' | 'draft' | 'expired' | null
     >(null);
-    const [items, setItems] = useState<TrackedListingItem[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [items, setItems] = useState<TrackedListingItem[]>(() => initialItems);
+    const [isLoading, setIsLoading] = useState(() => initialItems.length === 0);
     const [isTracking, setIsTracking] = useState(false);
     const [refreshingById, setRefreshingById] = useState<Record<string, boolean>>({});
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [listingInput, setListingInput] = useState('');
 
     const loadListings = useCallback(async () => {
-        setIsLoading(true);
-
         try {
             const response = await listTrackedListings({});
 
             setItems(response.items);
+            queryClient.setQueryData(trackedListingsQueryKey, response);
             setErrorMessage(null);
         } catch (error) {
             setErrorMessage(toErrorMessage(error));
@@ -129,7 +137,15 @@ export function ListingsTab() {
                 listing: listingInput
             });
 
-            setItems((current) => upsertById(current, response.item));
+            setItems((current) => {
+                const nextItems = upsertById(current, response.item);
+
+                queryClient.setQueryData<ListTrackedListingsOutput>(trackedListingsQueryKey, {
+                    items: nextItems
+                });
+
+                return nextItems;
+            });
             setListingInput('');
             setErrorMessage(null);
         } catch (error) {
@@ -150,7 +166,15 @@ export function ListingsTab() {
                 trackedListingId: item.id
             });
 
-            setItems((current) => upsertById(current, refreshed));
+            setItems((current) => {
+                const nextItems = upsertById(current, refreshed);
+
+                queryClient.setQueryData<ListTrackedListingsOutput>(trackedListingsQueryKey, {
+                    items: nextItems
+                });
+
+                return nextItems;
+            });
             setErrorMessage(null);
         } catch (error) {
             setErrorMessage(toErrorMessage(error));

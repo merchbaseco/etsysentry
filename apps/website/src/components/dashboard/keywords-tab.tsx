@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     getDailyProductRanksForKeyword,
+    type ListTrackedKeywordsOutput,
     listTrackedKeywords,
     syncRanksForKeyword,
     trackKeyword,
@@ -12,6 +13,7 @@ import {
     type GetKeywordRanksForProductOutput
 } from '@/lib/listings-api';
 import { TrpcRequestError } from '@/lib/trpc-http';
+import { queryClient, trpc } from '@/lib/trpc-client';
 import { cn } from '@/lib/utils';
 import {
     EmptyState,
@@ -20,6 +22,8 @@ import {
     TopToolbar,
     timeAgo
 } from './shared';
+
+const trackedKeywordsQueryKey = trpc.app.keywords.list.queryOptions({}).queryKey;
 
 const toErrorMessage = (error: unknown): string => {
     if (error instanceof TrpcRequestError) {
@@ -47,12 +51,17 @@ const upsertById = (items: TrackedKeywordItem[], nextItem: TrackedKeywordItem): 
 };
 
 export function KeywordsTab() {
+    const cachedTrackedKeywords = queryClient.getQueryData<ListTrackedKeywordsOutput>(
+        trackedKeywordsQueryKey
+    );
+    const initialItems = cachedTrackedKeywords?.items ?? [];
+
     const [search, setSearch] = useState('');
     const [trackingStateFilter, setTrackingStateFilter] = useState<
         'active' | 'paused' | 'error' | null
     >(null);
-    const [items, setItems] = useState<TrackedKeywordItem[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [items, setItems] = useState<TrackedKeywordItem[]>(() => initialItems);
+    const [isLoading, setIsLoading] = useState(() => initialItems.length === 0);
     const [isTracking, setIsTracking] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [keywordInput, setKeywordInput] = useState('');
@@ -68,12 +77,11 @@ export function KeywordsTab() {
     const [isReverseLoading, setIsReverseLoading] = useState(false);
 
     const loadKeywords = useCallback(async () => {
-        setIsLoading(true);
-
         try {
             const response = await listTrackedKeywords({});
 
             setItems(response.items);
+            queryClient.setQueryData(trackedKeywordsQueryKey, response);
             setErrorMessage(null);
         } catch (error) {
             setErrorMessage(toErrorMessage(error));
@@ -119,7 +127,15 @@ export function KeywordsTab() {
                 keyword: keywordInput
             });
 
-            setItems((current) => upsertById(current, response.item));
+            setItems((current) => {
+                const nextItems = upsertById(current, response.item);
+
+                queryClient.setQueryData<ListTrackedKeywordsOutput>(trackedKeywordsQueryKey, {
+                    items: nextItems
+                });
+
+                return nextItems;
+            });
             setKeywordInput('');
             setErrorMessage(null);
         } catch (error) {
