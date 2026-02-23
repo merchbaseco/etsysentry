@@ -54,15 +54,21 @@ export function LogsDetailPanel({
                             <h4 className="mb-2 text-[10px] uppercase tracking-wider text-muted-foreground">
                                 Metadata
                             </h4>
-                            <div className="space-y-1 rounded border border-border bg-secondary p-3">
-                                {detailEntries.map(([key, value]) => (
-                                    <div key={key} className="flex items-center justify-between text-[10px]">
-                                        <span className="text-muted-foreground">{key}</span>
-                                        <span className="font-mono text-foreground">
-                                            {toDetailValue(value)}
-                                        </span>
-                                    </div>
-                                ))}
+                            <div className="space-y-2 rounded border border-border bg-secondary p-3">
+                                {detailEntries.map(([key, value]) => {
+                                    const displayValue = toDetailValue(value);
+                                    return (
+                                        <div key={key} className="min-w-0 text-[10px]">
+                                            <span className="text-muted-foreground">{key}</span>
+                                            <p
+                                                className="mt-0.5 truncate font-mono text-foreground"
+                                                title={displayValue}
+                                            >
+                                                {displayValue}
+                                            </p>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
                     ) : null}
