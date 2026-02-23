@@ -22,7 +22,7 @@ current and historical data for analysis.
   - API keys are user-owned; no role system for key ownership
   - admin-only behavior is gated by `ADMIN_EMAIL` match (RankWrangler style)
 - API organization: mirror RankWrangler tRPC organization with `api.public.*` and `api.app.*`.
-- API naming: user-intent-first names (for example: `syncRanksForKeyword`,
+- API naming: user-intent-first names (for example: `track`,
   `getDailyProductRanksForKeyword`, `getKeywordRanksForProduct`).
 
 ## Primitives

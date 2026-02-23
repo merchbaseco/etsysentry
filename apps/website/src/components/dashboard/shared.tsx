@@ -362,7 +362,7 @@ export function timeAgo(dateStr: string): string {
 
 export function timeUntil(dateStr: string): string {
   const diff = new Date(dateStr).getTime() - Date.now()
-  if (diff < 0) return "overdue"
+  if (diff <= 60000) return "Now"
   const mins = Math.floor(diff / 60000)
   if (mins < 60) return `in ${mins}m`
   const hrs = Math.floor(mins / 60)

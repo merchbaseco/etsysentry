@@ -25,10 +25,6 @@ export type DailyProductRanksForKeyword = InferProcedureOutput<
 
 export type KeywordRankResultItem = DailyProductRanksForKeyword['items'][number];
 
-export type SyncRanksForKeywordInput = InferProcedureInput<
-    typeof trpcClient.app.keywords.syncRanksForKeyword.mutate
->;
-
 export const listTrackedKeywords = async (
     params: ListTrackedKeywordsInput = {}
 ): Promise<ListTrackedKeywordsOutput> => {
@@ -57,18 +53,6 @@ export const getDailyProductRanksForKeyword = async (
         const response = await queryClient.fetchQuery(
             trpc.app.keywords.getDailyProductRanksForKeyword.queryOptions(params)
         );
-        return response;
-    } catch (error) {
-        throw toTrpcRequestError(error);
-    }
-};
-
-export const syncRanksForKeyword = async (
-    params: SyncRanksForKeywordInput
-): Promise<DailyProductRanksForKeyword> => {
-    try {
-        const response = await trpcClient.app.keywords.syncRanksForKeyword.mutate(params);
-
         return response;
     } catch (error) {
         throw toTrpcRequestError(error);

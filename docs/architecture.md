@@ -110,7 +110,7 @@ docs/
   - use `daily product ranks`, `keyword ranks for product`
   - avoid vague names such as `latestRanks` or `reverseKeywords`
 - Current examples:
-  - `api.app.keywords.syncRanksForKeyword`
+  - `api.app.keywords.track`
   - `api.app.keywords.getDailyProductRanksForKeyword`
   - `api.app.listings.getKeywordRanksForProduct`
 

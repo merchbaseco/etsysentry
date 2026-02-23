@@ -8,6 +8,7 @@ export type TrackedKeywordRecord = {
     keyword: string;
     lastRefreshError: string | null;
     lastRefreshedAt: string;
+    nextSyncAt: string;
     normalizedKeyword: string;
     tenantId: string;
     trackerClerkUserId: string;
@@ -41,6 +42,7 @@ const toRecord = (row: typeof trackedKeywords.$inferSelect): TrackedKeywordRecor
         keyword: row.keyword,
         lastRefreshError: row.lastRefreshError,
         lastRefreshedAt: row.lastRefreshedAt.toISOString(),
+        nextSyncAt: row.nextSyncAt.toISOString(),
         normalizedKeyword: row.normalizedKeyword,
         tenantId: row.tenantId,
         trackerClerkUserId: row.trackerClerkUserId,
@@ -106,6 +108,7 @@ export const trackKeyword = async (params: {
         keyword: normalized.keyword,
         lastRefreshError: null,
         lastRefreshedAt: now,
+        nextSyncAt: now,
         normalizedKeyword: normalized.normalizedKeyword,
         tenantId: params.tenantId,
         trackerClerkUserId: params.trackerClerkUserId,

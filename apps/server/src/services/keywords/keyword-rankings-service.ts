@@ -8,6 +8,12 @@ import {
 } from '../etsy/bridges/find-all-listings-active';
 import { getEtsyOAuthAccessToken } from '../etsy/oauth-service';
 
+const DAILY_SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000;
+
+export const computeNextKeywordSyncAt = (now: Date): Date => {
+    return new Date(now.getTime() + DAILY_SYNC_INTERVAL_MS);
+};
+
 export type ProductKeywordRankRecord = {
     etsyListingId: string;
     observedAt: string;
@@ -175,6 +181,7 @@ export const syncRanksForKeyword = async (params: {
     });
 
     const now = new Date();
+    const nextSyncAt = computeNextKeywordSyncAt(now);
 
     try {
         const response = await fetchKeywordRanksFromEtsy({
@@ -200,6 +207,7 @@ export const syncRanksForKeyword = async (params: {
             .set({
                 lastRefreshError: null,
                 lastRefreshedAt: now,
+                nextSyncAt,
                 trackingState: 'active',
                 updatedAt: now
             })
@@ -231,7 +239,8 @@ export const syncRanksForKeyword = async (params: {
             .set({
                 lastRefreshError: failureMessage,
                 lastRefreshedAt: now,
-                trackingState: 'error',
+                nextSyncAt,
+                trackingState: 'active',
                 updatedAt: now
             })
             .where(

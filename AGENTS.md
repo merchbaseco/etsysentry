@@ -22,6 +22,7 @@ This document guides AI coding assistants working in the EtsySentry repository.
 - System architecture: `docs/architecture.md`
 - Etsy OpenAPI bridge guide: `docs/etsy-openapi-bridges.md`
 - Rich log UX spec: `docs/log-view.md`
+- Logging strategy: `docs/logging-strategy.md`
 - Database query runbook: `docs/database-queries.md`
 - Server operations: `apps/server/README.md`
 - Typed client: `packages/http-client/README.md`
@@ -117,6 +118,31 @@ Use this checklist whenever adding or updating an Etsy bridge:
 6. Prefer immutable patterns and explicit runtime validation at boundaries.
 7. Handle edge cases and external API failures explicitly; do not swallow errors.
 8. Add or update focused tests when behavior changes.
+9. Enforce a `300` LoC maximum per file (excluding generated files); split files before crossing
+   this limit.
+10. Keep files singularly focused and cohesive; prefer small, composable modules over multi-purpose
+   files.
+
+## Naming Conventions
+
+Use explicit, action-first names that describe exactly what code does.
+
+1. Lead with a verb for jobs, services, and utility files.
+   - Prefer: `sync-keyword`, `sync-stale-keywords`, `find-stale-keywords.ts`
+   - Avoid: noun-first or vague names like `keyword-sync` or `keyword-sync-dispatch`
+2. Avoid ambiguous orchestration words such as `dispatch` when a clearer action exists.
+   - Prefer explicit intent: `sync`, `find`, `enqueue`, `refresh`, `track`
+3. Job queue names, job definition filenames, and exported job symbols should align semantically.
+   - Example: queue `sync-keyword` in `sync-keyword.ts` exported as `syncKeywordJob`
+4. Service/utility filenames must state one concrete responsibility.
+   - Example split: `find-stale-keywords.ts`, `enqueue-sync-keyword-job.ts`,
+     `sync-stale-keywords.ts`
+5. Each job file should contain only the job definition and its direct wiring.
+   - Move query/enqueue/business logic into focused service files.
+6. Router filenames are resource/domain-oriented, not necessarily verb-first.
+   - Prefer router filenames like `keywords/router.ts`, `listings/router.ts`
+7. Actual route/procedure names should be verb-first.
+   - Prefer procedure names/files like `track.ts`, `sync.ts`, `refresh.ts`, `list.ts`, `get-*.ts`
 
 ## Database and Migration Expectations
 

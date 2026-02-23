@@ -3,7 +3,6 @@ import {
     getDailyProductRanksForKeyword,
     type ListTrackedKeywordsOutput,
     listTrackedKeywords,
-    syncRanksForKeyword,
     trackKeyword,
     type DailyProductRanksForKeyword,
     type TrackedKeywordItem
@@ -20,7 +19,8 @@ import {
     FilterChip,
     StatusBadge,
     TopToolbar,
-    timeAgo
+    timeAgo,
+    timeUntil
 } from './shared';
 
 const trackedKeywordsQueryKey = trpc.app.keywords.list.queryOptions({}).queryKey;
@@ -70,11 +70,11 @@ export function KeywordsTab() {
     const [ranksByKeywordId, setRanksByKeywordId] = useState<
         Record<string, DailyProductRanksForKeyword>
     >({});
-    const [capturingByKeywordId, setCapturingByKeywordId] = useState<Record<string, boolean>>({});
     const [selectedListingId, setSelectedListingId] = useState<string | null>(null);
     const [keywordRanksForProduct, setKeywordRanksForProduct] =
         useState<GetKeywordRanksForProductOutput | null>(null);
     const [isReverseLoading, setIsReverseLoading] = useState(false);
+    const [, setClockTick] = useState(0);
 
     const loadKeywords = useCallback(async () => {
         try {
@@ -92,6 +92,26 @@ export function KeywordsTab() {
 
     useEffect(() => {
         void loadKeywords();
+    }, [loadKeywords]);
+
+    useEffect(() => {
+        const intervalId = window.setInterval(() => {
+            setClockTick((current) => current + 1);
+        }, 30_000);
+
+        return () => {
+            window.clearInterval(intervalId);
+        };
+    }, []);
+
+    useEffect(() => {
+        const intervalId = window.setInterval(() => {
+            void loadKeywords();
+        }, 60_000);
+
+        return () => {
+            window.clearInterval(intervalId);
+        };
     }, [loadKeywords]);
 
     const filtered = useMemo(() => {
@@ -189,38 +209,6 @@ export function KeywordsTab() {
         void loadLatestForKeyword(item.id);
     };
 
-    const handleCaptureKeyword = async (
-        trackedKeywordId: string,
-        event?: React.MouseEvent<HTMLButtonElement>
-    ) => {
-        event?.stopPropagation();
-
-        setCapturingByKeywordId((current) => ({
-            ...current,
-            [trackedKeywordId]: true
-        }));
-
-        try {
-            const dailyProductRanks = await syncRanksForKeyword({
-                trackedKeywordId
-            });
-
-            setRanksByKeywordId((current) => ({
-                ...current,
-                [trackedKeywordId]: dailyProductRanks
-            }));
-            setErrorMessage(null);
-            void loadKeywords();
-        } catch (error) {
-            setErrorMessage(toErrorMessage(error));
-        } finally {
-            setCapturingByKeywordId((current) => ({
-                ...current,
-                [trackedKeywordId]: false
-            }));
-        }
-    };
-
     const selectedKeyword = useMemo(
         () => items.find((item) => item.id === selectedKeywordId) ?? null,
         [items, selectedKeywordId]
@@ -301,7 +289,7 @@ export function KeywordsTab() {
                                     Updated
                                 </th>
                                 <th className="px-2 py-2 text-right text-[10px] uppercase tracking-wider text-muted-foreground">
-                                    Capture
+                                    Next Sync
                                 </th>
                             </tr>
                         </thead>
@@ -330,21 +318,8 @@ export function KeywordsTab() {
                                     <td className="px-2 py-1.5 text-right text-terminal-dim">
                                         {timeAgo(item.updatedAt)}
                                     </td>
-                                    <td className="px-2 py-1.5 text-right">
-                                        <button
-                                            type="button"
-                                            onClick={(event) => void handleCaptureKeyword(item.id, event)}
-                                            disabled={capturingByKeywordId[item.id] === true}
-                                            className={cn(
-                                                'h-7 rounded border border-border bg-secondary px-2 text-[10px] uppercase tracking-wider',
-                                                'transition-colors hover:text-foreground',
-                                                'disabled:cursor-default disabled:opacity-50'
-                                            )}
-                                        >
-                                            {capturingByKeywordId[item.id] === true
-                                                ? 'Capturing...'
-                                                : 'Sync Ranks'}
-                                        </button>
+                                    <td className="px-2 py-1.5 text-right text-terminal-dim">
+                                        {timeUntil(item.nextSyncAt)}
                                     </td>
                                 </tr>
                             ))}
@@ -355,7 +330,7 @@ export function KeywordsTab() {
 
             {selectedKeyword ? (
                 <div className="border-t border-border">
-                    <div className="flex items-center justify-between px-3 py-2 text-xs">
+                    <div className="px-3 py-2 text-xs">
                         <div>
                             <span className="text-muted-foreground">Latest Rankings:</span>{' '}
                             <span className="font-medium text-foreground">{selectedKeyword.keyword}</span>
@@ -365,20 +340,6 @@ export function KeywordsTab() {
                                 </span>
                             ) : null}
                         </div>
-                        <button
-                            type="button"
-                            onClick={() => void handleCaptureKeyword(selectedKeyword.id)}
-                            disabled={capturingByKeywordId[selectedKeyword.id] === true}
-                            className={cn(
-                                'h-7 rounded border border-border bg-secondary px-2 text-[10px] uppercase tracking-wider',
-                                'transition-colors hover:text-foreground',
-                                'disabled:cursor-default disabled:opacity-50'
-                            )}
-                        >
-                            {capturingByKeywordId[selectedKeyword.id] === true
-                                ? 'Capturing...'
-                                : 'Sync Rankings'}
-                        </button>
                     </div>
 
                     <div className="max-h-72 overflow-auto border-t border-border/60">

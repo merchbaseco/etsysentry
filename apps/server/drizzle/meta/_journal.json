@@ -36,6 +36,13 @@
       "when": 1771792199351,
       "tag": "0004_peaceful_rumiko_fujikawa",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1771806773858,
+      "tag": "0005_glorious_lord_hawal",
+      "breakpoints": true
     }
   ]
 }
