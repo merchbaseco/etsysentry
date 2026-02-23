@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import {
-    buildTrackedListingUpsertValues,
+    buildTrackedListingDiscoveryValues,
     computeNextKeywordSyncAt
 } from './keyword-rankings-service';
 
@@ -13,11 +13,11 @@ describe('computeNextKeywordSyncAt', () => {
     });
 });
 
-describe('buildTrackedListingUpsertValues', () => {
-    test('maps ranked listing fields into tracked listing upsert values', () => {
+describe('buildTrackedListingDiscoveryValues', () => {
+    test('maps ranked listing fields into tracked listing discovery values', () => {
         const now = new Date('2026-02-23T12:00:00.000Z');
 
-        const result = buildTrackedListingUpsertValues({
+        const result = buildTrackedListingDiscoveryValues({
             clerkUserId: 'user_123',
             now,
             rankedListing: {
@@ -28,6 +28,7 @@ describe('buildTrackedListingUpsertValues', () => {
                     divisor: 100
                 },
                 shopId: '99887766',
+                thumbnailUrl: 'https://i.etsystatic.com/123/il/abc123/1234567890/il_170x135.jpg',
                 title: 'Mid Century Wall Art',
                 url: 'https://www.etsy.com/listing/1234567890/mid-century-wall-art'
             },
@@ -37,47 +38,36 @@ describe('buildTrackedListingUpsertValues', () => {
         expect(result).toEqual({
             etsyListingId: '1234567890',
             etsyState: 'active',
-            lastRefreshError: null,
-            lastRefreshedAt: now,
-            numFavorers: null,
-            priceAmount: 2599,
-            priceCurrencyCode: 'USD',
-            priceDivisor: 100,
-            quantity: null,
             shopId: '99887766',
-            shopName: null,
             tenantId: 'tenant_123',
-            thumbnailUrl: null,
+            thumbnailUrl: 'https://i.etsystatic.com/123/il/abc123/1234567890/il_170x135.jpg',
             title: 'Mid Century Wall Art',
             trackerClerkUserId: 'user_123',
             trackingState: 'active',
             updatedAt: now,
-            updatedTimestamp: null,
-            url: 'https://www.etsy.com/listing/1234567890/mid-century-wall-art',
-            views: null
+            url: 'https://www.etsy.com/listing/1234567890/mid-century-wall-art'
         });
     });
 
-    test('sets nullable fields when ranked listing omits optional values', () => {
+    test('sets nullable discovery fields when ranked listing omits optional values', () => {
         const now = new Date('2026-02-23T12:00:00.000Z');
 
-        const result = buildTrackedListingUpsertValues({
+        const result = buildTrackedListingDiscoveryValues({
             clerkUserId: 'user_123',
             now,
             rankedListing: {
                 listingId: '1234567890',
                 price: null,
                 shopId: null,
+                thumbnailUrl: null,
                 title: 'Sample Title',
                 url: null
             },
             tenantId: 'tenant_123'
         });
 
-        expect(result.priceAmount).toBeNull();
-        expect(result.priceCurrencyCode).toBeNull();
-        expect(result.priceDivisor).toBeNull();
         expect(result.shopId).toBeNull();
+        expect(result.thumbnailUrl).toBeNull();
         expect(result.url).toBeNull();
     });
 });

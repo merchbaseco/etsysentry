@@ -92,7 +92,8 @@ docs/
   - handles Etsy search query wiring (pagination optional by caller)
 - `keyword-rankings-service.ts`:
   - calls the active listings search bridge for daily product ranks by keyword
-  - upserts discovered listings into `tracked_listings`
+  - inserts newly discovered ranked listings into `tracked_listings`
+  - returns newly discovered listing ids so job orchestration can enqueue `sync-listing`
   - persists rank facts into `product_keyword_ranks` (append-only) with `listingId` FK linkage
   - updates tracked keyword refresh state/errors
 - `etsy-listing-service.ts`:
@@ -221,7 +222,7 @@ Cadence policy (listing `updated_timestamp` aware):
 1. Load due keyword primitive.
 2. Search Etsy first page for the tracked keyword.
 3. Persist ranking observations.
-4. Upsert discovered listings and queue listing monitoring targets.
+4. Insert newly discovered listings and enqueue `sync-listing` jobs for those newly inserted rows.
 5. Emit event logs for each discovered listing and each ranking capture batch.
 
 ### `monitor-listings`
@@ -233,6 +234,20 @@ Cadence policy (listing `updated_timestamp` aware):
 5. Compare `updated_timestamp` against last known value and recalculate cadence tier.
 6. Update `listing_monitor_metadata` intended cadence and reason.
 7. Emit event logs (updated/no-change/profile-changed/metrics-changed/cadence-changed).
+
+### Listing Ownership Boundary
+
+- `sync-keyword` owns:
+  - rank observations in `product_keyword_ranks`
+  - discovery-time insert into `tracked_listings` for missing rows
+  - enqueue of `sync-listing` jobs for those newly inserted rows
+- `sync-listing` owns canonical listing snapshot fields in `tracked_listings`, including:
+  - `etsyState`
+  - `priceAmount`, `priceCurrencyCode`, `priceDivisor`
+  - `quantity`, `views`, `numFavorers`
+  - `shopName`, `updatedTimestamp`
+  - `lastRefreshedAt`, `lastRefreshError`
+- keyword sync must not update existing `tracked_listings` rows.
 
 ### Estimated Sales Helper (v1)
 

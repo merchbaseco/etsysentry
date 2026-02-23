@@ -196,6 +196,58 @@ const fetchListingFromEtsy = async (params: {
     }
 };
 
+const upsertTrackedListingFromBridgeResponse = async (params: {
+    bridgeResponse: GetListingBridgeResponse;
+    now: Date;
+    tenantId: string;
+    trackerClerkUserId: string;
+}): Promise<typeof trackedListings.$inferSelect> => {
+    const upsertValues = bridgeToUpsertValues({
+        bridgeResponse: params.bridgeResponse,
+        now: params.now,
+        tenantId: params.tenantId,
+        trackerClerkUserId: params.trackerClerkUserId
+    });
+
+    const [row] = await db
+        .insert(trackedListings)
+        .values(upsertValues)
+        .onConflictDoUpdate({
+            set: upsertValues,
+            target: [trackedListings.tenantId, trackedListings.etsyListingId]
+        })
+        .returning();
+
+    if (!row) {
+        throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Unable to upsert tracked listing.'
+        });
+    }
+
+    return row;
+};
+
+export const syncTrackedListingFromEtsy = async (params: {
+    clerkUserId: string;
+    etsyListingId: string;
+    tenantId: string;
+    trackerClerkUserId: string;
+}): Promise<typeof trackedListings.$inferSelect> => {
+    const listingFromEtsy = await fetchListingFromEtsy({
+        clerkUserId: params.clerkUserId,
+        etsyListingId: params.etsyListingId,
+        tenantId: params.tenantId
+    });
+
+    return upsertTrackedListingFromBridgeResponse({
+        bridgeResponse: listingFromEtsy,
+        now: new Date(),
+        tenantId: params.tenantId,
+        trackerClerkUserId: params.trackerClerkUserId
+    });
+};
+
 export const listTrackedListings = async (params: {
     tenantId: string;
     trackerClerkUserId?: string;
@@ -248,28 +300,12 @@ export const trackListing = async (params: {
         )
         .limit(1);
 
-    const listingFromEtsy = await fetchListingFromEtsy({
+    const row = await syncTrackedListingFromEtsy({
         clerkUserId: params.trackerClerkUserId,
         etsyListingId,
-        tenantId: params.tenantId
-    });
-
-    const now = new Date();
-    const upsertValues = bridgeToUpsertValues({
-        bridgeResponse: listingFromEtsy,
-        now,
         tenantId: params.tenantId,
         trackerClerkUserId: params.trackerClerkUserId
     });
-
-    const [row] = await db
-        .insert(trackedListings)
-        .values(upsertValues)
-        .onConflictDoUpdate({
-            set: upsertValues,
-            target: [trackedListings.tenantId, trackedListings.etsyListingId]
-        })
-        .returning();
 
     return {
         created: existing.length === 0,
@@ -302,25 +338,12 @@ export const refreshTrackedListing = async (params: {
     }
 
     try {
-        const listingFromEtsy = await fetchListingFromEtsy({
+        const updated = await syncTrackedListingFromEtsy({
             clerkUserId: params.clerkUserId,
             etsyListingId: current.etsyListingId,
-            tenantId: params.tenantId
-        });
-
-        const now = new Date();
-        const updateValues = bridgeToUpsertValues({
-            bridgeResponse: listingFromEtsy,
-            now,
             tenantId: params.tenantId,
             trackerClerkUserId: params.trackerClerkUserId
         });
-
-        const [updated] = await db
-            .update(trackedListings)
-            .set(updateValues)
-            .where(eq(trackedListings.listingId, current.listingId))
-            .returning();
 
         return toRecord(updated);
     } catch (error) {

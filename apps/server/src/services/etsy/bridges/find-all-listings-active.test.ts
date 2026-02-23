@@ -22,6 +22,10 @@ describe('find-all-listings-active bridge', () => {
                     results: [
                         {
                             listing_id: 1234567890,
+                            main_image: {
+                                url_170x135:
+                                    'https://i.etsystatic.com/123/il/abc123/1234567890/il_170x135.jpg'
+                            },
                             price: {
                                 amount: 4500,
                                 currency_code: 'USD',
@@ -64,6 +68,8 @@ describe('find-all-listings-active bridge', () => {
                         divisor: 100
                     },
                     shopId: '99112233',
+                    thumbnailUrl:
+                        'https://i.etsystatic.com/123/il/abc123/1234567890/il_170x135.jpg',
                     title: 'Mid Century Print',
                     url: 'https://www.etsy.com/listing/1234567890/mid-century-print'
                 },
@@ -71,6 +77,7 @@ describe('find-all-listings-active bridge', () => {
                     listingId: '1122334455',
                     price: null,
                     shopId: null,
+                    thumbnailUrl: null,
                     title: 'Vintage Lamp',
                     url: null
                 }
