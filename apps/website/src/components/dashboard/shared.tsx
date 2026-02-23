@@ -39,6 +39,7 @@ export function StatusDot({ status }: { status: string }) {
         status === "success" && "bg-terminal-green",
         status === "failed" && "bg-terminal-red",
         status === "retrying" && "bg-terminal-yellow",
+        status === "partial" && "bg-terminal-yellow",
       )}
     />
   )
@@ -59,6 +60,7 @@ export function StatusBadge({ status }: { status: string }) {
         status === "success" && "bg-terminal-green/10 text-terminal-green",
         status === "failed" && "bg-terminal-red/10 text-terminal-red",
         status === "retrying" && "bg-terminal-yellow/10 text-terminal-yellow",
+        status === "partial" && "bg-terminal-yellow/10 text-terminal-yellow",
       )}
     >
       <StatusDot status={status} />

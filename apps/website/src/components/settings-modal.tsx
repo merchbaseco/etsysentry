@@ -15,9 +15,12 @@ import {
     ShieldCheck,
     Sun,
     Unplug,
+    Wifi,
+    WifiOff,
     XIcon,
 } from 'lucide-react';
 import type { EtsyOAuthConnectionState } from '@/hooks/use-etsy-oauth-connection';
+import type { RealtimeWebsocketState } from '@/hooks/use-realtime-query-invalidations';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
@@ -25,6 +28,7 @@ type SettingsPage = 'general' | 'etsy-api';
 
 type SettingsModalProps = {
     connection: EtsyOAuthConnectionState;
+    realtime: RealtimeWebsocketState;
 };
 
 const navItems: { id: SettingsPage; label: string; icon: typeof Settings }[] = [
@@ -60,6 +64,46 @@ const getStatusLabel = (connection: EtsyOAuthConnectionState): string => {
     }
 
     return 'Disconnected';
+};
+
+const getRealtimeStatusLabel = (realtime: RealtimeWebsocketState): string => {
+    if (realtime.status === 'connected') {
+        return 'Connected';
+    }
+
+    if (realtime.status === 'reconnecting') {
+        return `Reconnecting (${realtime.reconnectAttempt})`;
+    }
+
+    if (realtime.status === 'connecting') {
+        return 'Connecting';
+    }
+
+    if (realtime.status === 'waiting_for_auth') {
+        return 'Waiting for auth';
+    }
+
+    if (realtime.status === 'error') {
+        return 'Connection error';
+    }
+
+    return 'Disconnected';
+};
+
+const getRealtimeStatusClassName = (realtime: RealtimeWebsocketState): string => {
+    if (realtime.status === 'connected') {
+        return 'bg-terminal-green/10 text-terminal-green';
+    }
+
+    if (realtime.status === 'error') {
+        return 'bg-terminal-red/10 text-terminal-red';
+    }
+
+    if (realtime.status === 'waiting_for_auth') {
+        return 'bg-terminal-blue/10 text-terminal-blue';
+    }
+
+    return 'bg-terminal-yellow/10 text-terminal-yellow';
 };
 
 function GeneralSettingsPage() {
@@ -165,7 +209,13 @@ function GeneralSettingsPage() {
     );
 }
 
-function EtsyApiSettingsPage({ connection }: { connection: EtsyOAuthConnectionState }) {
+function EtsyApiSettingsPage({
+    connection,
+    realtime
+}: {
+    connection: EtsyOAuthConnectionState;
+    realtime: RealtimeWebsocketState;
+}) {
     const isActionBusy =
         connection.isCheckingStatus ||
         connection.isConnecting ||
@@ -264,6 +314,44 @@ function EtsyApiSettingsPage({ connection }: { connection: EtsyOAuthConnectionSt
                 </div>
             </div>
 
+            <div className="space-y-2">
+                <span className="text-[10px] font-medium uppercase tracking-wider text-terminal-dim">
+                    Realtime
+                </span>
+                <div className="space-y-1">
+                    <div className="flex items-center justify-between rounded border border-border bg-secondary/40 px-3 py-2">
+                        <div className="flex items-center gap-2">
+                            {realtime.status === 'connected' ? (
+                                <Wifi className="size-3 text-terminal-green" />
+                            ) : (
+                                <WifiOff className="size-3 text-terminal-yellow" />
+                            )}
+                            <span className="text-[10px] text-muted-foreground">WebSocket</span>
+                        </div>
+                        <span
+                            className={cn(
+                                'rounded px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider',
+                                getRealtimeStatusClassName(realtime)
+                            )}
+                        >
+                            {getRealtimeStatusLabel(realtime)}
+                        </span>
+                    </div>
+                    <div className="flex items-center justify-between rounded border border-border bg-secondary/40 px-3 py-2">
+                        <span className="text-[10px] text-muted-foreground">Last Connected</span>
+                        <span className="text-[10px] font-medium text-foreground">
+                            {formatTimestamp(realtime.lastConnectedAt)}
+                        </span>
+                    </div>
+                    <div className="flex items-center justify-between rounded border border-border bg-secondary/40 px-3 py-2">
+                        <span className="text-[10px] text-muted-foreground">Last Error</span>
+                        <span className="text-[10px] font-medium text-foreground">
+                            {formatTimestamp(realtime.lastErrorAt)}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
             <div className="border-t border-border pt-6">
                 <span className="text-[10px] font-medium uppercase tracking-wider text-terminal-dim">
                     Actions
@@ -327,7 +415,7 @@ function EtsyApiSettingsPage({ connection }: { connection: EtsyOAuthConnectionSt
     );
 }
 
-export function SettingsModal({ connection }: SettingsModalProps) {
+export function SettingsModal({ connection, realtime }: SettingsModalProps) {
     const [open, setOpen] = useState(false);
     const [activePage, setActivePage] = useState<SettingsPage>('general');
 
@@ -430,7 +518,7 @@ export function SettingsModal({ connection }: SettingsModalProps) {
                             {activePage === 'general' ? (
                                 <GeneralSettingsPage />
                             ) : (
-                                <EtsyApiSettingsPage connection={connection} />
+                                <EtsyApiSettingsPage connection={connection} realtime={realtime} />
                             )}
                         </div>
                     </div>

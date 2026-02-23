@@ -1,239 +1,299 @@
-"use client"
+'use client';
 
-import { useState, useMemo } from "react"
-import { cn } from "@/lib/utils"
-import { mockLogs, type LogEntry, type LogLevel, type LogStatus } from "@/lib/mock-data"
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  StatusBadge,
-  SortableHeader,
-  FilterChip,
-  TopToolbar,
-  Pagination,
-  EmptyState,
-  DetailPanel,
-  DetailRow,
-  Download,
-  Play,
-  Pause,
-} from "./shared"
+    listEventLogs,
+    type EventLogCursor,
+    type EventLogItem,
+    type EventLogLevel,
+    type EventLogPrimitiveType,
+    type EventLogStatus,
+    type ListEventLogsOutput
+} from '@/lib/logs-api';
+import { logsInvalidatedEventName } from '@/hooks/use-realtime-query-invalidations';
+import { TrpcRequestError } from '@/lib/trpc-http';
+import { cn } from '@/lib/utils';
+import { LogsDetailPanel } from './logs-detail-panel';
+import {
+    LOG_LEVELS,
+    LOG_STATUSES,
+    LOG_TYPES,
+    LogLevelBadge,
+    PrimitiveTypeBadge,
+    formatLogTime,
+    getTargetLabel
+} from './logs-ui';
+import {
+    Download,
+    EmptyState,
+    FilterChip,
+    Pause,
+    Play,
+    StatusBadge,
+    TopToolbar
+} from './shared';
 
-const PAGE_SIZE = 20
+const PAGE_SIZE = 20;
 
-function LogLevelBadge({ level }: { level: LogLevel }) {
-  return (
-    <span className={cn(
-      "inline-flex items-center rounded px-1.5 py-0.5 text-[10px] uppercase tracking-wider font-bold",
-      level === "info" && "text-terminal-blue",
-      level === "warn" && "text-terminal-yellow",
-      level === "error" && "text-terminal-red",
-      level === "debug" && "text-terminal-dim",
-    )}>
-      {level}
-    </span>
-  )
-}
+type EventLogPage = Pick<ListEventLogsOutput, 'items' | 'nextCursor'>;
 
-function PrimitiveTypeBadge({ type }: { type: string }) {
-  return (
-    <span className={cn(
-      "inline-flex items-center rounded px-1 py-0.5 text-[10px] uppercase tracking-wider",
-      type === "listing" && "text-terminal-green bg-terminal-green/5",
-      type === "keyword" && "text-terminal-blue bg-terminal-blue/5",
-      type === "shop" && "text-terminal-yellow bg-terminal-yellow/5",
-      type === "system" && "text-terminal-dim bg-secondary",
-    )}>
-      {type}
-    </span>
-  )
-}
+const toErrorMessage = (error: unknown): string => {
+    if (error instanceof TrpcRequestError) {
+        return error.message;
+    }
 
-function formatLogTime(dateStr: string): string {
-  const d = new Date(dateStr)
-  return d.toLocaleString("en-US", {
-    month: "short",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  })
-}
+    if (error instanceof Error && error.message.length > 0) {
+        return error.message;
+    }
+
+    return 'Unexpected request failure.';
+};
+
 
 export function LogsTab() {
-  const [search, setSearch] = useState("")
-  const [sortKey, setSortKey] = useState("time")
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc")
-  const [page, setPage] = useState(1)
-  const [filterLevel, setFilterLevel] = useState<LogLevel | null>(null)
-  const [filterStatus, setFilterStatus] = useState<LogStatus | null>(null)
-  const [filterType, setFilterType] = useState<string | null>(null)
-  const [liveMode, setLiveMode] = useState(false)
-  const [selectedLog, setSelectedLog] = useState<LogEntry | null>(null)
+    const [search, setSearch] = useState('');
+    const [page, setPage] = useState(1);
+    const [pages, setPages] = useState<EventLogPage[]>([]);
+    const [filterLevel, setFilterLevel] = useState<EventLogLevel | null>(null);
+    const [filterStatus, setFilterStatus] = useState<EventLogStatus | null>(null);
+    const [filterType, setFilterType] = useState<EventLogPrimitiveType | null>(null);
+    const [liveMode, setLiveMode] = useState(false);
+    const [selectedLog, setSelectedLog] = useState<EventLogItem | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  function handleSort(key: string) {
-    if (sortKey === key) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"))
-    } else {
-      setSortKey(key)
-      setSortDir("desc")
-    }
-    setPage(1)
-  }
+    const getQueryInput = useCallback(
+        (cursor?: EventLogCursor | null) => ({
+            cursor: cursor ?? undefined,
+            levels: filterLevel ? [filterLevel] : undefined,
+            limit: PAGE_SIZE,
+            primitiveTypes: filterType ? [filterType] : undefined,
+            search: search.trim().length > 0 ? search.trim() : undefined,
+            statuses: filterStatus ? [filterStatus] : undefined
+        }),
+        [filterLevel, filterStatus, filterType, search]
+    );
 
-  const filtered = useMemo(() => {
-    let data = [...mockLogs]
-    if (search) {
-      const q = search.toLowerCase()
-      data = data.filter(
-        (l) =>
-          l.message.toLowerCase().includes(q) ||
-          l.action.toLowerCase().includes(q) ||
-          l.target.toLowerCase().includes(q) ||
-          l.runId.toLowerCase().includes(q),
-      )
-    }
-    if (filterLevel) data = data.filter((l) => l.level === filterLevel)
-    if (filterStatus) data = data.filter((l) => l.status === filterStatus)
-    if (filterType) data = data.filter((l) => l.primitiveType === filterType)
+    const loadFirstPage = useCallback(async () => {
+        setIsLoading(true);
 
-    data.sort((a, b) => {
-      const aVal = a[sortKey as keyof LogEntry]
-      const bVal = b[sortKey as keyof LogEntry]
-      const aStr = String(aVal)
-      const bStr = String(bVal)
-      return sortDir === "asc" ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr)
-    })
-    return data
-  }, [search, sortKey, sortDir, filterLevel, filterStatus, filterType])
+        try {
+            const response = await listEventLogs(getQueryInput());
 
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+            setPages([response]);
+            setPage(1);
+            setErrorMessage(null);
+        } catch (error) {
+            setErrorMessage(toErrorMessage(error));
+            setPages([]);
+            setPage(1);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [getQueryInput]);
 
-  return (
-    <div className="flex flex-col h-full">
-      <TopToolbar search={search} onSearchChange={(v) => { setSearch(v); setPage(1) }} onRefresh={() => {}}>
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-[9px] uppercase tracking-widest text-terminal-dim mr-1">Level</span>
-          {(["info", "warn", "error", "debug"] as LogLevel[]).map((l) => (
-            <FilterChip key={l} label={l} active={filterLevel === l} onClick={() => { setFilterLevel(filterLevel === l ? null : l); setPage(1) }} />
-          ))}
-          <span className="text-border mx-1">|</span>
-          <span className="text-[9px] uppercase tracking-widest text-terminal-dim mr-1">Status</span>
-          {(["success", "failed", "retrying", "pending"] as LogStatus[]).map((s) => (
-            <FilterChip key={s} label={s} active={filterStatus === s} onClick={() => { setFilterStatus(filterStatus === s ? null : s); setPage(1) }} />
-          ))}
-          <span className="text-border mx-1">|</span>
-          <span className="text-[9px] uppercase tracking-widest text-terminal-dim mr-1">Type</span>
-          {(["listing", "keyword", "shop", "system"]).map((t) => (
-            <FilterChip key={t} label={t} active={filterType === t} onClick={() => { setFilterType(filterType === t ? null : t); setPage(1) }} />
-          ))}
-        </div>
-        <div className="flex items-center gap-1.5 ml-auto">
-          <button
-            onClick={() => setLiveMode(!liveMode)}
-            className={cn(
-              "flex items-center gap-1.5 rounded border px-2 py-1 text-[10px] cursor-pointer transition-colors",
-              liveMode
-                ? "border-terminal-green/30 bg-terminal-green/10 text-terminal-green"
-                : "border-border bg-secondary text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {liveMode ? <Pause className="size-3" /> : <Play className="size-3" />}
-            {liveMode ? "Live" : "Paused"}
-          </button>
-          <button className="flex items-center gap-1.5 rounded border border-border bg-secondary px-2 py-1 text-[10px] text-muted-foreground hover:text-foreground cursor-pointer transition-colors">
-            <Download className="size-3" />
-            Export
-          </button>
-        </div>
-      </TopToolbar>
+    useEffect(() => {
+        void loadFirstPage();
+    }, [loadFirstPage]);
 
-      <div className="flex-1 overflow-auto">
-        {paginated.length === 0 ? (
-          <EmptyState message="No logs match your filters." />
-        ) : (
-          <table className="w-full text-xs">
-            <thead className="sticky top-0 z-10 bg-card">
-              <tr className="border-b border-border">
-                <th className="px-3 py-2 text-left"><SortableHeader label="Time" sortKey="time" currentSort={sortKey} currentDir={sortDir} onSort={handleSort} /></th>
-                <th className="px-2 py-2 text-center"><SortableHeader label="Level" sortKey="level" currentSort={sortKey} currentDir={sortDir} onSort={handleSort} className="justify-center" /></th>
-                <th className="px-2 py-2 text-left"><SortableHeader label="Action" sortKey="action" currentSort={sortKey} currentDir={sortDir} onSort={handleSort} /></th>
-                <th className="px-2 py-2 text-center"><SortableHeader label="Type" sortKey="primitiveType" currentSort={sortKey} currentDir={sortDir} onSort={handleSort} className="justify-center" /></th>
-                <th className="px-2 py-2 text-left"><SortableHeader label="Target" sortKey="target" currentSort={sortKey} currentDir={sortDir} onSort={handleSort} /></th>
-                <th className="px-2 py-2 text-left"><SortableHeader label="Message" sortKey="message" currentSort={sortKey} currentDir={sortDir} onSort={handleSort} /></th>
-                <th className="px-2 py-2 text-left"><SortableHeader label="Run ID" sortKey="runId" currentSort={sortKey} currentDir={sortDir} onSort={handleSort} /></th>
-                <th className="px-2 py-2 text-center"><SortableHeader label="Status" sortKey="status" currentSort={sortKey} currentDir={sortDir} onSort={handleSort} className="justify-center" /></th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginated.map((l) => (
-                <tr
-                  key={l.id}
-                  onClick={() => setSelectedLog(l)}
-                  className={cn(
-                    "border-b border-border/50 cursor-pointer transition-colors hover:bg-accent/50",
-                    l.level === "error" && "bg-terminal-red/3",
-                    l.level === "warn" && "bg-terminal-yellow/3",
-                  )}
-                >
-                  <td className="px-3 py-1 text-terminal-dim font-mono whitespace-nowrap">{formatLogTime(l.time)}</td>
-                  <td className="px-2 py-1 text-center"><LogLevelBadge level={l.level} /></td>
-                  <td className="px-2 py-1 text-foreground font-mono">{l.action}</td>
-                  <td className="px-2 py-1 text-center"><PrimitiveTypeBadge type={l.primitiveType} /></td>
-                  <td className="px-2 py-1 text-terminal-dim font-mono">{l.target}</td>
-                  <td className="px-2 py-1 max-w-64 truncate text-secondary-foreground">{l.message}</td>
-                  <td className="px-2 py-1 text-terminal-dim font-mono">{l.runId}</td>
-                  <td className="px-2 py-1 text-center"><StatusBadge status={l.status} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+    useEffect(() => {
+        if (!liveMode) {
+            return;
+        }
 
-      {filtered.length > 0 && (
-        <Pagination page={page} totalPages={totalPages} onPageChange={setPage} totalItems={filtered.length} pageSize={PAGE_SIZE} />
-      )}
+        const intervalId = window.setInterval(() => {
+            void loadFirstPage();
+        }, 15_000);
 
-      <DetailPanel
-        open={!!selectedLog}
-        onClose={() => setSelectedLog(null)}
-        title={selectedLog?.action || ""}
-        subtitle={selectedLog ? `${selectedLog.id} / ${selectedLog.runId}` : ""}
-      >
-        {selectedLog && (
-          <>
-            <div className="space-y-0">
-              <DetailRow label="Time" value={formatLogTime(selectedLog.time)} />
-              <DetailRow label="Level" value={<LogLevelBadge level={selectedLog.level} />} />
-              <DetailRow label="Action" value={selectedLog.action} />
-              <DetailRow label="Type" value={<PrimitiveTypeBadge type={selectedLog.primitiveType} />} />
-              <DetailRow label="Target" value={selectedLog.target} />
-              <DetailRow label="Run ID" value={selectedLog.runId} />
-              <DetailRow label="Status" value={<StatusBadge status={selectedLog.status} />} />
-            </div>
-            <div className="mt-4">
-              <h4 className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Message</h4>
-              <div className="rounded border border-border bg-secondary p-3 text-[11px] text-foreground leading-relaxed">
-                {selectedLog.message}
-              </div>
-            </div>
-            {selectedLog.metadata && (
-              <div className="mt-4">
-                <h4 className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Metadata</h4>
-                <div className="rounded border border-border bg-secondary p-3 space-y-1">
-                  {Object.entries(selectedLog.metadata).map(([key, value]) => (
-                    <div key={key} className="flex items-center justify-between text-[10px]">
-                      <span className="text-muted-foreground">{key}</span>
-                      <span className="text-foreground font-mono">{value}</span>
-                    </div>
-                  ))}
+        return () => {
+            window.clearInterval(intervalId);
+        };
+    }, [liveMode, loadFirstPage]);
+
+    useEffect(() => {
+        const onInvalidated = () => {
+            void loadFirstPage();
+        };
+
+        window.addEventListener(logsInvalidatedEventName, onInvalidated);
+
+        return () => {
+            window.removeEventListener(logsInvalidatedEventName, onInvalidated);
+        };
+    }, [loadFirstPage]);
+
+    const currentPage = pages[page - 1];
+    const paginated = currentPage?.items ?? [];
+
+    const hasNextPage = useMemo(() => {
+        if (page < pages.length) {
+            return true;
+        }
+
+        return Boolean(currentPage?.nextCursor);
+    }, [currentPage?.nextCursor, page, pages.length]);
+
+    const handleNextPage = useCallback(async () => {
+        if (page < pages.length) {
+            setPage((current) => current + 1);
+            return;
+        }
+
+        if (!currentPage?.nextCursor) {
+            return;
+        }
+
+        setIsLoading(true);
+
+        try {
+            const response = await listEventLogs(getQueryInput(currentPage.nextCursor));
+
+            setPages((existing) => [...existing, response]);
+            setPage((current) => current + 1);
+            setErrorMessage(null);
+        } catch (error) {
+            setErrorMessage(toErrorMessage(error));
+        } finally {
+            setIsLoading(false);
+        }
+    }, [currentPage?.nextCursor, getQueryInput, page, pages.length]);
+
+    return (
+        <div className="flex h-full flex-col">
+            <TopToolbar search={search} onSearchChange={setSearch} onRefresh={() => void loadFirstPage()}>
+                <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="mr-1 text-[9px] uppercase tracking-widest text-terminal-dim">Level</span>
+                    {LOG_LEVELS.map((levelValue) => (
+                        <FilterChip
+                            key={levelValue}
+                            active={filterLevel === levelValue}
+                            label={levelValue}
+                            onClick={() => setFilterLevel(filterLevel === levelValue ? null : levelValue)}
+                        />
+                    ))}
+                    <span className="mx-1 text-border">|</span>
+                    <span className="mr-1 text-[9px] uppercase tracking-widest text-terminal-dim">Status</span>
+                    {LOG_STATUSES.map((statusValue) => (
+                        <FilterChip
+                            key={statusValue}
+                            active={filterStatus === statusValue}
+                            label={statusValue}
+                            onClick={() =>
+                                setFilterStatus(filterStatus === statusValue ? null : statusValue)
+                            }
+                        />
+                    ))}
+                    <span className="mx-1 text-border">|</span>
+                    <span className="mr-1 text-[9px] uppercase tracking-widest text-terminal-dim">Type</span>
+                    {LOG_TYPES.map((typeValue) => (
+                        <FilterChip
+                            key={typeValue}
+                            active={filterType === typeValue}
+                            label={typeValue}
+                            onClick={() => setFilterType(filterType === typeValue ? null : typeValue)}
+                        />
+                    ))}
                 </div>
-              </div>
-            )}
-          </>
-        )}
-      </DetailPanel>
-    </div>
-  )
+                <div className="ml-auto flex items-center gap-1.5">
+                    <button
+                        onClick={() => setLiveMode(!liveMode)}
+                        className={cn(
+                            'flex cursor-pointer items-center gap-1.5 rounded border px-2 py-1 text-[10px] transition-colors',
+                            liveMode
+                                ? 'border-terminal-green/30 bg-terminal-green/10 text-terminal-green'
+                                : 'border-border bg-secondary text-muted-foreground hover:text-foreground'
+                        )}
+                    >
+                        {liveMode ? <Pause className="size-3" /> : <Play className="size-3" />}
+                        {liveMode ? 'Live' : 'Paused'}
+                    </button>
+                    <button className="flex cursor-pointer items-center gap-1.5 rounded border border-border bg-secondary px-2 py-1 text-[10px] text-muted-foreground transition-colors hover:text-foreground">
+                        <Download className="size-3" />
+                        Export
+                    </button>
+                </div>
+            </TopToolbar>
+
+            {errorMessage ? (
+                <div className="border-b border-terminal-red/20 bg-terminal-red/10 px-3 py-2 text-xs text-terminal-red">
+                    {errorMessage}
+                </div>
+            ) : null}
+
+            <div className="flex-1 overflow-auto">
+                {isLoading && pages.length === 0 ? (
+                    <div className="px-3 py-6 text-xs text-muted-foreground">Loading event logs...</div>
+                ) : paginated.length === 0 ? (
+                    <EmptyState message="No logs match your filters." />
+                ) : (
+                    <table className="w-full text-xs">
+                        <thead className="sticky top-0 z-10 bg-card">
+                            <tr className="border-b border-border">
+                                <th className="px-3 py-2 text-left text-[10px] uppercase tracking-wider text-muted-foreground">Time</th>
+                                <th className="px-2 py-2 text-center text-[10px] uppercase tracking-wider text-muted-foreground">Level</th>
+                                <th className="px-2 py-2 text-left text-[10px] uppercase tracking-wider text-muted-foreground">Action</th>
+                                <th className="px-2 py-2 text-center text-[10px] uppercase tracking-wider text-muted-foreground">Type</th>
+                                <th className="px-2 py-2 text-left text-[10px] uppercase tracking-wider text-muted-foreground">Target</th>
+                                <th className="px-2 py-2 text-left text-[10px] uppercase tracking-wider text-muted-foreground">Message</th>
+                                <th className="px-2 py-2 text-left text-[10px] uppercase tracking-wider text-muted-foreground">Run ID</th>
+                                <th className="px-2 py-2 text-center text-[10px] uppercase tracking-wider text-muted-foreground">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {paginated.map((logItem) => (
+                                <tr
+                                    key={logItem.id}
+                                    onClick={() => setSelectedLog(logItem)}
+                                    className={cn(
+                                        'cursor-pointer border-b border-border/50 transition-colors hover:bg-accent/50',
+                                        logItem.level === 'error' && 'bg-terminal-red/3',
+                                        logItem.level === 'warn' && 'bg-terminal-yellow/3'
+                                    )}
+                                >
+                                    <td className="font-mono whitespace-nowrap px-3 py-1 text-terminal-dim">
+                                        {formatLogTime(logItem.occurredAt)}
+                                    </td>
+                                    <td className="px-2 py-1 text-center">
+                                        <LogLevelBadge level={logItem.level} />
+                                    </td>
+                                    <td className="px-2 py-1 font-mono text-foreground">{logItem.action}</td>
+                                    <td className="px-2 py-1 text-center">
+                                        <PrimitiveTypeBadge type={logItem.primitiveType} />
+                                    </td>
+                                    <td className="px-2 py-1 font-mono text-terminal-dim">{getTargetLabel(logItem)}</td>
+                                    <td className="max-w-64 truncate px-2 py-1 text-secondary-foreground">{logItem.message}</td>
+                                    <td className="px-2 py-1 font-mono text-terminal-dim">{logItem.monitorRunId ?? '--'}</td>
+                                    <td className="px-2 py-1 text-center">
+                                        <StatusBadge status={logItem.status} />
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                )}
+            </div>
+
+            <div className="flex items-center justify-between border-t border-border px-3 py-2 text-[10px] text-muted-foreground">
+                <span>Page {page}</span>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setPage((current) => Math.max(1, current - 1))}
+                        disabled={page <= 1 || isLoading}
+                        className="rounded border border-border bg-secondary px-2 py-1 transition-colors hover:text-foreground disabled:cursor-default disabled:opacity-40"
+                    >
+                        Prev
+                    </button>
+                    <button
+                        onClick={() => void handleNextPage()}
+                        disabled={!hasNextPage || isLoading}
+                        className="rounded border border-border bg-secondary px-2 py-1 transition-colors hover:text-foreground disabled:cursor-default disabled:opacity-40"
+                    >
+                        Next
+                    </button>
+                </div>
+            </div>
+
+            <LogsDetailPanel selectedLog={selectedLog} onClose={() => setSelectedLog(null)} />
+        </div>
+    );
 }

@@ -13,7 +13,7 @@ describe('emitEvent', () => {
 
         emitEvent({
             clerkUserId: 'user_123',
-            queries: ['app.keywords.list', 'app.listings.list'],
+            queries: ['app.keywords.list', 'app.listings.list', 'app.logs.list'],
             tenantId: 'tenant_123'
         });
         stopListening();
@@ -21,7 +21,7 @@ describe('emitEvent', () => {
         expect(receivedEvents).toEqual([
             {
                 clerkUserId: 'user_123',
-                queries: ['app.keywords.list', 'app.listings.list'],
+                queries: ['app.keywords.list', 'app.listings.list', 'app.logs.list'],
                 tenantId: 'tenant_123'
             }
         ]);
@@ -31,7 +31,9 @@ describe('emitEvent', () => {
         expect(() => {
             emitEvent({
                 clerkUserId: 'user_123',
-                queries: ['invalid.query'] as unknown as ('app.keywords.list' | 'app.listings.list')[],
+                queries: ['invalid.query'] as unknown as (
+                    'app.keywords.list' | 'app.listings.list' | 'app.logs.list'
+                )[],
                 tenantId: 'tenant_123'
             });
         }).toThrow();

@@ -8,7 +8,8 @@ realtimeInvalidationEmitter.setMaxListeners(0);
 
 export const realtimeInvalidationQuerySchema = z.enum([
     'app.keywords.list',
-    'app.listings.list'
+    'app.listings.list',
+    'app.logs.list'
 ]);
 
 const realtimeInvalidationEventSchema = z.object({

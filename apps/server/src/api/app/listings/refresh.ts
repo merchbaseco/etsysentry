@@ -11,6 +11,7 @@ export const listingsRefreshProcedure = appProcedure
     .mutation(async ({ ctx, input }) => {
         return refreshTrackedListing({
             clerkUserId: ctx.user.sub,
+            requestId: ctx.requestId,
             tenantId: ctx.tenantId,
             trackedListingId: input.trackedListingId,
             trackerClerkUserId: ctx.user.sub

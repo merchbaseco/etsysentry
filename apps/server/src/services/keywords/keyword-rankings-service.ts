@@ -8,6 +8,7 @@ import {
     type FindAllListingsActiveBridgeResponse
 } from '../etsy/bridges/find-all-listings-active';
 import { getEtsyOAuthAccessToken } from '../etsy/oauth-service';
+import { createEventLog, createEventLogs } from '../logs/create-event-log';
 import { emitEvent } from '../realtime/emit-event';
 
 const DAILY_SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000;
@@ -203,6 +204,8 @@ const fetchKeywordRanksFromEtsy = async (params: {
 
 export const syncRanksForKeyword = async (params: {
     clerkUserId: string;
+    monitorRunId?: string;
+    requestId?: string;
     tenantId: string;
     trackedKeywordId: string;
 }): Promise<SyncRanksForKeywordResult> => {
@@ -317,7 +320,19 @@ export const syncRanksForKeyword = async (params: {
                 await tx.insert(productKeywordRanks).values(values);
             }
 
+            const discoveredListings = newlyDiscoveredEtsyListingIds.map((etsyListingId) => {
+                const rankedListing = uniqueRankedListingsById.get(etsyListingId);
+
+                return {
+                    etsyListingId,
+                    primitiveId: listingIdByEtsyListingId.get(etsyListingId) ?? null,
+                    shopId: rankedListing?.shopId ?? null,
+                    title: rankedListing?.title ?? null
+                };
+            });
+
             return {
+                discoveredListings,
                 newlyDiscoveredEtsyListingIds,
                 values
             };
@@ -344,6 +359,51 @@ export const syncRanksForKeyword = async (params: {
             queries: [...keywordSyncInvalidationQueries],
             tenantId: params.tenantId
         });
+
+        await createEventLogs([
+            ...insertValues.discoveredListings.map((listing) => ({
+                action: 'listing.discovered',
+                category: 'listing',
+                clerkUserId: params.clerkUserId,
+                detailsJson: {
+                    keyword: trackedKeyword.keyword,
+                    title: listing.title
+                },
+                keyword: trackedKeyword.keyword,
+                level: 'info' as const,
+                listingId: listing.etsyListingId,
+                message:
+                    `Discovered listing ${listing.etsyListingId} from keyword ` +
+                    `"${trackedKeyword.keyword}".`,
+                monitorRunId: params.monitorRunId ?? null,
+                primitiveId: listing.primitiveId,
+                primitiveType: 'listing' as const,
+                requestId: params.requestId ?? null,
+                shopId: listing.shopId,
+                status: 'success' as const,
+                tenantId: params.tenantId
+            })),
+            {
+                action: 'keyword.synced',
+                category: 'keyword',
+                clerkUserId: params.clerkUserId,
+                detailsJson: {
+                    capturedCount: insertValues.values.length,
+                    discoveredCount: insertValues.newlyDiscoveredEtsyListingIds.length
+                },
+                keyword: trackedKeyword.keyword,
+                level: 'info',
+                message:
+                    `Synced keyword "${trackedKeyword.keyword}" with ` +
+                    `${insertValues.values.length} captured listings.`,
+                monitorRunId: params.monitorRunId ?? null,
+                primitiveId: trackedKeyword.id,
+                primitiveType: 'keyword',
+                requestId: params.requestId ?? null,
+                status: 'success',
+                tenantId: params.tenantId
+            }
+        ]);
 
         return {
             keyword: trackedKeyword.keyword,
@@ -384,6 +444,28 @@ export const syncRanksForKeyword = async (params: {
             queries: [...keywordSyncInvalidationQueries],
             tenantId: params.tenantId
         });
+
+        try {
+            await createEventLog({
+                action: 'keyword.sync_failed',
+                category: 'keyword',
+                clerkUserId: params.clerkUserId,
+                detailsJson: {
+                    error: failureMessage
+                },
+                keyword: trackedKeyword.keyword,
+                level: 'error',
+                message: `Keyword sync failed for "${trackedKeyword.keyword}": ${failureMessage}`,
+                monitorRunId: params.monitorRunId ?? null,
+                primitiveId: trackedKeyword.id,
+                primitiveType: 'keyword',
+                requestId: params.requestId ?? null,
+                status: 'failed',
+                tenantId: params.tenantId
+            });
+        } catch {
+            // Preserve the original sync failure.
+        }
 
         throw error;
     }

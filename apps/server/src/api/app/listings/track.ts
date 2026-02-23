@@ -11,6 +11,7 @@ export const listingsTrackProcedure = appProcedure
     .mutation(async ({ ctx, input }) => {
         return trackListing({
             listingInput: input.listing,
+            requestId: ctx.requestId,
             tenantId: ctx.tenantId,
             trackerClerkUserId: ctx.user.sub
         });

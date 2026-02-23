@@ -2,6 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { and, desc, eq } from 'drizzle-orm';
 import { db } from '../../db';
 import { trackedListings } from '../../db/schema';
+import { createEventLog } from '../logs/create-event-log';
 import {
     EtsyGetListingBridgeError,
     getListing,
@@ -272,6 +273,7 @@ export const listTrackedListings = async (params: {
 
 export const trackListing = async (params: {
     listingInput: string;
+    requestId?: string;
     tenantId: string;
     trackerClerkUserId: string;
 }): Promise<{
@@ -307,14 +309,38 @@ export const trackListing = async (params: {
         trackerClerkUserId: params.trackerClerkUserId
     });
 
+    const created = existing.length === 0;
+    const item = toRecord(row);
+
+    await createEventLog({
+        action: created ? 'listing.tracked' : 'listing.updated',
+        category: 'listing',
+        clerkUserId: params.trackerClerkUserId,
+        detailsJson: {
+            title: item.title
+        },
+        level: 'info',
+        listingId: item.etsyListingId,
+        message: created
+            ? `Started tracking listing ${item.etsyListingId}.`
+            : `Updated tracked listing ${item.etsyListingId}.`,
+        primitiveId: item.id,
+        primitiveType: 'listing',
+        requestId: params.requestId ?? null,
+        shopId: item.shopId,
+        status: 'success',
+        tenantId: item.tenantId
+    });
+
     return {
-        created: existing.length === 0,
-        item: toRecord(row)
+        created,
+        item
     };
 };
 
 export const refreshTrackedListing = async (params: {
     clerkUserId: string;
+    requestId?: string;
     tenantId: string;
     trackedListingId: string;
     trackerClerkUserId: string;
@@ -345,6 +371,25 @@ export const refreshTrackedListing = async (params: {
             trackerClerkUserId: params.trackerClerkUserId
         });
 
+        await createEventLog({
+            action: 'listing.synced',
+            category: 'listing',
+            clerkUserId: params.clerkUserId,
+            detailsJson: {
+                etsyState: updated.etsyState,
+                title: updated.title
+            },
+            level: 'info',
+            listingId: updated.etsyListingId,
+            message: `Synced listing ${updated.etsyListingId}.`,
+            primitiveId: updated.listingId,
+            primitiveType: 'listing',
+            requestId: params.requestId ?? null,
+            shopId: updated.shopId,
+            status: 'success',
+            tenantId: updated.tenantId
+        });
+
         return toRecord(updated);
     } catch (error) {
         const failureMessage =
@@ -363,6 +408,28 @@ export const refreshTrackedListing = async (params: {
 
         if (!updated) {
             throw error;
+        }
+
+        try {
+            await createEventLog({
+                action: 'listing.sync_failed',
+                category: 'listing',
+                clerkUserId: params.clerkUserId,
+                detailsJson: {
+                    error: failureMessage
+                },
+                level: 'error',
+                listingId: updated.etsyListingId,
+                message: `Listing sync failed for ${updated.etsyListingId}: ${failureMessage}`,
+                primitiveId: updated.listingId,
+                primitiveType: 'listing',
+                requestId: params.requestId ?? null,
+                shopId: updated.shopId,
+                status: 'failed',
+                tenantId: updated.tenantId
+            });
+        } catch {
+            // Preserve the original sync failure.
         }
 
         throw error;

@@ -4,7 +4,6 @@ import { StrictMode, useCallback, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './app';
 import { ThemeProvider } from './components/theme-provider';
-import { useRealtimeQueryInvalidations } from './hooks/use-realtime-query-invalidations';
 import { configureTrpcAuthTokenGetter, queryClient } from './lib/trpc-client';
 import './styles/global.css';
 
@@ -34,8 +33,6 @@ const AuthenticatedApp = () => {
     const getAuthToken = useCallback(async () => {
         return (await getToken()) ?? null;
     }, [getToken]);
-
-    useRealtimeQueryInvalidations(getAuthToken);
 
     useEffect(() => {
         configureTrpcAuthTokenGetter(getAuthToken);
