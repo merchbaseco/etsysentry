@@ -28,13 +28,25 @@ const formatPrice = (item: TrackedListingItem): string => {
         return '--';
     }
 
-    const value = (item.price.value || 0).toFixed(2);
+    const nativeValue = (item.price.value || 0).toFixed(2);
+    const usdValue =
+        item.priceUsdValue !== null && item.priceUsdValue !== undefined
+            ? item.priceUsdValue.toFixed(2)
+            : null;
 
-    if (item.price.currencyCode === 'USD') {
-        return `$${value}`;
+    if (item.price.currencyCode === 'USD' && usdValue !== null) {
+        return `$${usdValue}`;
     }
 
-    return `${item.price.currencyCode} ${value}`;
+    if (usdValue !== null) {
+        return `$${usdValue} (${item.price.currencyCode} ${nativeValue})`;
+    }
+
+    if (item.price.currencyCode === 'USD') {
+        return `$${nativeValue}`;
+    }
+
+    return `${item.price.currencyCode} ${nativeValue}`;
 };
 
 const toErrorMessage = (error: unknown): string => {

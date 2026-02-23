@@ -15,14 +15,19 @@ Implemented scaffold:
 - Tracked listings app API (`api.app.listings.list|track|refresh`)
 - Tracked keywords app API (`api.app.keywords.list|track`)
 - Keyword rank read API (`api.app.keywords.getDailyProductRanksForKeyword`)
+- Currency conversion API (`api.app.currency.getStatus|refresh`)
 - Keyword rank sync inserts a `tracked_listings` row only when a ranked listing is not already
   tracked, then inserts `product_keyword_ranks`
 - Newly discovered listings from keyword sync enqueue `sync-listing` jobs to hydrate canonical
   listing snapshot fields
+- Scheduled currency rates sync job (`sync-currency-rates`) refreshes USD conversion rates cache
+  from `open.er-api.com`
 - Canonical listing snapshot fields (`price*`, `quantity`, `views`, `numFavorers`, `shopName`,
   `etsyState`, `updatedTimestamp`, `lastRefreshedAt`, `lastRefreshError`) are owned by listing
   sync (`track|refresh`) paths
 - User-facing event logs persisted in `event_logs` with admin listing API
+- Listing responses include derived `priceUsdValue` computed from cached conversion rates at
+  request time
 - Product keyword-rank query (`api.app.listings.getKeywordRanksForProduct`)
 - First Etsy bridge file:
   - `apps/server/src/services/etsy/bridges/exchange-oauth-token.ts`
@@ -110,6 +115,8 @@ Current app surface:
 - `api.app.keywords.track`
 - `api.app.keywords.getDailyProductRanksForKeyword`
 - `api.app.logs.list` (admin-only)
+- `api.app.currency.getStatus`
+- `api.app.currency.refresh`
 
 ## Etsy Bridge Rules
 
@@ -129,6 +136,7 @@ Current app surface:
 - Keyword ranks are auto-synced by `pg-boss` workers:
   - immediate enqueue when a keyword is tracked
   - daily scheduled dispatch for due tracked keywords
+- USD conversion rates are auto-synced by `pg-boss` workers every 6 hours.
 - `api.app.*` procedures require Clerk bearer auth (`Authorization: Bearer <token>`).
 - Admin-only app procedures require authenticated user email to match `ADMIN_EMAIL`.
 - Keep `.env.example` updated when env vars change.

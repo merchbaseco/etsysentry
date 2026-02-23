@@ -235,3 +235,20 @@ export const etsyOAuthConnections = pgTable(
         tenantIdx: index('etsy_oauth_connections_tenant_idx').on(table.tenantId)
     })
 );
+
+export const currencyRates = pgTable(
+    'currency_rates',
+    {
+        baseCurrency: text('base_currency').primaryKey(),
+        fetchedAt: timestamp('fetched_at', { mode: 'date' }),
+        lastRefreshError: text('last_refresh_error'),
+        nextRefreshAt: timestamp('next_refresh_at', { mode: 'date' }),
+        provider: text('provider').notNull(),
+        ratesJson: text('rates_json'),
+        updatedAt: timestamp('updated_at', { mode: 'date' }).notNull().defaultNow()
+    },
+    (table) => ({
+        nextRefreshAtIdx: index('currency_rates_next_refresh_at_idx').on(table.nextRefreshAt),
+        updatedAtIdx: index('currency_rates_updated_at_idx').on(table.updatedAt)
+    })
+);
