@@ -332,7 +332,7 @@ export function ListingsTab() {
                                         </td>
                                         <td className="px-2 py-1.5">
                                             <div className="flex items-center justify-end gap-1">
-                                                <span className="text-[10px] text-terminal-dim">
+                                                <span className="text-[11px] text-terminal-dim">
                                                     {timeAgo(item.lastRefreshedAt)}
                                                 </span>
                                                 <Button
