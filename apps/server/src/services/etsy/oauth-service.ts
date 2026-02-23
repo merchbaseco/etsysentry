@@ -8,6 +8,7 @@ import {
 } from './bridges/exchange-oauth-token';
 import { createPkcePair } from './oauth-pkce';
 import { etsyOAuthConnectionStore, etsyOAuthStateStore } from './oauth-runtime';
+import { recordEtsyApiCallBestEffort } from './record-etsy-api-call';
 import type {
     EtsyOAuthConnectionKey,
     EtsyOAuthConnectionStore,
@@ -52,6 +53,11 @@ export type EtsyOAuthServiceDependencies = {
         codeChallenge: string;
         codeVerifier: string;
     };
+    recordApiCall: (params: {
+        clerkUserId: string;
+        endpoint: string;
+        tenantId: string;
+    }) => Promise<void>;
     stateStore: EtsyOAuthStateStore;
 };
 
@@ -60,6 +66,7 @@ const defaultDependencies: EtsyOAuthServiceDependencies = {
     exchangeToken: exchangeOAuthToken,
     nowMs: () => Date.now(),
     pkceFactory: createPkcePair,
+    recordApiCall: recordEtsyApiCallBestEffort,
     stateStore: etsyOAuthStateStore
 };
 
@@ -166,6 +173,12 @@ export const createEtsyOAuthService = (
         refreshToken: string;
     }): Promise<EtsyOAuthTokens> => {
         try {
+            await dependencies.recordApiCall({
+                clerkUserId: params.identity.clerkUserId,
+                endpoint: 'exchangeOAuthToken',
+                tenantId: params.identity.tenantId
+            });
+
             const refreshed = await dependencies.exchangeToken({
                 grantType: 'refresh_token',
                 refreshToken: params.refreshToken
@@ -229,7 +242,9 @@ export const createEtsyOAuthService = (
         });
     };
 
-    const getOAuthAccessToken = async (params: EtsyOAuthIdentity): Promise<EtsyOAuthAccessToken> => {
+    const getOAuthAccessToken = async (
+        params: EtsyOAuthIdentity
+    ): Promise<EtsyOAuthAccessToken> => {
         const tokens = await ensureFreshTokens({
             identity: params
         });
@@ -239,6 +254,11 @@ export const createEtsyOAuthService = (
         );
 
         if (hasExplicitScopes && missingScopes.length > 0) {
+            const missingScopesSummary = missingScopes.join(', ');
+            const reconnectMessage =
+                `Etsy OAuth session is missing required scope(s): ${missingScopesSummary}. ` +
+                'Reconnect Etsy OAuth.';
+
             logOAuthDebug('required scope check failed', {
                 connectionKey: formatConnectionKeyForLog(params),
                 missingScopes,
@@ -247,7 +267,7 @@ export const createEtsyOAuthService = (
 
             throw new TRPCError({
                 code: 'PRECONDITION_FAILED',
-                message: `Etsy OAuth session is missing required scope(s): ${missingScopes.join(', ')}. Reconnect Etsy OAuth.`
+                message: reconnectMessage
             });
         }
 
@@ -334,6 +354,12 @@ export const createEtsyOAuthService = (
         };
 
         try {
+            await dependencies.recordApiCall({
+                clerkUserId: identity.clerkUserId,
+                endpoint: 'exchangeOAuthToken',
+                tenantId: identity.tenantId
+            });
+
             const tokenResponse = await dependencies.exchangeToken({
                 code: params.code,
                 codeVerifier: statePayload.codeVerifier,

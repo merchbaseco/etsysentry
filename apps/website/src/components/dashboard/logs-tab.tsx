@@ -26,7 +26,9 @@ import {
 import {
     Download,
     EmptyState,
+    FilterBar,
     FilterChip,
+    FilterGroup,
     Pause,
     Play,
     StatusBadge,
@@ -160,40 +162,41 @@ export function LogsTab() {
 
     return (
         <div className="flex h-full flex-col">
-            <TopToolbar search={search} onSearchChange={setSearch} onRefresh={() => void loadFirstPage()}>
-                <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="mr-1 text-[9px] uppercase tracking-widest text-terminal-dim">Level</span>
-                    {LOG_LEVELS.map((levelValue) => (
-                        <FilterChip
-                            key={levelValue}
-                            active={filterLevel === levelValue}
-                            label={levelValue}
-                            onClick={() => setFilterLevel(filterLevel === levelValue ? null : levelValue)}
-                        />
-                    ))}
-                    <span className="mx-1 text-border">|</span>
-                    <span className="mr-1 text-[9px] uppercase tracking-widest text-terminal-dim">Status</span>
-                    {LOG_STATUSES.map((statusValue) => (
-                        <FilterChip
-                            key={statusValue}
-                            active={filterStatus === statusValue}
-                            label={statusValue}
-                            onClick={() =>
-                                setFilterStatus(filterStatus === statusValue ? null : statusValue)
-                            }
-                        />
-                    ))}
-                    <span className="mx-1 text-border">|</span>
-                    <span className="mr-1 text-[9px] uppercase tracking-widest text-terminal-dim">Type</span>
-                    {LOG_TYPES.map((typeValue) => (
-                        <FilterChip
-                            key={typeValue}
-                            active={filterType === typeValue}
-                            label={typeValue}
-                            onClick={() => setFilterType(filterType === typeValue ? null : typeValue)}
-                        />
-                    ))}
-                </div>
+            <TopToolbar search={search} onSearchChange={setSearch}>
+                <FilterBar>
+                    <FilterGroup label="Level">
+                        {LOG_LEVELS.map((levelValue) => (
+                            <FilterChip
+                                key={levelValue}
+                                active={filterLevel === levelValue}
+                                label={levelValue}
+                                onClick={() => setFilterLevel(filterLevel === levelValue ? null : levelValue)}
+                            />
+                        ))}
+                    </FilterGroup>
+                    <FilterGroup label="Status">
+                        {LOG_STATUSES.map((statusValue) => (
+                            <FilterChip
+                                key={statusValue}
+                                active={filterStatus === statusValue}
+                                label={statusValue}
+                                onClick={() =>
+                                    setFilterStatus(filterStatus === statusValue ? null : statusValue)
+                                }
+                            />
+                        ))}
+                    </FilterGroup>
+                    <FilterGroup label="Type">
+                        {LOG_TYPES.map((typeValue) => (
+                            <FilterChip
+                                key={typeValue}
+                                active={filterType === typeValue}
+                                label={typeValue}
+                                onClick={() => setFilterType(filterType === typeValue ? null : typeValue)}
+                            />
+                        ))}
+                    </FilterGroup>
+                </FilterBar>
                 <div className="ml-auto flex items-center gap-1.5">
                     <button
                         onClick={() => setLiveMode(!liveMode)}

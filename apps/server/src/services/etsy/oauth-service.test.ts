@@ -34,6 +34,7 @@ const createDependencies = (overrides: Partial<EtsyOAuthServiceDependencies> = {
             codeChallenge: 'challenge-1',
             codeVerifier: 'verifier-1'
         }),
+        recordApiCall: async () => {},
         stateStore: new EtsyOAuthStateStore(60_000)
     };
 

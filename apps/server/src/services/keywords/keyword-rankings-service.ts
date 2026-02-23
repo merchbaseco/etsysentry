@@ -8,6 +8,7 @@ import {
     type FindAllListingsActiveBridgeResponse
 } from '../etsy/bridges/find-all-listings-active';
 import { getEtsyOAuthAccessToken } from '../etsy/oauth-service';
+import { recordEtsyApiCallBestEffort } from '../etsy/record-etsy-api-call';
 import { createEventLog, createEventLogs } from '../logs/create-event-log';
 import { emitEvent } from '../realtime/emit-event';
 
@@ -186,6 +187,12 @@ const fetchKeywordRanksFromEtsy = async (params: {
     });
 
     try {
+        await recordEtsyApiCallBestEffort({
+            clerkUserId: params.clerkUserId,
+            endpoint: 'findAllListingsActive',
+            tenantId: params.tenantId
+        });
+
         return await findAllListingsActive({
             accessToken: oauthToken.accessToken,
             keywords: params.keyword,

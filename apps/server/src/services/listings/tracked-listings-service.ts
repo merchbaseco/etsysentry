@@ -9,6 +9,7 @@ import {
     type GetListingBridgeResponse
 } from '../etsy/bridges/get-listing';
 import { getEtsyOAuthAccessToken } from '../etsy/oauth-service';
+import { recordEtsyApiCallBestEffort } from '../etsy/record-etsy-api-call';
 
 export type TrackedListingRecord = {
     etsyListingId: string;
@@ -183,6 +184,12 @@ const fetchListingFromEtsy = async (params: {
     });
 
     try {
+        await recordEtsyApiCallBestEffort({
+            clerkUserId: params.clerkUserId,
+            endpoint: 'getListing',
+            tenantId: params.tenantId
+        });
+
         return await getListing({
             accessToken: oauthToken.accessToken,
             includes: ['Images'],

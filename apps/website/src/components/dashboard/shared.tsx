@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import React, { useState } from "react"
 import {
   Search,
   RefreshCw,
@@ -154,15 +154,56 @@ export function FilterChip({
     <button
       onClick={onClick}
       className={cn(
-        "inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px] uppercase tracking-wider font-medium transition-colors cursor-pointer",
+        "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] uppercase tracking-wider font-medium transition-colors cursor-pointer",
         active
-          ? "bg-primary/15 text-primary border border-primary/30"
-          : "bg-secondary text-muted-foreground border border-border hover:text-foreground hover:border-muted-foreground/30",
+          ? "bg-primary/15 text-primary"
+          : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80",
       )}
     >
       {label}
-      {active && <X className="size-2.5" />}
+      {active && <X className="size-2.5 opacity-60" />}
     </button>
+  )
+}
+
+// ============================================================
+// FilterGroup — label + chips, used inside FilterBar
+// ============================================================
+export function FilterGroup({
+  label,
+  children,
+}: {
+  label: string
+  children: React.ReactNode
+}) {
+  return (
+    <div data-slot="filter-group" className="flex items-center gap-1.5">
+      <span className="text-[9px] uppercase tracking-widest text-terminal-dim">{label}</span>
+      {children}
+    </div>
+  )
+}
+
+// ============================================================
+// FilterBar — auto-separates adjacent FilterGroups
+// ============================================================
+export function FilterBar({
+  children,
+  className,
+}: {
+  children: React.ReactNode
+  className?: string
+}) {
+  const groups = React.Children.toArray(children)
+  return (
+    <div className={cn("flex flex-wrap items-center gap-2", className)}>
+      {groups.map((child, i) => (
+        <React.Fragment key={i}>
+          {i > 0 && <span className="h-4 w-px bg-border" />}
+          {child}
+        </React.Fragment>
+      ))}
+    </div>
   )
 }
 
@@ -241,46 +282,35 @@ export function Pagination({
 export function TopToolbar({
   search,
   onSearchChange,
-  onRefresh,
   children,
 }: {
   search: string
   onSearchChange: (v: string) => void
-  onRefresh: () => void
   children?: React.ReactNode
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-2 border-b border-border px-3 py-2">
-      <div className="flex items-center gap-1.5 rounded border border-border bg-secondary px-2 py-1 text-xs min-w-48">
-        <Search className="size-3 text-muted-foreground" />
+    <div className="flex flex-wrap items-center gap-2 border-b border-border px-3 py-1.5">
+      <div className="flex items-center gap-1.5 rounded bg-secondary px-2 py-1 text-xs min-w-44 focus-within:ring-1 focus-within:ring-ring/40 transition-shadow">
+        <Search className="size-3 shrink-0 text-terminal-dim" />
         <input
           type="text"
-          placeholder="Search..."
+          placeholder="Filter..."
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="bg-transparent text-foreground placeholder:text-muted-foreground outline-none w-full text-xs"
+          className="bg-transparent text-foreground placeholder:text-terminal-dim outline-none w-full text-[11px]"
         />
         {search && (
-          <button onClick={() => onSearchChange("")} className="cursor-pointer">
-            <X className="size-3 text-muted-foreground hover:text-foreground" />
+          <button onClick={() => onSearchChange("")} className="cursor-pointer shrink-0">
+            <X className="size-3 text-terminal-dim hover:text-foreground transition-colors" />
           </button>
         )}
       </div>
-      {children}
-      <div className="flex items-center gap-1 ml-auto">
-        <button className="flex items-center gap-1.5 rounded border border-border bg-secondary px-2 py-1 text-[10px] text-muted-foreground hover:text-foreground cursor-pointer transition-colors">
-          <Calendar className="size-3" />
-          Last 7d
-          <ChevronDown className="size-3" />
-        </button>
-        <button
-          onClick={onRefresh}
-          className="flex items-center gap-1.5 rounded border border-border bg-secondary px-2 py-1 text-[10px] text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
-        >
-          <RefreshCw className="size-3" />
-          Refresh
-        </button>
-      </div>
+      {children && (
+        <>
+          <span className="h-4 w-px bg-border" />
+          {children}
+        </>
+      )}
     </div>
   )
 }

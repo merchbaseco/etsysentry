@@ -6,7 +6,9 @@ import { mockShops, type Shop, type ListingStatus } from "@/lib/mock-data"
 import {
   StatusBadge,
   SortableHeader,
+  FilterBar,
   FilterChip,
+  FilterGroup,
   TopToolbar,
   Pagination,
   EmptyState,
@@ -69,18 +71,19 @@ export function ShopsTab() {
 
   return (
     <div className="flex flex-col h-full">
-      <TopToolbar search={search} onSearchChange={(v) => { setSearch(v); setPage(1) }} onRefresh={() => {}}>
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-[9px] uppercase tracking-widest text-terminal-dim mr-1">Status</span>
-          {(["active", "paused", "error"] as ListingStatus[]).map((s) => (
-            <FilterChip key={s} label={s} active={filterStatus === s} onClick={() => { setFilterStatus(filterStatus === s ? null : s); setPage(1) }} />
-          ))}
-          <span className="text-border mx-1">|</span>
-          <span className="text-[9px] uppercase tracking-widest text-terminal-dim mr-1">Activity</span>
-          {(["high", "medium", "low"] as const).map((a) => (
-            <FilterChip key={a} label={a} active={filterActivity === a} onClick={() => { setFilterActivity(filterActivity === a ? null : a); setPage(1) }} />
-          ))}
-        </div>
+      <TopToolbar search={search} onSearchChange={(v) => { setSearch(v); setPage(1) }}>
+        <FilterBar>
+          <FilterGroup label="Status">
+            {(["active", "paused", "error"] as ListingStatus[]).map((s) => (
+              <FilterChip key={s} label={s} active={filterStatus === s} onClick={() => { setFilterStatus(filterStatus === s ? null : s); setPage(1) }} />
+            ))}
+          </FilterGroup>
+          <FilterGroup label="Activity">
+            {(["high", "medium", "low"] as const).map((a) => (
+              <FilterChip key={a} label={a} active={filterActivity === a} onClick={() => { setFilterActivity(filterActivity === a ? null : a); setPage(1) }} />
+            ))}
+          </FilterGroup>
+        </FilterBar>
       </TopToolbar>
 
       <div className="flex-1 overflow-auto">
