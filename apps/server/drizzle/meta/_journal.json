@@ -43,6 +43,13 @@
       "when": 1771806157972,
       "tag": "0005_bored_juggernaut",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1771819857107,
+      "tag": "0006_glossy_mister_fear",
+      "breakpoints": true
     }
   ]
 }

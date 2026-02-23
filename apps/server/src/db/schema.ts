@@ -82,6 +82,7 @@ export const trackedKeywords = pgTable(
         normalizedKeyword: text('normalized_keyword').notNull(),
         trackingState: trackedKeywordTrackingStateEnum('tracking_state').notNull().default('active'),
         lastRefreshedAt: timestamp('last_refreshed_at', { mode: 'date' }).notNull().defaultNow(),
+        nextSyncAt: timestamp('next_sync_at', { mode: 'date' }).notNull().defaultNow(),
         lastRefreshError: text('last_refresh_error'),
         createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
         updatedAt: timestamp('updated_at', { mode: 'date' }).notNull().defaultNow()
@@ -97,6 +98,7 @@ export const trackedKeywords = pgTable(
             table.trackerClerkUserId
         ),
         trackingStateIdx: index('tracked_keywords_tracking_state_idx').on(table.trackingState),
+        nextSyncAtIdx: index('tracked_keywords_next_sync_at_idx').on(table.nextSyncAt),
         updatedAtIdx: index('tracked_keywords_updated_at_idx').on(table.updatedAt)
     })
 );

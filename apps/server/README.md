@@ -10,10 +10,10 @@ Implemented scaffold:
 - OAuth callback endpoint at `/auth/etsy/callback`
 - Etsy OAuth PKCE flow (`api.app.etsyAuth.*`)
 - PostgreSQL + Drizzle foundation (schema, migrations, runtime connection)
+- pg-boss keyword sync automation (dispatch + workers)
 - Tracked listings app API (`api.app.listings.list|track|refresh`)
 - Tracked keywords app API (`api.app.keywords.list|track`)
-- Keyword rank sync/read API
-  (`api.app.keywords.syncRanksForKeyword|getDailyProductRanksForKeyword`)
+- Keyword rank read API (`api.app.keywords.getDailyProductRanksForKeyword`)
 - Keyword rank sync now upserts discovered ranked listings into `tracked_listings`
   before inserting `product_keyword_ranks`
 - Product keyword-rank query (`api.app.listings.getKeywordRanksForProduct`)
@@ -26,7 +26,6 @@ Implemented scaffold:
 
 Planned next layers (not yet scaffolded):
 
-- pg-boss job orchestration
 - Primitive and timeseries storage
 
 ## Run Locally
@@ -101,7 +100,6 @@ Current app surface:
 - `api.app.listings.getKeywordRanksForProduct`
 - `api.app.keywords.list`
 - `api.app.keywords.track`
-- `api.app.keywords.syncRanksForKeyword`
 - `api.app.keywords.getDailyProductRanksForKeyword`
 
 ## Etsy Bridge Rules
@@ -116,6 +114,9 @@ Current app surface:
 ## Operational Notes
 
 - Startup logs include a status summary with API prefix, callback path, and OAuth scopes.
+- Keyword ranks are auto-synced by `pg-boss` workers:
+  - immediate enqueue when a keyword is tracked
+  - daily scheduled dispatch for due tracked keywords
 - `api.app.*` procedures require Clerk bearer auth (`Authorization: Bearer <token>`).
 - Admin-only app procedures require authenticated user email to match `ADMIN_EMAIL`.
 - Keep `.env.example` updated when env vars change.

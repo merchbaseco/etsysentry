@@ -1,0 +1,2 @@
+ALTER TABLE "tracked_keywords" ADD COLUMN "next_sync_at" timestamp DEFAULT now() NOT NULL;--> statement-breakpoint
+CREATE INDEX "tracked_keywords_next_sync_at_idx" ON "tracked_keywords" USING btree ("next_sync_at");
