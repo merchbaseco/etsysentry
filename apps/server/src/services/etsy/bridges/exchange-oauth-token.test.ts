@@ -1,10 +1,12 @@
 import { afterEach, describe, expect, mock, test } from 'bun:test';
+import { resetEtsyRateLimitStateForTests } from '../fetch-etsy-api';
 import { exchangeOAuthToken, EtsyOAuthBridgeError } from './exchange-oauth-token';
 
 const originalFetch = globalThis.fetch;
 
 afterEach(() => {
     globalThis.fetch = originalFetch;
+    resetEtsyRateLimitStateForTests();
 });
 
 describe('exchange-oauth-token bridge', () => {

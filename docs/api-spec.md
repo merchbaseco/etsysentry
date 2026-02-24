@@ -78,6 +78,54 @@ Output:
 }
 ```
 
+`app.admin.enqueueSyncAllListings` (mutation, admin-only)
+
+Input:
+
+```ts
+{}
+```
+
+Output:
+
+```ts
+{
+  enqueuedCount: number;
+  skippedCount: number;
+  totalCount: number;
+}
+```
+
+`app.admin.getEtsyApiUsage` (query, admin-only)
+
+Input:
+
+```ts
+{}
+```
+
+Output:
+
+```ts
+{
+  rateLimit: {
+    blockedForMs: number;
+    blockedUntil: string | null; // ISO timestamp
+    perDayLimit: number;
+    perSecondLimit: number;
+    requestsInCurrentSecond: number;
+    secondWindowResetsInMs: number;
+    secondWindowStartedAt: string | null; // ISO timestamp
+  };
+  stats: {
+    callsPast5Minutes: number;
+    callsPastHour: number;
+    callsPast24Hours: number;
+    lastCallAt: string | null; // ISO timestamp
+  };
+}
+```
+
 ### Etsy OAuth
 
 `app.etsyAuth.start` (mutation)
@@ -213,6 +261,26 @@ Input:
 
 Output:
 - same item shape as entries in `app.listings.list` output
+
+`app.listings.refreshMany` (mutation)
+
+Input:
+
+```ts
+{
+  trackedListingIds: string[]; // uuid[], min 1, max 100
+}
+```
+
+Output:
+
+```ts
+{
+  enqueuedCount: number;
+  skippedCount: number;
+  totalCount: number;
+}
+```
 
 ## Public API (`api.public.*`) Canonical Contract (v1 Target)
 

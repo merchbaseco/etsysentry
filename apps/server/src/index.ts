@@ -170,6 +170,13 @@ if (import.meta.main) {
             databaseName: env.databaseName,
             databasePort: env.databasePort,
             oauthScopes: env.etsyOAuthScopes,
+            etsyRateLimitDefaults: {
+                backoffInitialMs: env.ETSY_RATE_LIMIT_BACKOFF_INITIAL_MS,
+                backoffMaxMs: env.ETSY_RATE_LIMIT_BACKOFF_MAX_MS,
+                maxRetries: env.ETSY_RATE_LIMIT_MAX_RETRIES,
+                perDay: env.ETSY_RATE_LIMIT_DEFAULT_PER_DAY,
+                perSecond: env.ETSY_RATE_LIMIT_DEFAULT_PER_SECOND
+            },
             port: env.PORT
         },
         'Startup status summary'

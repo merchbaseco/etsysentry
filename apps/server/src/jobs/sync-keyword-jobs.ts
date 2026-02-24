@@ -6,9 +6,13 @@ import {
 } from './job-router';
 import { createJobsLogger, type JobsLogger } from './jobs-logger';
 import {
+    type SyncListingJobInput
+} from './sync-listing-shared';
+import {
     type SyncKeywordJobInput
 } from './sync-keyword-shared';
 import { enqueueSyncKeywordJob } from '../services/keywords/enqueue-sync-keyword-job';
+import { enqueueSyncListingJob } from '../services/listings/enqueue-sync-listing-job';
 import './sync-currency-rates';
 import './sync-listing';
 import './sync-keyword';
@@ -47,6 +51,17 @@ const sendKeywordSyncJob = async (payload: SyncKeywordJobInput): Promise<string 
     }
 
     return enqueueSyncKeywordJob({
+        boss,
+        payload
+    });
+};
+
+const sendListingSyncJob = async (payload: SyncListingJobInput): Promise<string | null> => {
+    if (!boss) {
+        return null;
+    }
+
+    return enqueueSyncListingJob({
         boss,
         payload
     });
@@ -104,4 +119,10 @@ export const enqueueKeywordSyncJob = async (
     payload: SyncKeywordJobInput
 ): Promise<string | null> => {
     return sendKeywordSyncJob(payload);
+};
+
+export const enqueueListingSyncJob = async (
+    payload: SyncListingJobInput
+): Promise<string | null> => {
+    return sendListingSyncJob(payload);
 };

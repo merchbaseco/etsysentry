@@ -4,6 +4,7 @@ import { StrictMode, useCallback, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './app';
 import { ThemeProvider } from './components/theme-provider';
+import { clearCachedAdminStatus } from './lib/admin-api';
 import { configureTrpcAuthTokenGetter, queryClient } from './lib/trpc-client';
 import './styles/global.css';
 
@@ -39,6 +40,7 @@ const AuthenticatedApp = () => {
 
         return () => {
             configureTrpcAuthTokenGetter(null);
+            clearCachedAdminStatus();
         };
     }, [getAuthToken]);
 

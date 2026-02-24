@@ -5,15 +5,25 @@ import {
 } from './trpc-inference';
 import { toTrpcRequestError } from './trpc-http';
 
-export type ListTrackedListingsInput = InferProcedureInput<typeof trpcClient.app.listings.list.query>;
+export type ListTrackedListingsInput = InferProcedureInput<
+    typeof trpcClient.app.listings.list.query
+>;
 
-export type ListTrackedListingsOutput = InferProcedureOutput<typeof trpcClient.app.listings.list.query>;
+export type ListTrackedListingsOutput = InferProcedureOutput<
+    typeof trpcClient.app.listings.list.query
+>;
 
 export type TrackListingInput = InferProcedureInput<typeof trpcClient.app.listings.track.mutate>;
 
 export type TrackListingOutput = InferProcedureOutput<typeof trpcClient.app.listings.track.mutate>;
 
-export type RefreshTrackedListingInput = InferProcedureInput<typeof trpcClient.app.listings.refresh.mutate>;
+export type RefreshTrackedListingInput = InferProcedureInput<
+    typeof trpcClient.app.listings.refresh.mutate
+>;
+
+export type RefreshManyTrackedListingsInput = InferProcedureInput<
+    typeof trpcClient.app.listings.refreshMany.mutate
+>;
 
 export type TrackedListingItem = ListTrackedListingsOutput['items'][number];
 
@@ -51,6 +61,22 @@ export const refreshTrackedListing = async (
 ): Promise<TrackedListingItem> => {
     try {
         const response = await trpcClient.app.listings.refresh.mutate(params);
+
+        return response;
+    } catch (error) {
+        throw toTrpcRequestError(error);
+    }
+};
+
+export const refreshManyTrackedListings = async (
+    params: RefreshManyTrackedListingsInput
+): Promise<{
+    enqueuedCount: number;
+    skippedCount: number;
+    totalCount: number;
+}> => {
+    try {
+        const response = await trpcClient.app.listings.refreshMany.mutate(params);
 
         return response;
     } catch (error) {

@@ -23,8 +23,14 @@ import {
 } from 'lucide-react';
 import type { EtsyOAuthConnectionState } from '@/hooks/use-etsy-oauth-connection';
 import type { RealtimeWebsocketState } from '@/hooks/use-realtime-query-invalidations';
+import {
+    enqueueSyncAllListings,
+    getAdminStatus,
+    getEtsyApiUsage,
+    type EtsyApiUsage
+} from '@/lib/admin-api';
 import { getCurrencyStatus, refreshCurrencyRates, type CurrencyStatus } from '@/lib/currency-api';
-import { TrpcRequestError } from '@/lib/trpc-http';
+import { TrpcRequestError, toTrpcRequestError } from '@/lib/trpc-http';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
@@ -53,6 +59,25 @@ const formatTimestamp = (value: string | null): string => {
     }
 
     return parsed.toLocaleString();
+};
+
+const formatDurationMs = (value: number): string => {
+    if (value <= 0) {
+        return '0 ms';
+    }
+
+    if (value < 1_000) {
+        return `${value} ms`;
+    }
+
+    const seconds = value / 1_000;
+
+    if (seconds < 60) {
+        return `${seconds.toFixed(1)} sec`;
+    }
+
+    const minutes = seconds / 60;
+    return `${minutes.toFixed(1)} min`;
 };
 
 const getStatusLabel = (connection: EtsyOAuthConnectionState): string => {
@@ -111,7 +136,7 @@ const getRealtimeStatusClassName = (realtime: RealtimeWebsocketState): string =>
     return 'bg-terminal-yellow/10 text-terminal-yellow';
 };
 
-const formatErrorMessage = (error: unknown): string => {
+const formatTrpcErrorMessage = (error: unknown, fallbackMessage: string): string => {
     if (error instanceof TrpcRequestError) {
         return error.message;
     }
@@ -120,7 +145,19 @@ const formatErrorMessage = (error: unknown): string => {
         return error.message;
     }
 
-    return 'Unexpected currency conversion request failure.';
+    return fallbackMessage;
+};
+
+const formatCurrencyErrorMessage = (error: unknown): string => {
+    return formatTrpcErrorMessage(error, 'Unexpected currency conversion request failure.');
+};
+
+const formatListingResyncErrorMessage = (error: unknown): string => {
+    return formatTrpcErrorMessage(error, 'Unexpected listing resync request failure.');
+};
+
+const formatEtsyApiUsageErrorMessage = (error: unknown): string => {
+    return formatTrpcErrorMessage(error, 'Unexpected Etsy API usage request failure.');
 };
 
 const getCurrencyStateLabel = (status: CurrencyStatus | null): string => {
@@ -139,7 +176,19 @@ const getCurrencyStateLabel = (status: CurrencyStatus | null): string => {
     return 'Healthy';
 };
 
-function GeneralSettingsPage() {
+function GeneralSettingsPage({
+    adminEnqueueMessage,
+    adminErrorMessage,
+    isAdmin,
+    isEnqueuingListingResync,
+    onEnqueueListingResync
+}: {
+    adminEnqueueMessage: string | null;
+    adminErrorMessage: string | null;
+    isAdmin: boolean;
+    isEnqueuingListingResync: boolean;
+    onEnqueueListingResync: () => Promise<void>;
+}) {
     const { theme, setTheme } = useTheme();
 
     const themeOptions = [
@@ -238,15 +287,70 @@ function GeneralSettingsPage() {
                     <span className="text-[10px] font-medium text-foreground">Daily</span>
                 </div>
             </div>
+
+            {isAdmin ? (
+                <div className="border-t border-border pt-6">
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground">
+                        Admin Operations
+                    </h3>
+                    <p className="mt-1 text-[10px] text-muted-foreground">
+                        Queue a background resync for all tracked listings in this tenant.
+                    </p>
+
+                    <div className="mt-3">
+                        <button
+                            type="button"
+                            className={cn(
+                                'inline-flex cursor-pointer items-center gap-1.5 rounded border border-border bg-card',
+                                'px-2.5 py-1.5 text-[10px] font-medium uppercase tracking-wider text-foreground',
+                                'transition-colors hover:border-primary/40 hover:text-primary',
+                                'disabled:cursor-default disabled:opacity-50'
+                            )}
+                            disabled={isEnqueuingListingResync}
+                            onClick={() => {
+                                void onEnqueueListingResync();
+                            }}
+                        >
+                            <RefreshCw
+                                className={cn(
+                                    'size-3',
+                                    isEnqueuingListingResync ? 'animate-spin' : undefined
+                                )}
+                            />
+                            Enqueue Listing Resync
+                        </button>
+                    </div>
+
+                    {adminEnqueueMessage ? (
+                        <p className="mt-3 text-[10px] text-terminal-green">
+                            {adminEnqueueMessage}
+                        </p>
+                    ) : null}
+
+                    {adminErrorMessage ? (
+                        <p className="mt-3 text-[10px] text-terminal-red">{adminErrorMessage}</p>
+                    ) : null}
+                </div>
+            ) : null}
         </div>
     );
 }
 
 function EtsyApiSettingsPage({
+    apiUsage,
+    apiUsageErrorMessage,
     connection,
+    isAdmin,
+    isLoadingApiUsage,
+    onRefreshApiUsage,
     realtime
 }: {
+    apiUsage: EtsyApiUsage | null;
+    apiUsageErrorMessage: string | null;
     connection: EtsyOAuthConnectionState;
+    isAdmin: boolean;
+    isLoadingApiUsage: boolean;
+    onRefreshApiUsage: () => Promise<void>;
     realtime: RealtimeWebsocketState;
 }) {
     const isActionBusy =
@@ -384,6 +488,101 @@ function EtsyApiSettingsPage({
                     </div>
                 </div>
             </div>
+
+            {isAdmin ? (
+                <div className="border-t border-border pt-6">
+                    <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] font-medium uppercase tracking-wider text-terminal-dim">
+                            Admin API Limits & Usage
+                        </span>
+                        <button
+                            type="button"
+                            className={actionButtonClassName}
+                            disabled={isLoadingApiUsage}
+                            onClick={() => {
+                                void onRefreshApiUsage();
+                            }}
+                        >
+                            <RefreshCw
+                                className={cn(
+                                    'size-3',
+                                    isLoadingApiUsage ? 'animate-spin' : undefined
+                                )}
+                            />
+                            Refresh Usage
+                        </button>
+                    </div>
+
+                    <div className="mt-3 space-y-1">
+                        <div className="flex items-center justify-between rounded border border-border bg-secondary/40 px-3 py-2">
+                            <span className="text-[10px] text-muted-foreground">
+                                Per-Second Limit
+                            </span>
+                            <span className="text-[10px] font-medium text-foreground">
+                                {apiUsage?.rateLimit.perSecondLimit ?? 'N/A'}
+                            </span>
+                        </div>
+                        <div className="flex items-center justify-between rounded border border-border bg-secondary/40 px-3 py-2">
+                            <span className="text-[10px] text-muted-foreground">
+                                Per-Day Limit
+                            </span>
+                            <span className="text-[10px] font-medium text-foreground">
+                                {apiUsage?.rateLimit.perDayLimit ?? 'N/A'}
+                            </span>
+                        </div>
+                        <div className="flex items-center justify-between rounded border border-border bg-secondary/40 px-3 py-2">
+                            <span className="text-[10px] text-muted-foreground">
+                                Requests This Second
+                            </span>
+                            <span className="text-[10px] font-medium text-foreground">
+                                {apiUsage?.rateLimit.requestsInCurrentSecond ?? 'N/A'}
+                            </span>
+                        </div>
+                        <div className="flex items-center justify-between rounded border border-border bg-secondary/40 px-3 py-2">
+                            <span className="text-[10px] text-muted-foreground">Cooldown</span>
+                            <span className="text-[10px] font-medium text-foreground">
+                                {apiUsage
+                                    ? formatDurationMs(apiUsage.rateLimit.blockedForMs)
+                                    : 'N/A'}
+                            </span>
+                        </div>
+                        <div className="flex items-center justify-between rounded border border-border bg-secondary/40 px-3 py-2">
+                            <span className="text-[10px] text-muted-foreground">
+                                Calls (Past 5 Min)
+                            </span>
+                            <span className="text-[10px] font-medium text-foreground">
+                                {apiUsage?.stats.callsPast5Minutes ?? 'N/A'}
+                            </span>
+                        </div>
+                        <div className="flex items-center justify-between rounded border border-border bg-secondary/40 px-3 py-2">
+                            <span className="text-[10px] text-muted-foreground">
+                                Calls (Past 1 Hour)
+                            </span>
+                            <span className="text-[10px] font-medium text-foreground">
+                                {apiUsage?.stats.callsPastHour ?? 'N/A'}
+                            </span>
+                        </div>
+                        <div className="flex items-center justify-between rounded border border-border bg-secondary/40 px-3 py-2">
+                            <span className="text-[10px] text-muted-foreground">
+                                Calls (Past 24 Hours)
+                            </span>
+                            <span className="text-[10px] font-medium text-foreground">
+                                {apiUsage?.stats.callsPast24Hours ?? 'N/A'}
+                            </span>
+                        </div>
+                        <div className="flex items-center justify-between rounded border border-border bg-secondary/40 px-3 py-2">
+                            <span className="text-[10px] text-muted-foreground">Last Call</span>
+                            <span className="text-[10px] font-medium text-foreground">
+                                {formatTimestamp(apiUsage?.stats.lastCallAt ?? null)}
+                            </span>
+                        </div>
+                    </div>
+
+                    {apiUsageErrorMessage ? (
+                        <p className="mt-3 text-[10px] text-terminal-red">{apiUsageErrorMessage}</p>
+                    ) : null}
+                </div>
+            ) : null}
 
             <div className="border-t border-border pt-6">
                 <span className="text-[10px] font-medium uppercase tracking-wider text-terminal-dim">
@@ -605,6 +804,14 @@ export function SettingsModal({ connection, realtime }: SettingsModalProps) {
     const [isLoadingCurrencyStatus, setIsLoadingCurrencyStatus] = useState(false);
     const [isRefreshingCurrencyRates, setIsRefreshingCurrencyRates] = useState(false);
     const [currencyErrorMessage, setCurrencyErrorMessage] = useState<string | null>(null);
+    const [isAdmin, setIsAdmin] = useState(false);
+    const [isLoadingAdminStatus, setIsLoadingAdminStatus] = useState(false);
+    const [apiUsage, setApiUsage] = useState<EtsyApiUsage | null>(null);
+    const [isLoadingApiUsage, setIsLoadingApiUsage] = useState(false);
+    const [apiUsageErrorMessage, setApiUsageErrorMessage] = useState<string | null>(null);
+    const [isEnqueuingListingResync, setIsEnqueuingListingResync] = useState(false);
+    const [adminEnqueueMessage, setAdminEnqueueMessage] = useState<string | null>(null);
+    const [adminErrorMessage, setAdminErrorMessage] = useState<string | null>(null);
 
     const loadCurrencyStatus = useCallback(async () => {
         setIsLoadingCurrencyStatus(true);
@@ -614,7 +821,7 @@ export function SettingsModal({ connection, realtime }: SettingsModalProps) {
             setCurrencyStatus(status);
             setCurrencyErrorMessage(null);
         } catch (error) {
-            setCurrencyErrorMessage(formatErrorMessage(error));
+            setCurrencyErrorMessage(formatCurrencyErrorMessage(error));
         } finally {
             setIsLoadingCurrencyStatus(false);
         }
@@ -628,11 +835,84 @@ export function SettingsModal({ connection, realtime }: SettingsModalProps) {
             setCurrencyStatus(status);
             setCurrencyErrorMessage(null);
         } catch (error) {
-            setCurrencyErrorMessage(formatErrorMessage(error));
+            setCurrencyErrorMessage(formatCurrencyErrorMessage(error));
         } finally {
             setIsRefreshingCurrencyRates(false);
         }
     }, []);
+
+    const loadAdminPrivileges = useCallback(async () => {
+        setIsLoadingAdminStatus(true);
+
+        try {
+            await getAdminStatus();
+            setIsAdmin(true);
+        } catch (error) {
+            const requestError = toTrpcRequestError(error);
+
+            if (requestError.code === 'FORBIDDEN' || requestError.code === 'UNAUTHORIZED') {
+                setIsAdmin(false);
+                return;
+            }
+
+            setIsAdmin(false);
+        } finally {
+            setIsLoadingAdminStatus(false);
+        }
+    }, []);
+
+    const loadApiUsage = useCallback(async () => {
+        if (!isAdmin || isLoadingAdminStatus) {
+            return;
+        }
+
+        setIsLoadingApiUsage(true);
+
+        try {
+            const usage = await getEtsyApiUsage();
+            setApiUsage(usage);
+            setApiUsageErrorMessage(null);
+        } catch (error) {
+            setApiUsageErrorMessage(formatEtsyApiUsageErrorMessage(error));
+        } finally {
+            setIsLoadingApiUsage(false);
+        }
+    }, [isAdmin, isLoadingAdminStatus]);
+
+    const handleEnqueueListingResync = useCallback(async () => {
+        if (!isAdmin || isLoadingAdminStatus || isEnqueuingListingResync) {
+            return;
+        }
+
+        const shouldEnqueue = window.confirm(
+            'Queue a listing resync for all tracked listings in this tenant?'
+        );
+
+        if (!shouldEnqueue) {
+            return;
+        }
+
+        setIsEnqueuingListingResync(true);
+
+        try {
+            const response = await enqueueSyncAllListings();
+
+            const summary =
+                response.totalCount === 0
+                    ? 'No tracked listings were found to enqueue.'
+                    : response.skippedCount === 0
+                      ? `Queued ${response.enqueuedCount} listing resync jobs.`
+                      : `Queued ${response.enqueuedCount} of ${response.totalCount} listing resync jobs.`;
+
+            setAdminEnqueueMessage(summary);
+            setAdminErrorMessage(null);
+        } catch (error) {
+            setAdminEnqueueMessage(null);
+            setAdminErrorMessage(formatListingResyncErrorMessage(error));
+        } finally {
+            setIsEnqueuingListingResync(false);
+        }
+    }, [isAdmin, isEnqueuingListingResync, isLoadingAdminStatus]);
 
     useEffect(() => {
         if (!open || activePage !== 'currency') {
@@ -641,6 +921,33 @@ export function SettingsModal({ connection, realtime }: SettingsModalProps) {
 
         void loadCurrencyStatus();
     }, [activePage, loadCurrencyStatus, open]);
+
+    useEffect(() => {
+        if (!open) {
+            return;
+        }
+
+        void loadAdminPrivileges();
+    }, [loadAdminPrivileges, open]);
+
+    useEffect(() => {
+        if (!open || activePage !== 'etsy-api' || !isAdmin || isLoadingAdminStatus) {
+            return;
+        }
+
+        void loadApiUsage();
+    }, [activePage, isAdmin, isLoadingAdminStatus, loadApiUsage, open]);
+
+    useEffect(() => {
+        if (open) {
+            return;
+        }
+
+        setApiUsage(null);
+        setApiUsageErrorMessage(null);
+        setAdminEnqueueMessage(null);
+        setAdminErrorMessage(null);
+    }, [open]);
 
     return (
         <DialogPrimitive.Root open={open} onOpenChange={setOpen}>
@@ -738,9 +1045,25 @@ export function SettingsModal({ connection, realtime }: SettingsModalProps) {
 
                         {/* Content */}
                         <div className="min-h-0 flex-1 overflow-y-auto p-6">
-                            {activePage === 'general' ? <GeneralSettingsPage /> : null}
+                            {activePage === 'general' ? (
+                                <GeneralSettingsPage
+                                    adminEnqueueMessage={adminEnqueueMessage}
+                                    adminErrorMessage={adminErrorMessage}
+                                    isAdmin={isAdmin && !isLoadingAdminStatus}
+                                    isEnqueuingListingResync={isEnqueuingListingResync}
+                                    onEnqueueListingResync={handleEnqueueListingResync}
+                                />
+                            ) : null}
                             {activePage === 'etsy-api' ? (
-                                <EtsyApiSettingsPage connection={connection} realtime={realtime} />
+                                <EtsyApiSettingsPage
+                                    apiUsage={apiUsage}
+                                    apiUsageErrorMessage={apiUsageErrorMessage}
+                                    connection={connection}
+                                    isAdmin={isAdmin && !isLoadingAdminStatus}
+                                    isLoadingApiUsage={isLoadingApiUsage}
+                                    onRefreshApiUsage={loadApiUsage}
+                                    realtime={realtime}
+                                />
                             ) : null}
                             {activePage === 'currency' ? (
                                 <CurrencySettingsPage
