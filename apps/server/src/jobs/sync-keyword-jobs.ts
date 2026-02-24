@@ -21,6 +21,7 @@ import { startupReconciliationTasks } from './startup-reconciliation-tasks';
 import { runStartupReconciliation } from './startup-reconciliation';
 import './sync-currency-rates';
 import './sync-listing';
+import './sync-stale-listings';
 import './sync-shop';
 import './sync-keyword';
 import './sync-stale-keywords';

@@ -225,6 +225,11 @@ Primitive cadence policy (v1):
 - `shop`: fixed daily cadence.
 - `currency rates`: fixed 24-hour refresh cadence.
 
+Current listing sync dispatch implementation:
+
+- `sync-stale-listings` runs every minute and enqueues due tracked listings in daily batches.
+- stale listing selection explicitly excludes digital rows (`tracked_listings.isDigital = false`).
+
 Cadence policy (listing `updated_timestamp` aware):
 
 - Tier 1: every 1 day (default).
@@ -262,6 +267,7 @@ Cadence policy (listing `updated_timestamp` aware):
     - `syncState` (`idle|queued|syncing`)
 - `sync-listing` owns canonical listing snapshot fields in `tracked_listings`, including:
   - `etsyState`
+  - `isDigital`
   - `priceAmount`, `priceCurrencyCode`, `priceDivisor`
   - `quantity`, `views`, `numFavorers`
   - `shopName`, `updatedTimestamp`

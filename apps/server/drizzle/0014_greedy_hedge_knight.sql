@@ -1,0 +1,1 @@
+ALTER TABLE "tracked_listings" ADD COLUMN "is_digital" boolean DEFAULT false NOT NULL;

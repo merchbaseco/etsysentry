@@ -11,6 +11,10 @@ import {
 import { getEtsyOAuthAccessToken } from '../etsy/oauth-service';
 import { recordEtsyApiCallBestEffort } from '../etsy/record-etsy-api-call';
 import {
+    buildDigitalListingTrackingErrorMessage,
+    isExcludedDigitalListingType
+} from './is-excluded-digital-listing-type';
+import {
     isTrackedListingSyncInFlight,
     setTrackedListingSyncStateByListingId
 } from './set-tracked-listing-sync-state';
@@ -24,6 +28,7 @@ export type TrackedListingRecord = {
     etsyListingId: string;
     etsyState: (typeof trackedListings.$inferSelect)['etsyState'];
     id: string;
+    isDigital: boolean;
     lastRefreshError: string | null;
     lastRefreshedAt: string;
     price: {
@@ -134,6 +139,7 @@ const toRecord = (row: typeof trackedListings.$inferSelect): TrackedListingRecor
         etsyListingId: row.etsyListingId,
         etsyState: row.etsyState,
         id: row.listingId,
+        isDigital: row.isDigital,
         lastRefreshError: row.lastRefreshError,
         lastRefreshedAt: row.lastRefreshedAt.toISOString(),
         numFavorers: row.numFavorers,
@@ -163,6 +169,7 @@ const bridgeToUpsertValues = (params: {
     return {
         etsyListingId: params.bridgeResponse.listingId,
         etsyState: params.bridgeResponse.etsyState,
+        isDigital: isExcludedDigitalListingType(params.bridgeResponse.listingType),
         lastRefreshError: null,
         lastRefreshedAt: params.now,
         numFavorers: params.bridgeResponse.numFavorers,
@@ -177,7 +184,9 @@ const bridgeToUpsertValues = (params: {
         title: params.bridgeResponse.title,
         trackerClerkUserId: params.trackerClerkUserId,
         syncState: 'idle' as const,
-        trackingState: 'active' as const,
+        trackingState: isExcludedDigitalListingType(params.bridgeResponse.listingType)
+            ? ('paused' as const)
+            : ('active' as const),
         updatedAt: params.now,
         updatedTimestamp: params.bridgeResponse.updatedTimestamp,
         url: params.bridgeResponse.url,
@@ -252,12 +261,23 @@ export const syncTrackedListingFromEtsy = async (params: {
     etsyListingId: string;
     accountId: string;
     trackerClerkUserId: string;
+    rejectExcludedListingType?: boolean;
 }): Promise<typeof trackedListings.$inferSelect> => {
     const listingFromEtsy = await fetchListingFromEtsy({
         clerkUserId: params.clerkUserId,
         etsyListingId: params.etsyListingId,
         accountId: params.accountId
     });
+
+    if (
+        params.rejectExcludedListingType &&
+        isExcludedDigitalListingType(listingFromEtsy.listingType)
+    ) {
+        throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: buildDigitalListingTrackingErrorMessage()
+        });
+    }
 
     const row = await upsertTrackedListingFromBridgeResponse({
         bridgeResponse: listingFromEtsy,
@@ -332,7 +352,8 @@ export const trackListing = async (params: {
         clerkUserId: params.trackerClerkUserId,
         etsyListingId,
         accountId: params.accountId,
-        trackerClerkUserId: params.trackerClerkUserId
+        trackerClerkUserId: params.trackerClerkUserId,
+        rejectExcludedListingType: true
     });
 
     const created = existing.length === 0;

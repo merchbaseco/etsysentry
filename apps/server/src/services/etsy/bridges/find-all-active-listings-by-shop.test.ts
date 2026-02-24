@@ -24,6 +24,7 @@ describe('find-all-active-listings-by-shop bridge', () => {
                     results: [
                         {
                             listing_id: 1234567890,
+                            listing_type: 'physical',
                             num_favorers: 45,
                             price: {
                                 amount: 4500,
@@ -39,6 +40,7 @@ describe('find-all-active-listings-by-shop bridge', () => {
                         },
                         {
                             listing_id: 1122334455,
+                            listing_type: 'download',
                             price: null,
                             title: 'Vintage Lamp',
                             updated_timestamp: null,
@@ -66,6 +68,7 @@ describe('find-all-active-listings-by-shop bridge', () => {
                 {
                     etsyState: 'active',
                     listingId: '1234567890',
+                    listingType: 'physical',
                     numFavorers: 45,
                     price: {
                         amount: 4500,
@@ -81,6 +84,7 @@ describe('find-all-active-listings-by-shop bridge', () => {
                 {
                     etsyState: null,
                     listingId: '1122334455',
+                    listingType: 'download',
                     numFavorers: null,
                     price: null,
                     quantity: null,
