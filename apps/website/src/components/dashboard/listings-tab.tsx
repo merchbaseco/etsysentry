@@ -25,6 +25,7 @@ import {
     MouseThumbnailTooltipPortal,
     useMouseThumbnailTooltip
 } from './mouse-thumbnail-tooltip';
+import { ListingHistoryDrawer } from './listing-history-drawer';
 
 const trackedListingsQueryKey = trpc.app.listings.list.queryOptions({}).queryKey;
 const REALTIME_REFRESH_DEBOUNCE_MS = 200;
@@ -43,6 +44,7 @@ export function ListingsTab() {
     const [isLoading, setIsLoading] = useState(() => initialItems.length === 0);
     const [isTracking, setIsTracking] = useState(false);
     const [refreshingById, setRefreshingById] = useState<Record<string, boolean>>({});
+    const [historyListing, setHistoryListing] = useState<TrackedListingItem | null>(null);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [listingInput, setListingInput] = useState('');
     const itemsRef = useRef<TrackedListingItem[]>(initialItems);
@@ -239,6 +241,7 @@ export function ListingsTab() {
                     <ListingsTable
                         items={filtered}
                         refreshingById={refreshingById}
+                        onOpenHistory={setHistoryListing}
                         onRefresh={(item) => void handleRefreshRow(item)}
                         onRowMouseEnter={(event, item) => {
                             showTooltip({
@@ -260,6 +263,10 @@ export function ListingsTab() {
                 )}
             </div>
             <MouseThumbnailTooltipPortal tooltip={tooltip} tooltipRef={tooltipRef} />
+            <ListingHistoryDrawer
+                selectedListing={historyListing}
+                onClose={() => setHistoryListing(null)}
+            />
         </div>
     );
 }

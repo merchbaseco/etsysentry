@@ -183,8 +183,9 @@ docs/
   - purpose: append-only rank facts only (no listing metadata snapshots)
   - `accountId`, `trackedKeywordId`, `listingId`, `etsyListingId`, `observedAt`, `rank`
 - `listing_metric_snapshots`
-  - `accountId`, `listingId`, `observedAt`, `reviewCount`, `reviewAverage`, `favorerCount`,
-    `price`, `currency`, `views`, `quantity`, `estimatedSales`
+  - one row per UTC day for each tracked listing (latest sync wins within day)
+  - `accountId`, `listingId`, `observedDate`, `observedAt`, `favorerCount`,
+    `priceAmount`, `priceDivisor`, `priceCurrencyCode`, `views`, `quantity`
 - `tracked_shop_snapshots`
   - append-only daily shop metrics
   - `id`, `accountId`, `trackedShopId`, `etsyShopId`, `observedAt`,
@@ -261,7 +262,7 @@ Cadence policy (listing `updated_timestamp` aware):
 1. Load due listing target.
 2. Fetch listing detail via listing bridges.
 3. Upsert profile changes (`listing_profiles`).
-4. Append metric snapshot (`listing_metric_snapshots`).
+4. Upsert daily metric snapshot (`listing_metric_snapshots`, keyed by UTC calendar day).
 5. Compare `updated_timestamp` against last known value and recalculate cadence tier.
 6. Update `listing_monitor_metadata` intended cadence and reason.
 7. Emit event logs (updated/no-change/profile-changed/metrics-changed/cadence-changed).

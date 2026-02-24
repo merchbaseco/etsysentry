@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import {
     boolean,
+    date,
     index,
     integer,
     jsonb,
@@ -216,6 +217,41 @@ export const productKeywordRanks = pgTable(
             table.accountId,
             table.trackedKeywordId,
             table.rank
+        )
+    })
+);
+
+export const listingMetricSnapshots = pgTable(
+    'listing_metric_snapshots',
+    {
+        id: uuid('id').primaryKey().defaultRandom(),
+        accountId: text('account_id').notNull(),
+        listingId: uuid('listing_id')
+            .notNull()
+            .references(() => trackedListings.listingId),
+        observedDate: date('observed_date', { mode: 'string' }).notNull(),
+        observedAt: timestamp('observed_at', { mode: 'date' }).notNull().defaultNow(),
+        views: integer('views'),
+        favorerCount: integer('favorer_count'),
+        quantity: integer('quantity'),
+        priceAmount: integer('price_amount'),
+        priceDivisor: integer('price_divisor'),
+        priceCurrencyCode: text('price_currency_code'),
+        createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+        updatedAt: timestamp('updated_at', { mode: 'date' }).notNull().defaultNow()
+    },
+    (table) => ({
+        tenantListingDayUnique: uniqueIndex('listing_metric_snapshots_tenant_listing_day_unique').on(
+            table.accountId,
+            table.listingId,
+            table.observedDate
+        ),
+        tenantListingObservedAtIdx: index(
+            'listing_metric_snapshots_tenant_listing_observed_at_idx'
+        ).on(table.accountId, table.listingId, table.observedAt),
+        tenantObservedDateIdx: index('listing_metric_snapshots_tenant_observed_date_idx').on(
+            table.accountId,
+            table.observedDate
         )
     })
 );
