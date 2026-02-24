@@ -120,6 +120,7 @@ docs/
 
 - Tenant boundary key: `accountId` on all tenant-owned tables.
 - Clerk user identity maps to one or more tenant memberships (no role model for regular users).
+- Clerk identifiers are boundary auth inputs only; persisted domain ownership keys are `accountId`.
 - `api.app.*` procedures:
   - require Clerk bearer auth (`Authorization: Bearer <token>`)
   - derive `accountId` from verified token/context using `(iss, sub)` identity mapping
@@ -174,8 +175,16 @@ docs/
 - `listing_metric_snapshots`
   - `accountId`, `listingId`, `observedAt`, `reviewCount`, `reviewAverage`, `favorerCount`,
     `price`, `currency`, `views`, `quantity`, `estimatedSales`
-- `shop_listing_observations`
-  - `accountId`, `shopPrimitiveId`, `shopId`, `listingId`, `observedAt`, `isActive`
+- `tracked_shop_snapshots`
+  - append-only daily shop metrics
+  - `id`, `accountId`, `trackedShopId`, `etsyShopId`, `observedAt`,
+    `activeListingCount`, `newListingCount`,
+    `favoritesTotal`, `favoritesDelta`, `soldTotal`, `soldDelta`,
+    `reviewTotal`, `reviewDelta`
+- `tracked_shop_listings`
+  - current/rolling listing-state for each tracked shop
+  - `accountId`, `trackedShopId`, `etsyShopId`, `etsyListingId`,
+    `isActive`, `firstSeenAt`, `lastSeenAt`, `lastChangedAt`
 - `monitor_runs`
   - `id`, `accountId`, `monitorType`, `targetPrimitiveId`, `startedAt`, `finishedAt`,
     `status`, `error`
@@ -299,10 +308,21 @@ Helper refinement strategy:
 ### `monitor-shops`
 
 1. Load due shop primitive.
-2. Fetch shop listing set.
-3. Persist membership observations.
-4. Upsert/enqueue newly observed listings.
-5. Emit event logs for additions/removals/refresh outcomes.
+2. Fetch shop listings with `sort_on=updated`, `sort_order=desc`.
+3. Incremental mode:
+   - first sync paginates full active set
+   - subsequent syncs stop when listings fall below previous watermark timestamp
+   - include entire tie bucket at watermark timestamp before stopping
+4. Insert a `tracked_shop_snapshots` row for daily shop metrics.
+5. Upsert `tracked_shop_listings`:
+   - new ids set `firstSeenAt = now`, `lastSeenAt = now`, `isActive = true`
+   - existing active ids update `lastSeenAt = now`
+   - removals are recorded when observed by listing sync or reconciliation
+6. Compute additions from listing-state transitions and persist daily counts.
+7. Upsert every encountered listing id into `tracked_listings`; enqueue `sync-listing` for newly
+   inserted rows.
+8. Emit event logs for additions/refresh outcomes and invalidate `app.shops.list` +
+   `app.listings.list`.
 
 ## API Contracts
 

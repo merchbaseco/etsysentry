@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react';
 import { queryClient, trpc } from '@/lib/trpc-client';
 
-type RealtimeInvalidationQuery = 'app.keywords.list' | 'app.listings.list' | 'app.logs.list';
+type RealtimeInvalidationQuery =
+    | 'app.keywords.list'
+    | 'app.listings.list'
+    | 'app.shops.list'
+    | 'app.logs.list';
 
 type RealtimeInvalidationMessage = {
     queries: RealtimeInvalidationQuery[];
@@ -26,10 +30,12 @@ export type RealtimeWebsocketState = {
     status: RealtimeWebsocketStatus;
 };
 
-const queryKeyByInvalidationQuery: Record<RealtimeInvalidationQuery, readonly unknown[]> = {
+const queryKeyByInvalidationQuery: Record<
+    Exclude<RealtimeInvalidationQuery, 'app.shops.list' | 'app.logs.list'>,
+    readonly unknown[]
+> = {
     'app.keywords.list': trpc.app.keywords.list.queryOptions({}).queryKey,
-    'app.listings.list': trpc.app.listings.list.queryOptions({}).queryKey,
-    'app.logs.list': trpc.app.logs.list.queryOptions({ limit: 20 }).queryKey
+    'app.listings.list': trpc.app.listings.list.queryOptions({}).queryKey
 };
 
 const parseRealtimeInvalidationMessage = (rawData: unknown): RealtimeInvalidationMessage | null => {
@@ -51,6 +57,7 @@ const parseRealtimeInvalidationMessage = (rawData: unknown): RealtimeInvalidatio
             return (
                 query === 'app.keywords.list' ||
                 query === 'app.listings.list' ||
+                query === 'app.shops.list' ||
                 query === 'app.logs.list'
             );
         });
@@ -105,6 +112,27 @@ const refetchInvalidatedQueries = async (queries: RealtimeInvalidationQuery[]): 
                     type: 'all'
                 });
                 window.dispatchEvent(new CustomEvent(logsInvalidatedEventName));
+                return;
+            }
+
+            if (queryName === 'app.shops.list') {
+                const isShopsListQuery = (query: { queryKey: readonly unknown[] }): boolean => {
+                    const serializedKey = JSON.stringify(query.queryKey);
+
+                    return (
+                        serializedKey.includes('"app"') &&
+                        serializedKey.includes('"shops"') &&
+                        serializedKey.includes('"list"')
+                    );
+                };
+
+                await queryClient.invalidateQueries({
+                    predicate: isShopsListQuery
+                });
+                await queryClient.refetchQueries({
+                    predicate: isShopsListQuery,
+                    type: 'all'
+                });
                 return;
             }
 

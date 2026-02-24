@@ -9,16 +9,22 @@ import {
     type SyncListingJobInput
 } from './sync-listing-shared';
 import {
+    type SyncShopJobInput
+} from './sync-shop-shared';
+import {
     type SyncKeywordJobInput
 } from './sync-keyword-shared';
 import { enqueueSyncKeywordJob } from '../services/keywords/enqueue-sync-keyword-job';
 import { enqueueSyncListingJob } from '../services/listings/enqueue-sync-listing-job';
+import { enqueueSyncShopJob } from '../services/shops/enqueue-sync-shop-job';
 import { startupReconciliationTasks } from './startup-reconciliation-tasks';
 import { runStartupReconciliation } from './startup-reconciliation';
 import './sync-currency-rates';
 import './sync-listing';
+import './sync-shop';
 import './sync-keyword';
 import './sync-stale-keywords';
+import './sync-stale-shops';
 
 const defaultLogger = createJobsLogger({
     scope: 'jobs.sync-keyword'
@@ -64,6 +70,17 @@ const sendListingSyncJob = async (payload: SyncListingJobInput): Promise<string 
     }
 
     return enqueueSyncListingJob({
+        boss,
+        payload
+    });
+};
+
+const sendShopSyncJob = async (payload: SyncShopJobInput): Promise<string | null> => {
+    if (!boss) {
+        return null;
+    }
+
+    return enqueueSyncShopJob({
         boss,
         payload
     });
@@ -133,4 +150,10 @@ export const enqueueListingSyncJob = async (
     payload: SyncListingJobInput
 ): Promise<string | null> => {
     return sendListingSyncJob(payload);
+};
+
+export const enqueueShopSyncJob = async (
+    payload: SyncShopJobInput
+): Promise<string | null> => {
+    return sendShopSyncJob(payload);
 };

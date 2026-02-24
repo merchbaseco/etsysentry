@@ -32,6 +32,8 @@ const createEventLogInputSchema = z
 
 type CreateEventLogInput = z.input<typeof createEventLogInputSchema>;
 
+type RealtimeInvalidationQuery = 'app.logs.list' | 'app.shops.list';
+
 export type EventLogRecord = {
     id: string;
     accountId: string;
@@ -104,12 +106,24 @@ const toInsertValues = (input: CreateEventLogInput) => {
     };
 };
 
+const buildInvalidationQueries = (
+    primitiveType: z.infer<typeof eventLogPrimitiveTypeSchema>
+): RealtimeInvalidationQuery[] => {
+    const queries: RealtimeInvalidationQuery[] = ['app.logs.list'];
+
+    if (primitiveType === 'shop') {
+        queries.push('app.shops.list');
+    }
+
+    return queries;
+};
+
 export const createEventLog = async (input: CreateEventLogInput): Promise<EventLogRecord> => {
     const parsed = toInsertValues(input);
     const [row] = await db.insert(eventLogs).values(parsed.values).returning();
 
     emitEvent({
-        queries: ['app.logs.list'],
+        queries: buildInvalidationQueries(parsed.values.primitiveType),
         accountId: parsed.values.accountId
     });
 
@@ -127,11 +141,23 @@ export const createEventLogs = async (input: CreateEventLogInput[]): Promise<Eve
         .values(parsedValues.map((value) => value.values))
         .returning();
 
-    const invalidationAccountIds = new Set(parsedValues.map((value) => value.values.accountId));
+    const invalidationQueriesByAccountId = new Map<string, Set<RealtimeInvalidationQuery>>();
 
-    for (const accountId of invalidationAccountIds) {
+    for (const parsedValue of parsedValues) {
+        const currentQueries =
+            invalidationQueriesByAccountId.get(parsedValue.values.accountId) ??
+            new Set<RealtimeInvalidationQuery>();
+
+        for (const query of buildInvalidationQueries(parsedValue.values.primitiveType)) {
+            currentQueries.add(query);
+        }
+
+        invalidationQueriesByAccountId.set(parsedValue.values.accountId, currentQueries);
+    }
+
+    for (const [accountId, queries] of invalidationQueriesByAccountId.entries()) {
         emitEvent({
-            queries: ['app.logs.list'],
+            queries: [...queries],
             accountId
         });
     }

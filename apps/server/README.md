@@ -14,6 +14,7 @@ Implemented scaffold:
 - pg-boss keyword sync automation (dispatch + workers)
 - Tracked listings app API (`api.app.listings.list|track|refresh`)
 - Tracked keywords app API (`api.app.keywords.list|track`)
+- Tracked shops app API (`api.app.shops.list|track|refresh`)
 - Dashboard summary app API (`api.app.dashboard.getSummary`)
 - Keyword rank read API (`api.app.keywords.getDailyProductRanksForKeyword`)
 - Currency conversion API (`api.app.currency.getStatus|refresh`)
@@ -41,6 +42,10 @@ Implemented scaffold:
   - `apps/server/src/services/etsy/bridges/get-listing.ts`
 - Search listings bridge:
   - `apps/server/src/services/etsy/bridges/find-all-listings-active.ts`
+- Shop bridges:
+  - `apps/server/src/services/etsy/bridges/get-shop.ts`
+  - `apps/server/src/services/etsy/bridges/find-shops.ts`
+  - `apps/server/src/services/etsy/bridges/find-all-active-listings-by-shop.ts`
 
 Planned next layers (not yet scaffolded):
 
@@ -101,7 +106,7 @@ Optional:
 3. Etsy redirects to `ETSY_OAUTH_REDIRECT_URI` (`/auth/etsy/callback`), and this value must also be
    registered in your Etsy app settings.
 4. Callback verifies `state`, exchanges `code` for tokens via the OAuth bridge, and stores token
-   state keyed by tenant + Clerk user.
+   state keyed by `accountId`.
 5. Client calls `api.app.etsyAuth.status` / `api.app.etsyAuth.refresh` with Clerk bearer auth.
 
 ## API Structure
@@ -131,6 +136,9 @@ Current app surface:
 - `api.app.logs.list` (admin-only)
 - `api.app.currency.getStatus`
 - `api.app.currency.refresh`
+- `api.app.shops.list`
+- `api.app.shops.track`
+- `api.app.shops.refresh`
 
 ## Etsy Bridge Rules
 
@@ -146,14 +154,17 @@ Current app surface:
 - Startup logs include a status summary with API prefix, callback path, and OAuth scopes.
 - `/ws` requires a Clerk bearer token passed as `token` query param during websocket connect.
 - Realtime websocket payloads are invalidation-only events (no record payloads), currently targeting
-  `app.keywords.list` and `app.listings.list`.
+  `app.keywords.list`, `app.listings.list`, and `app.shops.list`.
 - Job runtime performs startup reconciliation via `apps/server/src/jobs/startup-reconciliation*.ts`
   before workers start; tasks are extensible and currently include resetting stale
-  `tracked_keywords.syncState` / `tracked_listings.syncState` rows that have no live
-  `sync-keyword` / `sync-listing` pg-boss job.
+  `tracked_keywords.syncState` / `tracked_listings.syncState` / `tracked_shops.syncState` rows
+  that have no live `sync-keyword` / `sync-listing` / `sync-shop` pg-boss job.
 - Keyword ranks are auto-synced by `pg-boss` workers:
   - immediate enqueue when a keyword is tracked
   - daily scheduled dispatch for due tracked keywords
+- Shop monitors are auto-synced by `pg-boss` workers:
+  - immediate enqueue when a shop is tracked or manually refreshed
+  - daily scheduled dispatch for due tracked shops
 - USD conversion rates are auto-synced by `pg-boss` workers every 24 hours.
 - Etsy bridge HTTP calls are protected by in-process rate limiting with dynamic header sync:
   - reads `x-limit-per-second`, `x-limit-per-day`, `x-remaining-*`

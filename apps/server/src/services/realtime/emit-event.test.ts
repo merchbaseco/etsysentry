@@ -12,14 +12,14 @@ describe('emitEvent', () => {
         });
 
         emitEvent({
-            queries: ['app.keywords.list', 'app.listings.list', 'app.logs.list'],
+            queries: ['app.keywords.list', 'app.listings.list', 'app.shops.list', 'app.logs.list'],
             accountId: 'tenant_123'
         });
         stopListening();
 
         expect(receivedEvents).toEqual([
             {
-                queries: ['app.keywords.list', 'app.listings.list', 'app.logs.list'],
+                queries: ['app.keywords.list', 'app.listings.list', 'app.shops.list', 'app.logs.list'],
                 accountId: 'tenant_123'
             }
         ]);
@@ -29,7 +29,7 @@ describe('emitEvent', () => {
         expect(() => {
             emitEvent({
                 queries: ['invalid.query'] as unknown as (
-                    'app.keywords.list' | 'app.listings.list' | 'app.logs.list'
+                    'app.keywords.list' | 'app.listings.list' | 'app.shops.list' | 'app.logs.list'
                 )[],
                 accountId: 'tenant_123'
             });
