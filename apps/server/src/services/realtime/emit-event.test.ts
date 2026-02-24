@@ -12,7 +12,6 @@ describe('emitEvent', () => {
         });
 
         emitEvent({
-            clerkUserId: 'user_123',
             queries: ['app.keywords.list', 'app.listings.list', 'app.logs.list'],
             accountId: 'tenant_123'
         });
@@ -20,7 +19,6 @@ describe('emitEvent', () => {
 
         expect(receivedEvents).toEqual([
             {
-                clerkUserId: 'user_123',
                 queries: ['app.keywords.list', 'app.listings.list', 'app.logs.list'],
                 accountId: 'tenant_123'
             }
@@ -30,7 +28,6 @@ describe('emitEvent', () => {
     test('rejects invalid query names', () => {
         expect(() => {
             emitEvent({
-                clerkUserId: 'user_123',
                 queries: ['invalid.query'] as unknown as (
                     'app.keywords.list' | 'app.listings.list' | 'app.logs.list'
                 )[],

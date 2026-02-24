@@ -5,6 +5,7 @@ import { trackedListings } from '../../db/schema';
 export type TrackedListingSyncTarget = {
     trackedListingId: string;
     etsyListingId: string;
+    syncState: (typeof trackedListings.$inferSelect)['syncState'];
     trackerClerkUserId: string;
 };
 
@@ -31,6 +32,7 @@ export const findTrackedListingSyncTargets = async (params: {
         .select({
             trackedListingId: trackedListings.listingId,
             etsyListingId: trackedListings.etsyListingId,
+            syncState: trackedListings.syncState,
             trackerClerkUserId: trackedListings.trackerClerkUserId
         })
         .from(trackedListings)

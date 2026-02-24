@@ -18,6 +18,12 @@ export const trackedListingTrackingStateEnum = pgEnum('tracked_listing_tracking_
     'error'
 ]);
 
+export const trackedListingSyncStateEnum = pgEnum('tracked_listing_sync_state', [
+    'idle',
+    'queued',
+    'syncing'
+]);
+
 export const trackedKeywordTrackingStateEnum = pgEnum('tracked_keyword_tracking_state', [
     'active',
     'paused',
@@ -91,6 +97,7 @@ export const trackedListings = pgTable(
         url: text('url'),
         thumbnailUrl: text('thumbnail_url'),
         trackingState: trackedListingTrackingStateEnum('tracking_state').notNull().default('active'),
+        syncState: trackedListingSyncStateEnum('sync_state').notNull().default('idle'),
         etsyState: trackedListingEtsyStateEnum('etsy_state').notNull().default('inactive'),
         priceAmount: integer('price_amount'),
         priceDivisor: integer('price_divisor'),
@@ -115,6 +122,7 @@ export const trackedListings = pgTable(
             table.trackerClerkUserId
         ),
         trackingStateIdx: index('tracked_listings_tracking_state_idx').on(table.trackingState),
+        syncStateIdx: index('tracked_listings_sync_state_idx').on(table.syncState),
         updatedAtIdx: index('tracked_listings_updated_at_idx').on(table.updatedAt)
     })
 );

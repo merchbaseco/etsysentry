@@ -84,7 +84,6 @@ const toInsertValues = (input: CreateEventLogInput) => {
     const parsed = createEventLogInputSchema.parse(input);
 
     return {
-        clerkUserId: parsed.clerkUserId,
         values: {
             accountId: parsed.accountId,
             occurredAt: parsed.occurredAt ?? new Date(),
@@ -109,13 +108,10 @@ export const createEventLog = async (input: CreateEventLogInput): Promise<EventL
     const parsed = toInsertValues(input);
     const [row] = await db.insert(eventLogs).values(parsed.values).returning();
 
-    if (parsed.clerkUserId) {
-        emitEvent({
-            clerkUserId: parsed.clerkUserId,
-            queries: ['app.logs.list'],
-            accountId: parsed.values.accountId
-        });
-    }
+    emitEvent({
+        queries: ['app.logs.list'],
+        accountId: parsed.values.accountId
+    });
 
     return toRecord(row);
 };
@@ -131,21 +127,10 @@ export const createEventLogs = async (input: CreateEventLogInput[]): Promise<Eve
         .values(parsedValues.map((value) => value.values))
         .returning();
 
-    const invalidationTargets = new Set<string>();
+    const invalidationAccountIds = new Set(parsedValues.map((value) => value.values.accountId));
 
-    for (const value of parsedValues) {
-        if (!value.clerkUserId) {
-            continue;
-        }
-
-        invalidationTargets.add(JSON.stringify([value.values.accountId, value.clerkUserId]));
-    }
-
-    for (const target of invalidationTargets) {
-        const [accountId, clerkUserId] = JSON.parse(target) as [string, string];
-
+    for (const accountId of invalidationAccountIds) {
         emitEvent({
-            clerkUserId,
             queries: ['app.logs.list'],
             accountId
         });

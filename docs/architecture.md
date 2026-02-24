@@ -206,6 +206,8 @@ Scheduling strategy:
 3. Dispatcher enqueues pg-boss jobs spaced over time (avoid burst spikes).
 4. Worker handlers execute monitor jobs and update `nextRunAt` + `frequencyTier`.
 5. Every action emits an `event_logs` row.
+6. Startup reconciliation runs before workers begin so persisted monitor state can be repaired
+   deterministically after restarts (for example, stale `syncState` rows with no live job).
 
 Primitive cadence policy (v1):
 
@@ -251,7 +253,7 @@ Cadence policy (listing `updated_timestamp` aware):
   - `priceAmount`, `priceCurrencyCode`, `priceDivisor`
   - `quantity`, `views`, `numFavorers`
   - `shopName`, `updatedTimestamp`
-  - `lastRefreshedAt`, `lastRefreshError`
+  - `lastRefreshedAt`, `lastRefreshError`, `syncState` (`idle|queued|syncing`)
 - keyword sync must not update existing `tracked_listings` rows.
 
 ### Estimated Sales Helper (v1)

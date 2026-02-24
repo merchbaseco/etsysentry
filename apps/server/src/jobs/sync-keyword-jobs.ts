@@ -13,6 +13,8 @@ import {
 } from './sync-keyword-shared';
 import { enqueueSyncKeywordJob } from '../services/keywords/enqueue-sync-keyword-job';
 import { enqueueSyncListingJob } from '../services/listings/enqueue-sync-listing-job';
+import { startupReconciliationTasks } from './startup-reconciliation-tasks';
+import { runStartupReconciliation } from './startup-reconciliation';
 import './sync-currency-rates';
 import './sync-listing';
 import './sync-keyword';
@@ -84,6 +86,11 @@ export const startKeywordSyncJobs = async (params?: {
         const queue = getBoss();
 
         await queue.start();
+        const startupReconciliationSummary = await runStartupReconciliation({
+            boss: queue,
+            logger,
+            tasks: startupReconciliationTasks
+        });
         jobsRuntime = await startRegisteredJobs({
             boss: queue,
             logger
@@ -91,6 +98,7 @@ export const startKeywordSyncJobs = async (params?: {
 
         logger.info(
             {
+                startupReconciliation: startupReconciliationSummary,
                 startupSummary: jobsRuntime.startupSummary
             },
             'Keyword sync automation jobs started.'
