@@ -75,7 +75,7 @@ describe('buildTrackedListingDiscoveryValues', () => {
         expect(result.isDigital).toBe(false);
     });
 
-    test('sets paused tracking state for digital listings', () => {
+    test('keeps active tracking state for digital listings', () => {
         const now = new Date('2026-02-23T12:00:00.000Z');
 
         const result = buildTrackedListingDiscoveryValues({
@@ -93,7 +93,7 @@ describe('buildTrackedListingDiscoveryValues', () => {
             accountId: 'tenant_123'
         });
 
-        expect(result.trackingState).toBe('paused');
+        expect(result.trackingState).toBe('active');
         expect(result.isDigital).toBe(true);
     });
 });

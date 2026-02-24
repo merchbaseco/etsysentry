@@ -7,7 +7,3 @@ export const isExcludedDigitalListingType = (listingType: string | null): boolea
 
     return DIGITAL_LISTING_TYPES.has(listingType.toLowerCase());
 };
-
-export const buildDigitalListingTrackingErrorMessage = (): string => {
-    return 'Digital listings are not eligible for tracking.';
-};

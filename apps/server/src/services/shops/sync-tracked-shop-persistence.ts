@@ -158,9 +158,7 @@ export const discoverTrackedListings = async (params: {
                     shopId: params.etsyShopId,
                     title: listing.title,
                     trackerClerkUserId: params.clerkUserId,
-                    trackingState: isExcludedDigitalListingType(listing.listingType)
-                        ? ('paused' as const)
-                        : ('active' as const),
+                    trackingState: 'active' as const,
                     updatedAt: params.now,
                     updatedTimestamp: listing.updatedTimestamp,
                     url: listing.url
@@ -175,9 +173,7 @@ export const discoverTrackedListings = async (params: {
             });
 
         for (const row of rows) {
-            const listing = listingByEtsyListingId.get(row.etsyListingId);
-
-            if (!listing || isExcludedDigitalListingType(listing.listingType)) {
+            if (!listingByEtsyListingId.has(row.etsyListingId)) {
                 continue;
             }
 
