@@ -13,6 +13,7 @@ export type TrackedKeywordRecord = {
     normalizedKeyword: string;
     accountId: string;
     trackerClerkUserId: string;
+    syncState: (typeof trackedKeywords.$inferSelect)['syncState'];
     trackingState: (typeof trackedKeywords.$inferSelect)['trackingState'];
     updatedAt: string;
 };
@@ -47,6 +48,7 @@ const toRecord = (row: typeof trackedKeywords.$inferSelect): TrackedKeywordRecor
         normalizedKeyword: row.normalizedKeyword,
         accountId: row.accountId,
         trackerClerkUserId: row.trackerClerkUserId,
+        syncState: row.syncState,
         trackingState: row.trackingState,
         updatedAt: row.updatedAt.toISOString()
     };

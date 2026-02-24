@@ -28,6 +28,8 @@ Implemented scaffold:
   sync (`track|refresh`) paths
 - Tracked listings persist sync queue state in `tracked_listings.syncState` (`idle|queued|syncing`)
   so dashboard refresh actions can reflect in-progress work across page reloads
+- Tracked keywords persist sync queue state in `tracked_keywords.syncState` (`idle|queued|syncing`)
+  so dashboard "next sync" labels can reflect queued/in-progress syncs across page reloads
 - User-facing event logs persisted in `event_logs` with admin listing API
 - Listing responses include derived `priceUsdValue` computed from cached conversion rates at
   request time
@@ -146,7 +148,8 @@ Current app surface:
   `app.keywords.list` and `app.listings.list`.
 - Job runtime performs startup reconciliation via `apps/server/src/jobs/startup-reconciliation*.ts`
   before workers start; tasks are extensible and currently include resetting stale
-  `tracked_listings.syncState` rows that have no live `sync-listing` pg-boss job.
+  `tracked_keywords.syncState` / `tracked_listings.syncState` rows that have no live
+  `sync-keyword` / `sync-listing` pg-boss job.
 - Keyword ranks are auto-synced by `pg-boss` workers:
   - immediate enqueue when a keyword is tracked
   - daily scheduled dispatch for due tracked keywords

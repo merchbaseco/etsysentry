@@ -30,6 +30,12 @@ export const trackedKeywordTrackingStateEnum = pgEnum('tracked_keyword_tracking_
     'error'
 ]);
 
+export const trackedKeywordSyncStateEnum = pgEnum('tracked_keyword_sync_state', [
+    'idle',
+    'queued',
+    'syncing'
+]);
+
 export const trackedListingEtsyStateEnum = pgEnum('tracked_listing_etsy_state', [
     'active',
     'inactive',
@@ -136,6 +142,7 @@ export const trackedKeywords = pgTable(
         keyword: text('keyword').notNull(),
         normalizedKeyword: text('normalized_keyword').notNull(),
         trackingState: trackedKeywordTrackingStateEnum('tracking_state').notNull().default('active'),
+        syncState: trackedKeywordSyncStateEnum('sync_state').notNull().default('idle'),
         lastRefreshedAt: timestamp('last_refreshed_at', { mode: 'date' }).notNull().defaultNow(),
         nextSyncAt: timestamp('next_sync_at', { mode: 'date' }).notNull().defaultNow(),
         lastRefreshError: text('last_refresh_error'),
@@ -153,6 +160,7 @@ export const trackedKeywords = pgTable(
             table.trackerClerkUserId
         ),
         trackingStateIdx: index('tracked_keywords_tracking_state_idx').on(table.trackingState),
+        syncStateIdx: index('tracked_keywords_sync_state_idx').on(table.syncState),
         nextSyncAtIdx: index('tracked_keywords_next_sync_at_idx').on(table.nextSyncAt),
         updatedAtIdx: index('tracked_keywords_updated_at_idx').on(table.updatedAt)
     })

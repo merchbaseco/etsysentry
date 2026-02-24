@@ -1,4 +1,4 @@
-import { and, asc, lte, ne } from 'drizzle-orm';
+import { and, asc, eq, lte, ne } from 'drizzle-orm';
 import { db } from '../../db';
 import { trackedKeywords } from '../../db/schema';
 import {
@@ -22,6 +22,7 @@ export const findStaleKeywords = async (params?: {
         .where(
             and(
                 ne(trackedKeywords.trackingState, 'paused'),
+                eq(trackedKeywords.syncState, 'idle'),
                 lte(trackedKeywords.nextSyncAt, now)
             )
         )

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { enqueueKeywordSyncJob } from '../../../jobs/sync-keyword-jobs';
+import { setTrackedKeywordSyncStateByKeywordId } from '../../../services/keywords/set-tracked-keyword-sync-state';
 import { trackKeyword } from '../../../services/keywords/tracked-keywords-service';
 import { createEventLog } from '../../../services/logs/create-event-log';
 import { appProcedure } from '../../trpc';
@@ -24,6 +25,14 @@ export const keywordsTrackProcedure = appProcedure
             trackedKeywordId: trackedKeyword.item.id
         });
 
+        if (monitorRunId) {
+            await setTrackedKeywordSyncStateByKeywordId({
+                accountId: trackedKeyword.item.accountId,
+                trackedKeywordId: trackedKeyword.item.id,
+                syncState: 'queued'
+            });
+        }
+
         await createEventLog({
             action: 'keyword.sync_queued',
             category: 'keyword',
@@ -44,5 +53,11 @@ export const keywordsTrackProcedure = appProcedure
             accountId: trackedKeyword.item.accountId
         });
 
-        return trackedKeyword;
+        return {
+            ...trackedKeyword,
+            item: {
+                ...trackedKeyword.item,
+                syncState: monitorRunId ? 'queued' : trackedKeyword.item.syncState
+            }
+        };
     });

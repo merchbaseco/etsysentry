@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { RefreshCw } from 'lucide-react';
 import {
     getDailyProductRanksForKeyword,
     type ListTrackedKeywordsOutput,
@@ -50,6 +51,10 @@ const upsertById = (items: TrackedKeywordItem[], nextItem: TrackedKeywordItem): 
     clone[existingIndex] = nextItem;
 
     return clone;
+};
+
+const isKeywordSyncInFlight = (item: TrackedKeywordItem): boolean => {
+    return item.syncState === 'queued' || item.syncState === 'syncing';
 };
 
 export function KeywordsTab() {
@@ -310,35 +315,47 @@ export function KeywordsTab() {
                             </tr>
                         </thead>
                         <tbody>
-                            {filtered.map((item) => (
-                                <tr
-                                    key={item.id}
-                                    className={cn(
-                                        'cursor-pointer border-b border-border/50',
-                                        selectedKeywordId === item.id ? 'bg-accent/30' : 'hover:bg-accent/20'
-                                    )}
-                                    onClick={() => handleSelectKeyword(item)}
-                                >
-                                    <td className="px-3 py-1.5 text-foreground">
-                                        <div className="font-medium">{item.keyword}</div>
-                                        <div className="text-[11px] text-terminal-dim">
-                                            {item.normalizedKeyword}
-                                        </div>
-                                    </td>
-                                    <td className="px-2 py-1.5 text-center">
-                                        <StatusBadge status={item.trackingState} />
-                                    </td>
-                                    <td className="px-2 py-1.5 text-right text-terminal-dim">
-                                        {timeAgo(item.lastRefreshedAt)}
-                                    </td>
-                                    <td className="px-2 py-1.5 text-right text-terminal-dim">
-                                        {timeAgo(item.updatedAt)}
-                                    </td>
-                                    <td className="px-2 py-1.5 text-right text-terminal-dim">
-                                        {timeUntil(item.nextSyncAt)}
-                                    </td>
-                                </tr>
-                            ))}
+                            {filtered.map((item) => {
+                                const isSyncInFlight = isKeywordSyncInFlight(item);
+
+                                return (
+                                    <tr
+                                        key={item.id}
+                                        className={cn(
+                                            'cursor-pointer border-b border-border/50',
+                                            selectedKeywordId === item.id ? 'bg-accent/30' : 'hover:bg-accent/20'
+                                        )}
+                                        onClick={() => handleSelectKeyword(item)}
+                                    >
+                                        <td className="px-3 py-1.5 text-foreground">
+                                            <div className="font-medium">{item.keyword}</div>
+                                            <div className="text-[11px] text-terminal-dim">
+                                                {item.normalizedKeyword}
+                                            </div>
+                                        </td>
+                                        <td className="px-2 py-1.5 text-center">
+                                            <StatusBadge status={item.trackingState} />
+                                        </td>
+                                        <td className="px-2 py-1.5 text-right text-terminal-dim">
+                                            {timeAgo(item.lastRefreshedAt)}
+                                        </td>
+                                        <td className="px-2 py-1.5 text-right text-terminal-dim">
+                                            {timeAgo(item.updatedAt)}
+                                        </td>
+                                        <td className="px-2 py-1.5 text-right text-terminal-dim">
+                                            <div className="flex items-center justify-end gap-1">
+                                                {isSyncInFlight ? (
+                                                    <RefreshCw
+                                                        aria-hidden="true"
+                                                        className="size-3 animate-spin text-terminal-dim"
+                                                    />
+                                                ) : null}
+                                                <span>{timeUntil(item.nextSyncAt)}</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                 )}
