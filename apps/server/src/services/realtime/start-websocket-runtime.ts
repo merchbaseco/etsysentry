@@ -123,7 +123,6 @@ export const startWebsocketRuntime = (params: {
 
                 params.server.log.warn(
                     {
-                        clerkUserId: event.clerkUserId,
                         error,
                         accountId: event.accountId
                     },

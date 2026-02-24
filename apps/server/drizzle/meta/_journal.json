@@ -78,6 +78,13 @@
       "when": 1771906566895,
       "tag": "0010_happy_franklin_storm",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1771963922040,
+      "tag": "0011_bouncy_shinko_yamashiro",
+      "breakpoints": true
     }
   ]
 }

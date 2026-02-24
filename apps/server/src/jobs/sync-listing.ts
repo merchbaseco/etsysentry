@@ -4,6 +4,7 @@ import {
     syncListingJobInputSchema
 } from './sync-listing-shared';
 import { syncTrackedListingFromEtsy } from '../services/listings/tracked-listings-service';
+import { setTrackedListingsSyncStateByEtsyListingIds } from '../services/listings/set-tracked-listing-sync-state';
 
 export const syncListingJob = defineJob(SYNC_LISTING_JOB_NAME, {
     persistSuccess: 'didWork',
@@ -13,16 +14,30 @@ export const syncListingJob = defineJob(SYNC_LISTING_JOB_NAME, {
     .work(async (job, signal, log) => {
         void signal;
 
-        await syncTrackedListingFromEtsy({
-            clerkUserId: job.data.clerkUserId,
-            etsyListingId: job.data.etsyListingId,
+        await setTrackedListingsSyncStateByEtsyListingIds({
             accountId: job.data.accountId,
-            trackerClerkUserId: job.data.clerkUserId
+            etsyListingIds: [job.data.etsyListingId],
+            syncState: 'syncing'
         });
 
-        log('Synced listing from Etsy.', {
-            etsyListingId: job.data.etsyListingId
-        });
+        try {
+            await syncTrackedListingFromEtsy({
+                clerkUserId: job.data.clerkUserId,
+                etsyListingId: job.data.etsyListingId,
+                accountId: job.data.accountId,
+                trackerClerkUserId: job.data.clerkUserId
+            });
+
+            log('Synced listing from Etsy.', {
+                etsyListingId: job.data.etsyListingId
+            });
+        } finally {
+            await setTrackedListingsSyncStateByEtsyListingIds({
+                accountId: job.data.accountId,
+                etsyListingIds: [job.data.etsyListingId],
+                syncState: 'idle'
+            });
+        }
 
         return {
             didWork: true,

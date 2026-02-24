@@ -72,6 +72,10 @@ const upsertById = (items: TrackedListingItem[], nextItem: TrackedListingItem): 
     return clone;
 };
 
+const isListingSyncInFlight = (item: TrackedListingItem): boolean => {
+    return item.syncState === 'queued' || item.syncState === 'syncing';
+};
+
 export function ListingsTab() {
     const cachedTrackedListings = queryClient.getQueryData<ListTrackedListingsOutput>(
         trackedListingsQueryKey
@@ -188,6 +192,10 @@ export function ListingsTab() {
     };
 
     const handleRefreshRow = async (item: TrackedListingItem) => {
+        if (isListingSyncInFlight(item) || refreshingById[item.id] === true) {
+            return;
+        }
+
         setRefreshingById((current) => ({
             ...current,
             [item.id]: true
@@ -309,7 +317,18 @@ export function ListingsTab() {
                         </thead>
                         <tbody>
                             {filtered.map((item) => {
-                                const isRefreshing = refreshingById[item.id] === true;
+                                const isQueuedOrSyncing = isListingSyncInFlight(item);
+                                const isRefreshing = isQueuedOrSyncing || refreshingById[item.id] === true;
+                                const refreshTitle = isQueuedOrSyncing
+                                    ? 'Listing sync in progress'
+                                    : isRefreshing
+                                      ? 'Refreshing listing'
+                                      : 'Refresh listing';
+                                const refreshAriaLabel = isQueuedOrSyncing
+                                    ? `Syncing ${item.title}`
+                                    : isRefreshing
+                                      ? `Refreshing ${item.title}`
+                                      : `Refresh ${item.title}`;
 
                                 return (
                                     <tr key={item.id} className="border-b border-border/50">
@@ -373,16 +392,8 @@ export function ListingsTab() {
                                                     size="icon-sm"
                                                     onClick={() => void handleRefreshRow(item)}
                                                     disabled={isRefreshing}
-                                                    aria-label={
-                                                        isRefreshing
-                                                            ? `Refreshing ${item.title}`
-                                                            : `Refresh ${item.title}`
-                                                    }
-                                                    title={
-                                                        isRefreshing
-                                                            ? 'Refreshing listing'
-                                                            : 'Refresh listing'
-                                                    }
+                                                    aria-label={refreshAriaLabel}
+                                                    title={refreshTitle}
                                                     className="size-6 text-terminal-dim hover:text-foreground"
                                                 >
                                                     <RefreshCw

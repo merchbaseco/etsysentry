@@ -361,7 +361,6 @@ export const syncRanksForKeyword = async (params: {
             );
 
         emitEvent({
-            clerkUserId: params.clerkUserId,
             queries: [...keywordSyncInvalidationQueries],
             accountId: params.accountId
         });
@@ -446,7 +445,6 @@ export const syncRanksForKeyword = async (params: {
             );
 
         emitEvent({
-            clerkUserId: params.clerkUserId,
             queries: [...keywordSyncInvalidationQueries],
             accountId: params.accountId
         });

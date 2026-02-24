@@ -10,6 +10,10 @@ import {
 } from '../etsy/bridges/get-listing';
 import { getEtsyOAuthAccessToken } from '../etsy/oauth-service';
 import { recordEtsyApiCallBestEffort } from '../etsy/record-etsy-api-call';
+import {
+    isTrackedListingSyncInFlight,
+    setTrackedListingSyncStateByListingId
+} from './set-tracked-listing-sync-state';
 
 export type TrackedListingRecord = {
     etsyListingId: string;
@@ -30,6 +34,7 @@ export type TrackedListingRecord = {
     thumbnailUrl: string | null;
     title: string;
     trackerClerkUserId: string;
+    syncState: (typeof trackedListings.$inferSelect)['syncState'];
     trackingState: (typeof trackedListings.$inferSelect)['trackingState'];
     updatedAt: string;
     updatedTimestamp: number | null;
@@ -135,6 +140,7 @@ const toRecord = (row: typeof trackedListings.$inferSelect): TrackedListingRecor
         thumbnailUrl: row.thumbnailUrl ?? null,
         title: row.title,
         trackerClerkUserId: row.trackerClerkUserId,
+        syncState: row.syncState,
         trackingState: row.trackingState,
         updatedAt: row.updatedAt.toISOString(),
         updatedTimestamp: row.updatedTimestamp,
@@ -165,6 +171,7 @@ const bridgeToUpsertValues = (params: {
         thumbnailUrl: params.bridgeResponse.thumbnailUrl,
         title: params.bridgeResponse.title,
         trackerClerkUserId: params.trackerClerkUserId,
+        syncState: 'idle' as const,
         trackingState: 'active' as const,
         updatedAt: params.now,
         updatedTimestamp: params.bridgeResponse.updatedTimestamp,
@@ -369,12 +376,38 @@ export const refreshTrackedListing = async (params: {
         });
     }
 
+    if (isTrackedListingSyncInFlight(current.syncState)) {
+        throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'Tracked listing sync is already queued or in progress.'
+        });
+    }
+
+    const didSetSyncing = await setTrackedListingSyncStateByListingId({
+        accountId: params.accountId,
+        syncState: 'syncing',
+        trackedListingId: current.listingId
+    });
+
+    if (!didSetSyncing) {
+        throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Tracked listing was not found for this account.'
+        });
+    }
+
     try {
         const updated = await syncTrackedListingFromEtsy({
             clerkUserId: params.clerkUserId,
             etsyListingId: current.etsyListingId,
             accountId: params.accountId,
             trackerClerkUserId: params.trackerClerkUserId
+        });
+
+        await setTrackedListingSyncStateByListingId({
+            accountId: params.accountId,
+            syncState: 'idle',
+            trackedListingId: current.listingId
         });
 
         await createEventLog({
@@ -406,6 +439,7 @@ export const refreshTrackedListing = async (params: {
             .set({
                 lastRefreshError: failureMessage,
                 lastRefreshedAt: new Date(),
+                syncState: 'idle',
                 trackingState: 'error',
                 updatedAt: new Date()
             })
@@ -415,6 +449,12 @@ export const refreshTrackedListing = async (params: {
         if (!updated) {
             throw error;
         }
+
+        await setTrackedListingSyncStateByListingId({
+            accountId: params.accountId,
+            syncState: 'idle',
+            trackedListingId: current.listingId
+        });
 
         try {
             await createEventLog({

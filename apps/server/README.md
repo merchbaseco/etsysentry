@@ -26,6 +26,8 @@ Implemented scaffold:
 - Canonical listing snapshot fields (`price*`, `quantity`, `views`, `numFavorers`, `shopName`,
   `etsyState`, `updatedTimestamp`, `lastRefreshedAt`, `lastRefreshError`) are owned by listing
   sync (`track|refresh`) paths
+- Tracked listings persist sync queue state in `tracked_listings.syncState` (`idle|queued|syncing`)
+  so dashboard refresh actions can reflect in-progress work across page reloads
 - User-facing event logs persisted in `event_logs` with admin listing API
 - Listing responses include derived `priceUsdValue` computed from cached conversion rates at
   request time
@@ -142,6 +144,9 @@ Current app surface:
 - `/ws` requires a Clerk bearer token passed as `token` query param during websocket connect.
 - Realtime websocket payloads are invalidation-only events (no record payloads), currently targeting
   `app.keywords.list` and `app.listings.list`.
+- Job runtime performs startup reconciliation via `apps/server/src/jobs/startup-reconciliation*.ts`
+  before workers start; tasks are extensible and currently include resetting stale
+  `tracked_listings.syncState` rows that have no live `sync-listing` pg-boss job.
 - Keyword ranks are auto-synced by `pg-boss` workers:
   - immediate enqueue when a keyword is tracked
   - daily scheduled dispatch for due tracked keywords

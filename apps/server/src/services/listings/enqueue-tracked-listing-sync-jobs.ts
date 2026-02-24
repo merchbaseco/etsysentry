@@ -1,5 +1,9 @@
 import { enqueueListingSyncJob } from '../../jobs/sync-keyword-jobs';
 import { findTrackedListingSyncTargets } from './find-tracked-listing-sync-targets';
+import {
+    isTrackedListingSyncInFlight,
+    setTrackedListingsSyncStateByListingIds
+} from './set-tracked-listing-sync-state';
 
 export type ListingSyncSelection =
     | {
@@ -27,8 +31,13 @@ export const enqueueTrackedListingSyncJobs = async (params: {
     });
 
     let enqueuedCount = 0;
+    const queuedTrackedListingIds: string[] = [];
 
     for (const target of syncTargets) {
+        if (isTrackedListingSyncInFlight(target.syncState)) {
+            continue;
+        }
+
         const jobId = await enqueueListingSyncJob({
             clerkUserId: target.trackerClerkUserId,
             etsyListingId: target.etsyListingId,
@@ -37,8 +46,15 @@ export const enqueueTrackedListingSyncJobs = async (params: {
 
         if (jobId) {
             enqueuedCount += 1;
+            queuedTrackedListingIds.push(target.trackedListingId);
         }
     }
+
+    await setTrackedListingsSyncStateByListingIds({
+        accountId: params.accountId,
+        syncState: 'queued',
+        trackedListingIds: queuedTrackedListingIds
+    });
 
     const totalCount = syncTargets.length;
     const skippedCount = totalCount - enqueuedCount;

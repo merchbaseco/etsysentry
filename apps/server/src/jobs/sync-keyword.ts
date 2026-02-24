@@ -5,6 +5,7 @@ import {
 } from './sync-keyword-shared';
 import { syncRanksForKeyword } from '../services/keywords/keyword-rankings-service';
 import { enqueueSyncListingJob } from '../services/listings/enqueue-sync-listing-job';
+import { setTrackedListingsSyncStateByEtsyListingIds } from '../services/listings/set-tracked-listing-sync-state';
 
 export const syncKeywordJob = defineJob(SYNC_KEYWORD_JOB_NAME, {
     persistSuccess: 'didWork',
@@ -21,8 +22,10 @@ export const syncKeywordJob = defineJob(SYNC_KEYWORD_JOB_NAME, {
             trackedKeywordId: job.data.trackedKeywordId
         });
 
+        const enqueuedEtsyListingIds: string[] = [];
+
         for (const etsyListingId of syncResult.newlyDiscoveredEtsyListingIds) {
-            await enqueueSyncListingJob({
+            const queuedJobId = await enqueueSyncListingJob({
                 boss: context.boss,
                 payload: {
                     clerkUserId: job.data.clerkUserId,
@@ -30,7 +33,17 @@ export const syncKeywordJob = defineJob(SYNC_KEYWORD_JOB_NAME, {
                     accountId: job.data.accountId
                 }
             });
+
+            if (queuedJobId) {
+                enqueuedEtsyListingIds.push(etsyListingId);
+            }
         }
+
+        await setTrackedListingsSyncStateByEtsyListingIds({
+            accountId: job.data.accountId,
+            etsyListingIds: enqueuedEtsyListingIds,
+            syncState: 'queued'
+        });
 
         log('Synced keyword ranks.', {
             discoveredListingsCount: syncResult.newlyDiscoveredEtsyListingIds.length,
