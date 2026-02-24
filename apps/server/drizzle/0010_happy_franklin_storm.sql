@@ -44,6 +44,23 @@ DROP INDEX "tracked_listings_tenant_tracker_idx";--> statement-breakpoint
 ALTER TABLE "etsy_oauth_connections" DROP CONSTRAINT "etsy_oauth_connections_tenant_clerk_pk";--> statement-breakpoint
 ALTER TABLE "clerk_identities" ADD CONSTRAINT "clerk_identities_account_id_accounts_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."accounts"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "clerk_identities_account_idx" ON "clerk_identities" USING btree ("account_id");--> statement-breakpoint
+INSERT INTO "accounts" ("id")
+SELECT DISTINCT "account_id"
+FROM (
+	SELECT "account_id" FROM "etsy_oauth_connections"
+	UNION
+	SELECT "account_id" FROM "tracked_listings"
+	UNION
+	SELECT "account_id" FROM "tracked_keywords"
+	UNION
+	SELECT "account_id" FROM "product_keyword_ranks"
+	UNION
+	SELECT "account_id" FROM "event_logs"
+	UNION
+	SELECT "account_id" FROM "etsy_api_call_events"
+) AS "legacy_account_ids"
+WHERE "account_id" IS NOT NULL
+ON CONFLICT ("id") DO NOTHING;--> statement-breakpoint
 ALTER TABLE "etsy_oauth_connections" ADD CONSTRAINT "etsy_oauth_connections_account_id_accounts_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."accounts"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "tracked_keywords_account_idx" ON "tracked_keywords" USING btree ("account_id");--> statement-breakpoint
 CREATE INDEX "tracked_listings_account_idx" ON "tracked_listings" USING btree ("account_id");--> statement-breakpoint
