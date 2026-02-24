@@ -72,9 +72,10 @@ Each primitive must be creatable, listable, retrievable, and monitorable.
 - Listing monitoring:
   - Is the canonical source of truth for listing snapshot fields.
   - Store/update listing profile data separately from metric snapshots.
-  - Capture snapshot fields at each run (at minimum: review count, review average, favorers, price).
+  - Capture snapshot fields at each run (at minimum: favorers, price, views, quantity).
   - Add additional quantitative fields from Etsy listing responses where useful.
-  - Persist append-only historical metric rows.
+  - Persist one listing metric row per UTC calendar day (dedupe by account + listing + day).
+  - If a listing is synced multiple times in one UTC day, keep only the most recent run for that day.
   - Sales is treated as an inferred/estimated metric if Etsy does not provide a direct field.
   - Estimated sales must be implemented in v1 and isolated into a helper to support recalculation.
   - v1 estimate should combine three methods into an intelligent weighted average:
@@ -139,7 +140,8 @@ Each primitive must be creatable, listable, retrievable, and monitorable.
 
 ## Data Quality Requirements
 
-- Timeseries records are append-only.
+- Rank/fact timeseries records are append-only (for example keyword rank history).
+- Listing metric snapshots are day-keyed and keep only the most recent run per UTC day.
 - Monitor runs are auditable with status and error details.
 - Daily runs should be resumable/retriable if partial failure occurs.
 - Per-action event logs are first-class records (listing discovered, listing updated, keyword rank

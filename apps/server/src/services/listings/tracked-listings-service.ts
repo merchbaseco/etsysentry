@@ -23,6 +23,7 @@ import {
     createListingSyncedEventLog
 } from './create-listing-sync-event-log';
 import { setTrackedShopListingActivityByEtsyListingId } from '../shops/set-tracked-shop-listing-activity';
+import { upsertListingMetricSnapshot } from './upsert-listing-metric-snapshot';
 
 export type TrackedListingRecord = {
     etsyListingId: string;
@@ -263,6 +264,7 @@ export const syncTrackedListingFromEtsy = async (params: {
     trackerClerkUserId: string;
     rejectExcludedListingType?: boolean;
 }): Promise<typeof trackedListings.$inferSelect> => {
+    const now = new Date();
     const listingFromEtsy = await fetchListingFromEtsy({
         clerkUserId: params.clerkUserId,
         etsyListingId: params.etsyListingId,
@@ -281,9 +283,21 @@ export const syncTrackedListingFromEtsy = async (params: {
 
     const row = await upsertTrackedListingFromBridgeResponse({
         bridgeResponse: listingFromEtsy,
-        now: new Date(),
+        now,
         accountId: params.accountId,
         trackerClerkUserId: params.trackerClerkUserId
+    });
+
+    await upsertListingMetricSnapshot({
+        accountId: row.accountId,
+        listingId: row.listingId,
+        observedAt: now,
+        views: row.views,
+        favorerCount: row.numFavorers,
+        quantity: row.quantity,
+        priceAmount: row.priceAmount,
+        priceDivisor: row.priceDivisor,
+        priceCurrencyCode: row.priceCurrencyCode
     });
 
     await setTrackedShopListingActivityByEtsyListingId({
