@@ -23,6 +23,7 @@ This document guides AI coding assistants working in the EtsySentry repository.
 - Etsy OpenAPI bridge guide: `docs/etsy-openapi-bridges.md`
 - Rich log UX spec: `docs/log-view.md`
 - Logging strategy: `docs/logging-strategy.md`
+- Event log action catalog: `docs/event-log-actions.md`
 - Database query runbook: `docs/database-queries.md`
 - Server operations: `apps/server/README.md`
 - Typed client: `packages/http-client/README.md`

@@ -141,3 +141,4 @@ App/Admin only:
 - Every external Etsy bridge failure emits a log row with error code/classification.
 - Every cadence tier change emits a log row.
 - Keep PII/secrets out of `message` and `detailsJson`.
+- The implemented action inventory is maintained in `docs/event-log-actions.md`.

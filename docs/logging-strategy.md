@@ -9,6 +9,7 @@ Define one consistent logging strategy across server runtime, jobs, and services
 - safe (no secrets/PII leakage)
 
 This document complements `docs/log-view.md` (UI/UX requirements for viewing logs).
+Persisted event action inventory is documented in `docs/event-log-actions.md`.
 
 ## Core Principles
 

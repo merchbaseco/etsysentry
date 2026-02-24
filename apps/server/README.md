@@ -29,6 +29,7 @@ Implemented scaffold:
 - Tracked listings persist sync queue state in `tracked_listings.syncState` (`idle|queued|syncing`)
   so dashboard refresh actions can reflect in-progress work across page reloads
 - User-facing event logs persisted in `event_logs` with admin listing API
+- Event log action catalog documented in `docs/event-log-actions.md`
 - Listing responses include derived `priceUsdValue` computed from cached conversion rates at
   request time
 - Product keyword-rank query (`api.app.listings.getKeywordRanksForProduct`)

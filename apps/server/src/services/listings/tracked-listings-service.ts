@@ -14,6 +14,10 @@ import {
     isTrackedListingSyncInFlight,
     setTrackedListingSyncStateByListingId
 } from './set-tracked-listing-sync-state';
+import {
+    createListingSyncFailedEventLog,
+    createListingSyncedEventLog
+} from './create-listing-sync-event-log';
 
 export type TrackedListingRecord = {
     etsyListingId: string;
@@ -410,23 +414,15 @@ export const refreshTrackedListing = async (params: {
             trackedListingId: current.listingId
         });
 
-        await createEventLog({
-            action: 'listing.synced',
-            category: 'listing',
+        await createListingSyncedEventLog({
+            accountId: updated.accountId,
             clerkUserId: params.clerkUserId,
-            detailsJson: {
-                etsyState: updated.etsyState,
-                title: updated.title
-            },
-            level: 'info',
-            listingId: updated.etsyListingId,
-            message: `Synced listing ${updated.etsyListingId}.`,
-            primitiveId: updated.listingId,
-            primitiveType: 'listing',
+            etsyListingId: updated.etsyListingId,
+            etsyState: updated.etsyState,
+            listingId: updated.listingId,
             requestId: params.requestId ?? null,
             shopId: updated.shopId,
-            status: 'success',
-            accountId: updated.accountId
+            title: updated.title
         });
 
         return toRecord(updated);
@@ -457,22 +453,14 @@ export const refreshTrackedListing = async (params: {
         });
 
         try {
-            await createEventLog({
-                action: 'listing.sync_failed',
-                category: 'listing',
+            await createListingSyncFailedEventLog({
+                accountId: updated.accountId,
                 clerkUserId: params.clerkUserId,
-                detailsJson: {
-                    error: failureMessage
-                },
-                level: 'error',
-                listingId: updated.etsyListingId,
-                message: `Listing sync failed for ${updated.etsyListingId}: ${failureMessage}`,
-                primitiveId: updated.listingId,
-                primitiveType: 'listing',
+                errorMessage: failureMessage,
+                etsyListingId: updated.etsyListingId,
+                listingId: updated.listingId,
                 requestId: params.requestId ?? null,
-                shopId: updated.shopId,
-                status: 'failed',
-                accountId: updated.accountId
+                shopId: updated.shopId
             });
         } catch {
             // Preserve the original sync failure.
