@@ -47,6 +47,16 @@ packages/
 docs/
 ```
 
+## Dashboard Website Architecture
+
+- Stack: Vite + React + React Router.
+- Frontend source of truth: `apps/website/src`.
+- Dashboard routes are path-based (`/`, `/keywords`, `/shops`, `/logs`).
+- Next.js runtime/config files are out of scope and must not be introduced:
+  - `next.config.*`
+  - `next-env.d.ts`
+  - App Router directories
+
 ## Runtime Components
 
 1. API server (Fastify + tRPC)

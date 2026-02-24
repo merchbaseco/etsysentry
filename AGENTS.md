@@ -1,178 +1,65 @@
 # AGENTS.md
 
-This document guides AI coding assistants working in the EtsySentry repository.
+This file is the always-on guide for AI coding assistants in EtsySentry.
 
-## Overview
+## Repository Snapshot
 
-- **Repo layout**: Monorepo. The server lives in `apps/server`.
-- **Purpose**: Etsy listing intelligence platform for tracking keyword/search, listing, and shop performance over time.
-- **Primary primitives**:
-  - `keyword` - Etsy search keyword that is monitored daily.
-  - `listing` - Etsy listing that is tracked daily.
-  - `shop` - Etsy shop that is monitored daily for listing changes.
-- **Core behavior**:
-  - Keyword monitors fetch Etsy search results daily for pages 1-3.
-  - Listing monitors store daily snapshots (sales, reviews, pricing, visibility signals).
-  - Shop monitors discover/refresh listings and feed them into listing tracking.
-- **Integration model**: Etsy API v3 only, wrapped via bridge files (one Etsy endpoint per bridge file).
+- Monorepo; server app is in `apps/server`.
+- Product scope is Etsy listing intelligence across `keyword`, `listing`, and `shop` primitives.
 
-## Documentation Map
-
-- Product requirements: `docs/requirements.md`
-- System architecture: `docs/architecture.md`
-- Etsy OpenAPI bridge guide: `docs/etsy-openapi-bridges.md`
-- Rich log UX spec: `docs/log-view.md`
-- Logging strategy: `docs/logging-strategy.md`
-- Event log action catalog: `docs/event-log-actions.md`
-- Database query runbook: `docs/database-queries.md`
-- Server operations: `apps/server/README.md`
-- Typed client: `packages/http-client/README.md`
-
-## Website Architecture Decision
-
-- The website stack is **Vite + React + React Router** (not Next.js).
-- Frontend source-of-truth lives under `apps/website/src`.
-- Dashboard routes are path-based (`/`, `/keywords`, `/shops`, `/logs`) via React Router.
-- Do not add or reintroduce Next.js runtime/config files (`next.config.*`, `next-env.d.ts`, App Router dirs).
-
-## API Design Principles
-
-- All first-party APIs should be tRPC (no REST surface unless explicitly required).
-- Public surface:
-  - `api.public.*` - agent/CLI-safe endpoints.
-- App surface:
-  - `api.app.*` - authenticated dashboard/admin endpoints.
-- `api.app.*` identity/tenant scope must come from server auth context:
-  - validate Clerk bearer token in server context
-  - derive `tenantId` + `clerkUserId` server-side
-  - do not accept auth identity fields from client procedure input
-- CLI should map to `api.public.*` so there is a single canonical public contract.
-- Shared business logic belongs in utilities/services, not duplicated across routers.
-- Each tRPC procedure should live in its own file under `apps/server/src/api/public` or `apps/server/src/api/app`.
-
-## Auth and OAuth Storage Rules
-
-- Website app requests to `api.app.*` must send Clerk bearer auth in `Authorization: Bearer <token>`.
-- Etsy OAuth tokens/connections are server-managed persistence, not browser-managed state.
-- Do not store Etsy OAuth session identifiers/tokens in `localStorage`, `sessionStorage`, or client cookies.
-- Etsy OAuth connection identity is keyed by `(tenantId, clerkUserId)` and persisted in DB.
-- If auth/session architecture needs to change, ask for clarification before broad refactors.
-
-## Etsy Bridge Pattern (Required)
-
-- Store Etsy API wrappers under `apps/server/src/services/etsy/bridges`.
-- OpenAPI source-of-truth for Etsy endpoints:
-  - `https://www.etsy.com/openapi/generated/oas/3.0.0.json`
-- Each Etsy API endpoint gets exactly one bridge file that:
-  - Calls one Etsy endpoint.
-  - Defines request/response types for that endpoint.
-  - Performs thin transport mapping only (no business logic).
-- Example structure:
-  - `apps/server/src/services/etsy/bridges/get-shop.ts`
-  - `apps/server/src/services/etsy/bridges/get-shop-listings.ts`
-  - `apps/server/src/services/etsy/bridges/search-listings.ts`
-  - `apps/server/src/services/etsy/bridges/get-listing.ts`
-- Orchestration, retries, batching, and persistence belong in higher-level services/jobs.
-
-## Etsy Bridge Runbook
-
-Use this checklist whenever adding or updating an Etsy bridge:
-
-1. Open Etsy OpenAPI spec (`3.0.0.json`) and locate the `operationId`.
-2. Create/update exactly one bridge file for that operation in `apps/server/src/services/etsy/bridges`.
-3. Copy path/query parameter names exactly as defined in OpenAPI.
-4. Add explicit input validation for bridge inputs.
-5. Add response parsing for the operation schema and normalize output fields for service use.
-6. Add bridge-scoped error handling that preserves HTTP status and raw body.
-7. Add/update focused bridge tests:
-   - success mapping
-   - query param serialization (if applicable)
-   - non-2xx behavior
-   - invalid input handling
-8. Keep business logic out of bridges:
-   - no DB reads/writes
-   - no orchestration/retries/scheduling
-9. Update docs when bridge surface changes:
-   - `docs/etsy-openapi-bridges.md`
-   - `apps/server/README.md` (if operational behavior changed)
-
-## Monitoring and Data Expectations
-
-- Daily monitoring is the baseline cadence for all primitives.
-- Preserve raw snapshots and derived metrics separately when practical.
-- Track ranking positions by keyword + page + position + listing.
-- Track listing timeseries records as append-only daily snapshots.
-- Track shop discovery state so listing additions/removals are auditable.
-- Avoid destructive historical rewrites.
-
-## Code Style and Quality Standards
+## Always-On Coding Rules
 
 1. Keep TypeScript strictness enabled.
-2. Biome formatting and linting standards:
+2. Follow Biome style:
    - 4-space indentation
    - single quotes
    - semicolons
    - 100-character line width
-3. Build types first: function signatures and data models before implementation details.
-4. Make illegal states unrepresentable (discriminated unions, branded types, `const` assertions).
-5. Keep modules focused and small; split files when responsibilities diverge.
+3. Build types first (function signatures and data models) before implementation details.
+4. Make illegal states unrepresentable (`const` assertions, discriminated unions, branded types).
+5. Keep modules focused and composable; split files when responsibilities diverge.
 6. Prefer immutable patterns and explicit runtime validation at boundaries.
 7. Handle edge cases and external API failures explicitly; do not swallow errors.
 8. Add or update focused tests when behavior changes.
-9. Enforce a `300` LoC maximum per file (excluding generated files); split files before crossing
-   this limit.
-10. Keep files singularly focused and cohesive; prefer small, composable modules over multi-purpose
-   files.
-11. UI component organization must use shared, scoped component folders:
-   - Put reusable presentational UI in `apps/website/src/components/ui/*`.
-   - Put domain-scoped shared UI in `apps/website/src/components/ui/<scope>/*` (for example:
-     `components/ui/dashboard/*`).
-   - Keep feature-only composition/stateful components in their feature folders
-     (for example: `components/dashboard/*`).
-   - Do not create or keep catch-all files like `shared.tsx` in feature folders.
+9. Enforce a `300` LoC maximum per file (excluding generated files).
 
-## Naming Conventions
+## Naming Rules
 
-Use explicit, action-first names that describe exactly what code does.
+1. Use concise, explicit names without filler words.
+2. Use verb-first names for jobs/services/utilities (for example `sync-keyword`).
+3. Avoid ambiguous orchestration names like `dispatch` when intent can be explicit.
+4. Align queue names, filenames, and exported symbols semantically.
+5. Keep service/utility files single-purpose.
+6. Keep route/procedure names verb-first (`track`, `sync`, `refresh`, `list`, `get-*`).
 
-1. Prioritize concise names with no filler words.
-   - Prefer short, specific names that are still unambiguous.
-   - Avoid unnecessarily long names when a shorter precise name exists.
-2. Lead with a verb for jobs, services, and utility files.
-   - Prefer: `sync-keyword`, `sync-stale-keywords`, `find-stale-keywords.ts`
-   - Avoid: noun-first or vague names like `keyword-sync` or `keyword-sync-dispatch`
-3. Avoid ambiguous orchestration words such as `dispatch` when a clearer action exists.
-   - Prefer explicit intent: `sync`, `find`, `enqueue`, `refresh`, `track`
-4. Job queue names, job definition filenames, and exported job symbols should align semantically.
-   - Example: queue `sync-keyword` in `sync-keyword.ts` exported as `syncKeywordJob`
-5. Service/utility filenames must state one concrete responsibility.
-   - Example split: `find-stale-keywords.ts`, `enqueue-sync-keyword-job.ts`,
-     `sync-stale-keywords.ts`
-6. Each job file should contain only the job definition and its direct wiring.
-   - Move query/enqueue/business logic into focused service files.
-7. Router filenames are resource/domain-oriented, not necessarily verb-first.
-   - Prefer router filenames like `keywords/router.ts`, `listings/router.ts`
-8. Actual route/procedure names should be verb-first.
-   - Prefer procedure names/files like `track.ts`, `sync.ts`, `refresh.ts`, `list.ts`, `get-*.ts`
+## Change Scope Rules
 
-## Database and Migration Expectations
+1. Prefer the simplest end-to-end change that resolves the reported issue.
+2. For bug fixes, patch the narrow failing path first.
+3. Generalize only when there is a concrete follow-up requirement.
+4. Do not add abstractions, parameters, or extension points unless at least two current call
+   sites need them now.
 
-- Use Drizzle ORM for schema and queries.
-- Never hand-write migration SQL.
-- Update schema source first, then generate migrations with tooling.
-- Keep `init.sql` or equivalent bootstrap SQL in sync with schema evolution.
-
-## Editing Expectations
+## Required Maintenance
 
 1. Keep docs current when API shape, jobs, or storage models change.
-2. Preserve startup status logging in the server entrypoint as features/jobs are added.
-3. Keep secrets out of version control; update `.env.example` when env vars change.
-4. Prefer adding bridges/services over embedding Etsy HTTP calls directly in routers/jobs.
-5. Ask for clarification before changing auth model, billing model, or production deployment behavior.
-6. Prefer the simplest change that solves the reported issue end-to-end.
-7. Do not add new abstractions, parameters, or extension points unless at least two current call
-   sites need them right now.
-8. For bug fixes, first patch the narrow failing path; generalize only when a concrete follow-up
-   requirement exists.
+2. Keep startup status logging intact in the server entrypoint when adding features/jobs.
+3. Keep secrets out of version control.
+4. Update `.env.example` when environment variables change.
+5. Prefer adding Etsy bridges/services over embedding Etsy HTTP calls in routers/jobs.
+6. If requirements are unclear, add an explicit note in `docs/requirements.md` and ask.
 
-If requirements are ambiguous, prefer adding an explicit note in `docs/requirements.md` and ask.
+## Knowledge Index
+
+- Product requirements: `docs/requirements.md`
+- System architecture: `docs/architecture.md`
+- API surface and contract details: `docs/api-spec.md`
+- CLI behavior and contract: `docs/cli-spec.md`
+- Etsy bridge implementation and runbook: `docs/etsy-openapi-bridges.md`
+- Logging strategy: `docs/logging-strategy.md`
+- Event log actions: `docs/event-log-actions.md`
+- Log UX spec: `docs/log-view.md`
+- Database query runbook: `docs/database-queries.md`
+- Docs vs AGENTS placement guide: `docs/agent-doc-placement.md`
+- Server operations: `apps/server/README.md`
+- Typed client package: `packages/http-client/README.md`

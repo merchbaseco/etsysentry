@@ -26,6 +26,13 @@ Server transport base URL for both modalities:
 - Current implementation status:
   - implemented and active
 
+OAuth/session storage boundary:
+- Etsy OAuth tokens/connections are persisted server-side.
+- Website clients must not store Etsy OAuth tokens/session identifiers in browser storage:
+  - `localStorage`
+  - `sessionStorage`
+  - cookies
+
 ### Public API (`api.public.*`)
 
 - Intended clients:
