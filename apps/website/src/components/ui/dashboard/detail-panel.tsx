@@ -21,22 +21,29 @@ export function DetailPanel({
     return (
         <div className="fixed inset-0 z-50 flex justify-end">
             <div className="absolute inset-0 bg-background/60 backdrop-blur-sm" onClick={onClose} />
-            <div className="relative z-10 w-full max-w-md border-l border-border bg-card overflow-y-auto animate-in slide-in-from-right duration-300">
-                <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card px-4 py-3">
-                    <div>
-                        <h3 className="text-xs font-semibold text-primary">{title}</h3>
+            <div className="relative z-10 w-full max-w-lg border-l border-border bg-card overflow-y-auto animate-in slide-in-from-right duration-300">
+                <div className="sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-card px-5 py-4">
+                    <div className="min-w-0 flex-1">
+                        <h3 className="truncate text-sm font-semibold text-primary" title={title}>
+                            {title}
+                        </h3>
                         {subtitle ? (
-                            <p className="mt-0.5 text-[10px] text-muted-foreground">{subtitle}</p>
+                            <p
+                                className="mt-0.5 truncate font-mono text-[10px] text-muted-foreground"
+                                title={subtitle}
+                            >
+                                {subtitle}
+                            </p>
                         ) : null}
                     </div>
                     <button
                         onClick={onClose}
-                        className="rounded p-1 hover:bg-secondary cursor-pointer transition-colors"
+                        className="shrink-0 rounded p-1.5 hover:bg-secondary cursor-pointer transition-colors"
                     >
                         <X className="size-4 text-muted-foreground" />
                     </button>
                 </div>
-                <div className="space-y-4 p-4">{children}</div>
+                <div className="space-y-5 p-5">{children}</div>
             </div>
         </div>
     );
@@ -52,9 +59,19 @@ export function DetailRow({
     valueColor?: string;
 }) {
     return (
-        <div className="flex items-start justify-between border-b border-border/50 py-1.5">
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</span>
-            <span className={cn('text-right text-xs', valueColor ?? 'text-foreground')}>{value}</span>
+        <div className="flex items-center justify-between gap-4 border-b border-border/50 py-2">
+            <span className="shrink-0 text-[10px] uppercase tracking-wider text-muted-foreground">
+                {label}
+            </span>
+            <span
+                className={cn(
+                    'truncate text-right font-mono text-xs',
+                    valueColor ?? 'text-foreground'
+                )}
+                title={typeof value === 'string' ? value : undefined}
+            >
+                {value}
+            </span>
         </div>
     );
 }

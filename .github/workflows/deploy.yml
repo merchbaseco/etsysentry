@@ -25,3 +25,12 @@ jobs:
 
           # Show status
           docker compose -p etsysentry --env-file /Users/zknicker/srv/etsysentry/.env ps
+
+      - name: Notify Discord
+        if: always()
+        continue-on-error: true
+        uses: merchbaseco/captainhook/.github/actions/deploy-notify@v1
+        with:
+          discord-webhook-url: ${{ secrets.DISCORD_DEPLOY_WEBHOOK_URL }}
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          job-status: ${{ job.status }}

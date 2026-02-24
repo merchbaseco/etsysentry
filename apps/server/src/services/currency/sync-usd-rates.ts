@@ -1,7 +1,7 @@
 import { FetchUsdRatesError, fetchUsdRates } from './fetch-usd-rates';
 import { saveUsdRatesCache, saveUsdRatesRefreshError } from './save-usd-rates-cache';
 
-export const USD_RATES_REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1000;
+export const USD_RATES_REFRESH_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
 export class SyncUsdRatesError extends Error {
     constructor(message: string) {

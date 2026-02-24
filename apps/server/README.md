@@ -145,7 +145,7 @@ Current app surface:
 - Keyword ranks are auto-synced by `pg-boss` workers:
   - immediate enqueue when a keyword is tracked
   - daily scheduled dispatch for due tracked keywords
-- USD conversion rates are auto-synced by `pg-boss` workers every 6 hours.
+- USD conversion rates are auto-synced by `pg-boss` workers every 24 hours.
 - Etsy bridge HTTP calls are protected by in-process rate limiting with dynamic header sync:
   - reads `x-limit-per-second`, `x-limit-per-day`, `x-remaining-*`
   - honors `retry-after` on rate-limit responses
