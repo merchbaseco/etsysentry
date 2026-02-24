@@ -18,6 +18,7 @@ import {
     createListingSyncFailedEventLog,
     createListingSyncedEventLog
 } from './create-listing-sync-event-log';
+import { setTrackedShopListingActivityByEtsyListingId } from '../shops/set-tracked-shop-listing-activity';
 
 export type TrackedListingRecord = {
     etsyListingId: string;
@@ -258,12 +259,20 @@ export const syncTrackedListingFromEtsy = async (params: {
         accountId: params.accountId
     });
 
-    return upsertTrackedListingFromBridgeResponse({
+    const row = await upsertTrackedListingFromBridgeResponse({
         bridgeResponse: listingFromEtsy,
         now: new Date(),
         accountId: params.accountId,
         trackerClerkUserId: params.trackerClerkUserId
     });
+
+    await setTrackedShopListingActivityByEtsyListingId({
+        accountId: params.accountId,
+        etsyListingId: row.etsyListingId,
+        isActive: row.etsyState === 'active'
+    });
+
+    return row;
 };
 
 export const listTrackedListings = async (params: {

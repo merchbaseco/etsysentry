@@ -20,6 +20,8 @@ current and historical data for analysis.
 - Tenancy: multi-tenant from the start.
 - Auth:
   - Clerk for app/user auth
+  - Clerk identity is only used at the auth boundary to resolve `accountId`
+  - tenant/domain records are keyed by `accountId` (not Clerk user ids)
   - managed API keys for CLI/public API auth
   - API keys are user-owned; no role system for key ownership
   - admin-only behavior is gated by `ADMIN_EMAIL` match (RankWrangler style)
@@ -64,8 +66,8 @@ Each primitive must be creatable, listable, retrievable, and monitorable.
   - Query Etsy search for the keyword.
   - Capture first-page results each run.
   - Persist listing ranking observations with a single absolute rank per listing.
-  - Auto-add newly discovered listings only when the tracked listing does not already exist.
-  - Enqueue listing sync jobs for newly discovered listings so canonical listing snapshots are
+  - Upsert every encountered listing id into `tracked_listings` (dedupe by account + Etsy listing id).
+  - Enqueue listing sync jobs for newly inserted listing rows so canonical listing snapshots are
     hydrated.
 - Listing monitoring:
   - Is the canonical source of truth for listing snapshot fields.
@@ -86,9 +88,23 @@ Each primitive must be creatable, listable, retrievable, and monitorable.
     - if one method is unavailable, renormalize weights across available methods
   - `num_favorers` should be included as a weighting signal for confidence/adjustment in the helper.
 - Shop monitoring:
-  - Capture active/recent listings for the shop each run.
-  - Persist listing membership observations.
-  - Auto-add discovered listings.
+  - Capture the active listing set for the shop each run.
+  - Use incremental pagination with `sort_on=updated`, `sort_order=desc`.
+  - First run captures the full active set; later runs stop once they pass the prior sync watermark
+    (including the full tie bucket at that watermark timestamp).
+  - Persist daily shop metrics snapshots with at least:
+    - active listing count
+    - new listings count
+    - favorites total + daily delta
+    - sold total + daily delta
+    - review total + daily delta
+  - Persist tracked shop listing state with:
+    - `firstSeenAt`
+    - `lastSeenAt`
+    - active/inactive status
+  - Upsert every encountered listing id into `tracked_listings` (dedupe by account + Etsy listing id).
+  - Enqueue listing sync jobs for newly inserted listing rows.
+  - Removals are eventual state transitions (`isActive = false`), not exact daily counts.
 - v1 cadence policy for primitives:
   - listing: adaptive (`1d -> 3d -> 7d -> 1d on change`)
   - keyword: fixed daily

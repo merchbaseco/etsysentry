@@ -179,7 +179,7 @@ Common flags:
 Commands:
 - `es metrics series keywords [--ids <id1,id2,...>] [--range <range>] [--bucket <auto|day|week|month>] [--metrics <bestRank,avgRank,visibilityScore,resultCount>]`
 - `es metrics series listings [--ids <id1,id2,...>] [--range <range>] [--bucket <auto|day|week|month>] [--metrics <reviewCount,reviewAverage,favorerCount,price,views,quantity,estimatedSales>]`
-- `es metrics series shops [--ids <id1,id2,...>] [--range <range>] [--bucket <auto|day|week|month>] [--metrics <activeListings,newListings,removedListings,totalFavorers,avgPrice>]`
+- `es metrics series shops [--ids <id1,id2,...>] [--range <range>] [--bucket <auto|day|week|month>] [--metrics <activeListings,newListings,favoritesTotal,favoritesDelta,soldTotal,soldDelta,reviewTotal,reviewDelta>]`
 
 Bucket behavior:
 - `auto` resolves to `day` for `today/7d/30d`, and `week` for longer custom ranges

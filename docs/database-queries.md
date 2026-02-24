@@ -60,7 +60,7 @@ Inside `psql`:
 ```bash
 # Most recently tracked listings
 psql -h "$DATABASE_HOST" -p "$DATABASE_PORT" -U "$DATABASE_USER" -d "$DATABASE_NAME" -c \
-  "SELECT etsy_listing_id, account_id, tracker_clerk_user_id, updated_at FROM tracked_listings ORDER BY updated_at DESC LIMIT 50;"
+  "SELECT etsy_listing_id, account_id, updated_at FROM tracked_listings ORDER BY updated_at DESC LIMIT 50;"
 
 # Etsy OAuth connections by account
 psql -h "$DATABASE_HOST" -p "$DATABASE_PORT" -U "$DATABASE_USER" -d "$DATABASE_NAME" -c \

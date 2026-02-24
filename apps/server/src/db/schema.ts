@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import {
+    boolean,
     index,
     integer,
     jsonb,
@@ -31,6 +32,18 @@ export const trackedKeywordTrackingStateEnum = pgEnum('tracked_keyword_tracking_
 ]);
 
 export const trackedKeywordSyncStateEnum = pgEnum('tracked_keyword_sync_state', [
+    'idle',
+    'queued',
+    'syncing'
+]);
+
+export const trackedShopTrackingStateEnum = pgEnum('tracked_shop_tracking_state', [
+    'active',
+    'paused',
+    'error'
+]);
+
+export const trackedShopSyncStateEnum = pgEnum('tracked_shop_sync_state', [
     'idle',
     'queued',
     'syncing'
@@ -202,6 +215,112 @@ export const productKeywordRanks = pgTable(
             table.accountId,
             table.trackedKeywordId,
             table.rank
+        )
+    })
+);
+
+export const trackedShops = pgTable(
+    'tracked_shops',
+    {
+        trackedShopId: uuid('tracked_shop_id').primaryKey().defaultRandom(),
+        accountId: text('account_id').notNull(),
+        etsyShopId: text('etsy_shop_id').notNull(),
+        shopName: text('shop_name').notNull(),
+        shopUrl: text('shop_url'),
+        trackingState: trackedShopTrackingStateEnum('tracking_state').notNull().default('active'),
+        syncState: trackedShopSyncStateEnum('sync_state').notNull().default('idle'),
+        lastRefreshedAt: timestamp('last_refreshed_at', { mode: 'date' }).notNull().defaultNow(),
+        nextSyncAt: timestamp('next_sync_at', { mode: 'date' }).notNull().defaultNow(),
+        lastRefreshError: text('last_refresh_error'),
+        lastSyncedListingUpdatedTimestamp: integer('last_synced_listing_updated_timestamp'),
+        createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+        updatedAt: timestamp('updated_at', { mode: 'date' }).notNull().defaultNow()
+    },
+    (table) => ({
+        tenantShopUnique: uniqueIndex('tracked_shops_tenant_shop_unique').on(
+            table.accountId,
+            table.etsyShopId
+        ),
+        accountIdx: index('tracked_shops_account_idx').on(table.accountId),
+        trackingStateIdx: index('tracked_shops_tracking_state_idx').on(table.trackingState),
+        syncStateIdx: index('tracked_shops_sync_state_idx').on(table.syncState),
+        nextSyncAtIdx: index('tracked_shops_next_sync_at_idx').on(table.nextSyncAt),
+        updatedAtIdx: index('tracked_shops_updated_at_idx').on(table.updatedAt)
+    })
+);
+
+export const trackedShopSnapshots = pgTable(
+    'tracked_shop_snapshots',
+    {
+        id: uuid('id').primaryKey().defaultRandom(),
+        accountId: text('account_id').notNull(),
+        trackedShopId: uuid('tracked_shop_id')
+            .notNull()
+            .references(() => trackedShops.trackedShopId),
+        etsyShopId: text('etsy_shop_id').notNull(),
+        observedAt: timestamp('observed_at', { mode: 'date' }).notNull().defaultNow(),
+        activeListingCount: integer('active_listing_count').notNull().default(0),
+        newListingCount: integer('new_listing_count').notNull().default(0),
+        favoritesTotal: integer('favorites_total'),
+        favoritesDelta: integer('favorites_delta'),
+        soldTotal: integer('sold_total'),
+        soldDelta: integer('sold_delta'),
+        reviewTotal: integer('review_total'),
+        reviewDelta: integer('review_delta'),
+        createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow()
+    },
+    (table) => ({
+        tenantShopObservedAtIdx: index('tracked_shop_snapshots_tenant_shop_observed_at_idx').on(
+            table.accountId,
+            table.trackedShopId,
+            table.observedAt
+        ),
+        tenantEtsyShopObservedAtIdx: index(
+            'tracked_shop_snapshots_tenant_etsy_shop_observed_at_idx'
+        ).on(
+            table.accountId,
+            table.etsyShopId,
+            table.observedAt
+        )
+    })
+);
+
+export const trackedShopListings = pgTable(
+    'tracked_shop_listings',
+    {
+        id: uuid('id').primaryKey().defaultRandom(),
+        accountId: text('account_id').notNull(),
+        trackedShopId: uuid('tracked_shop_id')
+            .notNull()
+            .references(() => trackedShops.trackedShopId),
+        etsyShopId: text('etsy_shop_id').notNull(),
+        etsyListingId: text('etsy_listing_id').notNull(),
+        listingUpdatedTimestamp: integer('listing_updated_timestamp'),
+        isActive: boolean('is_active').notNull().default(true),
+        firstSeenAt: timestamp('first_seen_at', { mode: 'date' }).notNull().defaultNow(),
+        lastSeenAt: timestamp('last_seen_at', { mode: 'date' }).notNull().defaultNow(),
+        lastChangedAt: timestamp('last_changed_at', { mode: 'date' }).notNull().defaultNow(),
+        createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+        updatedAt: timestamp('updated_at', { mode: 'date' }).notNull().defaultNow()
+    },
+    (table) => ({
+        tenantShopListingUnique: uniqueIndex('tracked_shop_listings_tenant_shop_listing_unique').on(
+            table.accountId,
+            table.trackedShopId,
+            table.etsyListingId
+        ),
+        tenantShopActiveIdx: index('tracked_shop_listings_tenant_shop_active_idx').on(
+            table.accountId,
+            table.trackedShopId,
+            table.isActive
+        ),
+        tenantListingIdx: index('tracked_shop_listings_tenant_listing_idx').on(
+            table.accountId,
+            table.etsyListingId
+        ),
+        tenantEtsyShopIdx: index('tracked_shop_listings_tenant_etsy_shop_idx').on(
+            table.accountId,
+            table.etsyShopId
         )
     })
 );

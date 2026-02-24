@@ -91,3 +91,29 @@ Example (`getListing`):
   - `taxonomy_id`
   - `shop_location`
   - `legacy`
+
+## Current Shop Bridge Examples
+
+- Bridge: `apps/server/src/services/etsy/bridges/get-shop.ts`
+- OpenAPI operation: `getShop`
+- Path: `/v3/application/shops/{shop_id}`
+- Security: api key only (no OAuth bearer required)
+
+- Bridge: `apps/server/src/services/etsy/bridges/find-shops.ts`
+- OpenAPI operation: `findShops`
+- Path: `/v3/application/shops`
+- Supported query params:
+  - `shop_name`
+  - `limit`
+  - `offset`
+
+- Bridge: `apps/server/src/services/etsy/bridges/find-all-active-listings-by-shop.ts`
+- OpenAPI operation: `findAllActiveListingsByShop`
+- Path: `/v3/application/shops/{shop_id}/listings/active`
+- Supported query params:
+  - `limit`
+  - `offset`
+  - `sort_on`
+  - `sort_order`
+  - `keywords`
+  - `legacy`

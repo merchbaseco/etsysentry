@@ -21,6 +21,7 @@ Server transport base URL for both modalities:
 - Auth context behavior:
   - server validates Clerk token
   - `accountId` is resolved server-side from mapped Clerk identity `(iss, sub)`
+  - all tenant/domain ownership is keyed by `accountId` (not Clerk user ids)
   - procedures must not accept auth identity fields from client input
   - admin-only procedures require Clerk email to match `ADMIN_EMAIL`
 - Current implementation status:
@@ -203,7 +204,6 @@ Output:
   items: Array<{
     id: string;
     accountId: string;
-    trackerClerkUserId: string;
     etsyListingId: string;
     title: string;
     url: string | null;
@@ -281,6 +281,82 @@ Output:
   totalCount: number;
 }
 ```
+
+### Shops
+
+`app.shops.list` (query)
+
+Input:
+
+```ts
+{}
+```
+
+Output:
+
+```ts
+{
+  items: Array<{
+    id: string; // tracked shop id (uuid)
+    accountId: string;
+    etsyShopId: string;
+    shopName: string;
+    shopUrl: string | null;
+    trackingState: 'active' | 'paused' | 'error';
+    syncState: 'idle' | 'queued' | 'syncing';
+    lastRefreshedAt: string; // ISO timestamp
+    nextSyncAt: string; // ISO timestamp
+    lastRefreshError: string | null;
+    lastSyncedListingUpdatedTimestamp: number | null;
+    updatedAt: string; // ISO timestamp
+    latestSnapshot: {
+      observedAt: string; // ISO timestamp
+      activeListingCount: number;
+      newListingCount: number;
+      favoritesTotal: number | null;
+      favoritesDelta: number | null;
+      soldTotal: number | null;
+      soldDelta: number | null;
+      reviewTotal: number | null;
+      reviewDelta: number | null;
+    } | null;
+  }>;
+}
+```
+
+`app.shops.track` (mutation)
+
+Input:
+
+```ts
+{
+  shop: string; // Etsy shop id, Etsy shop URL, or shop name
+}
+```
+
+Output:
+
+```ts
+{
+  created: boolean;
+  item: {
+    // same item shape as entries in app.shops.list output
+  };
+}
+```
+
+`app.shops.refresh` (mutation)
+
+Input:
+
+```ts
+{
+  trackedShopId: string; // uuid
+}
+```
+
+Output:
+- same item shape as entries in `app.shops.list` output
 
 ## Public API (`api.public.*`) Canonical Contract (v1 Target)
 
@@ -730,7 +806,16 @@ Input:
   ids?: string[]; // Etsy shop ids or shop primitive ids
   range?: string;
   bucket?: 'auto' | 'day' | 'week' | 'month';
-  metrics?: Array<'activeListings' | 'newListings' | 'removedListings' | 'totalFavorers' | 'avgPrice'>;
+  metrics?: Array<
+    | 'activeListings'
+    | 'newListings'
+    | 'favoritesTotal'
+    | 'favoritesDelta'
+    | 'soldTotal'
+    | 'soldDelta'
+    | 'reviewTotal'
+    | 'reviewDelta'
+  >;
 }
 ```
 

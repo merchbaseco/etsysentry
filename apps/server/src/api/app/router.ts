@@ -6,6 +6,7 @@ import { etsyAuthRouter } from './etsy-auth/router';
 import { keywordsRouter } from './keywords/router';
 import { listingsRouter } from './listings/router';
 import { logsRouter } from './logs/router';
+import { shopsRouter } from './shops/router';
 
 export const appRouter = router({
     admin: adminRouter,
@@ -14,5 +15,6 @@ export const appRouter = router({
     etsyAuth: etsyAuthRouter,
     keywords: keywordsRouter,
     listings: listingsRouter,
-    logs: logsRouter
+    logs: logsRouter,
+    shops: shopsRouter
 });

@@ -1,187 +1,250 @@
-"use client"
-
-import { useState, useMemo } from "react"
-import { cn } from "@/lib/utils"
-import { mockShops, type Shop, type ListingStatus } from "@/lib/mock-data"
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  StatusBadge,
-  SortableHeader,
-  FilterBar,
-  FilterChip,
-  FilterGroup,
-  TopToolbar,
-  Pagination,
-  EmptyState,
-  DetailPanel,
-  DetailRow,
-  timeAgo,
-  timeUntil,
-  formatNumber,
-} from "@/components/ui/dashboard"
+    type ListTrackedShopsOutput,
+    listTrackedShops,
+    refreshTrackedShop,
+    trackShop,
+    type TrackedShopItem
+} from '@/lib/shops-api';
+import { TrpcRequestError } from '@/lib/trpc-http';
+import { queryClient, trpc } from '@/lib/trpc-client';
+import { cn } from '@/lib/utils';
+import {
+    EmptyState,
+    FilterChip,
+    FilterGroup,
+    TopToolbar
+} from '@/components/ui/dashboard';
+import { ShopsTable } from './shops-table';
 
-const PAGE_SIZE = 15
+const trackedShopsQueryKey = trpc.app.shops.list.queryOptions({}).queryKey;
+const trackedShopsQueryKeyJson = JSON.stringify(trackedShopsQueryKey);
+
+const toErrorMessage = (error: unknown): string => {
+    if (error instanceof TrpcRequestError) {
+        return error.message;
+    }
+
+    if (error instanceof Error && error.message.length > 0) {
+        return error.message;
+    }
+
+    return 'Unexpected request failure.';
+};
+
+const upsertById = (items: TrackedShopItem[], nextItem: TrackedShopItem): TrackedShopItem[] => {
+    const existingIndex = items.findIndex((item) => item.id === nextItem.id);
+
+    if (existingIndex === -1) {
+        return [nextItem, ...items];
+    }
+
+    const clone = [...items];
+    clone[existingIndex] = nextItem;
+
+    return clone;
+};
+
+const isShopSyncInFlight = (item: TrackedShopItem): boolean => {
+    return item.syncState === 'queued' || item.syncState === 'syncing';
+};
 
 export function ShopsTab() {
-  const [search, setSearch] = useState("")
-  const [sortKey, setSortKey] = useState("totalTrackedListings")
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc")
-  const [page, setPage] = useState(1)
-  const [filterStatus, setFilterStatus] = useState<ListingStatus | null>(null)
-  const [filterActivity, setFilterActivity] = useState<"high" | "medium" | "low" | null>(null)
-  const [selectedShop, setSelectedShop] = useState<Shop | null>(null)
+    const cachedTrackedShops = queryClient.getQueryData<ListTrackedShopsOutput>(trackedShopsQueryKey);
+    const initialItems = cachedTrackedShops?.items ?? [];
 
-  function handleSort(key: string) {
-    if (sortKey === key) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"))
-    } else {
-      setSortKey(key)
-      setSortDir("desc")
-    }
-    setPage(1)
-  }
+    const [search, setSearch] = useState('');
+    const [trackingStateFilter, setTrackingStateFilter] = useState<
+        'active' | 'paused' | 'error' | null
+    >(null);
+    const [items, setItems] = useState<TrackedShopItem[]>(() => initialItems);
+    const [isLoading, setIsLoading] = useState(() => initialItems.length === 0);
+    const [isTracking, setIsTracking] = useState(false);
+    const [refreshingById, setRefreshingById] = useState<Record<string, boolean>>({});
+    const [shopInput, setShopInput] = useState('');
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const filtered = useMemo(() => {
-    let data = [...mockShops]
-    if (search) {
-      const q = search.toLowerCase()
-      data = data.filter(
-        (s) =>
-          s.shopName.toLowerCase().includes(q) ||
-          s.shopId.toLowerCase().includes(q),
-      )
-    }
-    if (filterStatus) data = data.filter((s) => s.status === filterStatus)
-    if (filterActivity) data = data.filter((s) => s.activityLevel === filterActivity)
+    const loadShops = useCallback(async () => {
+        try {
+            const response = await listTrackedShops({});
 
-    data.sort((a, b) => {
-      const aVal = a[sortKey as keyof Shop]
-      const bVal = b[sortKey as keyof Shop]
-      if (typeof aVal === "number" && typeof bVal === "number") {
-        return sortDir === "asc" ? aVal - bVal : bVal - aVal
-      }
-      const aStr = String(aVal)
-      const bStr = String(bVal)
-      return sortDir === "asc" ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr)
-    })
-    return data
-  }, [search, sortKey, sortDir, filterStatus, filterActivity])
+            setItems(response.items);
+            queryClient.setQueryData(trackedShopsQueryKey, response);
+            setErrorMessage(null);
+        } catch (error) {
+            setErrorMessage(toErrorMessage(error));
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
 
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+    useEffect(() => {
+        void loadShops();
+    }, [loadShops]);
 
-  return (
-    <div className="flex flex-col h-full">
-      <TopToolbar search={search} onSearchChange={(v) => { setSearch(v); setPage(1) }}>
-        <FilterBar>
-          <FilterGroup label="Status">
-            {(["active", "paused", "error"] as ListingStatus[]).map((s) => (
-              <FilterChip key={s} label={s} active={filterStatus === s} onClick={() => { setFilterStatus(filterStatus === s ? null : s); setPage(1) }} />
-            ))}
-          </FilterGroup>
-          <FilterGroup label="Activity">
-            {(["high", "medium", "low"] as const).map((a) => (
-              <FilterChip key={a} label={a} active={filterActivity === a} onClick={() => { setFilterActivity(filterActivity === a ? null : a); setPage(1) }} />
-            ))}
-          </FilterGroup>
-        </FilterBar>
-      </TopToolbar>
+    useEffect(() => {
+        return queryClient.getQueryCache().subscribe((event) => {
+            if (JSON.stringify(event.query.queryKey) !== trackedShopsQueryKeyJson) {
+                return;
+            }
 
-      <div className="flex-1 overflow-auto">
-        {paginated.length === 0 ? (
-          <EmptyState message="No shops match your filters." />
-        ) : (
-          <table className="w-full text-xs">
-            <thead className="sticky top-0 z-10 bg-card">
-              <tr className="border-b border-border">
-                <th className="px-3 py-2 text-left"><SortableHeader label="Shop" sortKey="shopName" currentSort={sortKey} currentDir={sortDir} onSort={handleSort} /></th>
-                <th className="px-2 py-2 text-left"><SortableHeader label="ID" sortKey="shopId" currentSort={sortKey} currentDir={sortDir} onSort={handleSort} /></th>
-                <th className="px-2 py-2 text-center"><SortableHeader label="Tracked" sortKey="totalTrackedListings" currentSort={sortKey} currentDir={sortDir} onSort={handleSort} className="justify-center" /></th>
-                <th className="px-2 py-2 text-center"><SortableHeader label="New" sortKey="newListings" currentSort={sortKey} currentDir={sortDir} onSort={handleSort} className="justify-center" /></th>
-                <th className="px-2 py-2 text-center"><SortableHeader label="Removed" sortKey="removedListings" currentSort={sortKey} currentDir={sortDir} onSort={handleSort} className="justify-center" /></th>
-                <th className="px-2 py-2 text-right"><SortableHeader label="Avg Rating" sortKey="avgListingRating" currentSort={sortKey} currentDir={sortDir} onSort={handleSort} className="justify-end" /></th>
-                <th className="px-2 py-2 text-right"><SortableHeader label="Avg Sales" sortKey="avgEstimatedSales" currentSort={sortKey} currentDir={sortDir} onSort={handleSort} className="justify-end" /></th>
-                <th className="px-2 py-2 text-center">
-                  <span className="text-[10px] uppercase tracking-wider font-medium text-muted-foreground">Activity</span>
-                </th>
-                <th className="px-2 py-2 text-right"><SortableHeader label="Last Run" sortKey="lastRun" currentSort={sortKey} currentDir={sortDir} onSort={handleSort} className="justify-end" /></th>
-                <th className="px-2 py-2 text-right"><SortableHeader label="Next Run" sortKey="nextRun" currentSort={sortKey} currentDir={sortDir} onSort={handleSort} className="justify-end" /></th>
-                <th className="px-2 py-2 text-center"><SortableHeader label="Status" sortKey="status" currentSort={sortKey} currentDir={sortDir} onSort={handleSort} className="justify-center" /></th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginated.map((s) => (
-                <tr
-                  key={s.id}
-                  onClick={() => setSelectedShop(s)}
-                  className="border-b border-border/50 cursor-pointer transition-colors hover:bg-accent/50"
+            const data = event.query.state.data as ListTrackedShopsOutput | undefined;
+
+            if (!data) {
+                return;
+            }
+
+            setItems(data.items);
+            setIsLoading(false);
+        });
+    }, []);
+
+    const filtered = useMemo(() => {
+        const query = search.trim().toLowerCase();
+
+        return items.filter((item) => {
+            if (trackingStateFilter && item.trackingState !== trackingStateFilter) {
+                return false;
+            }
+
+            if (query.length === 0) {
+                return true;
+            }
+
+            return item.shopName.toLowerCase().includes(query) || item.etsyShopId.includes(query);
+        });
+    }, [items, search, trackingStateFilter]);
+
+    const handleTrack = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+
+        if (!shopInput.trim()) {
+            return;
+        }
+
+        setIsTracking(true);
+
+        try {
+            const response = await trackShop({
+                shop: shopInput
+            });
+
+            setItems((current) => {
+                const nextItems = upsertById(current, response.item);
+
+                queryClient.setQueryData<ListTrackedShopsOutput>(trackedShopsQueryKey, {
+                    items: nextItems
+                });
+
+                return nextItems;
+            });
+            setShopInput('');
+            setErrorMessage(null);
+        } catch (error) {
+            setErrorMessage(toErrorMessage(error));
+        } finally {
+            setIsTracking(false);
+        }
+    };
+
+    const handleRefreshRow = async (item: TrackedShopItem): Promise<void> => {
+        if (isShopSyncInFlight(item) || refreshingById[item.id] === true) {
+            return;
+        }
+
+        setRefreshingById((current) => ({
+            ...current,
+            [item.id]: true
+        }));
+
+        try {
+            const refreshed = await refreshTrackedShop({
+                trackedShopId: item.id
+            });
+
+            setItems((current) => {
+                const nextItems = upsertById(current, refreshed);
+
+                queryClient.setQueryData<ListTrackedShopsOutput>(trackedShopsQueryKey, {
+                    items: nextItems
+                });
+
+                return nextItems;
+            });
+            setErrorMessage(null);
+        } catch (error) {
+            setErrorMessage(toErrorMessage(error));
+            void loadShops();
+        } finally {
+            setRefreshingById((current) => ({
+                ...current,
+                [item.id]: false
+            }));
+        }
+    };
+
+    return (
+        <div className="flex h-full flex-col">
+            <TopToolbar search={search} onSearchChange={setSearch}>
+                <FilterGroup label="Tracking">
+                    {(['active', 'paused', 'error'] as const).map((stateValue) => (
+                        <FilterChip
+                            key={stateValue}
+                            label={stateValue}
+                            active={trackingStateFilter === stateValue}
+                            onClick={() =>
+                                setTrackingStateFilter(
+                                    trackingStateFilter === stateValue ? null : stateValue
+                                )
+                            }
+                        />
+                    ))}
+                </FilterGroup>
+            </TopToolbar>
+
+            <form
+                onSubmit={handleTrack}
+                className="flex items-center gap-2 border-b border-border px-3 py-2 text-xs"
+            >
+                <input
+                    value={shopInput}
+                    onChange={(event) => setShopInput(event.target.value)}
+                    type="text"
+                    placeholder="Paste Etsy shop URL, shop id, or shop name"
+                    className="h-8 flex-1 rounded border border-border bg-secondary px-2 text-xs outline-none placeholder:text-muted-foreground"
+                />
+                <button
+                    type="submit"
+                    disabled={isTracking}
+                    className={cn(
+                        'h-8 rounded border border-border bg-secondary px-3 text-[11px] uppercase tracking-wider transition-colors',
+                        'disabled:cursor-default disabled:opacity-50',
+                        'hover:text-foreground'
+                    )}
                 >
-                  <td className="px-3 py-1.5 text-foreground font-medium">{s.shopName}</td>
-                  <td className="px-2 py-1.5 text-terminal-dim font-mono">{s.shopId}</td>
-                  <td className="px-2 py-1.5 text-center">{s.totalTrackedListings}</td>
-                  <td className="px-2 py-1.5 text-center">
-                    {s.newListings > 0 ? (
-                      <span className="text-terminal-green">+{s.newListings}</span>
-                    ) : (
-                      <span className="text-terminal-dim">0</span>
-                    )}
-                  </td>
-                  <td className="px-2 py-1.5 text-center">
-                    {s.removedListings > 0 ? (
-                      <span className="text-terminal-red">-{s.removedListings}</span>
-                    ) : (
-                      <span className="text-terminal-dim">0</span>
-                    )}
-                  </td>
-                  <td className="px-2 py-1.5 text-right text-terminal-yellow">{s.avgListingRating}</td>
-                  <td className="px-2 py-1.5 text-right">{formatNumber(s.avgEstimatedSales)}</td>
-                  <td className="px-2 py-1.5 text-center">
-                    <span className={cn(
-                      "text-[10px] px-1.5 py-0.5 rounded uppercase tracking-wider",
-                      s.activityLevel === "high" ? "bg-terminal-green/10 text-terminal-green" :
-                      s.activityLevel === "medium" ? "bg-terminal-yellow/10 text-terminal-yellow" :
-                      "bg-secondary text-terminal-dim",
-                    )}>
-                      {s.activityLevel}
-                    </span>
-                  </td>
-                  <td className="px-2 py-1.5 text-right text-terminal-dim text-[10px]">{timeAgo(s.lastRun)}</td>
-                  <td className="px-2 py-1.5 text-right text-terminal-dim text-[10px]">{timeUntil(s.nextRun)}</td>
-                  <td className="px-2 py-1.5 text-center"><StatusBadge status={s.status} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+                    {isTracking ? 'Tracking...' : 'Track Shop'}
+                </button>
+            </form>
 
-      {filtered.length > 0 && (
-        <Pagination page={page} totalPages={totalPages} onPageChange={setPage} totalItems={filtered.length} pageSize={PAGE_SIZE} />
-      )}
+            {errorMessage ? (
+                <div className="border-b border-terminal-red/20 bg-terminal-red/10 px-3 py-2 text-xs text-terminal-red">
+                    {errorMessage}
+                </div>
+            ) : null}
 
-      <DetailPanel
-        open={!!selectedShop}
-        onClose={() => setSelectedShop(null)}
-        title={selectedShop?.shopName || ""}
-        subtitle={selectedShop ? `${selectedShop.shopId}` : ""}
-      >
-        {selectedShop && (
-          <div className="space-y-0">
-            <DetailRow label="Shop Name" value={selectedShop.shopName} />
-            <DetailRow label="Shop ID" value={selectedShop.shopId} />
-            <DetailRow label="Total Tracked" value={selectedShop.totalTrackedListings} />
-            <DetailRow label="New Listings" value={selectedShop.newListings > 0 ? `+${selectedShop.newListings}` : "0"} valueColor={selectedShop.newListings > 0 ? "text-terminal-green" : "text-terminal-dim"} />
-            <DetailRow label="Removed Listings" value={selectedShop.removedListings > 0 ? `-${selectedShop.removedListings}` : "0"} valueColor={selectedShop.removedListings > 0 ? "text-terminal-red" : "text-terminal-dim"} />
-            <DetailRow label="Avg Rating" value={selectedShop.avgListingRating} valueColor="text-terminal-yellow" />
-            <DetailRow label="Avg Sales" value={formatNumber(selectedShop.avgEstimatedSales)} />
-            <DetailRow label="Activity Level" value={selectedShop.activityLevel.toUpperCase()} valueColor={
-              selectedShop.activityLevel === "high" ? "text-terminal-green" : selectedShop.activityLevel === "medium" ? "text-terminal-yellow" : "text-terminal-dim"
-            } />
-            <DetailRow label="Last Run" value={timeAgo(selectedShop.lastRun)} />
-            <DetailRow label="Next Run" value={timeUntil(selectedShop.nextRun)} />
-            <DetailRow label="Status" value={<StatusBadge status={selectedShop.status} />} />
-          </div>
-        )}
-      </DetailPanel>
-    </div>
-  )
+            <div className="min-h-0 flex-1 overflow-auto">
+                {isLoading ? (
+                    <div className="px-3 py-6 text-xs text-muted-foreground">Loading tracked shops...</div>
+                ) : filtered.length === 0 ? (
+                    <EmptyState message="No tracked shops yet. Add one above." />
+                ) : (
+                    <ShopsTable
+                        items={filtered}
+                        refreshingById={refreshingById}
+                        onRefresh={handleRefreshRow}
+                    />
+                )}
+            </div>
+        </div>
+    );
 }
