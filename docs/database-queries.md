@@ -11,6 +11,13 @@ or incident triage.
 - Keep queries bounded (`LIMIT`, tight `WHERE` clauses, explicit time windows).
 - Avoid exposing secrets or full credential values in responses.
 
+## Schema and Migration Policy
+
+- Use Drizzle ORM for schema and query definitions.
+- Never hand-write migration SQL.
+- Update schema source first, then generate migrations with tooling.
+- Keep bootstrap SQL assets (for example `init.sql`) aligned with schema evolution.
+
 ## Connection Setup
 
 Run from repo root:
