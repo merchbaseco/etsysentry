@@ -11,7 +11,6 @@ import {
 import { getEtsyOAuthAccessToken } from '../etsy/oauth-service';
 import { recordEtsyApiCallBestEffort } from '../etsy/record-etsy-api-call';
 import {
-    buildDigitalListingTrackingErrorMessage,
     isExcludedDigitalListingType
 } from './is-excluded-digital-listing-type';
 import {
@@ -184,9 +183,7 @@ const bridgeToUpsertValues = (params: {
         title: params.bridgeResponse.title,
         trackerClerkUserId: params.trackerClerkUserId,
         syncState: 'idle' as const,
-        trackingState: isExcludedDigitalListingType(params.bridgeResponse.listingType)
-            ? ('paused' as const)
-            : ('active' as const),
+        trackingState: 'active' as const,
         updatedAt: params.now,
         updatedTimestamp: params.bridgeResponse.updatedTimestamp,
         url: params.bridgeResponse.url,
@@ -261,23 +258,12 @@ export const syncTrackedListingFromEtsy = async (params: {
     etsyListingId: string;
     accountId: string;
     trackerClerkUserId: string;
-    rejectExcludedListingType?: boolean;
 }): Promise<typeof trackedListings.$inferSelect> => {
     const listingFromEtsy = await fetchListingFromEtsy({
         clerkUserId: params.clerkUserId,
         etsyListingId: params.etsyListingId,
         accountId: params.accountId
     });
-
-    if (
-        params.rejectExcludedListingType &&
-        isExcludedDigitalListingType(listingFromEtsy.listingType)
-    ) {
-        throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: buildDigitalListingTrackingErrorMessage()
-        });
-    }
 
     const row = await upsertTrackedListingFromBridgeResponse({
         bridgeResponse: listingFromEtsy,
@@ -352,8 +338,7 @@ export const trackListing = async (params: {
         clerkUserId: params.trackerClerkUserId,
         etsyListingId,
         accountId: params.accountId,
-        trackerClerkUserId: params.trackerClerkUserId,
-        rejectExcludedListingType: true
+        trackerClerkUserId: params.trackerClerkUserId
     });
 
     const created = existing.length === 0;

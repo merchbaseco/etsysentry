@@ -61,6 +61,7 @@ This file is the always-on guide for AI coding assistants in EtsySentry.
 - Logging strategy: `docs/logging-strategy.md`
 - Event log actions: `docs/event-log-actions.md`
 - Log UX spec: `docs/log-view.md`
+- Known product/implementation gaps: `docs/known-gaps.md`
 - Database query runbook: `docs/database-queries.md`
 - Docs vs AGENTS placement guide: `docs/agent-doc-placement.md`
 - Server operations: `apps/server/README.md`

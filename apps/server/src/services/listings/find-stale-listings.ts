@@ -1,4 +1,4 @@
-import { and, asc, eq, lte, ne } from 'drizzle-orm';
+import { and, asc, eq, lte, ne, or } from 'drizzle-orm';
 import { db } from '../../db';
 import { trackedListings } from '../../db/schema';
 import {
@@ -33,8 +33,7 @@ export const findStaleListings = async (params?: {
         .from(trackedListings)
         .where(
             and(
-                eq(trackedListings.isDigital, false),
-                ne(trackedListings.trackingState, 'paused'),
+                or(eq(trackedListings.isDigital, true), ne(trackedListings.trackingState, 'paused')),
                 eq(trackedListings.syncState, 'idle'),
                 lte(trackedListings.lastRefreshedAt, staleBefore)
             )

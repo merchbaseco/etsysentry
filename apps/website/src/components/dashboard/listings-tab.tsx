@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import {
     EmptyState,
     FilterBar,
+    FilterChip,
     FilterGroup,
     TopToolbar,
     formatNumber,
@@ -86,6 +87,7 @@ export function ListingsTab() {
     const initialItems = cachedTrackedListings?.items ?? [];
 
     const [search, setSearch] = useState('');
+    const [showDigitalListings, setShowDigitalListings] = useState(false);
     const [priceRange, setPriceRange] = useState<[number, number]>([0, 40]);
     const [favsRange, setFavsRange] = useState<[number, number]>([0, 5000]);
     const [items, setItems] = useState<TrackedListingItem[]>(() => initialItems);
@@ -138,6 +140,10 @@ export function ListingsTab() {
         const favsActive = favsRange[0] > 0 || favsRange[1] < 5000;
 
         return items.filter((item) => {
+            if (!showDigitalListings && item.isDigital) {
+                return false;
+            }
+
             if (priceActive) {
                 const price = item.price?.value ?? null;
                 if (price === null || price < priceRange[0] || price > priceRange[1]) {
@@ -162,7 +168,7 @@ export function ListingsTab() {
                 (item.shopId ?? '').includes(query)
             );
         });
-    }, [favsRange, items, priceRange, search]);
+    }, [favsRange, items, priceRange, search, showDigitalListings]);
 
     const handleTrack = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -252,6 +258,13 @@ export function ListingsTab() {
                             max={5000}
                             step={50}
                             onChange={setFavsRange}
+                        />
+                    </FilterGroup>
+                    <FilterGroup label="Listings">
+                        <FilterChip
+                            label="Show digital"
+                            active={showDigitalListings}
+                            onClick={() => setShowDigitalListings((current) => !current)}
                         />
                     </FilterGroup>
                 </FilterBar>

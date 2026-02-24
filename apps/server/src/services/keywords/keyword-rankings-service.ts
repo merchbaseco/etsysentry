@@ -68,9 +68,7 @@ export const buildTrackedListingDiscoveryValues = (params: {
         thumbnailUrl: params.rankedListing.thumbnailUrl,
         title: params.rankedListing.title,
         trackerClerkUserId: params.clerkUserId,
-        trackingState: isExcludedDigitalListingType(params.rankedListing.listingType)
-            ? ('paused' as const)
-            : ('active' as const),
+        trackingState: 'active' as const,
         updatedAt: params.now,
         url: params.rankedListing.url
     };
@@ -271,12 +269,7 @@ export const syncRanksForKeyword = async (params: {
                     });
 
                 for (const inserted of insertedListings) {
-                    const rankedListing = uniqueRankedListingsById.get(inserted.etsyListingId);
-
-                    if (
-                        rankedListing &&
-                        !isExcludedDigitalListingType(rankedListing.listingType)
-                    ) {
+                    if (uniqueRankedListingsById.has(inserted.etsyListingId)) {
                         newlyDiscoveredEtsyListingIds.push(inserted.etsyListingId);
                     }
                 }

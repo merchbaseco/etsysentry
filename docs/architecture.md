@@ -238,7 +238,7 @@ Primitive cadence policy (v1):
 Current listing sync dispatch implementation:
 
 - `sync-stale-listings` runs every minute and enqueues due tracked listings in daily batches.
-- stale listing selection explicitly excludes digital rows (`tracked_listings.isDigital = false`).
+- stale listing selection includes digital rows and only excludes explicitly paused listings.
 
 Cadence policy (listing `updated_timestamp` aware):
 
