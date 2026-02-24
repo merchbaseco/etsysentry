@@ -248,6 +248,9 @@ Cadence policy (listing `updated_timestamp` aware):
   - rank observations in `product_keyword_ranks`
   - discovery-time insert into `tracked_listings` for missing rows
   - enqueue of `sync-listing` jobs for those newly inserted rows
+  - tracked keyword sync status fields in `tracked_keywords`, including:
+    - `lastRefreshedAt`, `lastRefreshError`, `nextSyncAt`
+    - `syncState` (`idle|queued|syncing`)
 - `sync-listing` owns canonical listing snapshot fields in `tracked_listings`, including:
   - `etsyState`
   - `priceAmount`, `priceCurrencyCode`, `priceDivisor`

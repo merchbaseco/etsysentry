@@ -85,6 +85,13 @@
       "when": 1771963922040,
       "tag": "0011_bouncy_shinko_yamashiro",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1771966793667,
+      "tag": "0012_orange_daimon_hellstrom",
+      "breakpoints": true
     }
   ]
 }
