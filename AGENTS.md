@@ -39,6 +39,8 @@ This file is the always-on guide for AI coding assistants in EtsySentry.
 3. Generalize only when there is a concrete follow-up requirement.
 4. Do not add abstractions, parameters, or extension points unless at least two current call
    sites need them now.
+5. Treat this codebase as work in progress: prefer the right aspirational implementation over
+   preserving legacy code paths or compatibility layers.
 
 ## Required Maintenance
 
