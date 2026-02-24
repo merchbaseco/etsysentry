@@ -133,7 +133,8 @@ docs/
 - Clerk identifiers are boundary auth inputs only; persisted domain ownership keys are `accountId`.
 - `api.app.*` procedures:
   - require Clerk bearer auth (`Authorization: Bearer <token>`)
-  - derive `accountId` from verified token/context using `(iss, sub)` identity mapping
+  - derive `accountId` from verified token/context using `(iss, sub)` identity mapping with email
+    match as the preferred link when available
   - do not trust client-supplied auth identity fields
   - enforce tenant membership
   - enforce admin-only operations via `email === ADMIN_EMAIL`

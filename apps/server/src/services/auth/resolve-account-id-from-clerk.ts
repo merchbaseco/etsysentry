@@ -10,6 +10,11 @@ export type ResolveAccountIdFromClerkInput = {
     email: string | null;
 };
 
+type ResolvePreferredAccountIdInput = {
+    accountIdFromIdentity: string | null;
+    accountIdFromEmail: string | null;
+};
+
 const normalizeEmail = (email: string | null): string | null => {
     if (!email) {
         return null;
@@ -80,28 +85,23 @@ const upsertIdentity = async (params: {
         });
 };
 
+export const resolvePreferredAccountId = (input: ResolvePreferredAccountIdInput): string | null => {
+    return input.accountIdFromEmail ?? input.accountIdFromIdentity;
+};
+
 export const resolveAccountIdFromClerk = async (
     input: ResolveAccountIdFromClerkInput
 ): Promise<string> => {
     const normalizedEmail = normalizeEmail(input.email);
-    const existingAccountId = await findExistingByIdentity({
+    const accountIdFromIdentity = await findExistingByIdentity({
         clerkIssuer: input.clerkIssuer,
         clerkSubject: input.clerkSubject
     });
-
-    if (existingAccountId) {
-        await upsertIdentity({
-            accountId: existingAccountId,
-            clerkIssuer: input.clerkIssuer,
-            clerkOrgId: input.clerkOrgId,
-            clerkSubject: input.clerkSubject,
-            email: normalizedEmail
-        });
-
-        return existingAccountId;
-    }
-
-    const linkedAccountId = normalizedEmail ? await findExistingByEmail(normalizedEmail) : null;
+    const accountIdFromEmail = normalizedEmail ? await findExistingByEmail(normalizedEmail) : null;
+    const linkedAccountId = resolvePreferredAccountId({
+        accountIdFromEmail,
+        accountIdFromIdentity
+    });
     const accountId = linkedAccountId ?? randomUUID();
 
     if (!linkedAccountId) {
