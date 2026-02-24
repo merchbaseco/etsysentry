@@ -77,6 +77,11 @@ Optional:
 - `ETSY_OAUTH_SCOPES` (space/comma-delimited; `listings_r` is always required)
 - `ETSY_OAUTH_STATE_TTL_MS`
 - `ETSY_OAUTH_REFRESH_SKEW_MS`
+- `ETSY_RATE_LIMIT_DEFAULT_PER_SECOND`
+- `ETSY_RATE_LIMIT_DEFAULT_PER_DAY`
+- `ETSY_RATE_LIMIT_MAX_RETRIES`
+- `ETSY_RATE_LIMIT_BACKOFF_INITIAL_MS`
+- `ETSY_RATE_LIMIT_BACKOFF_MAX_MS`
 - `DATABASE_HOST` (default `localhost`)
 - `DATABASE_PORT` (default `5435`)
 - `DATABASE_NAME` (default `etsysentry`)
@@ -104,6 +109,7 @@ Optional:
 Current app surface:
 
 - `api.app.admin.status` (admin-only)
+- `api.app.admin.enqueueSyncAllListings` (admin-only)
 - `api.app.dashboard.getSummary`
 - `api.app.etsyAuth.start`
 - `api.app.etsyAuth.status`
@@ -112,6 +118,7 @@ Current app surface:
 - `api.app.listings.list`
 - `api.app.listings.track`
 - `api.app.listings.refresh`
+- `api.app.listings.refreshMany`
 - `api.app.listings.getKeywordRanksForProduct`
 - `api.app.keywords.list`
 - `api.app.keywords.track`
@@ -139,6 +146,10 @@ Current app surface:
   - immediate enqueue when a keyword is tracked
   - daily scheduled dispatch for due tracked keywords
 - USD conversion rates are auto-synced by `pg-boss` workers every 6 hours.
+- Etsy bridge HTTP calls are protected by in-process rate limiting with dynamic header sync:
+  - reads `x-limit-per-second`, `x-limit-per-day`, `x-remaining-*`
+  - honors `retry-after` on rate-limit responses
+  - applies exponential backoff when `retry-after` is absent
 - `api.app.*` procedures require Clerk bearer auth (`Authorization: Bearer <token>`).
 - Admin-only app procedures require authenticated user email to match `ADMIN_EMAIL`.
 - Keep `.env.example` updated when env vars change.

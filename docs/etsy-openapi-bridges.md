@@ -17,6 +17,16 @@ Each bridge file must:
    - response validation and field mapping
    - Etsy error normalization
 
+All Etsy bridge HTTP requests must use the shared guarded request helper:
+- `apps/server/src/services/etsy/fetch-etsy-api.ts`
+- `apps/server/src/services/etsy/get-etsy-api-key-header-value.ts`
+
+This guard provides transport-level safety only:
+- local request pacing using configured defaults
+- runtime updates from Etsy response headers (`x-limit-*`, `x-remaining-*`)
+- `retry-after` handling on rate-limit responses
+- exponential backoff fallback when `retry-after` is missing
+
 Each bridge file must not:
 1. Access the database.
 2. Run orchestration logic (batching, retries, scheduling).

@@ -1,5 +1,7 @@
 import { env } from '../../../config/env';
 import { z } from 'zod';
+import { fetchEtsyApi } from '../fetch-etsy-api';
+import { getEtsyApiKeyHeaderValue } from '../get-etsy-api-key-header-value';
 
 const etsyOAuthSuccessResponseSchema = z.object({
     access_token: z.string().min(1),
@@ -47,14 +49,6 @@ export class EtsyOAuthBridgeError extends Error {
         this.responseBody = responseBody;
     }
 }
-
-const getApiKeyHeaderValue = (): string => {
-    if (env.ETSY_API_SHARED_SECRET) {
-        return `${env.ETSY_API_KEY}:${env.ETSY_API_SHARED_SECRET}`;
-    }
-
-    return env.ETSY_API_KEY;
-};
 
 const buildRequestBody = (input: EtsyOAuthTokenRequest): URLSearchParams => {
     if (input.grantType === 'authorization_code') {
@@ -116,13 +110,16 @@ export const exchangeOAuthToken = async (
         grantType: input.grantType
     });
 
-    const response = await fetch('https://api.etsy.com/v3/public/oauth/token', {
-        body: buildRequestBody(input),
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'x-api-key': getApiKeyHeaderValue()
+    const response = await fetchEtsyApi({
+        init: {
+            body: buildRequestBody(input),
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'x-api-key': getEtsyApiKeyHeaderValue()
+            },
+            method: 'POST'
         },
-        method: 'POST'
+        url: 'https://api.etsy.com/v3/public/oauth/token'
     });
 
     const rawBody = await response.text();

@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { env } from '../../../config/env';
+import { fetchEtsyApi } from '../fetch-etsy-api';
+import { getEtsyApiKeyHeaderValue } from '../get-etsy-api-key-header-value';
 
 const getListingIncludeSchema = z.enum([
     'Shipping',
@@ -145,14 +146,6 @@ export class EtsyGetListingBridgeError extends Error {
     }
 }
 
-const getApiKeyHeaderValue = (): string => {
-    if (env.ETSY_API_SHARED_SECRET) {
-        return `${env.ETSY_API_KEY}:${env.ETSY_API_SHARED_SECRET}`;
-    }
-
-    return env.ETSY_API_KEY;
-};
-
 const tryParseJson = (input: string): unknown | null => {
     if (input.length === 0) {
         return null;
@@ -285,13 +278,16 @@ export const getListing = async (
         throw new EtsyGetListingBridgeError('Invalid getListing bridge input.', 400, '');
     }
 
-    const response = await fetch(buildEndpoint(parsedInput.data), {
-        headers: {
-            Accept: 'application/json',
-            Authorization: `Bearer ${parsedInput.data.accessToken}`,
-            'x-api-key': getApiKeyHeaderValue()
+    const response = await fetchEtsyApi({
+        init: {
+            headers: {
+                Accept: 'application/json',
+                Authorization: `Bearer ${parsedInput.data.accessToken}`,
+                'x-api-key': getEtsyApiKeyHeaderValue()
+            },
+            method: 'GET'
         },
-        method: 'GET'
+        url: buildEndpoint(parsedInput.data)
     });
 
     const rawBody = await response.text();

@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { env } from '../../../config/env';
+import { fetchEtsyApi } from '../fetch-etsy-api';
+import { getEtsyApiKeyHeaderValue } from '../get-etsy-api-key-header-value';
 
 const sortOnSchema = z.enum(['created', 'price', 'updated', 'score']);
 
@@ -96,14 +97,6 @@ export class EtsyFindAllListingsActiveBridgeError extends Error {
         this.responseBody = responseBody;
     }
 }
-
-const getApiKeyHeaderValue = (): string => {
-    if (env.ETSY_API_SHARED_SECRET) {
-        return `${env.ETSY_API_KEY}:${env.ETSY_API_SHARED_SECRET}`;
-    }
-
-    return env.ETSY_API_KEY;
-};
 
 const tryParseJson = (input: string): unknown | null => {
     if (input.length === 0) {
@@ -237,13 +230,16 @@ export const findAllListingsActive = async (
         );
     }
 
-    const response = await fetch(buildEndpoint(parsedInput.data), {
-        headers: {
-            Accept: 'application/json',
-            Authorization: `Bearer ${parsedInput.data.accessToken}`,
-            'x-api-key': getApiKeyHeaderValue()
+    const response = await fetchEtsyApi({
+        init: {
+            headers: {
+                Accept: 'application/json',
+                Authorization: `Bearer ${parsedInput.data.accessToken}`,
+                'x-api-key': getEtsyApiKeyHeaderValue()
+            },
+            method: 'GET'
         },
-        method: 'GET'
+        url: buildEndpoint(parsedInput.data)
     });
 
     const rawBody = await response.text();

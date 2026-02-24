@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, mock, test } from 'bun:test';
 import { env } from '../../../config/env';
+import { resetEtsyRateLimitStateForTests } from '../fetch-etsy-api';
 import {
     EtsyFindAllListingsActiveBridgeError,
     findAllListingsActive
@@ -11,6 +12,7 @@ const originalEtsyApiSharedSecret = env.ETSY_API_SHARED_SECRET;
 afterEach(() => {
     globalThis.fetch = originalFetch;
     env.ETSY_API_SHARED_SECRET = originalEtsyApiSharedSecret;
+    resetEtsyRateLimitStateForTests();
 });
 
 describe('find-all-listings-active bridge', () => {
