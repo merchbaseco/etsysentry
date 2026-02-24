@@ -31,6 +31,7 @@ Implemented scaffold:
 - Tracked keywords persist sync queue state in `tracked_keywords.syncState` (`idle|queued|syncing`)
   so dashboard "next sync" labels can reflect queued/in-progress syncs across page reloads
 - User-facing event logs persisted in `event_logs` with admin listing API
+- Event log action catalog documented in `docs/event-log-actions.md`
 - Listing responses include derived `priceUsdValue` computed from cached conversion rates at
   request time
 - Product keyword-rank query (`api.app.listings.getKeywordRanksForProduct`)
