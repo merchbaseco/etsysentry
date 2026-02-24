@@ -19,7 +19,10 @@ import {
     formatNumber,
     timeAgo
 } from '@/components/ui/dashboard';
-import { MouseThumbnailTooltip } from './mouse-thumbnail-tooltip';
+import {
+    MouseThumbnailTooltipPortal,
+    useMouseThumbnailTooltip
+} from './mouse-thumbnail-tooltip';
 import { RangeFilter } from './range-filter';
 
 const trackedListingsQueryKey = trpc.app.listings.list.queryOptions({}).queryKey;
@@ -91,6 +94,8 @@ export function ListingsTab() {
     const [refreshingById, setRefreshingById] = useState<Record<string, boolean>>({});
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [listingInput, setListingInput] = useState('');
+    const { hideTooltip, queueTooltipPositionUpdate, showTooltip, tooltip, tooltipRef } =
+        useMouseThumbnailTooltip();
 
     const loadListings = useCallback(async () => {
         try {
@@ -331,7 +336,26 @@ export function ListingsTab() {
                                       : `Refresh ${item.title}`;
 
                                 return (
-                                    <tr key={item.id} className="border-b border-border/50">
+                                    <tr
+                                        key={item.id}
+                                        className="border-b border-border/50"
+                                        onMouseEnter={(event) => {
+                                            showTooltip({
+                                                cursorX: event.clientX,
+                                                cursorY: event.clientY,
+                                                imageAlt: item.title,
+                                                imageUrl: item.thumbnailUrl
+                                            });
+                                        }}
+                                        onMouseMove={(event) => {
+                                            if (!item.thumbnailUrl) {
+                                                return;
+                                            }
+
+                                            queueTooltipPositionUpdate(event.clientX, event.clientY);
+                                        }}
+                                        onMouseLeave={hideTooltip}
+                                    >
                                         <td className="w-[68px] pl-3 pr-3 py-1.5">
                                             <div className="size-12 overflow-hidden rounded bg-secondary">
                                                 {item.thumbnailUrl ? (
@@ -345,20 +369,14 @@ export function ListingsTab() {
                                         </td>
                                         <td className="pl-2 pr-2 py-1.5 text-foreground">
                                             <div className="space-y-0.5">
-                                                <MouseThumbnailTooltip
-                                                    className="block min-w-0"
-                                                    imageAlt={item.title}
-                                                    imageUrl={item.thumbnailUrl}
+                                                <a
+                                                    href={item.url ?? undefined}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="block min-w-0 truncate hover:text-primary"
                                                 >
-                                                    <a
-                                                        href={item.url ?? undefined}
-                                                        target="_blank"
-                                                        rel="noreferrer"
-                                                        className="block truncate hover:text-primary"
-                                                    >
-                                                        {item.title}
-                                                    </a>
-                                                </MouseThumbnailTooltip>
+                                                    {item.title}
+                                                </a>
                                                 <div className="truncate font-semibold text-foreground">
                                                     {item.shopName ?? '--'}
                                                 </div>
@@ -412,6 +430,7 @@ export function ListingsTab() {
                     </table>
                 )}
             </div>
+            <MouseThumbnailTooltipPortal tooltip={tooltip} tooltipRef={tooltipRef} />
         </div>
     );
 }
