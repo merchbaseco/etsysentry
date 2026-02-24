@@ -7,13 +7,11 @@ type RealtimeInvalidationQuery =
     | 'app.shops.list'
     | 'app.logs.list';
 
-type RealtimeInvalidationMessage = {
-    queries: RealtimeInvalidationQuery[];
-    type: 'query.invalidate';
-};
+type RealtimeInvalidationMessage = { queries: RealtimeInvalidationQuery[]; type: 'query.invalidate' };
 
 type AuthTokenGetter = () => Promise<string | null>;
 export const logsInvalidatedEventName = 'etsysentry:logs-invalidated';
+export const listingsInvalidatedEventName = 'etsysentry:listings-invalidated';
 
 export type RealtimeWebsocketStatus =
     | 'connecting'
@@ -30,29 +28,24 @@ export type RealtimeWebsocketState = {
     status: RealtimeWebsocketStatus;
 };
 
-const queryKeyByInvalidationQuery: Record<
-    Exclude<RealtimeInvalidationQuery, 'app.shops.list' | 'app.logs.list'>,
-    readonly unknown[]
-> = {
-    'app.keywords.list': trpc.app.keywords.list.queryOptions({}).queryKey,
-    'app.listings.list': trpc.app.listings.list.queryOptions({}).queryKey
+const queryKeyByInvalidationQuery: Record<Exclude<RealtimeInvalidationQuery, 'app.shops.list' | 'app.logs.list' | 'app.listings.list'>, readonly unknown[]> = {
+    'app.keywords.list': trpc.app.keywords.list.queryOptions({}).queryKey
 };
+const listingsListQueryKey = trpc.app.listings.list.queryOptions({}).queryKey;
+const REALTIME_INVALIDATION_FLUSH_MS = 200;
 
 const parseRealtimeInvalidationMessage = (rawData: unknown): RealtimeInvalidationMessage | null => {
     if (typeof rawData !== 'string') {
         return null;
     }
-
     try {
         const parsed = JSON.parse(rawData) as {
             queries?: unknown;
             type?: unknown;
         };
-
         if (parsed.type !== 'query.invalidate' || !Array.isArray(parsed.queries)) {
             return null;
         }
-
         const queries = parsed.queries.filter((query): query is RealtimeInvalidationQuery => {
             return (
                 query === 'app.keywords.list' ||
@@ -61,11 +54,9 @@ const parseRealtimeInvalidationMessage = (rawData: unknown): RealtimeInvalidatio
                 query === 'app.logs.list'
             );
         });
-
         if (queries.length === 0) {
             return null;
         }
-
         return {
             queries,
             type: 'query.invalidate'
@@ -79,18 +70,15 @@ const buildRealtimeWebsocketUrl = (token: string): string => {
     const configuredOrigin = (import.meta.env.VITE_SERVER_ORIGIN as string | undefined)?.trim();
     const origin = configuredOrigin?.length ? configuredOrigin : window.location.origin;
     const url = new URL(origin);
-
     url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
     url.pathname = '/ws';
     url.search = '';
     url.searchParams.set('token', token);
-
     return url.toString();
 };
 
 const refetchInvalidatedQueries = async (queries: RealtimeInvalidationQuery[]): Promise<void> => {
     const uniqueQueries = Array.from(new Set(queries));
-
     await Promise.all(
         uniqueQueries.map(async (queryName) => {
             if (queryName === 'app.logs.list') {
@@ -107,18 +95,21 @@ const refetchInvalidatedQueries = async (queries: RealtimeInvalidationQuery[]): 
                 await queryClient.invalidateQueries({
                     predicate: isLogsListQuery
                 });
-                await queryClient.refetchQueries({
-                    predicate: isLogsListQuery,
-                    type: 'all'
-                });
                 window.dispatchEvent(new CustomEvent(logsInvalidatedEventName));
+                return;
+            }
+
+            if (queryName === 'app.listings.list') {
+                await queryClient.invalidateQueries({
+                    queryKey: listingsListQueryKey
+                });
+                window.dispatchEvent(new CustomEvent(listingsInvalidatedEventName));
                 return;
             }
 
             if (queryName === 'app.shops.list') {
                 const isShopsListQuery = (query: { queryKey: readonly unknown[] }): boolean => {
                     const serializedKey = JSON.stringify(query.queryKey);
-
                     return (
                         serializedKey.includes('"app"') &&
                         serializedKey.includes('"shops"') &&
@@ -164,6 +155,27 @@ export const useRealtimeQueryInvalidations = (
         let reconnectTimeoutId: number | null = null;
         let isStopped = false;
         let reconnectAttempt = 0;
+        let flushTimeoutId: number | null = null;
+        const queuedQueries = new Set<RealtimeInvalidationQuery>();
+        const flushInvalidatedQueries = () => {
+            if (queuedQueries.size === 0) {
+                flushTimeoutId = null;
+                return;
+            }
+            const queued = [...queuedQueries];
+            queuedQueries.clear();
+            flushTimeoutId = null;
+            void refetchInvalidatedQueries(queued);
+        };
+        const queueInvalidatedQueries = (queries: RealtimeInvalidationQuery[]) => {
+            for (const query of queries) {
+                queuedQueries.add(query);
+            }
+            if (flushTimeoutId !== null) {
+                return;
+            }
+            flushTimeoutId = window.setTimeout(flushInvalidatedQueries, REALTIME_INVALIDATION_FLUSH_MS);
+        };
 
         const scheduleReconnect = () => {
             if (isStopped || reconnectTimeoutId !== null) {
@@ -224,7 +236,7 @@ export const useRealtimeQueryInvalidations = (
                     return;
                 }
 
-                void refetchInvalidatedQueries(message.queries);
+                queueInvalidatedQueries(message.queries);
             };
 
             websocket.onclose = () => {
@@ -259,6 +271,13 @@ export const useRealtimeQueryInvalidations = (
             if (reconnectTimeoutId !== null) {
                 window.clearTimeout(reconnectTimeoutId);
             }
+
+            if (flushTimeoutId !== null) {
+                window.clearTimeout(flushTimeoutId);
+                flushTimeoutId = null;
+            }
+
+            queuedQueries.clear();
 
             websocket?.close();
             setState((current) => ({

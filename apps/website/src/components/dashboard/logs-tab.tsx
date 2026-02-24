@@ -1,41 +1,27 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Download, Pause, Play } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
     listEventLogs,
     type EventLogCursor,
     type EventLogItem,
     type EventLogLevel,
     type EventLogPrimitiveType,
-    type EventLogStatus,
-    type ListEventLogsOutput
+    type EventLogStatus
 } from '@/lib/logs-api';
 import { logsInvalidatedEventName } from '@/hooks/use-realtime-query-invalidations';
 import { TrpcRequestError } from '@/lib/trpc-http';
-import { cn } from '@/lib/utils';
+import {
+    captureScrollAnchor,
+    isScrollNearTop,
+    restoreScrollAnchor
+} from '@/lib/scroll-anchor';
 import { LogsDetailPanel } from './logs-detail-panel';
-import {
-    LOG_LEVELS,
-    LOG_STATUSES,
-    LOG_TYPES,
-    LogLevelBadge,
-    PrimitiveTypeBadge,
-    formatLogTime,
-    getTargetLabel
-} from './logs-ui';
-import {
-    EmptyState,
-    FilterBar,
-    FilterChip,
-    FilterGroup,
-    StatusBadge,
-    TopToolbar
-} from '@/components/ui/dashboard';
+import { LogsTable } from './logs-table';
+import { LogsToolbar } from './logs-toolbar';
+import { EmptyState } from '@/components/ui/dashboard';
 
 const PAGE_SIZE = 20;
-
-type EventLogPage = Pick<ListEventLogsOutput, 'items' | 'nextCursor'>;
 
 const toErrorMessage = (error: unknown): string => {
     if (error instanceof TrpcRequestError) {
@@ -49,18 +35,36 @@ const toErrorMessage = (error: unknown): string => {
     return 'Unexpected request failure.';
 };
 
+const mergeHeadLogs = (existing: EventLogItem[], incoming: EventLogItem[]): EventLogItem[] => {
+    if (incoming.length === 0) {
+        return existing;
+    }
+
+    const existingIds = new Set(existing.map((item) => item.id));
+    const uniqueIncoming = incoming.filter((item) => !existingIds.has(item.id));
+
+    if (uniqueIncoming.length === 0) {
+        return existing;
+    }
+
+    return [...uniqueIncoming, ...existing];
+};
 
 export function LogsTab() {
     const [search, setSearch] = useState('');
-    const [page, setPage] = useState(1);
-    const [pages, setPages] = useState<EventLogPage[]>([]);
+    const [logs, setLogs] = useState<EventLogItem[]>([]);
+    const [nextCursor, setNextCursor] = useState<EventLogCursor | null>(null);
+    const [pendingHeadLogs, setPendingHeadLogs] = useState<EventLogItem[]>([]);
     const [filterLevel, setFilterLevel] = useState<EventLogLevel | null>(null);
     const [filterStatus, setFilterStatus] = useState<EventLogStatus | null>(null);
     const [filterType, setFilterType] = useState<EventLogPrimitiveType | null>(null);
     const [liveMode, setLiveMode] = useState(false);
     const [selectedLog, setSelectedLog] = useState<EventLogItem | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
+    const scrollViewportRef = useRef<HTMLDivElement | null>(null);
+    const loadMoreTriggerRef = useRef<HTMLDivElement | null>(null);
 
     const getQueryInput = useCallback(
         (cursor?: EventLogCursor | null) => ({
@@ -76,21 +80,50 @@ export function LogsTab() {
 
     const loadFirstPage = useCallback(async () => {
         setIsLoading(true);
+        setIsLoadingMore(false);
+        setPendingHeadLogs([]);
 
         try {
             const response = await listEventLogs(getQueryInput());
 
-            setPages([response]);
-            setPage(1);
+            setLogs(response.items);
+            setNextCursor(response.nextCursor);
             setErrorMessage(null);
         } catch (error) {
             setErrorMessage(toErrorMessage(error));
-            setPages([]);
-            setPage(1);
+            setLogs([]);
+            setNextCursor(null);
+            setPendingHeadLogs([]);
         } finally {
             setIsLoading(false);
         }
     }, [getQueryInput]);
+
+    const refreshHeadPage = useCallback(async () => {
+        try {
+            const response = await listEventLogs(getQueryInput());
+            const container = scrollViewportRef.current;
+            const nearTop = container ? isScrollNearTop(container, 48) : true;
+
+            if (nearTop) {
+                setLogs((current) => {
+                    const withPending =
+                        pendingHeadLogs.length > 0
+                            ? mergeHeadLogs(current, pendingHeadLogs)
+                            : current;
+
+                    return mergeHeadLogs(withPending, response.items);
+                });
+                setPendingHeadLogs([]);
+            } else {
+                setPendingHeadLogs((current) => mergeHeadLogs(current, response.items));
+            }
+
+            setErrorMessage(null);
+        } catch (error) {
+            setErrorMessage(toErrorMessage(error));
+        }
+    }, [getQueryInput, pendingHeadLogs]);
 
     useEffect(() => {
         void loadFirstPage();
@@ -102,17 +135,17 @@ export function LogsTab() {
         }
 
         const intervalId = window.setInterval(() => {
-            void loadFirstPage();
+            void refreshHeadPage();
         }, 15_000);
 
         return () => {
             window.clearInterval(intervalId);
         };
-    }, [liveMode, loadFirstPage]);
+    }, [liveMode, refreshHeadPage]);
 
     useEffect(() => {
         const onInvalidated = () => {
-            void loadFirstPage();
+            void refreshHeadPage();
         };
 
         window.addEventListener(logsInvalidatedEventName, onInvalidated);
@@ -120,100 +153,94 @@ export function LogsTab() {
         return () => {
             window.removeEventListener(logsInvalidatedEventName, onInvalidated);
         };
-    }, [loadFirstPage]);
+    }, [refreshHeadPage]);
 
-    const currentPage = pages[page - 1];
-    const paginated = currentPage?.items ?? [];
-
-    const hasNextPage = useMemo(() => {
-        if (page < pages.length) {
-            return true;
-        }
-
-        return Boolean(currentPage?.nextCursor);
-    }, [currentPage?.nextCursor, page, pages.length]);
-
-    const handleNextPage = useCallback(async () => {
-        if (page < pages.length) {
-            setPage((current) => current + 1);
+    const applyPendingHeadLogs = useCallback(() => {
+        if (pendingHeadLogs.length === 0) {
             return;
         }
 
-        if (!currentPage?.nextCursor) {
+        const container = scrollViewportRef.current;
+        const anchor = container ? captureScrollAnchor(container) : null;
+
+        setLogs((current) => mergeHeadLogs(current, pendingHeadLogs));
+        setPendingHeadLogs([]);
+
+        if (!container) {
             return;
         }
 
-        setIsLoading(true);
+        window.requestAnimationFrame(() => {
+            restoreScrollAnchor(container, anchor);
+        });
+    }, [pendingHeadLogs]);
+
+    const handleLoadMore = useCallback(async () => {
+        if (isLoading || isLoadingMore || !nextCursor) {
+            return;
+        }
+
+        setIsLoadingMore(true);
 
         try {
-            const response = await listEventLogs(getQueryInput(currentPage.nextCursor));
+            const response = await listEventLogs(getQueryInput(nextCursor));
 
-            setPages((existing) => [...existing, response]);
-            setPage((current) => current + 1);
+            setLogs((existing) => [...existing, ...response.items]);
+            setNextCursor(response.nextCursor);
             setErrorMessage(null);
         } catch (error) {
             setErrorMessage(toErrorMessage(error));
         } finally {
-            setIsLoading(false);
+            setIsLoadingMore(false);
         }
-    }, [currentPage?.nextCursor, getQueryInput, page, pages.length]);
+    }, [getQueryInput, isLoading, isLoadingMore, nextCursor]);
+
+    useEffect(() => {
+        const observerRoot = scrollViewportRef.current;
+        const loadMoreTarget = loadMoreTriggerRef.current;
+
+        if (!observerRoot || !loadMoreTarget) {
+            return;
+        }
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0]?.isIntersecting) {
+                    void handleLoadMore();
+                }
+            },
+            {
+                root: observerRoot,
+                rootMargin: '200px 0px 200px 0px'
+            }
+        );
+
+        observer.observe(loadMoreTarget);
+        return () => {
+            observer.disconnect();
+        };
+    }, [handleLoadMore, logs.length]);
 
     return (
         <div className="flex h-full flex-col">
-            <TopToolbar search={search} onSearchChange={setSearch}>
-                <FilterBar>
-                    <FilterGroup label="Level">
-                        {LOG_LEVELS.map((levelValue) => (
-                            <FilterChip
-                                key={levelValue}
-                                active={filterLevel === levelValue}
-                                label={levelValue}
-                                onClick={() => setFilterLevel(filterLevel === levelValue ? null : levelValue)}
-                            />
-                        ))}
-                    </FilterGroup>
-                    <FilterGroup label="Status">
-                        {LOG_STATUSES.map((statusValue) => (
-                            <FilterChip
-                                key={statusValue}
-                                active={filterStatus === statusValue}
-                                label={statusValue}
-                                onClick={() =>
-                                    setFilterStatus(filterStatus === statusValue ? null : statusValue)
-                                }
-                            />
-                        ))}
-                    </FilterGroup>
-                    <FilterGroup label="Type">
-                        {LOG_TYPES.map((typeValue) => (
-                            <FilterChip
-                                key={typeValue}
-                                active={filterType === typeValue}
-                                label={typeValue}
-                                onClick={() => setFilterType(filterType === typeValue ? null : typeValue)}
-                            />
-                        ))}
-                    </FilterGroup>
-                </FilterBar>
-                <div className="ml-auto flex items-center gap-1.5">
-                    <button
-                        onClick={() => setLiveMode(!liveMode)}
-                        className={cn(
-                            'flex cursor-pointer items-center gap-1.5 rounded border px-2 py-1 text-[10px] transition-colors',
-                            liveMode
-                                ? 'border-terminal-green/30 bg-terminal-green/10 text-terminal-green'
-                                : 'border-border bg-secondary text-muted-foreground hover:text-foreground'
-                        )}
-                    >
-                        {liveMode ? <Pause className="size-3" /> : <Play className="size-3" />}
-                        {liveMode ? 'Live' : 'Paused'}
-                    </button>
-                    <button className="flex cursor-pointer items-center gap-1.5 rounded border border-border bg-secondary px-2 py-1 text-[10px] text-muted-foreground transition-colors hover:text-foreground">
-                        <Download className="size-3" />
-                        Export
-                    </button>
-                </div>
-            </TopToolbar>
+            <LogsToolbar
+                filterLevel={filterLevel}
+                filterStatus={filterStatus}
+                filterType={filterType}
+                liveMode={liveMode}
+                onSearchChange={setSearch}
+                onToggleFilterLevel={(value) =>
+                    setFilterLevel((current) => (current === value ? null : value))
+                }
+                onToggleFilterStatus={(value) =>
+                    setFilterStatus((current) => (current === value ? null : value))
+                }
+                onToggleFilterType={(value) =>
+                    setFilterType((current) => (current === value ? null : value))
+                }
+                onToggleLiveMode={() => setLiveMode((current) => !current)}
+                search={search}
+            />
 
             {errorMessage ? (
                 <div className="border-b border-terminal-red/20 bg-terminal-red/10 px-3 py-2 text-xs text-terminal-red">
@@ -221,77 +248,29 @@ export function LogsTab() {
                 </div>
             ) : null}
 
-            <div className="flex-1 overflow-auto">
-                {isLoading && pages.length === 0 ? (
-                    <div className="px-3 py-6 text-xs text-muted-foreground">Loading event logs...</div>
-                ) : paginated.length === 0 ? (
-                    <EmptyState message="No logs match your filters." />
-                ) : (
-                    <table className="w-full text-xs">
-                        <thead className="sticky top-0 z-10 bg-card">
-                            <tr className="border-b border-border">
-                                <th className="px-3 py-2 text-left text-[10px] uppercase tracking-wider text-muted-foreground">Time</th>
-                                <th className="px-2 py-2 text-center text-[10px] uppercase tracking-wider text-muted-foreground">Level</th>
-                                <th className="px-2 py-2 text-left text-[10px] uppercase tracking-wider text-muted-foreground">Action</th>
-                                <th className="px-2 py-2 text-center text-[10px] uppercase tracking-wider text-muted-foreground">Type</th>
-                                <th className="px-2 py-2 text-left text-[10px] uppercase tracking-wider text-muted-foreground">Target</th>
-                                <th className="px-2 py-2 text-left text-[10px] uppercase tracking-wider text-muted-foreground">Message</th>
-                                <th className="px-2 py-2 text-left text-[10px] uppercase tracking-wider text-muted-foreground">Run ID</th>
-                                <th className="px-2 py-2 text-center text-[10px] uppercase tracking-wider text-muted-foreground">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {paginated.map((logItem) => (
-                                <tr
-                                    key={logItem.id}
-                                    onClick={() => setSelectedLog(logItem)}
-                                    className={cn(
-                                        'cursor-pointer border-b border-border/50 transition-colors hover:bg-accent/50',
-                                        logItem.level === 'error' && 'bg-terminal-red/3',
-                                        logItem.level === 'warn' && 'bg-terminal-yellow/3'
-                                    )}
-                                >
-                                    <td className="font-mono whitespace-nowrap px-3 py-1 text-terminal-dim">
-                                        {formatLogTime(logItem.occurredAt)}
-                                    </td>
-                                    <td className="px-2 py-1 text-center">
-                                        <LogLevelBadge level={logItem.level} />
-                                    </td>
-                                    <td className="px-2 py-1 font-mono text-foreground">{logItem.action}</td>
-                                    <td className="px-2 py-1 text-center">
-                                        <PrimitiveTypeBadge type={logItem.primitiveType} />
-                                    </td>
-                                    <td className="px-2 py-1 font-mono text-terminal-dim">{getTargetLabel(logItem)}</td>
-                                    <td className="max-w-64 truncate px-2 py-1 text-secondary-foreground">{logItem.message}</td>
-                                    <td className="px-2 py-1 font-mono text-terminal-dim">{logItem.monitorRunId ?? '--'}</td>
-                                    <td className="px-2 py-1 text-center">
-                                        <StatusBadge status={logItem.status} />
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                )}
-            </div>
-
-            <div className="flex items-center justify-between border-t border-border px-3 py-2 text-[10px] text-muted-foreground">
-                <span>Page {page}</span>
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => setPage((current) => Math.max(1, current - 1))}
-                        disabled={page <= 1 || isLoading}
-                        className="rounded border border-border bg-secondary px-2 py-1 transition-colors hover:text-foreground disabled:cursor-default disabled:opacity-40"
-                    >
-                        Prev
-                    </button>
-                    <button
-                        onClick={() => void handleNextPage()}
-                        disabled={!hasNextPage || isLoading}
-                        className="rounded border border-border bg-secondary px-2 py-1 transition-colors hover:text-foreground disabled:cursor-default disabled:opacity-40"
-                    >
-                        Next
+            {pendingHeadLogs.length > 0 ? (
+                <div className="border-b border-terminal-green/20 bg-terminal-green/10 px-3 py-2 text-xs text-terminal-green">
+                    <button className="cursor-pointer hover:underline" onClick={applyPendingHeadLogs}>
+                        {pendingHeadLogs.length} new log
+                        {pendingHeadLogs.length === 1 ? '' : 's'} available. Click to load.
                     </button>
                 </div>
+            ) : null}
+
+            <div ref={scrollViewportRef} className="flex-1 overflow-auto">
+                {isLoading && logs.length === 0 ? (
+                    <div className="px-3 py-6 text-xs text-muted-foreground">Loading event logs...</div>
+                ) : logs.length === 0 ? (
+                    <EmptyState message="No logs match your filters." />
+                ) : (
+                    <LogsTable
+                        hasMore={Boolean(nextCursor)}
+                        isLoadingMore={isLoadingMore}
+                        items={logs}
+                        loadMoreTriggerRef={loadMoreTriggerRef}
+                        onSelectLog={setSelectedLog}
+                    />
+                )}
             </div>
 
             <LogsDetailPanel selectedLog={selectedLog} onClose={() => setSelectedLog(null)} />
