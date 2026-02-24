@@ -6,8 +6,7 @@ export const etsyAuthStartProcedure = appProcedure
     .input(z.object({}))
     .mutation(async ({ ctx }) => {
         const flow = startEtsyOAuthFlow({
-            clerkUserId: ctx.user.sub,
-            tenantId: ctx.tenantId
+            accountId: ctx.accountId
         });
 
         return {

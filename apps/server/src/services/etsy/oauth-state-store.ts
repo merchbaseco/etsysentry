@@ -1,9 +1,8 @@
 import { randomBytes } from 'node:crypto';
 
 export type EtsyOAuthStatePayload = {
-    clerkUserId: string;
     codeVerifier: string;
-    tenantId: string;
+    accountId: string;
 };
 
 type EtsyOAuthStoredState = EtsyOAuthStatePayload & {
@@ -54,9 +53,8 @@ export class EtsyOAuthStateStore {
         this.states.delete(state);
 
         return {
-            clerkUserId: found.clerkUserId,
             codeVerifier: found.codeVerifier,
-            tenantId: found.tenantId
+            accountId: found.accountId
         };
     }
 

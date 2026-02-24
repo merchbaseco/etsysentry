@@ -12,7 +12,7 @@ export const adminEnqueueSyncAllListingsProcedure = adminProcedure
             selection: {
                 mode: 'all'
             },
-            tenantId: ctx.tenantId
+            accountId: ctx.accountId
         });
         const { enqueuedCount, skippedCount, totalCount } = result;
 
@@ -49,7 +49,7 @@ export const adminEnqueueSyncAllListingsProcedure = adminProcedure
             primitiveType: 'system',
             requestId: ctx.requestId,
             status,
-            tenantId: ctx.tenantId
+            accountId: ctx.accountId
         });
 
         return {

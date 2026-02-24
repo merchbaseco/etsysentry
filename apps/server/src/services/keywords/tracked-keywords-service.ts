@@ -11,7 +11,7 @@ export type TrackedKeywordRecord = {
     lastRefreshedAt: string;
     nextSyncAt: string;
     normalizedKeyword: string;
-    tenantId: string;
+    accountId: string;
     trackerClerkUserId: string;
     trackingState: (typeof trackedKeywords.$inferSelect)['trackingState'];
     updatedAt: string;
@@ -45,7 +45,7 @@ const toRecord = (row: typeof trackedKeywords.$inferSelect): TrackedKeywordRecor
         lastRefreshedAt: row.lastRefreshedAt.toISOString(),
         nextSyncAt: row.nextSyncAt.toISOString(),
         normalizedKeyword: row.normalizedKeyword,
-        tenantId: row.tenantId,
+        accountId: row.accountId,
         trackerClerkUserId: row.trackerClerkUserId,
         trackingState: row.trackingState,
         updatedAt: row.updatedAt.toISOString()
@@ -53,15 +53,15 @@ const toRecord = (row: typeof trackedKeywords.$inferSelect): TrackedKeywordRecor
 };
 
 export const listTrackedKeywords = async (params: {
-    tenantId: string;
+    accountId: string;
     trackerClerkUserId?: string;
 }): Promise<{ items: TrackedKeywordRecord[] }> => {
     const whereClause = params.trackerClerkUserId
         ? and(
-              eq(trackedKeywords.tenantId, params.tenantId),
+              eq(trackedKeywords.accountId, params.accountId),
               eq(trackedKeywords.trackerClerkUserId, params.trackerClerkUserId)
           )
-        : eq(trackedKeywords.tenantId, params.tenantId);
+        : eq(trackedKeywords.accountId, params.accountId);
 
     const rows = await db
         .select()
@@ -77,7 +77,7 @@ export const listTrackedKeywords = async (params: {
 export const trackKeyword = async (params: {
     keywordInput: string;
     requestId?: string;
-    tenantId: string;
+    accountId: string;
     trackerClerkUserId: string;
 }): Promise<{
     created: boolean;
@@ -99,7 +99,7 @@ export const trackKeyword = async (params: {
         .from(trackedKeywords)
         .where(
             and(
-                eq(trackedKeywords.tenantId, params.tenantId),
+                eq(trackedKeywords.accountId, params.accountId),
                 eq(trackedKeywords.normalizedKeyword, normalized.normalizedKeyword)
             )
         )
@@ -112,7 +112,7 @@ export const trackKeyword = async (params: {
         lastRefreshedAt: now,
         nextSyncAt: now,
         normalizedKeyword: normalized.normalizedKeyword,
-        tenantId: params.tenantId,
+        accountId: params.accountId,
         trackerClerkUserId: params.trackerClerkUserId,
         trackingState: 'active' as const,
         updatedAt: now
@@ -123,7 +123,7 @@ export const trackKeyword = async (params: {
         .values(upsertValues)
         .onConflictDoUpdate({
             set: upsertValues,
-            target: [trackedKeywords.tenantId, trackedKeywords.normalizedKeyword]
+            target: [trackedKeywords.accountId, trackedKeywords.normalizedKeyword]
         })
         .returning();
 
@@ -146,7 +146,7 @@ export const trackKeyword = async (params: {
         primitiveType: 'keyword',
         requestId: params.requestId ?? null,
         status: 'success',
-        tenantId: item.tenantId
+        accountId: item.accountId
     });
 
     return {

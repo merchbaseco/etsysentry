@@ -6,7 +6,7 @@ export const adminGetEtsyApiUsageProcedure = adminProcedure
     .input(z.object({}))
     .query(async ({ ctx }) => {
         const usage = await getEtsyApiUsage({
-            tenantId: ctx.tenantId
+            accountId: ctx.accountId
         });
 
         return {

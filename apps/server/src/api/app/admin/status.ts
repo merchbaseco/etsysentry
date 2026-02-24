@@ -7,6 +7,6 @@ export const adminStatusProcedure = adminProcedure
         return {
             email: ctx.user.email ?? null,
             isAdmin: true,
-            tenantId: ctx.tenantId
+            accountId: ctx.accountId
         };
     });

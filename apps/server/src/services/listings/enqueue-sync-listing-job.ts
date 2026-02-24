@@ -10,6 +10,6 @@ export const enqueueSyncListingJob = async (params: {
 }): Promise<string | null> => {
     return params.boss.send(SYNC_LISTING_JOB_NAME, params.payload, {
         retryLimit: 0,
-        singletonKey: `${params.payload.tenantId}:${params.payload.etsyListingId}`
+        singletonKey: `${params.payload.accountId}:${params.payload.etsyListingId}`
     });
 };

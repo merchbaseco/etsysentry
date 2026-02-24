@@ -19,10 +19,7 @@ import type { EtsyOAuthStateStore } from './oauth-state-store';
 const REQUIRED_ETSY_OAUTH_SCOPES = ['listings_r'] as const;
 
 const formatConnectionKeyForLog = (key: EtsyOAuthConnectionKey): string => {
-    const tenantPrefix = key.tenantId.slice(0, 8);
-    const userPrefix = key.clerkUserId.slice(0, 8);
-
-    return `${tenantPrefix}:${userPrefix}`;
+    return key.accountId.slice(0, 8);
 };
 
 const logOAuthDebug = (message: string, details: Record<string, unknown>): void => {
@@ -54,9 +51,8 @@ export type EtsyOAuthServiceDependencies = {
         codeVerifier: string;
     };
     recordApiCall: (params: {
-        clerkUserId: string;
         endpoint: string;
-        tenantId: string;
+        accountId: string;
     }) => Promise<void>;
     stateStore: EtsyOAuthStateStore;
 };
@@ -66,7 +62,13 @@ const defaultDependencies: EtsyOAuthServiceDependencies = {
     exchangeToken: exchangeOAuthToken,
     nowMs: () => Date.now(),
     pkceFactory: createPkcePair,
-    recordApiCall: recordEtsyApiCallBestEffort,
+    recordApiCall: ({ accountId, endpoint }) => {
+        return recordEtsyApiCallBestEffort({
+            accountId,
+            clerkUserId: 'system',
+            endpoint
+        });
+    },
     stateStore: etsyOAuthStateStore
 };
 
@@ -174,9 +176,8 @@ export const createEtsyOAuthService = (
     }): Promise<EtsyOAuthTokens> => {
         try {
             await dependencies.recordApiCall({
-                clerkUserId: params.identity.clerkUserId,
                 endpoint: 'exchangeOAuthToken',
-                tenantId: params.identity.tenantId
+                accountId: params.identity.accountId
             });
 
             const refreshed = await dependencies.exchangeToken({
@@ -311,9 +312,8 @@ export const createEtsyOAuthService = (
     } => {
         const pkce = dependencies.pkceFactory();
         const stateEntry = dependencies.stateStore.issue({
-            clerkUserId: params.clerkUserId,
             codeVerifier: pkce.codeVerifier,
-            tenantId: params.tenantId
+            accountId: params.accountId
         });
 
         logOAuthDebug('issued OAuth start flow', {
@@ -349,15 +349,13 @@ export const createEtsyOAuthService = (
         }
 
         const identity: EtsyOAuthIdentity = {
-            clerkUserId: statePayload.clerkUserId,
-            tenantId: statePayload.tenantId
+            accountId: statePayload.accountId
         };
 
         try {
             await dependencies.recordApiCall({
-                clerkUserId: identity.clerkUserId,
                 endpoint: 'exchangeOAuthToken',
-                tenantId: identity.tenantId
+                accountId: identity.accountId
             });
 
             const tokenResponse = await dependencies.exchangeToken({

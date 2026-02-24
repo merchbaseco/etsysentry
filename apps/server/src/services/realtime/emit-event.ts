@@ -15,7 +15,7 @@ export const realtimeInvalidationQuerySchema = z.enum([
 const realtimeInvalidationEventSchema = z.object({
     clerkUserId: z.string().min(1),
     queries: z.array(realtimeInvalidationQuerySchema).min(1),
-    tenantId: z.string().min(1)
+    accountId: z.string().min(1)
 });
 
 export type RealtimeInvalidationEvent = z.infer<typeof realtimeInvalidationEventSchema>;

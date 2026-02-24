@@ -19,7 +19,7 @@ export type EtsyApiUsage = {
 };
 
 const countApiCallsSince = async (params: {
-    tenantId: string;
+    accountId: string;
     threshold: Date;
 }): Promise<number> => {
     const [row] = await db
@@ -29,7 +29,7 @@ const countApiCallsSince = async (params: {
         .from(etsyApiCallEvents)
         .where(
             and(
-                eq(etsyApiCallEvents.tenantId, params.tenantId),
+                eq(etsyApiCallEvents.accountId, params.accountId),
                 gte(etsyApiCallEvents.createdAt, params.threshold)
             )
         );
@@ -37,18 +37,18 @@ const countApiCallsSince = async (params: {
     return row?.value ?? 0;
 };
 
-const getLastApiCallTimestamp = async (params: { tenantId: string }): Promise<Date | null> => {
+const getLastApiCallTimestamp = async (params: { accountId: string }): Promise<Date | null> => {
     const [row] = await db
         .select({
             value: sql<Date | null>`max(${etsyApiCallEvents.createdAt})`
         })
         .from(etsyApiCallEvents)
-        .where(eq(etsyApiCallEvents.tenantId, params.tenantId));
+        .where(eq(etsyApiCallEvents.accountId, params.accountId));
 
     return row?.value ?? null;
 };
 
-export const getEtsyApiUsage = async (params: { tenantId: string }): Promise<EtsyApiUsage> => {
+export const getEtsyApiUsage = async (params: { accountId: string }): Promise<EtsyApiUsage> => {
     const nowMs = Date.now();
     const fiveMinutesAgo = new Date(nowMs - 5 * 60 * 1000);
     const oneHourAgo = new Date(nowMs - 60 * 60 * 1000);
@@ -57,19 +57,19 @@ export const getEtsyApiUsage = async (params: { tenantId: string }): Promise<Ets
     const [callsPast5Minutes, callsPastHour, callsPast24Hours, lastCallAt, rateLimit] =
         await Promise.all([
             countApiCallsSince({
-                tenantId: params.tenantId,
+                accountId: params.accountId,
                 threshold: fiveMinutesAgo
             }),
             countApiCallsSince({
-                tenantId: params.tenantId,
+                accountId: params.accountId,
                 threshold: oneHourAgo
             }),
             countApiCallsSince({
-                tenantId: params.tenantId,
+                accountId: params.accountId,
                 threshold: twentyFourHoursAgo
             }),
             getLastApiCallTimestamp({
-                tenantId: params.tenantId
+                accountId: params.accountId
             }),
             getEtsyRateLimitRuntimeSnapshot()
         ]);

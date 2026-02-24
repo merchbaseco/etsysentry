@@ -1,11 +1,13 @@
 import { verifyToken } from '@clerk/backend';
 import type { CreateFastifyContextOptions } from '@trpc/server/adapters/fastify';
 import { env } from '../config/env';
+import { resolveAccountIdFromClerk } from '../services/auth/resolve-account-id-from-clerk';
 
 type AuthType = 'clerk' | 'none';
 
 export type ClerkUser = {
     email?: string;
+    issuer: string;
     orgId: string | null;
     sub: string;
 };
@@ -43,7 +45,7 @@ export const createTrpcContext = async ({ req, res }: CreateFastifyContextOption
             reply: res,
             request: req,
             requestId: String(req.id),
-            tenantId: null,
+            accountId: null,
             user: null
         };
     }
@@ -54,22 +56,28 @@ export const createTrpcContext = async ({ req, res }: CreateFastifyContextOption
         });
 
         const subject = typeof payload.sub === 'string' ? payload.sub.trim() : '';
+        const issuer = typeof payload.iss === 'string' ? payload.iss.trim() : '';
 
-        if (!subject) {
+        if (!subject || !issuer) {
             return {
                 authType: 'none' as AuthType,
                 isAdmin: false,
                 reply: res,
                 request: req,
                 requestId: String(req.id),
-                tenantId: null,
+                accountId: null,
                 user: null
             };
         }
 
         const orgId = typeof payload.org_id === 'string' ? payload.org_id.trim() : '';
-        const tenantId = orgId.length > 0 ? orgId : subject;
         const email = typeof payload.email === 'string' ? payload.email : undefined;
+        const accountId = await resolveAccountIdFromClerk({
+            clerkIssuer: issuer,
+            clerkOrgId: orgId.length > 0 ? orgId : null,
+            clerkSubject: subject,
+            email: email ?? null
+        });
 
         return {
             authType: 'clerk' as AuthType,
@@ -77,9 +85,10 @@ export const createTrpcContext = async ({ req, res }: CreateFastifyContextOption
             reply: res,
             request: req,
             requestId: String(req.id),
-            tenantId,
+            accountId,
             user: {
                 email,
+                issuer,
                 orgId: orgId.length > 0 ? orgId : null,
                 sub: subject
             } satisfies ClerkUser
@@ -91,7 +100,7 @@ export const createTrpcContext = async ({ req, res }: CreateFastifyContextOption
             reply: res,
             request: req,
             requestId: String(req.id),
-            tenantId: null,
+            accountId: null,
             user: null
         };
     }

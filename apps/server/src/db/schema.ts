@@ -49,11 +49,40 @@ export const eventLogPrimitiveTypeEnum = pgEnum('event_log_primitive_type', [
     'system'
 ]);
 
+export const accounts = pgTable('accounts', {
+    id: text('id').primaryKey().default(sql`gen_random_uuid()::text`),
+    createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { mode: 'date' }).notNull().defaultNow()
+});
+
+export const clerkIdentities = pgTable(
+    'clerk_identities',
+    {
+        accountId: text('account_id')
+            .notNull()
+            .references(() => accounts.id),
+        clerkIssuer: text('clerk_issuer').notNull(),
+        clerkOrgId: text('clerk_org_id'),
+        clerkSubject: text('clerk_subject').notNull(),
+        createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+        email: text('email'),
+        lastSeenAt: timestamp('last_seen_at', { mode: 'date' }).notNull().defaultNow(),
+        updatedAt: timestamp('updated_at', { mode: 'date' }).notNull().defaultNow()
+    },
+    (table) => ({
+        accountIdx: index('clerk_identities_account_idx').on(table.accountId),
+        issuerSubjectPk: primaryKey({
+            columns: [table.clerkIssuer, table.clerkSubject],
+            name: 'clerk_identities_issuer_subject_pk'
+        })
+    })
+);
+
 export const trackedListings = pgTable(
     'tracked_listings',
     {
         listingId: uuid('listing_id').primaryKey().defaultRandom(),
-        tenantId: text('tenant_id').notNull(),
+        accountId: text('account_id').notNull(),
         trackerClerkUserId: text('tracker_clerk_user_id').notNull(),
         etsyListingId: text('etsy_listing_id').notNull(),
         shopId: text('shop_id'),
@@ -77,12 +106,12 @@ export const trackedListings = pgTable(
     },
     (table) => ({
         tenantListingUnique: uniqueIndex('tracked_listings_tenant_listing_unique').on(
-            table.tenantId,
+            table.accountId,
             table.etsyListingId
         ),
-        tenantIdx: index('tracked_listings_tenant_idx').on(table.tenantId),
+        accountIdx: index('tracked_listings_account_idx').on(table.accountId),
         tenantTrackerIdx: index('tracked_listings_tenant_tracker_idx').on(
-            table.tenantId,
+            table.accountId,
             table.trackerClerkUserId
         ),
         trackingStateIdx: index('tracked_listings_tracking_state_idx').on(table.trackingState),
@@ -94,7 +123,7 @@ export const trackedKeywords = pgTable(
     'tracked_keywords',
     {
         id: uuid('id').primaryKey().defaultRandom(),
-        tenantId: text('tenant_id').notNull(),
+        accountId: text('account_id').notNull(),
         trackerClerkUserId: text('tracker_clerk_user_id').notNull(),
         keyword: text('keyword').notNull(),
         normalizedKeyword: text('normalized_keyword').notNull(),
@@ -107,12 +136,12 @@ export const trackedKeywords = pgTable(
     },
     (table) => ({
         tenantKeywordUnique: uniqueIndex('tracked_keywords_tenant_keyword_unique').on(
-            table.tenantId,
+            table.accountId,
             table.normalizedKeyword
         ),
-        tenantIdx: index('tracked_keywords_tenant_idx').on(table.tenantId),
+        accountIdx: index('tracked_keywords_account_idx').on(table.accountId),
         tenantTrackerIdx: index('tracked_keywords_tenant_tracker_idx').on(
-            table.tenantId,
+            table.accountId,
             table.trackerClerkUserId
         ),
         trackingStateIdx: index('tracked_keywords_tracking_state_idx').on(table.trackingState),
@@ -125,7 +154,7 @@ export const productKeywordRanks = pgTable(
     'product_keyword_ranks',
     {
         id: uuid('id').primaryKey().defaultRandom(),
-        tenantId: text('tenant_id').notNull(),
+        accountId: text('account_id').notNull(),
         trackedKeywordId: uuid('tracked_keyword_id').notNull(),
         listingId: uuid('listing_id')
             .notNull()
@@ -137,24 +166,24 @@ export const productKeywordRanks = pgTable(
     },
     (table) => ({
         tenantKeywordObservedIdx: index('product_keyword_ranks_tenant_keyword_observed_idx').on(
-            table.tenantId,
+            table.accountId,
             table.trackedKeywordId,
             table.observedAt
         ),
         tenantListingObservedIdx: index('product_keyword_ranks_tenant_listing_observed_idx').on(
-            table.tenantId,
+            table.accountId,
             table.listingId,
             table.observedAt
         ),
         tenantEtsyListingObservedIdx: index(
             'product_keyword_ranks_tenant_etsy_listing_observed_idx'
         ).on(
-            table.tenantId,
+            table.accountId,
             table.etsyListingId,
             table.observedAt
         ),
         tenantKeywordRankIdx: index('product_keyword_ranks_tenant_keyword_rank_idx').on(
-            table.tenantId,
+            table.accountId,
             table.trackedKeywordId,
             table.rank
         )
@@ -165,7 +194,7 @@ export const eventLogs = pgTable(
     'event_logs',
     {
         id: uuid('id').primaryKey().defaultRandom(),
-        tenantId: text('tenant_id').notNull(),
+        accountId: text('account_id').notNull(),
         occurredAt: timestamp('occurred_at', { mode: 'date' }).notNull().defaultNow(),
         level: eventLogLevelEnum('level').notNull(),
         category: text('category').notNull(),
@@ -184,26 +213,26 @@ export const eventLogs = pgTable(
     },
     (table) => ({
         tenantOccurredAtIdx: index('event_logs_tenant_occurred_at_idx').on(
-            table.tenantId,
+            table.accountId,
             table.occurredAt
         ),
         tenantPrimitiveOccurredAtIdx: index('event_logs_tenant_primitive_occurred_at_idx').on(
-            table.tenantId,
+            table.accountId,
             table.primitiveType,
             table.occurredAt
         ),
         tenantListingOccurredAtIdx: index('event_logs_tenant_listing_occurred_at_idx').on(
-            table.tenantId,
+            table.accountId,
             table.listingId,
             table.occurredAt
         ),
         tenantShopOccurredAtIdx: index('event_logs_tenant_shop_occurred_at_idx').on(
-            table.tenantId,
+            table.accountId,
             table.shopId,
             table.occurredAt
         ),
         tenantMonitorRunOccurredAtIdx: index('event_logs_tenant_monitor_run_occurred_at_idx').on(
-            table.tenantId,
+            table.accountId,
             table.monitorRunId,
             table.occurredAt
         )
@@ -214,7 +243,9 @@ export const etsyOAuthConnections = pgTable(
     'etsy_oauth_connections',
     {
         accessToken: text('access_token').notNull(),
-        clerkUserId: text('clerk_user_id').notNull(),
+        accountId: text('account_id')
+            .primaryKey()
+            .references(() => accounts.id),
         createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
         expiresAt: timestamp('expires_at', { mode: 'date' }).notNull(),
         refreshToken: text('refresh_token').notNull(),
@@ -222,36 +253,28 @@ export const etsyOAuthConnections = pgTable(
             .array()
             .notNull()
             .default(sql`ARRAY[]::text[]`),
-        tenantId: text('tenant_id').notNull(),
         tokenType: text('token_type').notNull(),
         updatedAt: timestamp('updated_at', { mode: 'date' }).notNull().defaultNow()
     },
-    (table) => ({
-        clerkUserIdx: index('etsy_oauth_connections_clerk_user_idx').on(table.clerkUserId),
-        tenantClerkPk: primaryKey({
-            columns: [table.tenantId, table.clerkUserId],
-            name: 'etsy_oauth_connections_tenant_clerk_pk'
-        }),
-        tenantIdx: index('etsy_oauth_connections_tenant_idx').on(table.tenantId)
-    })
+    () => ({})
 );
 
 export const etsyApiCallEvents = pgTable(
     'etsy_api_call_events',
     {
         id: uuid('id').primaryKey().defaultRandom(),
-        tenantId: text('tenant_id').notNull(),
+        accountId: text('account_id').notNull(),
         clerkUserId: text('clerk_user_id').notNull(),
         endpoint: text('endpoint').notNull(),
         createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow()
     },
     (table) => ({
         tenantCreatedAtIdx: index('etsy_api_call_events_tenant_created_at_idx').on(
-            table.tenantId,
+            table.accountId,
             table.createdAt
         ),
         tenantClerkCreatedAtIdx: index('etsy_api_call_events_tenant_clerk_created_at_idx').on(
-            table.tenantId,
+            table.accountId,
             table.clerkUserId,
             table.createdAt
         )

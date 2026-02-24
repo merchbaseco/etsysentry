@@ -14,13 +14,13 @@ export const keywordsTrackProcedure = appProcedure
         const trackedKeyword = await trackKeyword({
             keywordInput: input.keyword,
             requestId: ctx.requestId,
-            tenantId: ctx.tenantId,
+            accountId: ctx.accountId,
             trackerClerkUserId: ctx.user.sub
         });
 
         const monitorRunId = await enqueueKeywordSyncJob({
             clerkUserId: trackedKeyword.item.trackerClerkUserId,
-            tenantId: trackedKeyword.item.tenantId,
+            accountId: trackedKeyword.item.accountId,
             trackedKeywordId: trackedKeyword.item.id
         });
 
@@ -41,7 +41,7 @@ export const keywordsTrackProcedure = appProcedure
             primitiveType: 'keyword',
             requestId: ctx.requestId,
             status: monitorRunId ? 'pending' : 'failed',
-            tenantId: trackedKeyword.item.tenantId
+            accountId: trackedKeyword.item.accountId
         });
 
         return trackedKeyword;

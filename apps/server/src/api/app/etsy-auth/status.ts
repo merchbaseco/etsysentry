@@ -6,8 +6,7 @@ export const etsyAuthStatusProcedure = appProcedure
     .input(z.object({}))
     .query(async ({ ctx }) => {
         const status = await getEtsyOAuthStatus({
-            clerkUserId: ctx.user.sub,
-            tenantId: ctx.tenantId
+            accountId: ctx.accountId
         });
 
         return {

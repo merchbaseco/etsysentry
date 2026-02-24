@@ -58,7 +58,7 @@ docs/
    - API key validation for CLI/public surface (`api.public.*`)
 6. Etsy OAuth connection persistence:
    - server-managed OAuth token storage in PostgreSQL
-   - keyed by `(tenantId, clerkUserId)`
+   - keyed by `accountId`
 
 ## Etsy Integration Layer
 
@@ -118,17 +118,17 @@ docs/
 
 ## Multi-Tenant and Auth Model
 
-- Tenant boundary key: `tenantId` on all tenant-owned tables.
+- Tenant boundary key: `accountId` on all tenant-owned tables.
 - Clerk user identity maps to one or more tenant memberships (no role model for regular users).
 - `api.app.*` procedures:
   - require Clerk bearer auth (`Authorization: Bearer <token>`)
-  - derive `tenantId` and `clerkUserId` from verified token/context
+  - derive `accountId` from verified token/context using `(iss, sub)` identity mapping
   - do not trust client-supplied auth identity fields
   - enforce tenant membership
   - enforce admin-only operations via `email === ADMIN_EMAIL`
 - Etsy OAuth connection/session model:
   - OAuth callback exchanges code for tokens and persists connection server-side
-  - connection lookup key is `(tenantId, clerkUserId)`
+  - connection lookup key is `accountId`
   - website does not persist OAuth tokens/session IDs in browser storage
 - API keys:
   - generated/managed via `api.app.apiKey.*`
@@ -144,58 +144,58 @@ docs/
 - `tenants`
   - `id`, `name`, `createdAt`
 - `tenant_memberships`
-  - `tenantId`, `clerkUserId`, `createdAt`
+  - `accountId`, `clerkIssuer`, `clerkSubject`, `createdAt`
 - `api_keys`
-  - `id`, `tenantId`, `ownerClerkUserId`, `name`, `keyPrefix`, `keyHash`, `lastUsedAt`, `revokedAt`
+  - `id`, `accountId`, `ownerClerkUserId`, `name`, `keyPrefix`, `keyHash`, `lastUsedAt`, `revokedAt`
 - `etsy_oauth_connections`
-  - `tenantId`, `clerkUserId`, `accessToken`, `refreshToken`, `tokenType`, `scopes`, `expiresAt`,
+  - `accountId`, `accessToken`, `refreshToken`, `tokenType`, `scopes`, `expiresAt`,
     `createdAt`, `updatedAt`
 - `currency_rates`
   - server-managed USD conversion cache from external FX provider
   - `baseCurrency`, `provider`, `ratesJson`, `fetchedAt`, `nextRefreshAt`, `lastRefreshError`,
     `updatedAt`
 - `primitives`
-  - `id`, `tenantId`, `type`, `value`, `status`, `source`, `createdAt`, `updatedAt`
+  - `id`, `accountId`, `type`, `value`, `status`, `source`, `createdAt`, `updatedAt`
 - `listing_profiles`
   - static/slow-changing listing data
-  - `tenantId`, `listingId`, `shopId`, `title`, `description`, `tags`, `shopOwner`,
+  - `accountId`, `listingId`, `shopId`, `title`, `description`, `tags`, `shopOwner`,
     `url`, `imageUrl`, `createdAt`, `updatedAt`, `firstSeenAt`, `lastSeenAt`
 - `listings`
   - thin canonical listing identity row
-  - `tenantId`, `listingId`, `shopId`, `firstSeenAt`, `lastSeenAt`
+  - `accountId`, `listingId`, `shopId`, `firstSeenAt`, `lastSeenAt`
 - `shops`
-  - `tenantId`, `shopId`, metadata fields, `firstSeenAt`, `lastSeenAt`
+  - `accountId`, `shopId`, metadata fields, `firstSeenAt`, `lastSeenAt`
 
 ### Observation Tables
 
 - `product_keyword_ranks`
   - purpose: append-only rank facts only (no listing metadata snapshots)
-  - `tenantId`, `trackedKeywordId`, `listingId`, `etsyListingId`, `observedAt`, `rank`
+  - `accountId`, `trackedKeywordId`, `listingId`, `etsyListingId`, `observedAt`, `rank`
 - `listing_metric_snapshots`
-  - `tenantId`, `listingId`, `observedAt`, `reviewCount`, `reviewAverage`, `favorerCount`,
+  - `accountId`, `listingId`, `observedAt`, `reviewCount`, `reviewAverage`, `favorerCount`,
     `price`, `currency`, `views`, `quantity`, `estimatedSales`
 - `shop_listing_observations`
-  - `tenantId`, `shopPrimitiveId`, `shopId`, `listingId`, `observedAt`, `isActive`
+  - `accountId`, `shopPrimitiveId`, `shopId`, `listingId`, `observedAt`, `isActive`
 - `monitor_runs`
-  - `id`, `tenantId`, `monitorType`, `targetPrimitiveId`, `startedAt`, `finishedAt`,
+  - `id`, `accountId`, `monitorType`, `targetPrimitiveId`, `startedAt`, `finishedAt`,
     `status`, `error`
 - `event_logs`
   - rich per-action log stream
-  - `id`, `tenantId`, `occurredAt`, `level`, `category`, `action`, `status`,
+  - `id`, `accountId`, `occurredAt`, `level`, `category`, `action`, `status`,
     `primitiveType`, `primitiveId`, `listingId`, `shopId`, `keyword`, `message`,
     `detailsJson`, `monitorRunId`, `requestId`
 
 ### Scheduling Tables
 
 - `monitor_targets`
-  - `tenantId`, `primitiveId`, `monitorType`, `nextRunAt`, `frequencyTier`,
+  - `accountId`, `primitiveId`, `monitorType`, `nextRunAt`, `frequencyTier`,
     `consecutiveNoChangeDays`, `lastListingUpdatedTimestamp`, `lastRunAt`, `lastStatus`
 - `listing_monitor_metadata`
   - explicit listing cadence audit row
-  - `tenantId`, `listingId`, `intendedCadence` (`1d|3d|7d`), `cadenceReason`,
+  - `accountId`, `listingId`, `intendedCadence` (`1d|3d|7d`), `cadenceReason`,
     `lastEvaluatedAt`, `lastUpdatedTimestampSeen`
 - `monitor_jobs` (optional audit table if pg-boss internal metadata is not enough)
-  - `tenantId`, `monitorType`, `scheduledFor`, `startedAt`, `finishedAt`, `status`
+  - `accountId`, `monitorType`, `scheduledFor`, `startedAt`, `finishedAt`, `status`
 
 ## Monitoring and Scheduling
 

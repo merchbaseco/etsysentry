@@ -12,13 +12,11 @@ import {
 import { EtsyOAuthStateStore } from './oauth-state-store';
 
 const primaryIdentity: EtsyOAuthConnectionKey = {
-    clerkUserId: 'user-1',
-    tenantId: 'tenant-1'
+    accountId: 'account-1'
 };
 
 const secondaryIdentity: EtsyOAuthConnectionKey = {
-    clerkUserId: 'user-2',
-    tenantId: 'tenant-1'
+    accountId: 'account-2'
 };
 
 const createDependencies = (overrides: Partial<EtsyOAuthServiceDependencies> = {}) => {
@@ -69,9 +67,8 @@ describe('oauth-service', () => {
 
         const statePayload = dependencies.stateStore.consume(state ?? '');
         expect(statePayload).toEqual({
-            clerkUserId: primaryIdentity.clerkUserId,
             codeVerifier: 'verifier-1',
-            tenantId: primaryIdentity.tenantId
+            accountId: primaryIdentity.accountId
         });
     });
 
@@ -93,9 +90,8 @@ describe('oauth-service', () => {
 
         setNowMs(2_000_000);
         const issued = dependencies.stateStore.issue({
-            clerkUserId: primaryIdentity.clerkUserId,
             codeVerifier: 'verifier-1',
-            tenantId: primaryIdentity.tenantId
+            accountId: primaryIdentity.accountId
         });
 
         const status = await service.completeOAuthFlow({
@@ -235,13 +231,11 @@ describe('oauth-service', () => {
         const service = createEtsyOAuthService(dependencies);
 
         const freshIdentity: EtsyOAuthConnectionKey = {
-            clerkUserId: 'user-fresh',
-            tenantId: 'tenant-1'
+            accountId: 'account-fresh'
         };
 
         const staleIdentity: EtsyOAuthConnectionKey = {
-            clerkUserId: 'user-stale',
-            tenantId: 'tenant-1'
+            accountId: 'account-stale'
         };
 
         setNowMs(1_000_000);

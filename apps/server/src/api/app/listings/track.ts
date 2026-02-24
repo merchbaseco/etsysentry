@@ -13,7 +13,7 @@ export const listingsTrackProcedure = appProcedure
         const response = await trackListing({
             listingInput: input.listing,
             requestId: ctx.requestId,
-            tenantId: ctx.tenantId,
+            accountId: ctx.accountId,
             trackerClerkUserId: ctx.user.sub
         });
 

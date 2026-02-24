@@ -56,13 +56,13 @@ export const buildTrackedListingDiscoveryValues = (params: {
     clerkUserId: string;
     now: Date;
     rankedListing: RankedListingResult;
-    tenantId: string;
+    accountId: string;
 }) => {
     return {
         etsyListingId: params.rankedListing.listingId,
         etsyState: 'active' as const,
         shopId: params.rankedListing.shopId,
-        tenantId: params.tenantId,
+        accountId: params.accountId,
         thumbnailUrl: params.rankedListing.thumbnailUrl,
         title: params.rankedListing.title,
         trackerClerkUserId: params.clerkUserId,
@@ -152,7 +152,7 @@ const mapBridgeErrorToTrpcError = (
 };
 
 const getTrackedKeyword = async (params: {
-    tenantId: string;
+    accountId: string;
     trackedKeywordId: string;
 }) => {
     const [keyword] = await db
@@ -161,7 +161,7 @@ const getTrackedKeyword = async (params: {
         .where(
             and(
                 eq(trackedKeywords.id, params.trackedKeywordId),
-                eq(trackedKeywords.tenantId, params.tenantId)
+                eq(trackedKeywords.accountId, params.accountId)
             )
         )
         .limit(1);
@@ -169,7 +169,7 @@ const getTrackedKeyword = async (params: {
     if (!keyword) {
         throw new TRPCError({
             code: 'NOT_FOUND',
-            message: 'Tracked keyword was not found for this tenant.'
+            message: 'Tracked keyword was not found for this account.'
         });
     }
 
@@ -179,18 +179,17 @@ const getTrackedKeyword = async (params: {
 const fetchKeywordRanksFromEtsy = async (params: {
     clerkUserId: string;
     keyword: string;
-    tenantId: string;
+    accountId: string;
 }) => {
     const oauthToken = await getEtsyOAuthAccessToken({
-        clerkUserId: params.clerkUserId,
-        tenantId: params.tenantId
+        accountId: params.accountId
     });
 
     try {
         await recordEtsyApiCallBestEffort({
             clerkUserId: params.clerkUserId,
             endpoint: 'findAllListingsActive',
-            tenantId: params.tenantId
+            accountId: params.accountId
         });
 
         return await findAllListingsActive({
@@ -213,11 +212,11 @@ export const syncRanksForKeyword = async (params: {
     clerkUserId: string;
     monitorRunId?: string;
     requestId?: string;
-    tenantId: string;
+    accountId: string;
     trackedKeywordId: string;
 }): Promise<SyncRanksForKeywordResult> => {
     const trackedKeyword = await getTrackedKeyword({
-        tenantId: params.tenantId,
+        accountId: params.accountId,
         trackedKeywordId: params.trackedKeywordId
     });
 
@@ -228,7 +227,7 @@ export const syncRanksForKeyword = async (params: {
         const response = await fetchKeywordRanksFromEtsy({
             clerkUserId: params.clerkUserId,
             keyword: trackedKeyword.keyword,
-            tenantId: params.tenantId
+            accountId: params.accountId
         });
 
         const insertValues = await db.transaction(async (tx) => {
@@ -252,7 +251,7 @@ export const syncRanksForKeyword = async (params: {
                         clerkUserId: params.clerkUserId,
                         now,
                         rankedListing,
-                        tenantId: params.tenantId
+                        accountId: params.accountId
                     })
                 );
 
@@ -261,7 +260,7 @@ export const syncRanksForKeyword = async (params: {
                     .values(discoveryValues)
                     // Keyword sync only discovers listings. Existing tracked listings are untouched.
                     .onConflictDoNothing({
-                        target: [trackedListings.tenantId, trackedListings.etsyListingId]
+                        target: [trackedListings.accountId, trackedListings.etsyListingId]
                     })
                     .returning({
                         etsyListingId: trackedListings.etsyListingId
@@ -279,7 +278,7 @@ export const syncRanksForKeyword = async (params: {
                     .from(trackedListings)
                     .where(
                         and(
-                            eq(trackedListings.tenantId, params.tenantId),
+                            eq(trackedListings.accountId, params.accountId),
                             inArray(
                                 trackedListings.etsyListingId,
                                 uniqueRankedListings.map((rankedListing) => rankedListing.listingId)
@@ -318,7 +317,7 @@ export const syncRanksForKeyword = async (params: {
                     listingId,
                     observedAt: now,
                     rank: index + 1,
-                    tenantId: params.tenantId,
+                    accountId: params.accountId,
                     trackedKeywordId: trackedKeyword.id
                 };
             });
@@ -357,14 +356,14 @@ export const syncRanksForKeyword = async (params: {
             .where(
                 and(
                     eq(trackedKeywords.id, trackedKeyword.id),
-                    eq(trackedKeywords.tenantId, params.tenantId)
+                    eq(trackedKeywords.accountId, params.accountId)
                 )
             );
 
         emitEvent({
             clerkUserId: params.clerkUserId,
             queries: [...keywordSyncInvalidationQueries],
-            tenantId: params.tenantId
+            accountId: params.accountId
         });
 
         await createEventLogs([
@@ -388,7 +387,7 @@ export const syncRanksForKeyword = async (params: {
                 requestId: params.requestId ?? null,
                 shopId: listing.shopId,
                 status: 'success' as const,
-                tenantId: params.tenantId
+                accountId: params.accountId
             })),
             {
                 action: 'keyword.synced',
@@ -408,7 +407,7 @@ export const syncRanksForKeyword = async (params: {
                 primitiveType: 'keyword',
                 requestId: params.requestId ?? null,
                 status: 'success',
-                tenantId: params.tenantId
+                accountId: params.accountId
             }
         ]);
 
@@ -442,14 +441,14 @@ export const syncRanksForKeyword = async (params: {
             .where(
                 and(
                     eq(trackedKeywords.id, trackedKeyword.id),
-                    eq(trackedKeywords.tenantId, params.tenantId)
+                    eq(trackedKeywords.accountId, params.accountId)
                 )
             );
 
         emitEvent({
             clerkUserId: params.clerkUserId,
             queries: [...keywordSyncInvalidationQueries],
-            tenantId: params.tenantId
+            accountId: params.accountId
         });
 
         try {
@@ -468,7 +467,7 @@ export const syncRanksForKeyword = async (params: {
                 primitiveType: 'keyword',
                 requestId: params.requestId ?? null,
                 status: 'failed',
-                tenantId: params.tenantId
+                accountId: params.accountId
             });
         } catch {
             // Preserve the original sync failure.
@@ -479,11 +478,11 @@ export const syncRanksForKeyword = async (params: {
 };
 
 export const getDailyProductRanksForKeyword = async (params: {
-    tenantId: string;
+    accountId: string;
     trackedKeywordId: string;
 }): Promise<DailyProductRanksForKeyword> => {
     const trackedKeyword = await getTrackedKeyword({
-        tenantId: params.tenantId,
+        accountId: params.accountId,
         trackedKeywordId: params.trackedKeywordId
     });
 
@@ -494,7 +493,7 @@ export const getDailyProductRanksForKeyword = async (params: {
         .from(productKeywordRanks)
         .where(
             and(
-                eq(productKeywordRanks.tenantId, params.tenantId),
+                eq(productKeywordRanks.accountId, params.accountId),
                 eq(productKeywordRanks.trackedKeywordId, params.trackedKeywordId)
             )
         )
@@ -516,7 +515,7 @@ export const getDailyProductRanksForKeyword = async (params: {
         .from(productKeywordRanks)
         .where(
             and(
-                eq(productKeywordRanks.tenantId, params.tenantId),
+                eq(productKeywordRanks.accountId, params.accountId),
                 eq(productKeywordRanks.trackedKeywordId, params.trackedKeywordId),
                 eq(productKeywordRanks.observedAt, latest.observedAt)
             )
@@ -534,7 +533,7 @@ export const getDailyProductRanksForKeyword = async (params: {
 
 export const getKeywordRanksForProduct = async (params: {
     listingInput: string;
-    tenantId: string;
+    accountId: string;
 }): Promise<{
     etsyListingId: string;
     items: KeywordRankForProduct[];
@@ -561,12 +560,12 @@ export const getKeywordRanksForProduct = async (params: {
             trackedKeywords,
             and(
                 eq(trackedKeywords.id, productKeywordRanks.trackedKeywordId),
-                eq(trackedKeywords.tenantId, productKeywordRanks.tenantId)
+                eq(trackedKeywords.accountId, productKeywordRanks.accountId)
             )
         )
         .where(
             and(
-                eq(productKeywordRanks.tenantId, params.tenantId),
+                eq(productKeywordRanks.accountId, params.accountId),
                 eq(productKeywordRanks.etsyListingId, etsyListingId)
             )
         )

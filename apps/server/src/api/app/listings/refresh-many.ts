@@ -18,7 +18,7 @@ export const listingsRefreshManyProcedure = appProcedure
                 mode: 'selected',
                 trackedListingIds
             },
-            tenantId: ctx.tenantId
+            accountId: ctx.accountId
         });
         const { enqueuedCount, skippedCount, totalCount } = result;
 
@@ -54,7 +54,7 @@ export const listingsRefreshManyProcedure = appProcedure
             primitiveType: 'system',
             requestId: ctx.requestId,
             status,
-            tenantId: ctx.tenantId
+            accountId: ctx.accountId
         });
 
         return {

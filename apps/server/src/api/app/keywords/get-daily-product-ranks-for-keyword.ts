@@ -10,7 +10,7 @@ export const keywordsGetDailyProductRanksForKeywordProcedure = appProcedure
     )
     .query(async ({ ctx, input }) => {
         return getDailyProductRanksForKeyword({
-            tenantId: ctx.tenantId,
+            accountId: ctx.accountId,
             trackedKeywordId: input.trackedKeywordId
         });
     });

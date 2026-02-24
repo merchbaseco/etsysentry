@@ -13,7 +13,7 @@ export const listingsRefreshProcedure = appProcedure
         const item = await refreshTrackedListing({
             clerkUserId: ctx.user.sub,
             requestId: ctx.requestId,
-            tenantId: ctx.tenantId,
+            accountId: ctx.accountId,
             trackedListingId: input.trackedListingId,
             trackerClerkUserId: ctx.user.sub
         });

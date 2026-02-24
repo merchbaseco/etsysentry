@@ -12,7 +12,7 @@ import {
 const createEventLogInputSchema = z
     .object({
         clerkUserId: z.string().min(1).nullable().optional().default(null),
-        tenantId: z.string().min(1),
+        accountId: z.string().min(1),
         occurredAt: z.date().optional(),
         level: eventLogLevelSchema.default('info'),
         category: z.string().min(1).default('monitor'),
@@ -34,7 +34,7 @@ type CreateEventLogInput = z.input<typeof createEventLogInputSchema>;
 
 export type EventLogRecord = {
     id: string;
-    tenantId: string;
+    accountId: string;
     occurredAt: string;
     level: z.infer<typeof eventLogLevelSchema>;
     category: string;
@@ -62,7 +62,7 @@ const toDetailsJson = (value: unknown): Record<string, unknown> => {
 const toRecord = (row: typeof eventLogs.$inferSelect): EventLogRecord => {
     return {
         id: row.id,
-        tenantId: row.tenantId,
+        accountId: row.accountId,
         occurredAt: row.occurredAt.toISOString(),
         level: row.level,
         category: row.category,
@@ -86,7 +86,7 @@ const toInsertValues = (input: CreateEventLogInput) => {
     return {
         clerkUserId: parsed.clerkUserId,
         values: {
-            tenantId: parsed.tenantId,
+            accountId: parsed.accountId,
             occurredAt: parsed.occurredAt ?? new Date(),
             level: parsed.level,
             category: parsed.category,
@@ -113,7 +113,7 @@ export const createEventLog = async (input: CreateEventLogInput): Promise<EventL
         emitEvent({
             clerkUserId: parsed.clerkUserId,
             queries: ['app.logs.list'],
-            tenantId: parsed.values.tenantId
+            accountId: parsed.values.accountId
         });
     }
 
@@ -138,16 +138,16 @@ export const createEventLogs = async (input: CreateEventLogInput[]): Promise<Eve
             continue;
         }
 
-        invalidationTargets.add(JSON.stringify([value.values.tenantId, value.clerkUserId]));
+        invalidationTargets.add(JSON.stringify([value.values.accountId, value.clerkUserId]));
     }
 
     for (const target of invalidationTargets) {
-        const [tenantId, clerkUserId] = JSON.parse(target) as [string, string];
+        const [accountId, clerkUserId] = JSON.parse(target) as [string, string];
 
         emitEvent({
             clerkUserId,
             queries: ['app.logs.list'],
-            tenantId
+            accountId
         });
     }
 

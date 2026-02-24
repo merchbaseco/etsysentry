@@ -6,8 +6,7 @@ export const etsyAuthRefreshProcedure = appProcedure
     .input(z.object({}))
     .mutation(async ({ ctx }) => {
         const status = await refreshEtsyOAuthAccessToken({
-            clerkUserId: ctx.user.sub,
-            tenantId: ctx.tenantId
+            accountId: ctx.accountId
         });
 
         return {
