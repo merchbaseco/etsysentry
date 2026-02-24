@@ -24,6 +24,7 @@ describe('find-all-listings-active bridge', () => {
                     results: [
                         {
                             listing_id: 1234567890,
+                            listing_type: 'physical',
                             main_image: {
                                 url_170x135:
                                     'https://i.etsystatic.com/123/il/abc123/1234567890/il_170x135.jpg'
@@ -39,6 +40,7 @@ describe('find-all-listings-active bridge', () => {
                         },
                         {
                             listing_id: 1122334455,
+                            listing_type: 'download',
                             price: null,
                             title: 'Vintage Lamp',
                             url: null
@@ -64,6 +66,7 @@ describe('find-all-listings-active bridge', () => {
             results: [
                 {
                     listingId: '1234567890',
+                    listingType: 'physical',
                     price: {
                         amount: 4500,
                         currencyCode: 'USD',
@@ -77,6 +80,7 @@ describe('find-all-listings-active bridge', () => {
                 },
                 {
                     listingId: '1122334455',
+                    listingType: 'download',
                     price: null,
                     shopId: null,
                     thumbnailUrl: null,

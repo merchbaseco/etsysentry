@@ -19,6 +19,7 @@ describe('get-listing bridge', () => {
                 JSON.stringify({
                     description: 'Sample description',
                     listing_id: 1234567890,
+                    listing_type: 'download',
                     num_favorers: 22,
                     price: {
                         amount: 2550,
@@ -52,6 +53,7 @@ describe('get-listing bridge', () => {
             description: 'Sample description',
             etsyState: 'active',
             listingId: '1234567890',
+            listingType: 'download',
             numFavorers: 22,
             price: {
                 amount: 2550,

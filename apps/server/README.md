@@ -27,6 +27,8 @@ Implemented scaffold:
 - Canonical listing snapshot fields (`price*`, `quantity`, `views`, `numFavorers`, `shopName`,
   `etsyState`, `updatedTimestamp`, `lastRefreshedAt`, `lastRefreshError`) are owned by listing
   sync (`track|refresh`) paths
+- Tracked listings persist `isDigital` and listing tracking auto-pauses digital listings based on
+  Etsy `listing_type`
 - Tracked listings persist sync queue state in `tracked_listings.syncState` (`idle|queued|syncing`)
   so dashboard refresh actions can reflect in-progress work across page reloads
 - Tracked keywords persist sync queue state in `tracked_keywords.syncState` (`idle|queued|syncing`)
@@ -165,6 +167,9 @@ Current app surface:
 - Shop monitors are auto-synced by `pg-boss` workers:
   - immediate enqueue when a shop is tracked or manually refreshed
   - daily scheduled dispatch for due tracked shops
+- Listing monitors are auto-synced by `pg-boss` workers:
+  - daily scheduled dispatch for due tracked listings where `tracked_listings.isDigital = false`
+    and `trackingState != paused`
 - USD conversion rates are auto-synced by `pg-boss` workers every 24 hours.
 - Etsy bridge HTTP calls are protected by in-process rate limiting with dynamic header sync:
   - reads `x-limit-per-second`, `x-limit-per-day`, `x-remaining-*`

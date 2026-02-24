@@ -14,6 +14,7 @@ const getListingIncludeSchema = z.enum([
 ]);
 
 const listingStateSchema = z.enum(['active', 'inactive', 'sold_out', 'draft', 'expired']);
+const listingTypeSchema = z.enum(['physical', 'download', 'both']);
 
 const moneySchema = z.object({
     amount: z.coerce.number().int(),
@@ -39,7 +40,7 @@ const listingResponseSchema = z
         language: z.string().nullable().optional(),
         last_modified_timestamp: z.coerce.number().int().nullable().optional(),
         listing_id: z.coerce.number().int().positive(),
-        listing_type: z.string().nullable().optional(),
+        listing_type: listingTypeSchema.nullable().optional(),
         materials: z.array(z.string()).nullable().optional(),
         num_favorers: z.coerce.number().int().nonnegative().nullable().optional(),
         original_creation_timestamp: z.coerce.number().int().nullable().optional(),
@@ -84,6 +85,7 @@ const etsyErrorSchema = z
 
 export type EtsyGetListingInclude = z.infer<typeof getListingIncludeSchema>;
 export type EtsyListingState = z.infer<typeof listingStateSchema>;
+export type EtsyListingType = z.infer<typeof listingTypeSchema>;
 
 export type GetListingBridgeInput = {
     accessToken: string;
@@ -104,7 +106,7 @@ export type GetListingBridgeResponse = {
     language: string | null;
     lastModifiedTimestamp: number | null;
     listingId: string;
-    listingType: string | null;
+    listingType: EtsyListingType | null;
     materials: string[];
     numFavorers: number | null;
     originalCreationTimestamp: number | null;

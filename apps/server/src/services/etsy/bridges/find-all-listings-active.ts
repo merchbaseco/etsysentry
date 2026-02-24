@@ -5,6 +5,7 @@ import { getEtsyApiKeyHeaderValue } from '../get-etsy-api-key-header-value';
 const sortOnSchema = z.enum(['created', 'price', 'updated', 'score']);
 
 const sortOrderSchema = z.enum(['asc', 'ascending', 'desc', 'descending', 'up', 'down']);
+const listingTypeSchema = z.enum(['physical', 'download', 'both']);
 
 const moneySchema = z.object({
     amount: z.coerce.number().int(),
@@ -16,6 +17,7 @@ const listingSchema = z
     .object({
         images: z.array(z.unknown()).nullable().optional(),
         listing_id: z.coerce.number().int().positive(),
+        listing_type: listingTypeSchema.nullable().optional(),
         main_image: z.unknown().nullable().optional(),
         price: moneySchema.nullable().optional(),
         shop_id: z.coerce.number().int().positive().nullable().optional(),
@@ -55,6 +57,7 @@ const etsyErrorSchema = z
 
 export type EtsyFindAllListingsActiveSortOn = z.infer<typeof sortOnSchema>;
 export type EtsyFindAllListingsActiveSortOrder = z.infer<typeof sortOrderSchema>;
+export type EtsyFindAllListingsActiveListingType = z.infer<typeof listingTypeSchema>;
 
 export type FindAllListingsActiveBridgeInput = {
     accessToken: string;
@@ -74,6 +77,7 @@ export type FindAllListingsActiveBridgeResponse = {
     count: number;
     results: Array<{
         listingId: string;
+        listingType: EtsyFindAllListingsActiveListingType | null;
         price: {
             amount: number;
             currencyCode: string;
@@ -202,6 +206,7 @@ const toResponse = (parsed: z.infer<typeof responseSchema>): FindAllListingsActi
         count: parsed.count,
         results: parsed.results.map((item) => ({
             listingId: String(item.listing_id),
+            listingType: item.listing_type ?? null,
             price: item.price
                 ? {
                       amount: item.price.amount,

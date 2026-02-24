@@ -110,6 +110,7 @@ export const trackedListings = pgTable(
         accountId: text('account_id').notNull(),
         trackerClerkUserId: text('tracker_clerk_user_id').notNull(),
         etsyListingId: text('etsy_listing_id').notNull(),
+        isDigital: boolean('is_digital').notNull().default(false),
         shopId: text('shop_id'),
         shopName: text('shop_name'),
         title: text('title').notNull(),

@@ -7,6 +7,7 @@ import {
     findAllListingsActive,
     type FindAllListingsActiveBridgeResponse
 } from '../etsy/bridges/find-all-listings-active';
+import { isExcludedDigitalListingType } from '../listings/is-excluded-digital-listing-type';
 import { getEtsyOAuthAccessToken } from '../etsy/oauth-service';
 import { recordEtsyApiCallBestEffort } from '../etsy/record-etsy-api-call';
 import { createEventLog, createEventLogs } from '../logs/create-event-log';
@@ -61,12 +62,15 @@ export const buildTrackedListingDiscoveryValues = (params: {
     return {
         etsyListingId: params.rankedListing.listingId,
         etsyState: 'active' as const,
+        isDigital: isExcludedDigitalListingType(params.rankedListing.listingType),
         shopId: params.rankedListing.shopId,
         accountId: params.accountId,
         thumbnailUrl: params.rankedListing.thumbnailUrl,
         title: params.rankedListing.title,
         trackerClerkUserId: params.clerkUserId,
-        trackingState: 'active' as const,
+        trackingState: isExcludedDigitalListingType(params.rankedListing.listingType)
+            ? ('paused' as const)
+            : ('active' as const),
         updatedAt: params.now,
         url: params.rankedListing.url
     };
@@ -267,7 +271,14 @@ export const syncRanksForKeyword = async (params: {
                     });
 
                 for (const inserted of insertedListings) {
-                    newlyDiscoveredEtsyListingIds.push(inserted.etsyListingId);
+                    const rankedListing = uniqueRankedListingsById.get(inserted.etsyListingId);
+
+                    if (
+                        rankedListing &&
+                        !isExcludedDigitalListingType(rankedListing.listingType)
+                    ) {
+                        newlyDiscoveredEtsyListingIds.push(inserted.etsyListingId);
+                    }
                 }
 
                 const trackedListingRows = await tx
@@ -302,7 +313,16 @@ export const syncRanksForKeyword = async (params: {
                 }
             }
 
-            const values = response.results.map((item, index) => {
+            const values: Array<{
+                etsyListingId: string;
+                listingId: string;
+                observedAt: Date;
+                rank: number;
+                accountId: string;
+                trackedKeywordId: string;
+            }> = [];
+
+            for (const [index, item] of response.results.entries()) {
                 const listingId = listingIdByEtsyListingId.get(item.listingId);
 
                 if (!listingId) {
@@ -312,15 +332,15 @@ export const syncRanksForKeyword = async (params: {
                     });
                 }
 
-                return {
+                values.push({
                     etsyListingId: item.listingId,
                     listingId,
                     observedAt: now,
                     rank: index + 1,
                     accountId: params.accountId,
                     trackedKeywordId: trackedKeyword.id
-                };
-            });
+                });
+            }
 
             if (values.length > 0) {
                 await tx.insert(productKeywordRanks).values(values);

@@ -1,6 +1,7 @@
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { db } from '../../db';
 import { trackedListings, trackedShopListings } from '../../db/schema';
+import { isExcludedDigitalListingType } from '../listings/is-excluded-digital-listing-type';
 import type { ShopListingResult } from './sync-tracked-shop-fetch';
 
 const DB_BATCH_SIZE = 500;
@@ -136,6 +137,9 @@ export const discoverTrackedListings = async (params: {
     listings: ShopListingResult[];
 }): Promise<Array<{ listingId: string; etsyListingId: string }>> => {
     const insertedRows: Array<{ listingId: string; etsyListingId: string }> = [];
+    const listingByEtsyListingId = new Map(
+        params.listings.map((listing) => [listing.listingId, listing])
+    );
 
     for (const listingChunk of chunkArray(params.listings, DB_BATCH_SIZE)) {
         const rows = await db
@@ -145,6 +149,7 @@ export const discoverTrackedListings = async (params: {
                     accountId: params.accountId,
                     etsyListingId: listing.listingId,
                     etsyState: listing.etsyState ?? 'active',
+                    isDigital: isExcludedDigitalListingType(listing.listingType),
                     numFavorers: listing.numFavorers,
                     priceAmount: listing.price?.amount ?? null,
                     priceCurrencyCode: listing.price?.currencyCode ?? null,
@@ -153,7 +158,9 @@ export const discoverTrackedListings = async (params: {
                     shopId: params.etsyShopId,
                     title: listing.title,
                     trackerClerkUserId: params.clerkUserId,
-                    trackingState: 'active' as const,
+                    trackingState: isExcludedDigitalListingType(listing.listingType)
+                        ? ('paused' as const)
+                        : ('active' as const),
                     updatedAt: params.now,
                     updatedTimestamp: listing.updatedTimestamp,
                     url: listing.url
@@ -167,7 +174,15 @@ export const discoverTrackedListings = async (params: {
                 listingId: trackedListings.listingId
             });
 
-        insertedRows.push(...rows);
+        for (const row of rows) {
+            const listing = listingByEtsyListingId.get(row.etsyListingId);
+
+            if (!listing || isExcludedDigitalListingType(listing.listingType)) {
+                continue;
+            }
+
+            insertedRows.push(row);
+        }
     }
 
     return insertedRows;

@@ -7,6 +7,7 @@ const sortOnSchema = z.enum(['created', 'price', 'updated', 'score']);
 const sortOrderSchema = z.enum(['asc', 'ascending', 'desc', 'descending', 'up', 'down']);
 
 const listingStateSchema = z.enum(['active', 'inactive', 'sold_out', 'draft', 'expired']);
+const listingTypeSchema = z.enum(['physical', 'download', 'both']);
 
 const moneySchema = z.object({
     amount: z.coerce.number().int(),
@@ -17,6 +18,7 @@ const moneySchema = z.object({
 const listingSchema = z
     .object({
         listing_id: z.coerce.number().int().positive(),
+        listing_type: listingTypeSchema.nullable().optional(),
         num_favorers: z.coerce.number().int().nonnegative().nullable().optional(),
         price: moneySchema.nullable().optional(),
         quantity: z.coerce.number().int().nonnegative().nullable().optional(),
@@ -55,6 +57,7 @@ const etsyErrorSchema = z
 
 export type EtsyFindAllActiveListingsByShopSortOn = z.infer<typeof sortOnSchema>;
 export type EtsyFindAllActiveListingsByShopSortOrder = z.infer<typeof sortOrderSchema>;
+export type EtsyFindAllActiveListingsByShopListingType = z.infer<typeof listingTypeSchema>;
 
 export type FindAllActiveListingsByShopBridgeInput = {
     keywords?: string;
@@ -71,6 +74,7 @@ export type FindAllActiveListingsByShopBridgeResponse = {
     results: Array<{
         etsyState: z.infer<typeof listingStateSchema> | null;
         listingId: string;
+        listingType: EtsyFindAllActiveListingsByShopListingType | null;
         numFavorers: number | null;
         price: {
             amount: number;
@@ -165,6 +169,7 @@ const toResponse = (
         results: parsed.results.map((item) => ({
             etsyState: item.state ?? null,
             listingId: String(item.listing_id),
+            listingType: item.listing_type ?? null,
             numFavorers: item.num_favorers ?? null,
             price: item.price
                 ? {
