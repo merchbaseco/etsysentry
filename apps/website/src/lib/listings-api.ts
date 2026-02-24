@@ -35,6 +35,14 @@ export type GetKeywordRanksForProductOutput = InferProcedureOutput<
     typeof trpcClient.app.listings.getKeywordRanksForProduct.query
 >;
 
+export type GetTrackedListingMetricHistoryInput = InferProcedureInput<
+    typeof trpcClient.app.listings.getMetricHistory.query
+>;
+
+export type GetTrackedListingMetricHistoryOutput = InferProcedureOutput<
+    typeof trpcClient.app.listings.getMetricHistory.query
+>;
+
 export const listTrackedListings = async (
     params: ListTrackedListingsInput = {}
 ): Promise<ListTrackedListingsOutput> => {
@@ -91,6 +99,20 @@ export const getKeywordRanksForProduct = async (
         const response = await queryClient.fetchQuery(
             trpc.app.listings.getKeywordRanksForProduct.queryOptions(params)
         );
+        return response;
+    } catch (error) {
+        throw toTrpcRequestError(error);
+    }
+};
+
+export const getTrackedListingMetricHistory = async (
+    params: GetTrackedListingMetricHistoryInput
+): Promise<GetTrackedListingMetricHistoryOutput> => {
+    try {
+        const response = await queryClient.fetchQuery(
+            trpc.app.listings.getMetricHistory.queryOptions(params)
+        );
+
         return response;
     } catch (error) {
         throw toTrpcRequestError(error);

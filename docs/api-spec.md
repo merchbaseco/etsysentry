@@ -289,6 +289,41 @@ Output:
 }
 ```
 
+`app.listings.getMetricHistory` (query)
+
+Input:
+
+```ts
+{
+  trackedListingId: string; // uuid
+  days?: number; // optional window size (1..365), default 30
+}
+```
+
+Output:
+
+```ts
+{
+  listingId: string; // tracked listing id (uuid)
+  etsyListingId: string;
+  title: string;
+  days: number;
+  items: Array<{
+    observedDate: string; // YYYY-MM-DD (UTC day key)
+    observedAt: string; // ISO timestamp for most recent run captured that day
+    views: number | null;
+    favorerCount: number | null;
+    quantity: number | null;
+    price: {
+      amount: number;
+      divisor: number;
+      currencyCode: string;
+      value: number;
+    } | null;
+  }>;
+}
+```
+
 ### Shops
 
 `app.shops.list` (query)

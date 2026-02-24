@@ -25,6 +25,7 @@ import {
     useMouseThumbnailTooltip
 } from './mouse-thumbnail-tooltip';
 import { RangeFilter } from './range-filter';
+import { ListingHistoryDrawer } from './listing-history-drawer';
 
 const trackedListingsQueryKey = trpc.app.listings.list.queryOptions({}).queryKey;
 const trackedListingsQueryKeyJson = JSON.stringify(trackedListingsQueryKey);
@@ -94,6 +95,7 @@ export function ListingsTab() {
     const [isLoading, setIsLoading] = useState(() => initialItems.length === 0);
     const [isTracking, setIsTracking] = useState(false);
     const [refreshingById, setRefreshingById] = useState<Record<string, boolean>>({});
+    const [historyListing, setHistoryListing] = useState<TrackedListingItem | null>(null);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [listingInput, setListingInput] = useState('');
     const { hideTooltip, queueTooltipPositionUpdate, showTooltip, tooltip, tooltipRef } =
@@ -328,8 +330,8 @@ export function ListingsTab() {
                                 <th className="w-[50px] px-2 py-2 text-center text-[10px] uppercase tracking-wider text-muted-foreground">
                                     Qty
                                 </th>
-                                <th className="w-[110px] px-2 py-2 text-right text-[10px] uppercase tracking-wider text-muted-foreground">
-                                    Refreshed
+                                <th className="w-[170px] px-2 py-2 text-right text-[10px] uppercase tracking-wider text-muted-foreground">
+                                    Actions
                                 </th>
                             </tr>
                         </thead>
@@ -414,6 +416,18 @@ export function ListingsTab() {
                                         </td>
                                         <td className="px-2 py-1.5">
                                             <div className="flex items-center justify-end gap-1">
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => setHistoryListing(item)}
+                                                    className={cn(
+                                                        'h-6 px-2 text-[10px] uppercase tracking-wider',
+                                                        'text-terminal-dim hover:text-foreground'
+                                                    )}
+                                                >
+                                                    History
+                                                </Button>
                                                 <span className="text-[11px] text-terminal-dim">
                                                     {timeAgo(item.lastRefreshedAt)}
                                                 </span>
@@ -444,6 +458,10 @@ export function ListingsTab() {
                 )}
             </div>
             <MouseThumbnailTooltipPortal tooltip={tooltip} tooltipRef={tooltipRef} />
+            <ListingHistoryDrawer
+                selectedListing={historyListing}
+                onClose={() => setHistoryListing(null)}
+            />
         </div>
     );
 }
