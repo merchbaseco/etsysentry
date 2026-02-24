@@ -18,10 +18,10 @@ export type EnqueueTrackedListingSyncJobsResult = {
 
 export const enqueueTrackedListingSyncJobs = async (params: {
     selection: ListingSyncSelection;
-    tenantId: string;
+    accountId: string;
 }): Promise<EnqueueTrackedListingSyncJobsResult> => {
     const syncTargets = await findTrackedListingSyncTargets({
-        tenantId: params.tenantId,
+        accountId: params.accountId,
         trackedListingIds:
             params.selection.mode === 'selected' ? params.selection.trackedListingIds : undefined
     });
@@ -32,7 +32,7 @@ export const enqueueTrackedListingSyncJobs = async (params: {
         const jobId = await enqueueListingSyncJob({
             clerkUserId: target.trackerClerkUserId,
             etsyListingId: target.etsyListingId,
-            tenantId: params.tenantId
+            accountId: params.accountId
         });
 
         if (jobId) {

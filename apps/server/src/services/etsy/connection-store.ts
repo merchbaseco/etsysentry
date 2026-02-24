@@ -1,10 +1,9 @@
-import { and, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { db } from '../../db';
 import { etsyOAuthConnections } from '../../db/schema';
 
 export type EtsyOAuthConnectionKey = {
-    clerkUserId: string;
-    tenantId: string;
+    accountId: string;
 };
 
 export type EtsyOAuthTokens = {
@@ -51,31 +50,19 @@ export class InMemoryEtsyOAuthConnectionStore implements EtsyOAuthConnectionStor
     }
 
     private toStorageKey(key: EtsyOAuthConnectionKey): string {
-        return `${key.tenantId}::${key.clerkUserId}`;
+        return key.accountId;
     }
 }
 
 export const etsyOAuthConnectionStore: EtsyOAuthConnectionStore = {
     async clear(key) {
-        await db
-            .delete(etsyOAuthConnections)
-            .where(
-                and(
-                    eq(etsyOAuthConnections.tenantId, key.tenantId),
-                    eq(etsyOAuthConnections.clerkUserId, key.clerkUserId)
-                )
-            );
+        await db.delete(etsyOAuthConnections).where(eq(etsyOAuthConnections.accountId, key.accountId));
     },
     async get(key) {
         const [row] = await db
             .select()
             .from(etsyOAuthConnections)
-            .where(
-                and(
-                    eq(etsyOAuthConnections.tenantId, key.tenantId),
-                    eq(etsyOAuthConnections.clerkUserId, key.clerkUserId)
-                )
-            )
+            .where(eq(etsyOAuthConnections.accountId, key.accountId))
             .limit(1);
 
         if (!row) {
@@ -91,28 +78,18 @@ export const etsyOAuthConnectionStore: EtsyOAuthConnectionStore = {
         };
     },
     async set(key, tokens) {
-        await db
-            .insert(etsyOAuthConnections)
-            .values({
+        await db.transaction(async (tx) => {
+            await tx.delete(etsyOAuthConnections).where(eq(etsyOAuthConnections.accountId, key.accountId));
+
+            await tx.insert(etsyOAuthConnections).values({
                 accessToken: tokens.accessToken,
-                clerkUserId: key.clerkUserId,
                 expiresAt: tokens.expiresAt,
                 refreshToken: tokens.refreshToken,
                 scopes: tokens.scopes,
-                tenantId: key.tenantId,
+                accountId: key.accountId,
                 tokenType: tokens.tokenType,
                 updatedAt: new Date()
-            })
-            .onConflictDoUpdate({
-                set: {
-                    accessToken: tokens.accessToken,
-                    expiresAt: tokens.expiresAt,
-                    refreshToken: tokens.refreshToken,
-                    scopes: tokens.scopes,
-                    tokenType: tokens.tokenType,
-                    updatedAt: new Date()
-                },
-                target: [etsyOAuthConnections.tenantId, etsyOAuthConnections.clerkUserId]
             });
+        });
     }
 };

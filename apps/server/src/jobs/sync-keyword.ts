@@ -17,7 +17,7 @@ export const syncKeywordJob = defineJob(SYNC_KEYWORD_JOB_NAME, {
         const syncResult = await syncRanksForKeyword({
             clerkUserId: job.data.clerkUserId,
             monitorRunId: job.id,
-            tenantId: job.data.tenantId,
+            accountId: job.data.accountId,
             trackedKeywordId: job.data.trackedKeywordId
         });
 
@@ -27,7 +27,7 @@ export const syncKeywordJob = defineJob(SYNC_KEYWORD_JOB_NAME, {
                 payload: {
                     clerkUserId: job.data.clerkUserId,
                     etsyListingId,
-                    tenantId: job.data.tenantId
+                    accountId: job.data.accountId
                 }
             });
         }

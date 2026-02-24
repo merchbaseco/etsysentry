@@ -31,6 +31,6 @@ export const logsListProcedure = appProcedure
     .query(async ({ ctx, input }) => {
         return listEventLogs({
             ...input,
-            tenantId: ctx.tenantId
+            accountId: ctx.accountId
         });
     });

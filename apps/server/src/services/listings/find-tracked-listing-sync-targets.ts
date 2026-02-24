@@ -10,7 +10,7 @@ export type TrackedListingSyncTarget = {
 
 export const findTrackedListingSyncTargets = async (params: {
     trackedListingIds?: string[];
-    tenantId: string;
+    accountId: string;
 }): Promise<TrackedListingSyncTarget[]> => {
     const uniqueTrackedListingIds = params.trackedListingIds
         ? Array.from(new Set(params.trackedListingIds))
@@ -22,10 +22,10 @@ export const findTrackedListingSyncTargets = async (params: {
 
     const whereClause = uniqueTrackedListingIds
         ? and(
-              eq(trackedListings.tenantId, params.tenantId),
+              eq(trackedListings.accountId, params.accountId),
               inArray(trackedListings.listingId, uniqueTrackedListingIds)
           )
-        : eq(trackedListings.tenantId, params.tenantId);
+        : eq(trackedListings.accountId, params.accountId);
 
     return db
         .select({

@@ -71,6 +71,13 @@
       "when": 1771885024892,
       "tag": "0009_mean_madripoor",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1771906566895,
+      "tag": "0010_happy_franklin_storm",
+      "breakpoints": true
     }
   ]
 }

@@ -32,14 +32,14 @@ describe('buildTrackedListingDiscoveryValues', () => {
                 title: 'Mid Century Wall Art',
                 url: 'https://www.etsy.com/listing/1234567890/mid-century-wall-art'
             },
-            tenantId: 'tenant_123'
+            accountId: 'tenant_123'
         });
 
         expect(result).toEqual({
             etsyListingId: '1234567890',
             etsyState: 'active',
             shopId: '99887766',
-            tenantId: 'tenant_123',
+            accountId: 'tenant_123',
             thumbnailUrl: 'https://i.etsystatic.com/123/il/abc123/1234567890/il_170x135.jpg',
             title: 'Mid Century Wall Art',
             trackerClerkUserId: 'user_123',
@@ -63,7 +63,7 @@ describe('buildTrackedListingDiscoveryValues', () => {
                 title: 'Sample Title',
                 url: null
             },
-            tenantId: 'tenant_123'
+            accountId: 'tenant_123'
         });
 
         expect(result.shopId).toBeNull();

@@ -11,7 +11,7 @@ import {
 
 const listEventLogsInputSchema = z
     .object({
-        tenantId: z.string().min(1),
+        accountId: z.string().min(1),
         limit: z.number().int().min(1).max(100).default(20),
         cursor: z
             .object({
@@ -54,7 +54,7 @@ const toDetailsJson = (value: unknown): Record<string, unknown> => {
 const toRecord = (row: typeof eventLogs.$inferSelect): EventLogRecord => {
     return {
         id: row.id,
-        tenantId: row.tenantId,
+        accountId: row.accountId,
         occurredAt: row.occurredAt.toISOString(),
         level: row.level,
         category: row.category,
@@ -74,7 +74,7 @@ const toRecord = (row: typeof eventLogs.$inferSelect): EventLogRecord => {
 
 export const listEventLogs = async (input: ListEventLogsInput): Promise<ListEventLogsResult> => {
     const parsed = listEventLogsInputSchema.parse(input);
-    const conditions = [eq(eventLogs.tenantId, parsed.tenantId)];
+    const conditions = [eq(eventLogs.accountId, parsed.accountId)];
 
     if (parsed.levels && parsed.levels.length > 0) {
         conditions.push(inArray(eventLogs.level, parsed.levels));

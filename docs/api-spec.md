@@ -20,7 +20,7 @@ Server transport base URL for both modalities:
   - `Authorization: Bearer <clerk_jwt>`
 - Auth context behavior:
   - server validates Clerk token
-  - `tenantId` and `clerkUserId` are derived from server auth context
+  - `accountId` is resolved server-side from mapped Clerk identity `(iss, sub)`
   - procedures must not accept auth identity fields from client input
   - admin-only procedures require Clerk email to match `ADMIN_EMAIL`
 - Current implementation status:
@@ -74,7 +74,7 @@ Output:
 {
   email: string | null;
   isAdmin: true;
-  tenantId: string;
+  accountId: string;
 }
 ```
 
@@ -202,7 +202,7 @@ Output:
 {
   items: Array<{
     id: string;
-    tenantId: string;
+    accountId: string;
     trackerClerkUserId: string;
     etsyListingId: string;
     title: string;

@@ -9,9 +9,10 @@ const createContext = (params: { email?: string; isAdmin: boolean }): TrpcContex
         reply: {} as never,
         request: {} as never,
         requestId: 'request-1',
-        tenantId: 'tenant-1',
+        accountId: 'tenant-1',
         user: {
             email: params.email,
+            issuer: 'https://clerk.example',
             orgId: null,
             sub: 'user-1'
         }

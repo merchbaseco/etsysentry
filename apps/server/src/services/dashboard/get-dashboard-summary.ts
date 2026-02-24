@@ -10,7 +10,7 @@ export type DashboardSummary = {
 
 const countApiCallsSince = async (params: {
     clerkUserId: string;
-    tenantId: string;
+    accountId: string;
     threshold: Date;
 }): Promise<number> => {
     const [row] = await db
@@ -20,7 +20,7 @@ const countApiCallsSince = async (params: {
         .from(etsyApiCallEvents)
         .where(
             and(
-                eq(etsyApiCallEvents.tenantId, params.tenantId),
+                eq(etsyApiCallEvents.accountId, params.accountId),
                 eq(etsyApiCallEvents.clerkUserId, params.clerkUserId),
                 gte(etsyApiCallEvents.createdAt, params.threshold)
             )
@@ -31,7 +31,7 @@ const countApiCallsSince = async (params: {
 
 const countTrackedListings = async (params: {
     clerkUserId: string;
-    tenantId: string;
+    accountId: string;
 }): Promise<number> => {
     const [row] = await db
         .select({
@@ -40,7 +40,7 @@ const countTrackedListings = async (params: {
         .from(trackedListings)
         .where(
             and(
-                eq(trackedListings.tenantId, params.tenantId),
+                eq(trackedListings.accountId, params.accountId),
                 eq(trackedListings.trackerClerkUserId, params.clerkUserId)
             )
         );
@@ -50,7 +50,7 @@ const countTrackedListings = async (params: {
 
 export const getDashboardSummary = async (params: {
     clerkUserId: string;
-    tenantId: string;
+    accountId: string;
 }): Promise<DashboardSummary> => {
     const now = Date.now();
     const oneHourAgo = new Date(now - 60 * 60 * 1000);
@@ -60,17 +60,17 @@ export const getDashboardSummary = async (params: {
         await Promise.all([
             countApiCallsSince({
                 clerkUserId: params.clerkUserId,
-                tenantId: params.tenantId,
+                accountId: params.accountId,
                 threshold: oneHourAgo
             }),
             countApiCallsSince({
                 clerkUserId: params.clerkUserId,
-                tenantId: params.tenantId,
+                accountId: params.accountId,
                 threshold: twentyFourHoursAgo
             }),
             countTrackedListings({
                 clerkUserId: params.clerkUserId,
-                tenantId: params.tenantId
+                accountId: params.accountId
             })
         ]);
 

@@ -14,7 +14,7 @@ describe('emitEvent', () => {
         emitEvent({
             clerkUserId: 'user_123',
             queries: ['app.keywords.list', 'app.listings.list', 'app.logs.list'],
-            tenantId: 'tenant_123'
+            accountId: 'tenant_123'
         });
         stopListening();
 
@@ -22,7 +22,7 @@ describe('emitEvent', () => {
             {
                 clerkUserId: 'user_123',
                 queries: ['app.keywords.list', 'app.listings.list', 'app.logs.list'],
-                tenantId: 'tenant_123'
+                accountId: 'tenant_123'
             }
         ]);
     });
@@ -34,7 +34,7 @@ describe('emitEvent', () => {
                 queries: ['invalid.query'] as unknown as (
                     'app.keywords.list' | 'app.listings.list' | 'app.logs.list'
                 )[],
-                tenantId: 'tenant_123'
+                accountId: 'tenant_123'
             });
         }).toThrow();
     });

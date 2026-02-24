@@ -4,14 +4,14 @@ import { verifyToken } from '@clerk/backend';
 import type { FastifyInstance } from 'fastify';
 import { WebSocket, WebSocketServer } from 'ws';
 import { env } from '../../config/env';
+import { resolveAccountIdFromClerk } from '../auth/resolve-account-id-from-clerk';
 import {
     onEvent,
     type RealtimeInvalidationEvent
 } from './emit-event';
 
 type RealtimeConnectionIdentity = {
-    clerkUserId: string;
-    tenantId: string;
+    accountId: string;
 };
 
 const normalizeOrigin = (origin: string): string => {
@@ -62,17 +62,23 @@ const deriveIdentityFromToken = async (
         });
 
         const subject = typeof payload.sub === 'string' ? payload.sub.trim() : '';
+        const issuer = typeof payload.iss === 'string' ? payload.iss.trim() : '';
 
-        if (!subject) {
+        if (!subject || !issuer) {
             return null;
         }
 
         const orgId = typeof payload.org_id === 'string' ? payload.org_id.trim() : '';
-        const tenantId = orgId.length > 0 ? orgId : subject;
+        const email = typeof payload.email === 'string' ? payload.email : null;
+        const accountId = await resolveAccountIdFromClerk({
+            clerkIssuer: issuer,
+            clerkOrgId: orgId.length > 0 ? orgId : null,
+            clerkSubject: subject,
+            email
+        });
 
         return {
-            clerkUserId: subject,
-            tenantId
+            accountId
         };
     } catch {
         return null;
@@ -83,10 +89,7 @@ const shouldDeliverEvent = (
     event: RealtimeInvalidationEvent,
     connectionIdentity: RealtimeConnectionIdentity
 ): boolean => {
-    return (
-        event.clerkUserId === connectionIdentity.clerkUserId &&
-        event.tenantId === connectionIdentity.tenantId
-    );
+    return event.accountId === connectionIdentity.accountId;
 };
 
 export const startWebsocketRuntime = (params: {
@@ -122,7 +125,7 @@ export const startWebsocketRuntime = (params: {
                     {
                         clerkUserId: event.clerkUserId,
                         error,
-                        tenantId: event.tenantId
+                        accountId: event.accountId
                     },
                     'Failed to send realtime invalidation event.'
                 );

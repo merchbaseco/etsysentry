@@ -6,7 +6,7 @@ export const keywordsListProcedure = appProcedure
     .input(z.object({}))
     .query(async ({ ctx }) => {
         return listTrackedKeywords({
-            tenantId: ctx.tenantId,
+            accountId: ctx.accountId,
             trackerClerkUserId: ctx.user.sub
         });
     });

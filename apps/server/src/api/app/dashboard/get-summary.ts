@@ -7,6 +7,6 @@ export const dashboardGetSummaryProcedure = appProcedure
     .query(async ({ ctx }) => {
         return getDashboardSummary({
             clerkUserId: ctx.user.sub,
-            tenantId: ctx.tenantId
+            accountId: ctx.accountId
         });
     });

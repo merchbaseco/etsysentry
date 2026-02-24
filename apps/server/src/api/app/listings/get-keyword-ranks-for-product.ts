@@ -11,6 +11,6 @@ export const listingsGetKeywordRanksForProductProcedure = appProcedure
     .query(async ({ ctx, input }) => {
         return getKeywordRanksForProduct({
             listingInput: input.listing,
-            tenantId: ctx.tenantId
+            accountId: ctx.accountId
         });
     });

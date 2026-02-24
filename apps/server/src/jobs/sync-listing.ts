@@ -16,7 +16,7 @@ export const syncListingJob = defineJob(SYNC_LISTING_JOB_NAME, {
         await syncTrackedListingFromEtsy({
             clerkUserId: job.data.clerkUserId,
             etsyListingId: job.data.etsyListingId,
-            tenantId: job.data.tenantId,
+            accountId: job.data.accountId,
             trackerClerkUserId: job.data.clerkUserId
         });
 
