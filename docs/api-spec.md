@@ -20,7 +20,8 @@ Server transport base URL for both modalities:
   - `Authorization: Bearer <clerk_jwt>`
 - Auth context behavior:
   - server validates Clerk token
-  - `accountId` is resolved server-side from mapped Clerk identity `(iss, sub)`
+  - `accountId` is resolved server-side from mapped Clerk identity `(iss, sub)` with email match
+    as the preferred link when available
   - all tenant/domain ownership is keyed by `accountId` (not Clerk user ids)
   - procedures must not accept auth identity fields from client input
   - admin-only procedures require Clerk email to match `ADMIN_EMAIL`

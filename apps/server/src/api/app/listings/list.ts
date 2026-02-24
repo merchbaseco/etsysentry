@@ -7,8 +7,7 @@ export const listingsListProcedure = appProcedure
     .input(z.object({}))
     .query(async ({ ctx }) => {
         const response = await listTrackedListings({
-            accountId: ctx.accountId,
-            trackerClerkUserId: ctx.user.sub
+            accountId: ctx.accountId
         });
 
         return {
