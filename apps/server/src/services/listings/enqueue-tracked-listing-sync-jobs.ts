@@ -1,9 +1,7 @@
 import { enqueueListingSyncJob } from '../../jobs/sync-keyword-jobs';
 import { findTrackedListingSyncTargets } from './find-tracked-listing-sync-targets';
-import {
-    isTrackedListingSyncInFlight,
-    setTrackedListingsSyncStateByListingIds
-} from './set-tracked-listing-sync-state';
+import { isTrackedListingSyncEnqueueEligible } from './is-tracked-listing-sync-enqueue-eligible';
+import { setTrackedListingsSyncStateByListingIds } from './set-tracked-listing-sync-state';
 
 export type ListingSyncSelection =
     | {
@@ -34,7 +32,7 @@ export const enqueueTrackedListingSyncJobs = async (params: {
     const queuedTrackedListingIds: string[] = [];
 
     for (const target of syncTargets) {
-        if (isTrackedListingSyncInFlight(target.syncState)) {
+        if (!isTrackedListingSyncEnqueueEligible(target)) {
             continue;
         }
 

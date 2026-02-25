@@ -3,11 +3,17 @@ import {
     SYNC_LISTING_JOB_NAME,
     syncListingJobInputSchema
 } from './sync-listing-shared';
+import { and, eq } from 'drizzle-orm';
+import { db } from '../db';
+import { trackedListings } from '../db/schema';
 import { syncTrackedListingFromEtsy } from '../services/listings/tracked-listings-service';
 import {
     createListingSyncFailedEventLog,
     createListingSyncedEventLog
 } from '../services/listings/create-listing-sync-event-log';
+import {
+    markTrackedListingSyncFailureByEtsyListingId
+} from '../services/listings/set-tracked-listing-sync-failure-state';
 import {
     setTrackedListingsSyncStateByEtsyListingIds
 } from '../services/listings/set-tracked-listing-sync-state';
@@ -19,6 +25,30 @@ export const syncListingJob = defineJob(SYNC_LISTING_JOB_NAME, {
     .input(syncListingJobInputSchema)
     .work(async (job, signal, log) => {
         void signal;
+
+        const [current] = await db
+            .select({
+                trackingState: trackedListings.trackingState
+            })
+            .from(trackedListings)
+            .where(
+                and(
+                    eq(trackedListings.accountId, job.data.accountId),
+                    eq(trackedListings.etsyListingId, job.data.etsyListingId)
+                )
+            )
+            .limit(1);
+
+        if (current?.trackingState === 'fatal') {
+            log('Skipped sync for fatal tracked listing.', {
+                etsyListingId: job.data.etsyListingId
+            });
+
+            return {
+                didWork: false,
+                etsyListingId: job.data.etsyListingId
+            } as const;
+        }
 
         await setTrackedListingsSyncStateByEtsyListingIds({
             accountId: job.data.accountId,
@@ -51,6 +81,11 @@ export const syncListingJob = defineJob(SYNC_LISTING_JOB_NAME, {
         } catch (error) {
             const failureMessage =
                 error instanceof Error ? error.message : 'Unexpected listing sync error.';
+            const failedListing = await markTrackedListingSyncFailureByEtsyListingId({
+                accountId: job.data.accountId,
+                etsyListingId: job.data.etsyListingId,
+                failureMessage
+            });
 
             try {
                 await createListingSyncFailedEventLog({
@@ -58,7 +93,9 @@ export const syncListingJob = defineJob(SYNC_LISTING_JOB_NAME, {
                     clerkUserId: job.data.clerkUserId,
                     errorMessage: failureMessage,
                     etsyListingId: job.data.etsyListingId,
-                    monitorRunId: job.id
+                    listingId: failedListing?.listingId ?? null,
+                    monitorRunId: job.id,
+                    shopId: failedListing?.shopId ?? null
                 });
             } catch {
                 // Preserve the original sync failure.

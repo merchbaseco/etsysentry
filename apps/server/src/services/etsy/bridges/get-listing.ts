@@ -13,6 +13,14 @@ const getListingIncludeSchema = z.enum([
     'Personalization'
 ]);
 
+const etsyListingStateSchema = z.enum([
+    'active',
+    'inactive',
+    'sold_out',
+    'draft',
+    'expired',
+    'edit'
+]);
 const listingStateSchema = z.enum(['active', 'inactive', 'sold_out', 'draft', 'expired']);
 const listingTypeSchema = z.enum(['physical', 'download', 'both']);
 
@@ -51,7 +59,7 @@ const listingResponseSchema = z
         shop: shopSchema.nullable().optional(),
         shop_id: z.coerce.number().int().positive().nullable().optional(),
         skus: z.array(z.string()).nullable().optional(),
-        state: listingStateSchema,
+        state: etsyListingStateSchema,
         state_timestamp: z.coerce.number().int().nullable().optional(),
         suggested_title: z.string().nullable().optional(),
         tags: z.array(z.string()).nullable().optional(),
@@ -217,6 +225,16 @@ const extractThumbnailUrl = (images: unknown[] | null | undefined): string | nul
     return typeof url === 'string' ? url : null;
 };
 
+const normalizeListingState = (
+    state: z.infer<typeof etsyListingStateSchema>
+): EtsyListingState => {
+    if (state === 'edit') {
+        return 'inactive';
+    }
+
+    return state;
+};
+
 const toResponse = (
     parsed: z.infer<typeof listingResponseSchema>
 ): GetListingBridgeResponse => {
@@ -226,7 +244,7 @@ const toResponse = (
         createdTimestamp: parsed.created_timestamp ?? null,
         creationTimestamp: parsed.creation_timestamp ?? null,
         description: parsed.description ?? null,
-        etsyState: parsed.state,
+        etsyState: normalizeListingState(parsed.state),
         images: parsed.images ?? [],
         inventory: parsed.inventory ?? null,
         language: parsed.language ?? null,

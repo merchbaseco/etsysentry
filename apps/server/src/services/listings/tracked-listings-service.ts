@@ -21,7 +21,12 @@ import {
     createListingSyncFailedEventLog,
     createListingSyncedEventLog
 } from './create-listing-sync-event-log';
-import { setTrackedShopListingActivityByEtsyListingId } from '../shops/set-tracked-shop-listing-activity';
+import {
+    markTrackedListingSyncFailureByListingId
+} from './set-tracked-listing-sync-failure-state';
+import {
+    setTrackedShopListingActivityByEtsyListingId
+} from '../shops/set-tracked-shop-listing-activity';
 import { upsertListingMetricSnapshot } from './upsert-listing-metric-snapshot';
 import { sortTrackedListingRowsByCreatedAtDesc } from './sort-tracked-listing-rows';
 
@@ -409,6 +414,13 @@ export const refreshTrackedListing = async (params: {
         });
     }
 
+    if (current.trackingState === 'fatal') {
+        throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Tracked listing is in a fatal sync state and requires admin intervention.'
+        });
+    }
+
     if (isTrackedListingSyncInFlight(current.syncState)) {
         throw new TRPCError({
             code: 'CONFLICT',
@@ -458,18 +470,11 @@ export const refreshTrackedListing = async (params: {
     } catch (error) {
         const failureMessage =
             error instanceof TRPCError ? error.message : 'Unexpected listing refresh error.';
-
-        const [updated] = await db
-            .update(trackedListings)
-            .set({
-                lastRefreshError: failureMessage,
-                lastRefreshedAt: new Date(),
-                syncState: 'idle',
-                trackingState: 'error',
-                updatedAt: new Date()
-            })
-            .where(eq(trackedListings.listingId, current.listingId))
-            .returning();
+        const updated = await markTrackedListingSyncFailureByListingId({
+            accountId: params.accountId,
+            failureMessage,
+            trackedListingId: current.listingId
+        });
 
         if (!updated) {
             throw error;

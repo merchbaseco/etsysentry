@@ -6,6 +6,7 @@ export type TrackedListingSyncTarget = {
     trackedListingId: string;
     etsyListingId: string;
     syncState: (typeof trackedListings.$inferSelect)['syncState'];
+    trackingState: (typeof trackedListings.$inferSelect)['trackingState'];
     trackerClerkUserId: string;
 };
 
@@ -33,6 +34,7 @@ export const findTrackedListingSyncTargets = async (params: {
             trackedListingId: trackedListings.listingId,
             etsyListingId: trackedListings.etsyListingId,
             syncState: trackedListings.syncState,
+            trackingState: trackedListings.trackingState,
             trackerClerkUserId: trackedListings.trackerClerkUserId
         })
         .from(trackedListings)

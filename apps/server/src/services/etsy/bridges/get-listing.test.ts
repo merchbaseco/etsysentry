@@ -74,6 +74,28 @@ describe('get-listing bridge', () => {
         expect(response.videos).toEqual([]);
     });
 
+    test('normalizes Etsy edit state to inactive', async () => {
+        globalThis.fetch = mock(async () => {
+            return new Response(
+                JSON.stringify({
+                    listing_id: 1234567890,
+                    state: 'edit',
+                    title: 'Sample Listing'
+                }),
+                {
+                    status: 200
+                }
+            );
+        }) as unknown as typeof fetch;
+
+        const response = await getListing({
+            accessToken: 'token-1',
+            listingId: '1234567890'
+        });
+
+        expect(response.etsyState).toBe('inactive');
+    });
+
     test('passes documented OpenAPI query params to getListing', async () => {
         let requestedUrl = '';
 

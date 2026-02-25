@@ -1,0 +1,1 @@
+ALTER TYPE "public"."tracked_listing_tracking_state" ADD VALUE 'fatal';
