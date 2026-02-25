@@ -188,9 +188,7 @@ const buildEndpoint = (input: z.infer<typeof getListingInputSchema>): string => 
     const url = new URL(`https://openapi.etsy.com/v3/application/listings/${input.listingId}`);
 
     if (input.includes && input.includes.length > 0) {
-        for (const include of input.includes) {
-            url.searchParams.append('includes', include);
-        }
+        url.searchParams.set('includes', input.includes.join(','));
     }
 
     if (input.language) {

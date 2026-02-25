@@ -50,10 +50,11 @@ When adding or updating a bridge:
 
 - Use exact Etsy parameter names over the wire.
 - Keep boolean values serialized as `"true"` / `"false"`.
-- For array query params (for example `includes`), append one key per value.
+- For array-like query params that Etsy expects as a CSV string (for example `includes`), send a
+  single comma-delimited value.
 
 Example (`getListing`):
-- `includes=Shop&includes=Images`
+- `includes=Shop,Images`
 - `language=en`
 - `legacy=true`
 - `allow_suggested_title=true`
