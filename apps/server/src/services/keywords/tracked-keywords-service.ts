@@ -54,6 +54,24 @@ const toRecord = (row: typeof trackedKeywords.$inferSelect): TrackedKeywordRecor
     };
 };
 
+export const getTrackedKeyword = async (params: {
+    accountId: string;
+    trackedKeywordId: string;
+}): Promise<TrackedKeywordRecord | null> => {
+    const [row] = await db
+        .select()
+        .from(trackedKeywords)
+        .where(
+            and(
+                eq(trackedKeywords.accountId, params.accountId),
+                eq(trackedKeywords.id, params.trackedKeywordId)
+            )
+        )
+        .limit(1);
+
+    return row ? toRecord(row) : null;
+};
+
 export const listTrackedKeywords = async (params: {
     accountId: string;
     trackerClerkUserId?: string;

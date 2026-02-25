@@ -15,6 +15,10 @@ export type TrackKeywordInput = InferProcedureInput<typeof trpcClient.app.keywor
 
 export type TrackKeywordOutput = InferProcedureOutput<typeof trpcClient.app.keywords.track.mutate>;
 
+export type RefreshTrackedKeywordInput = InferProcedureInput<
+    typeof trpcClient.app.keywords.refresh.mutate
+>;
+
 export type GetDailyProductRanksForKeywordInput = InferProcedureInput<
     typeof trpcClient.app.keywords.getDailyProductRanksForKeyword.query
 >;
@@ -39,6 +43,18 @@ export const listTrackedKeywords = async (
 export const trackKeyword = async (params: TrackKeywordInput): Promise<TrackKeywordOutput> => {
     try {
         const response = await trpcClient.app.keywords.track.mutate(params);
+
+        return response;
+    } catch (error) {
+        throw toTrpcRequestError(error);
+    }
+};
+
+export const refreshTrackedKeyword = async (
+    params: RefreshTrackedKeywordInput
+): Promise<TrackedKeywordItem> => {
+    try {
+        const response = await trpcClient.app.keywords.refresh.mutate(params);
 
         return response;
     } catch (error) {
