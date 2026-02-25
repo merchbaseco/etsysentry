@@ -328,7 +328,6 @@ export function KeywordsTab() {
                     <table className="w-full text-xs">
                         <thead className="sticky top-0 z-10 bg-card">
                             <tr className="border-b border-border">
-                                <th className="w-[44px] px-2 py-2 text-left text-[10px] uppercase tracking-wider text-muted-foreground" />
                                 <th className="px-3 py-2 text-left text-[10px] uppercase tracking-wider text-muted-foreground">
                                     Keyword
                                 </th>
@@ -344,6 +343,7 @@ export function KeywordsTab() {
                                 <th className="px-2 py-2 text-right text-[10px] uppercase tracking-wider text-muted-foreground">
                                     Next Sync
                                 </th>
+                                <th className="w-[44px] px-2 py-2 text-right text-[10px] uppercase tracking-wider text-muted-foreground" />
                             </tr>
                         </thead>
                         <tbody>
@@ -359,7 +359,25 @@ export function KeywordsTab() {
                                         )}
                                         onClick={() => handleSelectKeyword(item)}
                                     >
-                                        <td className="px-2 py-1.5">
+                                        <td className="px-3 py-1.5 text-foreground">
+                                            <div className="font-medium">{item.keyword}</div>
+                                            <div className="text-[11px] text-terminal-dim">
+                                                {item.normalizedKeyword}
+                                            </div>
+                                        </td>
+                                        <td className="px-2 py-1.5 text-center">
+                                            <StatusBadge status={item.trackingState} />
+                                        </td>
+                                        <td className="px-2 py-1.5 text-right text-terminal-dim">
+                                            {timeAgo(item.lastRefreshedAt)}
+                                        </td>
+                                        <td className="px-2 py-1.5 text-right text-terminal-dim">
+                                            {timeAgo(item.updatedAt)}
+                                        </td>
+                                        <td className="px-2 py-1.5 text-right text-terminal-dim">
+                                            {timeUntil(item.nextSyncAt)}
+                                        </td>
+                                        <td className="px-2 py-1.5 text-right">
                                             <Button
                                                 type="button"
                                                 variant="transparent"
@@ -381,24 +399,6 @@ export function KeywordsTab() {
                                                     )}
                                                 />
                                             </Button>
-                                        </td>
-                                        <td className="px-3 py-1.5 text-foreground">
-                                            <div className="font-medium">{item.keyword}</div>
-                                            <div className="text-[11px] text-terminal-dim">
-                                                {item.normalizedKeyword}
-                                            </div>
-                                        </td>
-                                        <td className="px-2 py-1.5 text-center">
-                                            <StatusBadge status={item.trackingState} />
-                                        </td>
-                                        <td className="px-2 py-1.5 text-right text-terminal-dim">
-                                            {timeAgo(item.lastRefreshedAt)}
-                                        </td>
-                                        <td className="px-2 py-1.5 text-right text-terminal-dim">
-                                            {timeAgo(item.updatedAt)}
-                                        </td>
-                                        <td className="px-2 py-1.5 text-right text-terminal-dim">
-                                            {timeUntil(item.nextSyncAt)}
                                         </td>
                                     </tr>
                                 );

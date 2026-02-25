@@ -14,8 +14,8 @@ import {
 
 type ListingsTableProps = {
     items: TrackedListingItem[];
-    onOpenHistory: (item: TrackedListingItem) => void;
     onRefresh: (item: TrackedListingItem) => void;
+    onSelectListing: (item: TrackedListingItem) => void;
     onRowMouseEnter: (
         event: MouseEvent<HTMLTableRowElement>,
         item: TrackedListingItem
@@ -26,6 +26,17 @@ type ListingsTableProps = {
         item: TrackedListingItem
     ) => void;
     refreshingById: Record<string, boolean>;
+};
+
+const interactiveElementSelector =
+    'a,button,input,select,textarea,[role="button"],[role="link"]';
+
+const isInteractiveElementClick = (event: MouseEvent<HTMLTableRowElement>): boolean => {
+    if (!(event.target instanceof Element)) {
+        return false;
+    }
+
+    return event.target.closest(interactiveElementSelector) !== null;
 };
 
 export function ListingsTable(props: ListingsTableProps) {
@@ -52,9 +63,10 @@ export function ListingsTable(props: ListingsTableProps) {
                     <th className="w-[50px] px-2 py-2 text-center text-[10px] uppercase tracking-wider text-muted-foreground">
                         Qty
                     </th>
-                    <th className="w-[170px] px-2 py-2 text-right text-[10px] uppercase tracking-wider text-muted-foreground">
-                        Actions
+                    <th className="w-[110px] px-2 py-2 text-right text-[10px] uppercase tracking-wider text-muted-foreground">
+                        Refreshed
                     </th>
+                    <th className="w-[44px] px-2 py-2 text-right text-[10px] uppercase tracking-wider text-muted-foreground" />
                 </tr>
             </thead>
             <tbody>
@@ -76,7 +88,14 @@ export function ListingsTable(props: ListingsTableProps) {
                         <tr
                             key={item.id}
                             data-row-id={item.id}
-                            className="border-b border-border/50"
+                            className="cursor-pointer border-b border-border/50 transition-colors hover:bg-accent/50"
+                            onClick={(event) => {
+                                if (isInteractiveElementClick(event)) {
+                                    return;
+                                }
+
+                                props.onSelectListing(item);
+                            }}
                             onMouseEnter={(event) => props.onRowMouseEnter(event, item)}
                             onMouseMove={(event) => props.onRowMouseMove(event, item)}
                             onMouseLeave={props.onRowMouseLeave}
@@ -120,41 +139,27 @@ export function ListingsTable(props: ListingsTableProps) {
                             <td className="whitespace-nowrap px-2 py-1.5 text-center">
                                 {item.quantity === null ? '--' : item.quantity}
                             </td>
-                            <td className="px-2 py-1.5">
-                                <div className="flex items-center justify-end gap-1">
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => props.onOpenHistory(item)}
+                            <td className="px-2 py-1.5 text-right text-terminal-dim">
+                                {timeAgo(item.lastRefreshedAt)}
+                            </td>
+                            <td className="px-2 py-1.5 text-right">
+                                <Button
+                                    type="button"
+                                    variant="transparent"
+                                    size="icon-sm"
+                                    onClick={() => props.onRefresh(item)}
+                                    disabled={isRefreshing}
+                                    aria-label={refreshAriaLabel}
+                                    title={refreshTitle}
+                                    className="size-6 text-terminal-dim hover:text-foreground"
+                                >
+                                    <RefreshCw
                                         className={cn(
-                                            'h-6 px-2 text-[10px] uppercase tracking-wider',
-                                            'text-terminal-dim hover:text-foreground'
+                                            'size-3.5',
+                                            isRefreshing && 'animate-spin'
                                         )}
-                                    >
-                                        History
-                                    </Button>
-                                    <span className="text-[11px] text-terminal-dim">
-                                        {timeAgo(item.lastRefreshedAt)}
-                                    </span>
-                                    <Button
-                                        type="button"
-                                        variant="transparent"
-                                        size="icon-sm"
-                                        onClick={() => props.onRefresh(item)}
-                                        disabled={isRefreshing}
-                                        aria-label={refreshAriaLabel}
-                                        title={refreshTitle}
-                                        className="size-6 text-terminal-dim hover:text-foreground"
-                                    >
-                                        <RefreshCw
-                                            className={cn(
-                                                'size-3.5',
-                                                isRefreshing && 'animate-spin'
-                                            )}
-                                        />
-                                    </Button>
-                                </div>
+                                    />
+                                </Button>
                             </td>
                         </tr>
                     );
