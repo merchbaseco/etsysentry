@@ -112,7 +112,7 @@ export const upsertTrackedShopListings = async (params: {
                     lastSeenAt: params.now,
                     lastChangedAt: sql`CASE
                         WHEN ${trackedShopListings.isActive} = false
-                            THEN ${params.now}
+                            THEN excluded.updated_at
                         ELSE ${trackedShopListings.lastChangedAt}
                     END`,
                     listingUpdatedTimestamp: sql`excluded.listing_updated_timestamp`,

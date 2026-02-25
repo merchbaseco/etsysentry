@@ -17,7 +17,7 @@ export const setTrackedShopListingActivityByEtsyListingId = async (params: {
             lastChangedAt: sql`CASE
                 WHEN ${trackedShopListings.isActive} = ${params.isActive}
                     THEN ${trackedShopListings.lastChangedAt}
-                ELSE ${now}
+                ELSE NOW()
             END`,
             updatedAt: now
         })
