@@ -102,7 +102,7 @@ export const AdminSettingsPage = ({
                         : 'N/A'}
                 </span>
             </div>
-            <div className={dataRowClassName}>
+            <div className={cn(dataRowClassName, 'border-b-0')}>
                 <span className="text-xs text-muted-foreground">Last call</span>
                 <span className="text-xs font-medium text-foreground">
                     {formatTimestamp(apiUsage?.stats.lastCallAt ?? null)}

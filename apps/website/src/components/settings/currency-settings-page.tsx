@@ -39,7 +39,7 @@ export const CurrencySettingsPage = ({
                     {formatTimestamp(status?.fetchedAt ?? null)}
                 </span>
             </div>
-            <div className={dataRowClassName}>
+            <div className={cn(dataRowClassName, 'border-b-0')}>
                 <span className="text-xs text-muted-foreground">Next refresh</span>
                 <span className="text-xs font-medium text-foreground">
                     {formatTimestamp(status?.nextRefreshAt ?? null)}

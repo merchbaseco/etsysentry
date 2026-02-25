@@ -111,7 +111,7 @@ export const EtsyApiSettingsPage = ({ connection, realtime }: EtsyApiSettingsPag
                     {formatTimestamp(connection.expiresAt)}
                 </span>
             </div>
-            <div className={dataRowClassName}>
+            <div className={cn(dataRowClassName, 'border-b-0')}>
                 <span className="text-xs text-muted-foreground">Scopes</span>
                 <span className="text-xs font-medium text-foreground">
                     {connection.scopes.length}
