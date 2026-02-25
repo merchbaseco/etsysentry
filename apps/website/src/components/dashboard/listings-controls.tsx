@@ -16,10 +16,12 @@ type ListingsControlsProps = {
     onPriceRangeChange: (value: [number, number]) => void;
     onSearchChange: (value: string) => void;
     onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
-    onToggleShowDigital: () => void;
+    onToggleDigitalListings: () => void;
+    onTogglePhysicalListings: () => void;
     priceRange: [number, number];
     search: string;
     showDigitalListings: boolean;
+    showPhysicalListings: boolean;
 };
 
 export function ListingsControls(props: ListingsControlsProps) {
@@ -45,11 +47,16 @@ export function ListingsControls(props: ListingsControlsProps) {
                             onChange={props.onFavsRangeChange}
                         />
                     </FilterGroup>
-                    <FilterGroup label="Listings">
+                    <FilterGroup label="Type">
                         <FilterChip
-                            label="Show digital"
+                            label="Physical"
+                            active={props.showPhysicalListings}
+                            onClick={props.onTogglePhysicalListings}
+                        />
+                        <FilterChip
+                            label="Digital"
                             active={props.showDigitalListings}
-                            onClick={props.onToggleShowDigital}
+                            onClick={props.onToggleDigitalListings}
                         />
                     </FilterGroup>
                 </FilterBar>

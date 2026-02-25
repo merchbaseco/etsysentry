@@ -37,6 +37,7 @@ export function ListingsTab() {
     const initialItems = cachedTrackedListings?.items ?? [];
 
     const [search, setSearch] = useState('');
+    const [showPhysicalListings, setShowPhysicalListings] = useState(true);
     const [showDigitalListings, setShowDigitalListings] = useState(false);
     const [priceRange, setPriceRange] = useState<[number, number]>([0, 40]);
     const [favsRange, setFavsRange] = useState<[number, number]>([0, 5000]);
@@ -125,7 +126,11 @@ export function ListingsTab() {
         const favsActive = favsRange[0] > 0 || favsRange[1] < 5000;
 
         return items.filter((item) => {
-            if (!showDigitalListings && item.isDigital) {
+            if (item.isDigital && !showDigitalListings) {
+                return false;
+            }
+
+            if (!item.isDigital && !showPhysicalListings) {
                 return false;
             }
 
@@ -153,7 +158,7 @@ export function ListingsTab() {
                 (item.shopId ?? '').includes(query)
             );
         });
-    }, [favsRange, items, priceRange, search, showDigitalListings]);
+    }, [favsRange, items, priceRange, search, showDigitalListings, showPhysicalListings]);
 
     const handleTrack = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -220,10 +225,12 @@ export function ListingsTab() {
                 onPriceRangeChange={setPriceRange}
                 onSearchChange={setSearch}
                 onSubmit={handleTrack}
-                onToggleShowDigital={() => setShowDigitalListings((current) => !current)}
+                onToggleDigitalListings={() => setShowDigitalListings((current) => !current)}
+                onTogglePhysicalListings={() => setShowPhysicalListings((current) => !current)}
                 priceRange={priceRange}
                 search={search}
                 showDigitalListings={showDigitalListings}
+                showPhysicalListings={showPhysicalListings}
             />
 
             {errorMessage ? (
