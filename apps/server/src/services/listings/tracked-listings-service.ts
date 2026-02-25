@@ -29,7 +29,6 @@ import {
 } from '../shops/set-tracked-shop-listing-activity';
 import { upsertListingMetricSnapshot } from './upsert-listing-metric-snapshot';
 import { sortTrackedListingRowsByCreatedAtDesc } from './sort-tracked-listing-rows';
-import { trackedListingSyncIncludes } from './tracked-listing-sync-includes';
 
 export type TrackedListingRecord = {
     etsyListingId: string;
@@ -217,7 +216,7 @@ const fetchListingFromEtsy = async (params: {
 
         return await getListing({
             accessToken: oauthToken.accessToken,
-            includes: [...trackedListingSyncIncludes],
+            includes: ['Images', 'Shop'],
             listingId: params.etsyListingId
         });
     } catch (error) {
