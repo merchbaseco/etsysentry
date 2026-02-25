@@ -216,7 +216,7 @@ const fetchListingFromEtsy = async (params: {
 
         return await getListing({
             accessToken: oauthToken.accessToken,
-            includes: ['Images'],
+            includes: ['Images', 'Shop'],
             listingId: params.etsyListingId
         });
     } catch (error) {
