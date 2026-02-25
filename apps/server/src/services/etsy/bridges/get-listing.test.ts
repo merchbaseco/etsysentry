@@ -18,6 +18,12 @@ describe('get-listing bridge', () => {
             return new Response(
                 JSON.stringify({
                     description: 'Sample description',
+                    images: [
+                        {
+                            url_170x135:
+                                'https://i.etsystatic.com/123/r/il/aabbcc/1234567890/il_170x135.jpg'
+                        }
+                    ],
                     listing_id: 1234567890,
                     listing_type: 'download',
                     num_favorers: 22,
@@ -64,13 +70,19 @@ describe('get-listing bridge', () => {
             shopId: '987654321',
             shopName: 'Needle & Oak',
             tags: ['tag-a'],
+            thumbnailUrl:
+                'https://i.etsystatic.com/123/r/il/aabbcc/1234567890/il_170x135.jpg',
             title: 'Sample Listing',
             updatedTimestamp: 1739400000,
             url: 'https://www.etsy.com/listing/1234567890/sample-listing',
             views: 1234
         });
 
-        expect(response.images).toEqual([]);
+        expect(response.images).toEqual([
+            {
+                url_170x135: 'https://i.etsystatic.com/123/r/il/aabbcc/1234567890/il_170x135.jpg'
+            }
+        ]);
         expect(response.videos).toEqual([]);
     });
 
@@ -126,7 +138,7 @@ describe('get-listing bridge', () => {
         const url = new URL(requestedUrl);
 
         expect(url.pathname).toBe('/v3/application/listings/1234567890');
-        expect(url.searchParams.getAll('includes')).toEqual(['Shop', 'Images']);
+        expect(url.searchParams.get('includes')).toBe('Shop,Images');
         expect(url.searchParams.get('language')).toBe('en');
         expect(url.searchParams.get('legacy')).toBe('true');
         expect(url.searchParams.get('allow_suggested_title')).toBe('true');
