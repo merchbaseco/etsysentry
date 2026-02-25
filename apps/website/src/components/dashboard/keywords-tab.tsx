@@ -4,6 +4,7 @@ import {
     getDailyProductRanksForKeyword,
     type ListTrackedKeywordsOutput,
     listTrackedKeywords,
+    refreshTrackedKeyword,
     trackKeyword,
     type DailyProductRanksForKeyword,
     type TrackedKeywordItem
@@ -15,6 +16,7 @@ import {
 import { TrpcRequestError } from '@/lib/trpc-http';
 import { queryClient, trpc } from '@/lib/trpc-client';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 import {
     EmptyState,
     FilterChip,
@@ -70,6 +72,7 @@ export function KeywordsTab() {
     const [items, setItems] = useState<TrackedKeywordItem[]>(() => initialItems);
     const [isLoading, setIsLoading] = useState(() => initialItems.length === 0);
     const [isTracking, setIsTracking] = useState(false);
+    const [refreshingById, setRefreshingById] = useState<Record<string, boolean>>({});
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [keywordInput, setKeywordInput] = useState('');
     const [selectedKeywordId, setSelectedKeywordId] = useState<string | null>(null);
@@ -189,6 +192,34 @@ export function KeywordsTab() {
         }
     };
 
+    const handleRefreshRow = async (item: TrackedKeywordItem): Promise<void> => {
+        if (isKeywordSyncInFlight(item) || refreshingById[item.id] === true) {
+            return;
+        }
+
+        setRefreshingById((current) => ({ ...current, [item.id]: true }));
+
+        try {
+            const refreshed = await refreshTrackedKeyword({
+                trackedKeywordId: item.id
+            });
+
+            setItems((current) => {
+                const nextItems = upsertById(current, refreshed);
+                queryClient.setQueryData<ListTrackedKeywordsOutput>(trackedKeywordsQueryKey, {
+                    items: nextItems
+                });
+                return nextItems;
+            });
+            setErrorMessage(null);
+        } catch (error) {
+            setErrorMessage(toErrorMessage(error));
+            void loadKeywords();
+        } finally {
+            setRefreshingById((current) => ({ ...current, [item.id]: false }));
+        }
+    };
+
     const loadLatestForKeyword = useCallback(async (trackedKeywordId: string) => {
         setIsLatestLoading(true);
 
@@ -297,6 +328,7 @@ export function KeywordsTab() {
                     <table className="w-full text-xs">
                         <thead className="sticky top-0 z-10 bg-card">
                             <tr className="border-b border-border">
+                                <th className="w-[44px] px-2 py-2 text-left text-[10px] uppercase tracking-wider text-muted-foreground" />
                                 <th className="px-3 py-2 text-left text-[10px] uppercase tracking-wider text-muted-foreground">
                                     Keyword
                                 </th>
@@ -327,6 +359,29 @@ export function KeywordsTab() {
                                         )}
                                         onClick={() => handleSelectKeyword(item)}
                                     >
+                                        <td className="px-2 py-1.5">
+                                            <Button
+                                                type="button"
+                                                variant="transparent"
+                                                size="icon-sm"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    void handleRefreshRow(item);
+                                                }}
+                                                disabled={isSyncInFlight || refreshingById[item.id] === true}
+                                                aria-label={`Refresh ${item.keyword}`}
+                                                title={isSyncInFlight ? 'Keyword sync in progress' : 'Refresh keyword'}
+                                                className="size-6 text-terminal-dim hover:text-foreground"
+                                            >
+                                                <RefreshCw
+                                                    className={cn(
+                                                        'size-3.5',
+                                                        (isSyncInFlight || refreshingById[item.id] === true)
+                                                            && 'animate-spin'
+                                                    )}
+                                                />
+                                            </Button>
+                                        </td>
                                         <td className="px-3 py-1.5 text-foreground">
                                             <div className="font-medium">{item.keyword}</div>
                                             <div className="text-[11px] text-terminal-dim">
@@ -343,15 +398,7 @@ export function KeywordsTab() {
                                             {timeAgo(item.updatedAt)}
                                         </td>
                                         <td className="px-2 py-1.5 text-right text-terminal-dim">
-                                            <div className="flex items-center justify-end gap-1">
-                                                {isSyncInFlight ? (
-                                                    <RefreshCw
-                                                        aria-hidden="true"
-                                                        className="size-3 animate-spin text-terminal-dim"
-                                                    />
-                                                ) : null}
-                                                <span>{timeUntil(item.nextSyncAt)}</span>
-                                            </div>
+                                            {timeUntil(item.nextSyncAt)}
                                         </td>
                                     </tr>
                                 );

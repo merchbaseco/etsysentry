@@ -1,5 +1,6 @@
 import { RefreshCw } from 'lucide-react';
 import { type TrackedShopItem } from '@/lib/shops-api';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { StatusBadge, timeAgo, timeUntil } from '@/components/ui/dashboard';
 
@@ -48,16 +49,15 @@ export const ShopsTable = (params: {
                     return (
                         <tr key={item.id} className="border-b border-border/50">
                             <td className="px-2 py-1.5">
-                                <button
+                                <Button
                                     type="button"
-                                    className={cn(
-                                        'inline-flex size-7 items-center justify-center rounded border border-border bg-secondary text-terminal-dim transition-colors hover:text-foreground',
-                                        'disabled:cursor-default disabled:opacity-50'
-                                    )}
+                                    variant="transparent"
+                                    size="icon-sm"
                                     onClick={() => void params.onRefresh(item)}
                                     disabled={isRefreshing}
                                     aria-label={`Refresh ${item.shopName}`}
                                     title={isQueuedOrSyncing ? 'Shop sync in progress' : 'Refresh shop'}
+                                    className="size-6 text-terminal-dim hover:text-foreground"
                                 >
                                     <RefreshCw
                                         className={cn(
@@ -65,7 +65,7 @@ export const ShopsTable = (params: {
                                             isRefreshing && 'animate-spin'
                                         )}
                                     />
-                                </button>
+                                </Button>
                             </td>
                             <td className="px-3 py-1.5 text-foreground">
                                 <div className="font-medium">{item.shopName}</div>
