@@ -17,7 +17,8 @@ import {
 export const trackedListingTrackingStateEnum = pgEnum('tracked_listing_tracking_state', [
     'active',
     'paused',
-    'error'
+    'error',
+    'fatal'
 ]);
 
 export const trackedListingSyncStateEnum = pgEnum('tracked_listing_sync_state', [

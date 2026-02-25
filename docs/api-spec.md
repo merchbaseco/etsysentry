@@ -215,7 +215,7 @@ Output:
     etsyListingId: string;
     title: string;
     url: string | null;
-    trackingState: 'active' | 'paused' | 'error';
+    trackingState: 'active' | 'paused' | 'error' | 'fatal';
     etsyState: 'active' | 'inactive' | 'sold_out' | 'draft' | 'expired';
     shopId: string | null;
     shopName: string | null;

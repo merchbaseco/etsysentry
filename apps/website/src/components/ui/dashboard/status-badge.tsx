@@ -4,6 +4,7 @@ const STATUS_DOT_CLASS: Record<string, string> = {
     active: 'bg-terminal-green',
     paused: 'bg-terminal-yellow',
     error: 'bg-terminal-red',
+    fatal: 'bg-terminal-red',
     pending: 'bg-terminal-blue',
     success: 'bg-terminal-green',
     failed: 'bg-terminal-red',
@@ -15,6 +16,7 @@ const STATUS_BADGE_CLASS: Record<string, string> = {
     active: 'bg-terminal-green/10 text-terminal-green',
     paused: 'bg-terminal-yellow/10 text-terminal-yellow',
     error: 'bg-terminal-red/10 text-terminal-red',
+    fatal: 'bg-terminal-red/10 text-terminal-red',
     pending: 'bg-terminal-blue/10 text-terminal-blue',
     success: 'bg-terminal-green/10 text-terminal-green',
     failed: 'bg-terminal-red/10 text-terminal-red',
@@ -37,7 +39,8 @@ export function StatusBadge({ status }: { status: string }) {
     return (
         <span
             className={cn(
-                'inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 text-[10px] uppercase tracking-wider font-medium',
+                'inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 text-[10px] uppercase',
+                'tracking-wider font-medium',
                 STATUS_BADGE_CLASS[status] ?? STATUS_BADGE_CLASS.pending
             )}
         >

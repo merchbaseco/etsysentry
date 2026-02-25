@@ -33,7 +33,11 @@ export const findStaleListings = async (params?: {
         .from(trackedListings)
         .where(
             and(
-                or(eq(trackedListings.isDigital, true), ne(trackedListings.trackingState, 'paused')),
+                ne(trackedListings.trackingState, 'fatal'),
+                or(
+                    eq(trackedListings.isDigital, true),
+                    ne(trackedListings.trackingState, 'paused')
+                ),
                 eq(trackedListings.syncState, 'idle'),
                 lte(trackedListings.lastRefreshedAt, staleBefore)
             )
