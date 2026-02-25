@@ -8,6 +8,7 @@ Define one consistent logging strategy across server runtime, jobs, and services
 - easy for humans to scan
 - safe (no secrets/PII leakage)
 
+This document is an implementation of `docs/logs-system-blueprint.md`.
 This document complements `docs/log-view.md` (UI/UX requirements for viewing logs).
 Persisted event action inventory is documented in `docs/event-log-actions.md`.
 
