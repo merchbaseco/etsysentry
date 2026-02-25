@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { db } from '../../db';
 import { trackedListings } from '../../db/schema';
 import { createEventLog } from '../logs/create-event-log';
@@ -23,6 +23,7 @@ import {
 } from './create-listing-sync-event-log';
 import { setTrackedShopListingActivityByEtsyListingId } from '../shops/set-tracked-shop-listing-activity';
 import { upsertListingMetricSnapshot } from './upsert-listing-metric-snapshot';
+import { sortTrackedListingRowsByCreatedAtDesc } from './sort-tracked-listing-rows';
 
 export type TrackedListingRecord = {
     etsyListingId: string;
@@ -309,11 +310,10 @@ export const listTrackedListings = async (params: {
     const rows = await db
         .select()
         .from(trackedListings)
-        .where(whereClause)
-        .orderBy(desc(trackedListings.updatedAt));
+        .where(whereClause);
 
     return {
-        items: rows.map(toRecord)
+        items: sortTrackedListingRowsByCreatedAtDesc(rows).map(toRecord)
     };
 };
 
