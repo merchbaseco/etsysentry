@@ -120,6 +120,23 @@ export function ListingsTab() {
         };
     }, [loadListings]);
 
+    useEffect(() => {
+        if (!historyListing) {
+            return;
+        }
+
+        const nextSelectedListing = items.find((item) => item.id === historyListing.id) ?? null;
+
+        if (!nextSelectedListing) {
+            setHistoryListing(null);
+            return;
+        }
+
+        if (nextSelectedListing !== historyListing) {
+            setHistoryListing(nextSelectedListing);
+        }
+    }, [historyListing, items]);
+
     const filtered = useMemo(() => {
         const query = search.trim().toLowerCase();
         const priceActive = priceRange[0] > 0 || priceRange[1] < 40;
@@ -248,8 +265,11 @@ export function ListingsTab() {
                     <ListingsTable
                         items={filtered}
                         refreshingById={refreshingById}
-                        onOpenHistory={setHistoryListing}
                         onRefresh={(item) => void handleRefreshRow(item)}
+                        onSelectListing={(item) => {
+                            hideTooltip();
+                            setHistoryListing(item);
+                        }}
                         onRowMouseEnter={(event, item) => {
                             showTooltip({
                                 cursorX: event.clientX,

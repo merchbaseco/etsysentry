@@ -28,7 +28,6 @@ export const ShopsTable = (params: {
         <table className="w-full text-xs">
             <thead className="sticky top-0 z-10 bg-card">
                 <tr className="border-b border-border">
-                    <th className="w-[44px] px-2 py-2 text-left text-[10px] uppercase tracking-wider text-muted-foreground" />
                     <th className="px-3 py-2 text-left text-[10px] uppercase tracking-wider text-muted-foreground">Shop</th>
                     <th className="w-[80px] px-2 py-2 text-center text-[10px] uppercase tracking-wider text-muted-foreground">Sync</th>
                     <th className="w-[80px] px-2 py-2 text-right text-[10px] uppercase tracking-wider text-muted-foreground">Active</th>
@@ -39,6 +38,7 @@ export const ShopsTable = (params: {
                     <th className="w-[110px] px-2 py-2 text-right text-[10px] uppercase tracking-wider text-muted-foreground">Refreshed</th>
                     <th className="w-[110px] px-2 py-2 text-right text-[10px] uppercase tracking-wider text-muted-foreground">Next Sync</th>
                     <th className="w-[76px] px-2 py-2 text-center text-[10px] uppercase tracking-wider text-muted-foreground">State</th>
+                    <th className="w-[44px] px-2 py-2 text-right text-[10px] uppercase tracking-wider text-muted-foreground" />
                 </tr>
             </thead>
             <tbody>
@@ -48,25 +48,6 @@ export const ShopsTable = (params: {
 
                     return (
                         <tr key={item.id} className="border-b border-border/50">
-                            <td className="px-2 py-1.5">
-                                <Button
-                                    type="button"
-                                    variant="transparent"
-                                    size="icon-sm"
-                                    onClick={() => void params.onRefresh(item)}
-                                    disabled={isRefreshing}
-                                    aria-label={`Refresh ${item.shopName}`}
-                                    title={isQueuedOrSyncing ? 'Shop sync in progress' : 'Refresh shop'}
-                                    className="size-6 text-terminal-dim hover:text-foreground"
-                                >
-                                    <RefreshCw
-                                        className={cn(
-                                            'size-3.5',
-                                            isRefreshing && 'animate-spin'
-                                        )}
-                                    />
-                                </Button>
-                            </td>
                             <td className="px-3 py-1.5 text-foreground">
                                 <div className="font-medium">{item.shopName}</div>
                                 <div className="text-[11px] text-terminal-dim">{item.etsyShopId}</div>
@@ -104,6 +85,25 @@ export const ShopsTable = (params: {
                             </td>
                             <td className="px-2 py-1.5 text-center">
                                 <StatusBadge status={item.trackingState} />
+                            </td>
+                            <td className="px-2 py-1.5 text-right">
+                                <Button
+                                    type="button"
+                                    variant="transparent"
+                                    size="icon-sm"
+                                    onClick={() => void params.onRefresh(item)}
+                                    disabled={isRefreshing}
+                                    aria-label={`Refresh ${item.shopName}`}
+                                    title={isQueuedOrSyncing ? 'Shop sync in progress' : 'Refresh shop'}
+                                    className="size-6 text-terminal-dim hover:text-foreground"
+                                >
+                                    <RefreshCw
+                                        className={cn(
+                                            'size-3.5',
+                                            isRefreshing && 'animate-spin'
+                                        )}
+                                    />
+                                </Button>
                             </td>
                         </tr>
                     );
