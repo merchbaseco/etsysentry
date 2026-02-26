@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { db } from '../../db';
 import { eventLogs } from '../../db/schema';
-import { emitEvent } from '../realtime/emit-event';
+import { sendRealtimeEvent } from '../realtime/emit-event';
 import {
     eventLogDetailsSchema,
     eventLogLevelSchema,
@@ -122,7 +122,8 @@ export const createEventLog = async (input: CreateEventLogInput): Promise<EventL
     const parsed = toInsertValues(input);
     const [row] = await db.insert(eventLogs).values(parsed.values).returning();
 
-    emitEvent({
+    sendRealtimeEvent({
+        type: 'query.invalidate',
         queries: buildInvalidationQueries(parsed.values.primitiveType),
         accountId: parsed.values.accountId
     });
@@ -156,7 +157,8 @@ export const createEventLogs = async (input: CreateEventLogInput[]): Promise<Eve
     }
 
     for (const [accountId, queries] of invalidationQueriesByAccountId.entries()) {
-        emitEvent({
+        sendRealtimeEvent({
+            type: 'query.invalidate',
             queries: [...queries],
             accountId
         });

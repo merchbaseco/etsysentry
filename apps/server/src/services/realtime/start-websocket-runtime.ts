@@ -6,12 +6,12 @@ import { WebSocket, WebSocketServer } from 'ws';
 import { env } from '../../config/env';
 import { resolveAccountIdFromClerk } from '../auth/resolve-account-id-from-clerk';
 import {
-    onEvent,
-    type RealtimeInvalidationEvent
+    onRealtimeEvent
 } from './emit-event';
 
 type RealtimeConnectionIdentity = {
     accountId: string;
+    clerkUserId: string;
 };
 
 const normalizeOrigin = (origin: string): string => {
@@ -78,7 +78,8 @@ const deriveIdentityFromToken = async (
         });
 
         return {
-            accountId
+            accountId,
+            clerkUserId: subject
         };
     } catch {
         return null;
@@ -86,10 +87,10 @@ const deriveIdentityFromToken = async (
 };
 
 const shouldDeliverEvent = (
-    event: RealtimeInvalidationEvent,
+    eventAccountId: string,
     connectionIdentity: RealtimeConnectionIdentity
 ): boolean => {
-    return event.accountId === connectionIdentity.accountId;
+    return eventAccountId === connectionIdentity.accountId;
 };
 
 export const startWebsocketRuntime = (params: {
@@ -101,14 +102,9 @@ export const startWebsocketRuntime = (params: {
         noServer: true
     });
     const identityByConnection = new Map<WebSocket, RealtimeConnectionIdentity>();
-    const removeInvalidationListener = onEvent((event) => {
-        const payload = JSON.stringify({
-            queries: event.queries,
-            type: 'query.invalidate'
-        });
-
+    const removeInvalidationListener = onRealtimeEvent((event) => {
         for (const [connection, connectionIdentity] of identityByConnection.entries()) {
-            if (!shouldDeliverEvent(event, connectionIdentity)) {
+            if (!shouldDeliverEvent(event.accountId, connectionIdentity)) {
                 continue;
             }
 
@@ -116,7 +112,7 @@ export const startWebsocketRuntime = (params: {
                 continue;
             }
 
-            connection.send(payload, (error?: Error) => {
+            connection.send(event.payload, (error?: Error) => {
                 if (!error) {
                     return;
                 }

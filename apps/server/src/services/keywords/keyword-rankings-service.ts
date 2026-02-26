@@ -11,7 +11,7 @@ import { isExcludedDigitalListingType } from '../listings/is-excluded-digital-li
 import { getEtsyOAuthAccessToken } from '../etsy/oauth-service';
 import { recordEtsyApiCallBestEffort } from '../etsy/record-etsy-api-call';
 import { createEventLog, createEventLogs } from '../logs/create-event-log';
-import { emitEvent } from '../realtime/emit-event';
+import { sendRealtimeEvent } from '../realtime/emit-event';
 
 const DAILY_SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const keywordSyncInvalidationQueries = ['app.keywords.list', 'app.listings.list'] as const;
@@ -373,7 +373,8 @@ export const syncRanksForKeyword = async (params: {
                 )
             );
 
-        emitEvent({
+        sendRealtimeEvent({
+            type: 'query.invalidate',
             queries: [...keywordSyncInvalidationQueries],
             accountId: params.accountId
         });
@@ -457,7 +458,8 @@ export const syncRanksForKeyword = async (params: {
                 )
             );
 
-        emitEvent({
+        sendRealtimeEvent({
+            type: 'query.invalidate',
             queries: [...keywordSyncInvalidationQueries],
             accountId: params.accountId
         });

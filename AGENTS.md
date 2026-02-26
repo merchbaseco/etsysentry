@@ -56,6 +56,7 @@ This file is the always-on guide for AI coding assistants in EtsySentry.
 - Product requirements: `docs/requirements.md`
 - System architecture: `docs/architecture.md`
 - API surface and contract details: `docs/api-spec.md`
+- Realtime architecture and message contracts: `docs/realtime.md`
 - CLI behavior and contract: `docs/cli-spec.md`
 - Etsy bridge implementation and runbook: `docs/etsy-openapi-bridges.md`
 - Logging strategy: `docs/logging-strategy.md`

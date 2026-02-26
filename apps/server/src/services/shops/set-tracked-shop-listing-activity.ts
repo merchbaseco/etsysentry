@@ -1,7 +1,7 @@
 import { and, eq, sql } from 'drizzle-orm';
 import { db } from '../../db';
 import { trackedShopListings } from '../../db/schema';
-import { emitEvent } from '../realtime/emit-event';
+import { sendRealtimeEvent } from '../realtime/emit-event';
 
 export const setTrackedShopListingActivityByEtsyListingId = async (params: {
     accountId: string;
@@ -32,7 +32,8 @@ export const setTrackedShopListingActivityByEtsyListingId = async (params: {
         });
 
     if (rows.length > 0) {
-        emitEvent({
+        sendRealtimeEvent({
+            type: 'query.invalidate',
             queries: ['app.shops.list'],
             accountId: params.accountId
         });
