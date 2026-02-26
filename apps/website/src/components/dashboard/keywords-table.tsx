@@ -1,26 +1,38 @@
-import type { RefObject } from 'react';
+import type { MouseEvent, RefObject } from 'react';
 import { useMemo, useRef } from 'react';
 import { flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { cn } from '@/lib/utils';
-import type { TrackedShopItem } from '@/lib/shops-api';
+import type { TrackedKeywordItem } from '@/lib/keywords-api';
 import { useInfiniteTableWindow } from './use-infinite-table-window';
 import {
-    createShopsColumns,
-    getShopsColumnMeta
-} from './shops-table-columns';
+    createKeywordsColumns,
+    getKeywordsColumnMeta
+} from './keywords-table-columns';
 import { useTableBodyHeight } from './use-table-body-height';
 
-type ShopsTableProps = {
-    items: TrackedShopItem[];
+type KeywordsTableProps = {
+    items: TrackedKeywordItem[];
+    onRefresh: (item: TrackedKeywordItem) => void;
+    onSelectKeyword: (item: TrackedKeywordItem) => void;
     refreshingById: Record<string, boolean>;
-    onRefresh: (item: TrackedShopItem) => void;
     resetKey: string;
+    selectedKeywordId: string | null;
     scrollContainerRef: RefObject<HTMLDivElement | null>;
 };
 
-const ROW_ESTIMATED_HEIGHT_PX = 34;
+const ROW_ESTIMATED_HEIGHT_PX = 38;
 const VIRTUAL_OVERSCAN_ROWS = 8;
+const interactiveElementSelector =
+    'a,button,input,select,textarea,[role="button"],[role="link"]';
+
+const isInteractiveElementClick = (event: MouseEvent<HTMLTableRowElement>): boolean => {
+    if (!(event.target instanceof Element)) {
+        return false;
+    }
+
+    return event.target.closest(interactiveElementSelector) !== null;
+};
 
 const toColumnLayout = (params: { size: number; grow?: boolean }) => {
     if (params.grow) {
@@ -40,7 +52,7 @@ const toColumnLayout = (params: { size: number; grow?: boolean }) => {
     } as const;
 };
 
-export const ShopsTable = (props: ShopsTableProps) => {
+export function KeywordsTable(props: KeywordsTableProps) {
     const { hasMore, renderCount } = useInfiniteTableWindow({
         itemsLength: props.items.length,
         resetKey: props.resetKey,
@@ -50,7 +62,7 @@ export const ShopsTable = (props: ShopsTableProps) => {
         return props.items.slice(0, renderCount);
     }, [props.items, renderCount]);
     const columns = useMemo(() => {
-        return createShopsColumns({
+        return createKeywordsColumns({
             onRefresh: props.onRefresh,
             refreshingById: props.refreshingById
         });
@@ -93,7 +105,9 @@ export const ShopsTable = (props: ShopsTableProps) => {
                             style={{ display: 'flex', width: '100%' }}
                         >
                             {headerGroup.headers.map((header) => {
-                                const columnMeta = getShopsColumnMeta(header.column.columnDef.meta);
+                                const columnMeta = getKeywordsColumnMeta(
+                                    header.column.columnDef.meta
+                                );
 
                                 return (
                                     <th
@@ -124,6 +138,7 @@ export const ShopsTable = (props: ShopsTableProps) => {
                 >
                     {virtualRows.map((virtualRow) => {
                         const row = rows[virtualRow.index];
+                        const item = row.original;
 
                         return (
                             <tr
@@ -133,15 +148,27 @@ export const ShopsTable = (props: ShopsTableProps) => {
                                         rowVirtualizer.measureElement(node);
                                     }
                                 }}
-                                className="absolute left-0 border-b border-border/50"
+                                className={cn(
+                                    'absolute left-0 cursor-pointer border-b border-border/50',
+                                    props.selectedKeywordId === item.id
+                                        ? 'bg-accent/30'
+                                        : 'hover:bg-accent/20'
+                                )}
                                 style={{
                                     display: 'flex',
                                     transform: `translateY(${virtualRow.start}px)`,
                                     width: '100%'
                                 }}
+                                onClick={(event) => {
+                                    if (isInteractiveElementClick(event)) {
+                                        return;
+                                    }
+
+                                    props.onSelectKeyword(item);
+                                }}
                             >
                                 {row.getVisibleCells().map((cell) => {
-                                    const columnMeta = getShopsColumnMeta(
+                                    const columnMeta = getKeywordsColumnMeta(
                                         cell.column.columnDef.meta
                                     );
 
@@ -172,8 +199,8 @@ export const ShopsTable = (props: ShopsTableProps) => {
             >
                 {hasMore
                     ? `Loaded ${tableItems.length} of ${props.items.length}. Scroll to load more.`
-                    : `Showing all ${props.items.length} shops.`}
+                    : `Showing all ${props.items.length} keywords.`}
             </div>
         </>
     );
-};
+}
