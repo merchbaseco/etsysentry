@@ -197,9 +197,11 @@ export function KeywordsTable(props: KeywordsTableProps) {
                 ref={footerRef}
                 className="border-t border-border px-3 py-2 text-[10px] text-muted-foreground"
             >
-                {hasMore
-                    ? `Loaded ${tableItems.length} of ${props.items.length}. Scroll to load more.`
-                    : `Showing all ${props.items.length} keywords.`}
+                {props.items.length === 0
+                    ? 'Loading...'
+                    : hasMore
+                      ? `Loaded ${tableItems.length} of ${props.items.length}. Scroll to load more.`
+                      : `Showing all ${props.items.length} keywords.`}
             </div>
         </>
     );

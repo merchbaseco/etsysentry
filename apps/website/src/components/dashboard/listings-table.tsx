@@ -217,9 +217,11 @@ export function ListingsTable(props: ListingsTableProps) {
                 ref={footerRef}
                 className="border-t border-border px-3 py-2 text-[10px] text-muted-foreground"
             >
-                {hasMore
-                    ? `Loaded ${tableItems.length} of ${props.items.length}. Scroll to load more.`
-                    : `Showing all ${props.items.length} listings.`}
+                {props.items.length === 0
+                    ? 'Loading...'
+                    : hasMore
+                      ? `Loaded ${tableItems.length} of ${props.items.length}. Scroll to load more.`
+                      : `Showing all ${props.items.length} listings.`}
             </div>
         </>
     );

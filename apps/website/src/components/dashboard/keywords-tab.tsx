@@ -325,9 +325,7 @@ export function KeywordsTab() {
             ) : null}
 
             <div ref={scrollViewportRef} className="min-h-0 flex-1 overflow-auto">
-                {isLoading ? (
-                    <div className="px-3 py-6 text-xs text-muted-foreground">Loading tracked keywords...</div>
-                ) : filtered.length === 0 ? (
+                {!isLoading && filtered.length === 0 ? (
                     <EmptyState message="No tracked keywords yet. Add one above." />
                 ) : (
                     <KeywordsTable

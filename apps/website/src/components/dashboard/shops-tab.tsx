@@ -241,9 +241,7 @@ export function ShopsTab() {
             ) : null}
 
             <div ref={scrollViewportRef} className="min-h-0 flex-1 overflow-auto">
-                {isLoading ? (
-                    <div className="px-3 py-6 text-xs text-muted-foreground">Loading tracked shops...</div>
-                ) : filtered.length === 0 ? (
+                {!isLoading && filtered.length === 0 ? (
                     <EmptyState message="No tracked shops yet. Add one above." />
                 ) : (
                     <ShopsTable
