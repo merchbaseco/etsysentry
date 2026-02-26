@@ -1,5 +1,22 @@
 import { describe, expect, test } from 'bun:test';
-import { sumSyncJobCounts } from './get-dashboard-summary';
+import {
+    sumSyncJobCounts,
+    toDashboardApiUsageCounts
+} from './get-dashboard-summary';
+
+describe('toDashboardApiUsageCounts', () => {
+    test('maps Etsy usage stats into dashboard API usage counts', () => {
+        expect(
+            toDashboardApiUsageCounts({
+                callsPast24Hours: 41,
+                callsPastHour: 9
+            })
+        ).toEqual({
+            etsyApiCallsPast24Hours: 41,
+            etsyApiCallsPastHour: 9
+        });
+    });
+});
 
 describe('sumSyncJobCounts', () => {
     test('sums queued and in-flight counts across primitives', () => {

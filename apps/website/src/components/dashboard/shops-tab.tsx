@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     type ListTrackedShopsOutput,
     listTrackedShops,
@@ -63,6 +63,7 @@ export function ShopsTab() {
     const [refreshingById, setRefreshingById] = useState<Record<string, boolean>>({});
     const [shopInput, setShopInput] = useState('');
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
+    const scrollViewportRef = useRef<HTMLDivElement | null>(null);
 
     const loadShops = useCallback(async () => {
         try {
@@ -114,6 +115,13 @@ export function ShopsTab() {
             return item.shopName.toLowerCase().includes(query) || item.etsyShopId.includes(query);
         });
     }, [items, search, trackingStateFilter]);
+    const tableResetKey = `${search}|${trackingStateFilter ?? 'all'}`;
+
+    useEffect(() => {
+        scrollViewportRef.current?.scrollTo({
+            top: 0
+        });
+    }, [tableResetKey]);
 
     const handleTrack = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -232,7 +240,7 @@ export function ShopsTab() {
                 </div>
             ) : null}
 
-            <div className="min-h-0 flex-1 overflow-auto">
+            <div ref={scrollViewportRef} className="min-h-0 flex-1 overflow-auto">
                 {isLoading ? (
                     <div className="px-3 py-6 text-xs text-muted-foreground">Loading tracked shops...</div>
                 ) : filtered.length === 0 ? (
@@ -241,7 +249,9 @@ export function ShopsTab() {
                     <ShopsTable
                         items={filtered}
                         refreshingById={refreshingById}
-                        onRefresh={handleRefreshRow}
+                        onRefresh={(item) => void handleRefreshRow(item)}
+                        resetKey={tableResetKey}
+                        scrollContainerRef={scrollViewportRef}
                     />
                 )}
             </div>

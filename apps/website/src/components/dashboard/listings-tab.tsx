@@ -16,8 +16,10 @@ import { EmptyState } from '@/components/ui/dashboard';
 import { ListingsControls } from './listings-controls';
 import { ListingsTable } from './listings-table';
 import {
+    filterTrackedListings,
     mergeTrackedListings,
     toListingsErrorMessage,
+    toListingsInfiniteResetKey,
     upsertListingById,
     isListingSyncInFlight
 } from './listings-tab-utils';
@@ -35,7 +37,6 @@ export function ListingsTab() {
         trackedListingsQueryKey
     );
     const initialItems = cachedTrackedListings?.items ?? [];
-
     const [search, setSearch] = useState('');
     const [showPhysicalListings, setShowPhysicalListings] = useState(true);
     const [showDigitalListings, setShowDigitalListings] = useState(false);
@@ -53,7 +54,6 @@ export function ListingsTab() {
     const scrollViewportRef = useRef<HTMLDivElement | null>(null);
     const { hideTooltip, queueTooltipPositionUpdate, showTooltip, tooltip, tooltipRef } =
         useMouseThumbnailTooltip();
-
     const applyListings = useCallback(
         (nextItems: TrackedListingItem[], options?: { preserveScroll?: boolean }) => {
             const container = options?.preserveScroll ? scrollViewportRef.current : null;
@@ -93,7 +93,6 @@ export function ListingsTab() {
     useEffect(() => {
         void loadListings();
     }, [loadListings]);
-
     useEffect(() => {
         const onListingsInvalidated = (
             event: Event
@@ -158,44 +157,27 @@ export function ListingsTab() {
     }, [historyListing, items]);
 
     const filtered = useMemo(() => {
-        const query = search.trim().toLowerCase();
-        const priceActive = priceRange[0] > 0 || priceRange[1] < 40;
-        const favsActive = favsRange[0] > 0 || favsRange[1] < 5000;
-
-        return items.filter((item) => {
-            if (item.isDigital && !showDigitalListings) {
-                return false;
-            }
-
-            if (!item.isDigital && !showPhysicalListings) {
-                return false;
-            }
-
-            if (priceActive) {
-                const price = item.price?.value ?? null;
-                if (price === null || price < priceRange[0] || price > priceRange[1]) {
-                    return false;
-                }
-            }
-
-            if (favsActive) {
-                if (item.numFavorers === null || item.numFavorers < favsRange[0] || item.numFavorers > favsRange[1]) {
-                    return false;
-                }
-            }
-
-            if (query.length === 0) {
-                return true;
-            }
-
-            return (
-                item.title.toLowerCase().includes(query) ||
-                item.etsyListingId.includes(query) ||
-                (item.shopName ?? '').toLowerCase().includes(query) ||
-                (item.shopId ?? '').includes(query)
-            );
+        return filterTrackedListings(items, {
+            search,
+            showPhysicalListings,
+            showDigitalListings,
+            priceRange,
+            favsRange
         });
     }, [favsRange, items, priceRange, search, showDigitalListings, showPhysicalListings]);
+    const tableResetKey = toListingsInfiniteResetKey({
+        search,
+        priceRange,
+        favsRange,
+        showDigitalListings,
+        showPhysicalListings
+    });
+
+    useEffect(() => {
+        scrollViewportRef.current?.scrollTo({
+            top: 0
+        });
+    }, [tableResetKey]);
 
     const handleTrack = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -269,13 +251,11 @@ export function ListingsTab() {
                 showDigitalListings={showDigitalListings}
                 showPhysicalListings={showPhysicalListings}
             />
-
             {errorMessage ? (
                 <div className="border-b border-terminal-red/20 bg-terminal-red/10 px-3 py-2 text-xs text-terminal-red">
                     {errorMessage}
                 </div>
             ) : null}
-
             <div ref={scrollViewportRef} className="min-h-0 flex-1 overflow-auto">
                 {isLoading ? (
                     <div className="px-3 py-6 text-xs text-muted-foreground">Loading tracked listings...</div>
@@ -284,6 +264,8 @@ export function ListingsTab() {
                 ) : (
                     <ListingsTable
                         items={filtered}
+                        resetKey={tableResetKey}
+                        scrollContainerRef={scrollViewportRef}
                         refreshingById={refreshingById}
                         onRefresh={(item) => void handleRefreshRow(item)}
                         onSelectListing={(item) => {
