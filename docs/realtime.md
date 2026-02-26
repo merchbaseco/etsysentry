@@ -99,10 +99,11 @@ Current guidance:
 ## Client Modules
 
 - `realtime-message-types.ts`: wire message schemas + `parseRealtimeMessage()`
-- `use-realtime-query-invalidations.ts`: socket lifecycle + dispatcher switch
-- `handle-query-invalidation.ts`: queued invalidation/refetch handler
-- `handle-sync-state-push.ts`: in-place cache patch for list sync states
-- `handle-dashboard-summary-push.ts`: in-place cache patch for job counts
+- `use-realtime-query-invalidations.ts`: socket lifecycle + realtime event dispatcher
+- `handle-realtime-event.ts`: `switch` dispatcher by realtime message `type`
+- `handle-query-invalidate-event.ts`: queued invalidation/refetch handler
+- `handle-sync-state-push-event.ts`: in-place cache patch for list sync states
+- `handle-dashboard-summary-push-event.ts`: in-place cache patch for job counts
 
 ## Adding New Event Types
 
