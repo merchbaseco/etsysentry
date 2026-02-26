@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { RefreshCw } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     getDailyProductRanksForKeyword,
     type ListTrackedKeywordsOutput,
@@ -16,16 +15,14 @@ import {
 import { TrpcRequestError } from '@/lib/trpc-http';
 import { queryClient, trpc } from '@/lib/trpc-client';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
 import {
     EmptyState,
     FilterChip,
     FilterGroup,
-    StatusBadge,
     TopToolbar,
-    timeAgo,
-    timeUntil
+    timeAgo
 } from '@/components/ui/dashboard';
+import { KeywordsTable } from './keywords-table';
 
 const trackedKeywordsQueryKey = trpc.app.keywords.list.queryOptions({}).queryKey;
 const trackedKeywordsQueryKeyJson = JSON.stringify(trackedKeywordsQueryKey);
@@ -85,6 +82,7 @@ export function KeywordsTab() {
         useState<GetKeywordRanksForProductOutput | null>(null);
     const [isReverseLoading, setIsReverseLoading] = useState(false);
     const [, setClockTick] = useState(0);
+    const scrollViewportRef = useRef<HTMLDivElement | null>(null);
 
     const loadKeywords = useCallback(async () => {
         try {
@@ -159,6 +157,13 @@ export function KeywordsTab() {
             );
         });
     }, [items, search, trackingStateFilter]);
+    const tableResetKey = `${search}|${trackingStateFilter ?? 'all'}`;
+
+    useEffect(() => {
+        scrollViewportRef.current?.scrollTo({
+            top: 0
+        });
+    }, [tableResetKey]);
 
     const handleTrack = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -319,92 +324,21 @@ export function KeywordsTab() {
                 </div>
             ) : null}
 
-            <div className="min-h-0 flex-1 overflow-auto">
+            <div ref={scrollViewportRef} className="min-h-0 flex-1 overflow-auto">
                 {isLoading ? (
                     <div className="px-3 py-6 text-xs text-muted-foreground">Loading tracked keywords...</div>
                 ) : filtered.length === 0 ? (
                     <EmptyState message="No tracked keywords yet. Add one above." />
                 ) : (
-                    <table className="w-full text-xs">
-                        <thead className="sticky top-0 z-10 bg-card">
-                            <tr className="border-b border-border">
-                                <th className="px-3 py-2 text-left text-[10px] uppercase tracking-wider text-muted-foreground">
-                                    Keyword
-                                </th>
-                                <th className="px-2 py-2 text-center text-[10px] uppercase tracking-wider text-muted-foreground">
-                                    State
-                                </th>
-                                <th className="px-2 py-2 text-right text-[10px] uppercase tracking-wider text-muted-foreground">
-                                    Last Refreshed
-                                </th>
-                                <th className="px-2 py-2 text-right text-[10px] uppercase tracking-wider text-muted-foreground">
-                                    Updated
-                                </th>
-                                <th className="px-2 py-2 text-right text-[10px] uppercase tracking-wider text-muted-foreground">
-                                    Next Sync
-                                </th>
-                                <th className="w-[44px] px-2 py-2 text-right text-[10px] uppercase tracking-wider text-muted-foreground" />
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filtered.map((item) => {
-                                const isSyncInFlight = isKeywordSyncInFlight(item);
-
-                                return (
-                                    <tr
-                                        key={item.id}
-                                        className={cn(
-                                            'cursor-pointer border-b border-border/50',
-                                            selectedKeywordId === item.id ? 'bg-accent/30' : 'hover:bg-accent/20'
-                                        )}
-                                        onClick={() => handleSelectKeyword(item)}
-                                    >
-                                        <td className="px-3 py-1.5 text-foreground">
-                                            <div className="font-medium">{item.keyword}</div>
-                                            <div className="text-[11px] text-terminal-dim">
-                                                {item.normalizedKeyword}
-                                            </div>
-                                        </td>
-                                        <td className="px-2 py-1.5 text-center">
-                                            <StatusBadge status={item.trackingState} />
-                                        </td>
-                                        <td className="px-2 py-1.5 text-right text-terminal-dim">
-                                            {timeAgo(item.lastRefreshedAt)}
-                                        </td>
-                                        <td className="px-2 py-1.5 text-right text-terminal-dim">
-                                            {timeAgo(item.updatedAt)}
-                                        </td>
-                                        <td className="px-2 py-1.5 text-right text-terminal-dim">
-                                            {timeUntil(item.nextSyncAt)}
-                                        </td>
-                                        <td className="px-2 py-1.5 text-right">
-                                            <Button
-                                                type="button"
-                                                variant="transparent"
-                                                size="icon-sm"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    void handleRefreshRow(item);
-                                                }}
-                                                disabled={isSyncInFlight || refreshingById[item.id] === true}
-                                                aria-label={`Refresh ${item.keyword}`}
-                                                title={isSyncInFlight ? 'Keyword sync in progress' : 'Refresh keyword'}
-                                                className="size-6 text-terminal-dim hover:text-foreground"
-                                            >
-                                                <RefreshCw
-                                                    className={cn(
-                                                        'size-3.5',
-                                                        (isSyncInFlight || refreshingById[item.id] === true)
-                                                            && 'animate-spin'
-                                                    )}
-                                                />
-                                            </Button>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
+                    <KeywordsTable
+                        items={filtered}
+                        onRefresh={(item) => void handleRefreshRow(item)}
+                        onSelectKeyword={handleSelectKeyword}
+                        refreshingById={refreshingById}
+                        resetKey={tableResetKey}
+                        selectedKeywordId={selectedKeywordId}
+                        scrollContainerRef={scrollViewportRef}
+                    />
                 )}
             </div>
 
