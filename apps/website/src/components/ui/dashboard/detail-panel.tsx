@@ -1,17 +1,24 @@
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+const SIZE_CLASS = {
+    default: 'max-w-lg',
+    wide: 'max-w-2xl'
+} as const;
+
 export function DetailPanel({
     open,
     onClose,
     title,
     subtitle,
+    size = 'default',
     children
 }: {
     open: boolean;
     onClose: () => void;
     title: string;
     subtitle?: string;
+    size?: keyof typeof SIZE_CLASS;
     children: React.ReactNode;
 }) {
     if (!open) {
@@ -21,7 +28,7 @@ export function DetailPanel({
     return (
         <div className="fixed inset-0 z-50 flex justify-end">
             <div className="absolute inset-0 bg-background/60 backdrop-blur-sm" onClick={onClose} />
-            <div className="relative z-10 w-full max-w-lg border-l border-border bg-card overflow-y-auto animate-in slide-in-from-right duration-300">
+            <div className={cn('relative z-10 w-full border-l border-border bg-card overflow-y-auto animate-in slide-in-from-right duration-300', SIZE_CLASS[size])}>
                 <div className="sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-card px-5 py-4">
                     <div className="min-w-0 flex-1">
                         <h3 className="truncate text-sm font-semibold text-primary" title={title}>
@@ -43,7 +50,7 @@ export function DetailPanel({
                         <X className="size-4 text-muted-foreground" />
                     </button>
                 </div>
-                <div className="space-y-5 p-5">{children}</div>
+                <div className={size === 'wide' ? '' : 'space-y-5 p-5'}>{children}</div>
             </div>
         </div>
     );

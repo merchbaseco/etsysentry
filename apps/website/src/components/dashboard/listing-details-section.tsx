@@ -1,11 +1,17 @@
+import { ExternalLink, Store } from 'lucide-react';
 import type { TrackedListingItem } from '@/lib/listings-api';
-import { DetailRow, formatNumber, timeAgo } from '@/components/ui/dashboard';
+import { formatNumber, StatusBadge, timeAgo } from '@/components/ui/dashboard';
 import { formatListingPrice } from './listings-tab-utils';
 
-const sectionTitleClassName =
-    'mb-2 text-[10px] uppercase tracking-wider text-muted-foreground';
-const panelClassName = 'rounded border border-border bg-secondary/50 p-3';
-const rawPayloadClassName = 'max-h-72 overflow-auto rounded border border-border bg-secondary p-3';
+const sectionBarClassName =
+    'flex items-center justify-between -mt-px border-y border-border bg-secondary px-4 py-1.5';
+const sectionBarLabelClassName =
+    'text-[11px] font-medium uppercase tracking-widest text-muted-foreground';
+const rowClassName =
+    'flex items-center justify-between gap-4 border-b border-border/50 px-4 py-2';
+const rowLabelClassName =
+    'shrink-0 text-[10px] uppercase tracking-wider text-muted-foreground';
+const rowValueClassName = 'truncate text-right font-mono text-xs text-foreground';
 
 const formatMetricValue = (value: number | null): string => {
     return value === null ? '--' : formatNumber(value);
@@ -24,170 +30,104 @@ const formatIsoDateTime = (value: string): string => {
     });
 };
 
-const formatNativePrice = (item: TrackedListingItem): string => {
-    if (!item.price) {
-        return '--';
-    }
-
-    if (item.price.currencyCode === 'USD') {
-        return `$${item.price.value.toFixed(2)} USD`;
-    }
-
-    return `${item.price.currencyCode} ${item.price.value.toFixed(2)}`;
-};
-
-const formatUsdPrice = (item: TrackedListingItem): string => {
-    return item.priceUsdValue === null ? '--' : `$${item.priceUsdValue.toFixed(2)}`;
-};
-
-const formatUpdatedTimestamp = (value: number | null): string => {
-    if (value === null) {
-        return '--';
-    }
-
-    const milliseconds = value > 1_000_000_000_000 ? value : value * 1_000;
-    const parsed = new Date(milliseconds);
-
-    if (Number.isNaN(parsed.getTime())) {
-        return String(value);
-    }
-
-    return `${value} (${parsed.toLocaleString(undefined, {
-        dateStyle: 'medium',
-        timeStyle: 'short'
-    })})`;
-};
-
-const getListingTypeLabel = (item: TrackedListingItem): string => {
-    return item.isDigital ? 'digital' : 'physical';
-};
-
 export function ListingDetailsSection({ item }: { item: TrackedListingItem }) {
-    const rawPayload = JSON.stringify(item, null, 2);
-
     return (
         <>
-            <div>
-                <h4 className={sectionTitleClassName}>Current Snapshot</h4>
-                <div className="space-y-0">
-                    <DetailRow label='Price (display)' value={formatListingPrice(item)} />
-                    <DetailRow label='Price (native)' value={formatNativePrice(item)} />
-                    <DetailRow label='Price (USD)' value={formatUsdPrice(item)} />
-                    <DetailRow label='Views' value={formatMetricValue(item.views)} />
-                    <DetailRow label='Favorites' value={formatMetricValue(item.numFavorers)} />
-                    <DetailRow label='Quantity' value={item.quantity ?? '--'} />
-                    <DetailRow label='Type' value={getListingTypeLabel(item)} />
-                </div>
-            </div>
-
-            <div>
-                <h4 className={sectionTitleClassName}>State</h4>
-                <div className="space-y-0">
-                    <DetailRow label='Etsy State' value={item.etsyState} />
-                    <DetailRow label='Tracking State' value={item.trackingState} />
-                    <DetailRow label='Sync State' value={item.syncState} />
-                    <DetailRow label='Refreshed' value={timeAgo(item.lastRefreshedAt)} />
-                    <DetailRow
-                        label='Refreshed At'
-                        value={formatIsoDateTime(item.lastRefreshedAt)}
+            {item.thumbnailUrl ? (
+                <a
+                    href={item.url ?? item.thumbnailUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block border-b border-border bg-secondary/30"
+                >
+                    <img
+                        src={item.thumbnailUrl}
+                        alt={item.title}
+                        className="mx-auto max-h-64 object-contain"
                     />
-                    <DetailRow label='Updated At' value={formatIsoDateTime(item.updatedAt)} />
-                    <DetailRow
-                        label='Updated Timestamp'
-                        value={formatUpdatedTimestamp(item.updatedTimestamp)}
-                    />
+                </a>
+            ) : null}
+
+            <div className={rowClassName}>
+                <div className="flex items-center gap-2 min-w-0">
+                    <Store className="size-3.5 shrink-0 text-muted-foreground" />
+                    <span className="truncate font-mono text-xs text-foreground">
+                        {item.shopName ?? '--'}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">
+                        {item.isDigital ? 'Digital' : 'Physical'}
+                    </span>
                 </div>
+                {item.url ? (
+                    <a
+                        href={item.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="shrink-0 inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
+                    >
+                        <ExternalLink className="size-3" />
+                        Etsy
+                    </a>
+                ) : null}
             </div>
 
-            <div>
-                <h4 className={sectionTitleClassName}>Identifiers</h4>
-                <div className="space-y-0">
-                    <DetailRow label='Title' value={item.title} />
-                    <DetailRow label='Tracked Listing ID' value={item.id} />
-                    <DetailRow label='Etsy Listing ID' value={item.etsyListingId} />
-                    <DetailRow label='Shop Name' value={item.shopName ?? '--'} />
-                    <DetailRow label='Shop ID' value={item.shopId ?? '--'} />
-                    <DetailRow label='Account ID' value={item.accountId} />
-                    <DetailRow label='Tracker User ID' value={item.trackerClerkUserId} />
-                </div>
+            <div className={sectionBarClassName}>
+                <span className={sectionBarLabelClassName}>Snapshot</span>
+            </div>
+            <div className={rowClassName}>
+                <span className={rowLabelClassName}>Price</span>
+                <span className="truncate text-right font-mono text-xs text-terminal-green">
+                    {formatListingPrice(item)}
+                </span>
+            </div>
+            <div className={rowClassName}>
+                <span className={rowLabelClassName}>Views</span>
+                <span className={rowValueClassName}>{formatMetricValue(item.views)}</span>
+            </div>
+            <div className={rowClassName}>
+                <span className={rowLabelClassName}>Favorites</span>
+                <span className={rowValueClassName}>
+                    {formatMetricValue(item.numFavorers)}
+                </span>
+            </div>
+            <div className={rowClassName}>
+                <span className={rowLabelClassName}>Quantity</span>
+                <span className={rowValueClassName}>
+                    {item.quantity?.toString() ?? '--'}
+                </span>
             </div>
 
-            <div>
-                <h4 className={sectionTitleClassName}>Links & Media</h4>
-                <div className={panelClassName}>
-                    <div className="space-y-2 text-xs">
-                        <div className="min-w-0">
-                            <p
-                                className='text-[10px] uppercase tracking-wider text-muted-foreground'
-                            >
-                                Listing URL
-                            </p>
-                            {item.url ? (
-                                <a
-                                    href={item.url}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className='block truncate font-mono text-[11px] text-primary hover:underline'
-                                    title={item.url}
-                                >
-                                    {item.url}
-                                </a>
-                            ) : (
-                                <p className='font-mono text-[11px] text-muted-foreground'>--</p>
-                            )}
-                        </div>
-                        <div className="min-w-0">
-                            <p
-                                className='text-[10px] uppercase tracking-wider text-muted-foreground'
-                            >
-                                Thumbnail URL
-                            </p>
-                            {item.thumbnailUrl ? (
-                                <a
-                                    href={item.thumbnailUrl}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className='block truncate font-mono text-[11px] text-primary hover:underline'
-                                    title={item.thumbnailUrl}
-                                >
-                                    {item.thumbnailUrl}
-                                </a>
-                            ) : (
-                                <p className='font-mono text-[11px] text-muted-foreground'>--</p>
-                            )}
-                        </div>
-                        {item.thumbnailUrl ? (
-                            <img
-                                src={item.thumbnailUrl}
-                                alt=""
-                                className="h-40 w-full rounded border border-border object-cover"
-                            />
-                        ) : null}
-                    </div>
-                </div>
+            <div className={sectionBarClassName}>
+                <span className={sectionBarLabelClassName}>Status</span>
+                <span className="text-[10px] text-muted-foreground">
+                    {timeAgo(item.lastRefreshedAt)}
+                    {' \u00b7 '}
+                    {formatIsoDateTime(item.lastRefreshedAt)}
+                </span>
+            </div>
+            <div className={rowClassName}>
+                <span className={rowLabelClassName}>Etsy</span>
+                <StatusBadge status={item.etsyState} />
+            </div>
+            <div className={rowClassName}>
+                <span className={rowLabelClassName}>Tracking</span>
+                <StatusBadge status={item.trackingState} />
+            </div>
+            <div className={rowClassName}>
+                <span className={rowLabelClassName}>Sync</span>
+                <StatusBadge status={item.syncState} />
             </div>
 
             {item.lastRefreshError ? (
-                <div>
-                    <h4 className={sectionTitleClassName}>Last Refresh Error</h4>
-                    <div
-                        className='rounded border border-terminal-red/20 bg-terminal-red/10 p-3 text-xs text-terminal-red'
-                    >
+                <>
+                    <div className={sectionBarClassName}>
+                        <span className={sectionBarLabelClassName}>Last Refresh Error</span>
+                    </div>
+                    <div className="px-4 py-3 text-xs text-terminal-red">
                         {item.lastRefreshError}
                     </div>
-                </div>
+                </>
             ) : null}
-
-            <div>
-                <h4 className={sectionTitleClassName}>Raw Listing Payload</h4>
-                <pre className={rawPayloadClassName}>
-                    <code
-                        className='whitespace-pre-wrap break-all font-mono text-[10px] text-foreground'
-                    >
-                        {rawPayload}
-                    </code>
-                </pre>
-            </div>
         </>
     );
 }

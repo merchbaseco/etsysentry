@@ -9,7 +9,10 @@ const STATUS_DOT_CLASS: Record<string, string> = {
     success: 'bg-terminal-green',
     failed: 'bg-terminal-red',
     retrying: 'bg-terminal-yellow',
-    partial: 'bg-terminal-yellow'
+    partial: 'bg-terminal-yellow',
+    idle: 'bg-terminal-dim',
+    queued: 'bg-terminal-blue',
+    syncing: 'bg-terminal-blue'
 };
 
 const STATUS_BADGE_CLASS: Record<string, string> = {
@@ -21,7 +24,10 @@ const STATUS_BADGE_CLASS: Record<string, string> = {
     success: 'bg-terminal-green/10 text-terminal-green',
     failed: 'bg-terminal-red/10 text-terminal-red',
     retrying: 'bg-terminal-yellow/10 text-terminal-yellow',
-    partial: 'bg-terminal-yellow/10 text-terminal-yellow'
+    partial: 'bg-terminal-yellow/10 text-terminal-yellow',
+    idle: 'bg-secondary text-terminal-dim',
+    queued: 'bg-terminal-blue/10 text-terminal-blue',
+    syncing: 'bg-terminal-blue/10 text-terminal-blue'
 };
 
 export function StatusDot({ status }: { status: string }) {
