@@ -1,6 +1,7 @@
-import { and, eq, gte, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { db } from '../../db';
-import { etsyApiCallEvents, trackedListings } from '../../db/schema';
+import { trackedListings } from '../../db/schema';
+import { getEtsyApiUsage, type EtsyApiUsageStats } from '../etsy/get-etsy-api-usage';
 
 export type DashboardSummary = {
     etsyApiCallsPast24Hours: number;
@@ -8,25 +9,18 @@ export type DashboardSummary = {
     totalTrackedListings: number;
 };
 
-const countApiCallsSince = async (params: {
-    clerkUserId: string;
-    accountId: string;
-    threshold: Date;
-}): Promise<number> => {
-    const [row] = await db
-        .select({
-            value: sql<number>`count(*)::int`
-        })
-        .from(etsyApiCallEvents)
-        .where(
-            and(
-                eq(etsyApiCallEvents.accountId, params.accountId),
-                eq(etsyApiCallEvents.clerkUserId, params.clerkUserId),
-                gte(etsyApiCallEvents.createdAt, params.threshold)
-            )
-        );
+export type DashboardApiUsageCounts = Pick<
+    DashboardSummary,
+    'etsyApiCallsPast24Hours' | 'etsyApiCallsPastHour'
+>;
 
-    return row?.value ?? 0;
+export const toDashboardApiUsageCounts = (
+    stats: Pick<EtsyApiUsageStats, 'callsPast24Hours' | 'callsPastHour'>
+): DashboardApiUsageCounts => {
+    return {
+        etsyApiCallsPast24Hours: stats.callsPast24Hours,
+        etsyApiCallsPastHour: stats.callsPastHour
+    };
 };
 
 const countTrackedListings = async (params: {
@@ -52,31 +46,18 @@ export const getDashboardSummary = async (params: {
     clerkUserId: string;
     accountId: string;
 }): Promise<DashboardSummary> => {
-    const now = Date.now();
-    const oneHourAgo = new Date(now - 60 * 60 * 1000);
-    const twentyFourHoursAgo = new Date(now - 24 * 60 * 60 * 1000);
-
-    const [etsyApiCallsPastHour, etsyApiCallsPast24Hours, totalTrackedListings] =
-        await Promise.all([
-            countApiCallsSince({
-                clerkUserId: params.clerkUserId,
-                accountId: params.accountId,
-                threshold: oneHourAgo
-            }),
-            countApiCallsSince({
-                clerkUserId: params.clerkUserId,
-                accountId: params.accountId,
-                threshold: twentyFourHoursAgo
-            }),
-            countTrackedListings({
-                clerkUserId: params.clerkUserId,
-                accountId: params.accountId
-            })
-        ]);
+    const [apiUsage, totalTrackedListings] = await Promise.all([
+        getEtsyApiUsage({
+            accountId: params.accountId
+        }),
+        countTrackedListings({
+            clerkUserId: params.clerkUserId,
+            accountId: params.accountId
+        })
+    ]);
 
     return {
-        etsyApiCallsPast24Hours,
-        etsyApiCallsPastHour,
+        ...toDashboardApiUsageCounts(apiUsage.stats),
         totalTrackedListings
     };
 };
