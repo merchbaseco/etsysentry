@@ -1,7 +1,8 @@
 import { and, eq, inArray } from 'drizzle-orm';
 import { db } from '../../db';
 import { trackedKeywords } from '../../db/schema';
-import { emitEvent } from '../realtime/emit-event';
+import { getDashboardJobCounts } from '../dashboard/get-dashboard-job-counts';
+import { sendRealtimeEvent } from '../realtime/emit-event';
 
 export type TrackedKeywordSyncState = (typeof trackedKeywords.$inferSelect)['syncState'];
 
@@ -9,13 +10,37 @@ export const isTrackedKeywordSyncInFlight = (syncState: TrackedKeywordSyncState)
     return syncState === 'queued' || syncState === 'syncing';
 };
 
-const emitTrackedKeywordsInvalidation = (params: {
+const emitTrackedKeywordsSyncStatePush = (params: {
     accountId: string;
+    keywordIds: string[];
+    syncState: TrackedKeywordSyncState;
 }): void => {
-    emitEvent({
-        queries: ['app.keywords.list'],
+    sendRealtimeEvent({
+        type: 'sync-state.push',
+        entity: 'keyword',
+        ids: Object.fromEntries(
+            params.keywordIds.map((keywordId) => [keywordId, params.syncState] as const)
+        ),
         accountId: params.accountId
     });
+};
+
+const emitDashboardSummaryPushBestEffort = (params: {
+    accountId: string;
+}): void => {
+    void getDashboardJobCounts({
+        accountId: params.accountId
+    })
+        .then((jobCounts) => {
+            sendRealtimeEvent({
+                type: 'dashboard-summary.push',
+                accountId: params.accountId,
+                jobCounts
+            });
+        })
+        .catch(() => {
+            // Dashboard summary polling still refreshes every 60 seconds.
+        });
 };
 
 const buildSyncStateUpdate = (syncState: TrackedKeywordSyncState) => {
@@ -46,7 +71,12 @@ export const setTrackedKeywordSyncStateByKeywordId = async (params: {
         return false;
     }
 
-    emitTrackedKeywordsInvalidation({
+    emitTrackedKeywordsSyncStatePush({
+        accountId: params.accountId,
+        keywordIds: rows.map((row) => row.id),
+        syncState: params.syncState
+    });
+    emitDashboardSummaryPushBestEffort({
         accountId: params.accountId
     });
 
@@ -81,7 +111,12 @@ export const setTrackedKeywordsSyncStateByKeywordIds = async (params: {
         return 0;
     }
 
-    emitTrackedKeywordsInvalidation({
+    emitTrackedKeywordsSyncStatePush({
+        accountId: params.accountId,
+        keywordIds: rows.map((row) => row.id),
+        syncState: params.syncState
+    });
+    emitDashboardSummaryPushBestEffort({
         accountId: params.accountId
     });
 

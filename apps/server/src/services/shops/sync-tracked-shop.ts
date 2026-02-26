@@ -3,7 +3,7 @@ import { and, desc, eq } from 'drizzle-orm';
 import { db } from '../../db';
 import { trackedShopSnapshots, trackedShops } from '../../db/schema';
 import { createEventLog, createEventLogs } from '../logs/create-event-log';
-import { emitEvent } from '../realtime/emit-event';
+import { sendRealtimeEvent } from '../realtime/emit-event';
 import { DAILY_SYNC_INTERVAL_MS } from './types';
 import {
     fetchChangedActiveListings,
@@ -141,7 +141,8 @@ export const syncTrackedShop = async (params: {
             })
             .where(eq(trackedShops.trackedShopId, trackedShop.trackedShopId));
 
-        emitEvent({
+        sendRealtimeEvent({
+            type: 'query.invalidate',
             queries: ['app.shops.list', 'app.listings.list'],
             accountId: params.accountId
         });
@@ -218,7 +219,8 @@ export const syncTrackedShop = async (params: {
             })
             .where(eq(trackedShops.trackedShopId, trackedShop.trackedShopId));
 
-        emitEvent({
+        sendRealtimeEvent({
+            type: 'query.invalidate',
             queries: ['app.shops.list'],
             accountId: params.accountId
         });

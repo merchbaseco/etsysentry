@@ -1,7 +1,8 @@
 import { and, eq, inArray } from 'drizzle-orm';
 import { db } from '../../db';
 import { trackedShops } from '../../db/schema';
-import { emitEvent } from '../realtime/emit-event';
+import { getDashboardJobCounts } from '../dashboard/get-dashboard-job-counts';
+import { sendRealtimeEvent } from '../realtime/emit-event';
 
 export type TrackedShopSyncState = (typeof trackedShops.$inferSelect)['syncState'];
 
@@ -9,13 +10,37 @@ export const isTrackedShopSyncInFlight = (syncState: TrackedShopSyncState): bool
     return syncState === 'queued' || syncState === 'syncing';
 };
 
-const emitTrackedShopsInvalidation = (params: {
+const emitTrackedShopsSyncStatePush = (params: {
     accountId: string;
+    trackedShopIds: string[];
+    syncState: TrackedShopSyncState;
 }): void => {
-    emitEvent({
-        queries: ['app.shops.list'],
+    sendRealtimeEvent({
+        type: 'sync-state.push',
+        entity: 'shop',
+        ids: Object.fromEntries(
+            params.trackedShopIds.map((trackedShopId) => [trackedShopId, params.syncState] as const)
+        ),
         accountId: params.accountId
     });
+};
+
+const emitDashboardSummaryPushBestEffort = (params: {
+    accountId: string;
+}): void => {
+    void getDashboardJobCounts({
+        accountId: params.accountId
+    })
+        .then((jobCounts) => {
+            sendRealtimeEvent({
+                type: 'dashboard-summary.push',
+                accountId: params.accountId,
+                jobCounts
+            });
+        })
+        .catch(() => {
+            // Dashboard summary polling still refreshes every 60 seconds.
+        });
 };
 
 const buildSyncStateUpdate = (syncState: TrackedShopSyncState) => {
@@ -46,7 +71,12 @@ export const setTrackedShopSyncStateByTrackedShopId = async (params: {
         return false;
     }
 
-    emitTrackedShopsInvalidation({
+    emitTrackedShopsSyncStatePush({
+        accountId: params.accountId,
+        trackedShopIds: rows.map((row) => row.trackedShopId),
+        syncState: params.syncState
+    });
+    emitDashboardSummaryPushBestEffort({
         accountId: params.accountId
     });
 
@@ -81,7 +111,12 @@ export const setTrackedShopsSyncStateByTrackedShopIds = async (params: {
         return 0;
     }
 
-    emitTrackedShopsInvalidation({
+    emitTrackedShopsSyncStatePush({
+        accountId: params.accountId,
+        trackedShopIds: rows.map((row) => row.trackedShopId),
+        syncState: params.syncState
+    });
+    emitDashboardSummaryPushBestEffort({
         accountId: params.accountId
     });
 

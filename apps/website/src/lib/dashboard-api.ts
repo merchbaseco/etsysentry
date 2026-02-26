@@ -1,8 +1,10 @@
-import { queryClient, trpc } from './trpc-client';
+import { queryClient, trpc, trpcClient } from './trpc-client';
 import { type InferProcedureOutput } from './trpc-inference';
 import { toTrpcRequestError } from './trpc-http';
 
-export type DashboardSummary = InferProcedureOutput<typeof trpc.app.dashboard.getSummary.query>;
+export type DashboardSummary = InferProcedureOutput<
+    typeof trpcClient.app.dashboard.getSummary.query
+>;
 
 export const getDashboardSummary = async (): Promise<DashboardSummary> => {
     try {

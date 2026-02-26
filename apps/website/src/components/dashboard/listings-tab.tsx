@@ -95,7 +95,27 @@ export function ListingsTab() {
     }, [loadListings]);
 
     useEffect(() => {
-        const onListingsInvalidated = () => {
+        const onListingsInvalidated = (
+            event: Event
+        ) => {
+            const detail = (event as CustomEvent<{ reason?: string }>).detail;
+
+            if (detail?.reason === 'sync-state.push') {
+                const cachedData = queryClient.getQueryData<ListTrackedListingsOutput>(
+                    trackedListingsQueryKey
+                );
+
+                if (!cachedData) {
+                    return;
+                }
+
+                const mergedItems = mergeTrackedListings(itemsRef.current, cachedData.items);
+                applyListings(mergedItems, {
+                    preserveScroll: true
+                });
+                return;
+            }
+
             if (realtimeRefreshTimeoutRef.current !== null) {
                 return;
             }
@@ -118,7 +138,7 @@ export function ListingsTab() {
 
             window.removeEventListener(listingsInvalidatedEventName, onListingsInvalidated);
         };
-    }, [loadListings]);
+    }, [applyListings, loadListings]);
 
     useEffect(() => {
         if (!historyListing) {

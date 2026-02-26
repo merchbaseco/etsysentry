@@ -1,7 +1,8 @@
 import { and, eq, inArray } from 'drizzle-orm';
 import { db } from '../../db';
 import { trackedListings } from '../../db/schema';
-import { emitEvent } from '../realtime/emit-event';
+import { getDashboardJobCounts } from '../dashboard/get-dashboard-job-counts';
+import { sendRealtimeEvent } from '../realtime/emit-event';
 
 export type TrackedListingSyncState = (typeof trackedListings.$inferSelect)['syncState'];
 
@@ -9,13 +10,37 @@ export const isTrackedListingSyncInFlight = (syncState: TrackedListingSyncState)
     return syncState === 'queued' || syncState === 'syncing';
 };
 
-const emitTrackedListingsInvalidation = (params: {
+const emitTrackedListingsSyncStatePush = (params: {
     accountId: string;
+    listingIds: string[];
+    syncState: TrackedListingSyncState;
 }): void => {
-    emitEvent({
-        queries: ['app.listings.list'],
+    sendRealtimeEvent({
+        type: 'sync-state.push',
+        entity: 'listing',
+        ids: Object.fromEntries(
+            params.listingIds.map((listingId) => [listingId, params.syncState] as const)
+        ),
         accountId: params.accountId
     });
+};
+
+const emitDashboardSummaryPushBestEffort = (params: {
+    accountId: string;
+}): void => {
+    void getDashboardJobCounts({
+        accountId: params.accountId
+    })
+        .then((jobCounts) => {
+            sendRealtimeEvent({
+                type: 'dashboard-summary.push',
+                accountId: params.accountId,
+                jobCounts
+            });
+        })
+        .catch(() => {
+            // Dashboard summary polling still refreshes every 60 seconds.
+        });
 };
 
 const buildSyncStateUpdate = (syncState: TrackedListingSyncState) => {
@@ -46,7 +71,12 @@ export const setTrackedListingSyncStateByListingId = async (params: {
         return false;
     }
 
-    emitTrackedListingsInvalidation({
+    emitTrackedListingsSyncStatePush({
+        accountId: params.accountId,
+        listingIds: rows.map((row) => row.listingId),
+        syncState: params.syncState
+    });
+    emitDashboardSummaryPushBestEffort({
         accountId: params.accountId
     });
 
@@ -81,7 +111,12 @@ export const setTrackedListingsSyncStateByListingIds = async (params: {
         return 0;
     }
 
-    emitTrackedListingsInvalidation({
+    emitTrackedListingsSyncStatePush({
+        accountId: params.accountId,
+        listingIds: rows.map((row) => row.listingId),
+        syncState: params.syncState
+    });
+    emitDashboardSummaryPushBestEffort({
         accountId: params.accountId
     });
 
@@ -116,7 +151,12 @@ export const setTrackedListingsSyncStateByEtsyListingIds = async (params: {
         return 0;
     }
 
-    emitTrackedListingsInvalidation({
+    emitTrackedListingsSyncStatePush({
+        accountId: params.accountId,
+        listingIds: rows.map((row) => row.listingId),
+        syncState: params.syncState
+    });
+    emitDashboardSummaryPushBestEffort({
         accountId: params.accountId
     });
 

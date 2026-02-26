@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
 import { type EtsyOAuthConnectionState } from '@/hooks/use-etsy-oauth-connection';
-import { type DashboardSummary, getDashboardSummary } from '@/lib/dashboard-api';
+import { trpc } from '@/lib/trpc-client';
 import { cn } from '@/lib/utils';
+import { useQuery } from '@tanstack/react-query';
 import { Activity, ShoppingCart } from 'lucide-react';
 
 export const getConnectionLabel = (connection: EtsyOAuthConnectionState): string => {
@@ -86,30 +86,14 @@ export const formatExpirySummary = (expiresAt: string | null): string => {
     return parsed.toLocaleTimeString();
 };
 
+const dashboardSummaryQueryOptions = trpc.app.dashboard.getSummary.queryOptions({});
+
 export const StatusIndicator = ({ connection }: { connection: EtsyOAuthConnectionState }) => {
     const connectionLabel = getConnectionLabel(connection);
-    const [summary, setSummary] = useState<DashboardSummary | null>(null);
-
-    const loadSummary = useCallback(async () => {
-        try {
-            const nextSummary = await getDashboardSummary();
-            setSummary(nextSummary);
-        } catch {
-            setSummary(null);
-        }
-    }, []);
-
-    useEffect(() => {
-        void loadSummary();
-
-        const intervalId = window.setInterval(() => {
-            void loadSummary();
-        }, 60_000);
-
-        return () => {
-            window.clearInterval(intervalId);
-        };
-    }, [loadSummary]);
+    const { data: summary } = useQuery({
+        ...dashboardSummaryQueryOptions,
+        refetchInterval: 60_000
+    });
 
     const apiCallsPastHour = summary?.etsyApiCallsPastHour ?? '--';
     const apiCallsPast24Hours = summary?.etsyApiCallsPast24Hours ?? '--';

@@ -2,22 +2,19 @@ import { KeywordsTab } from '@/components/dashboard/keywords-tab';
 import { ListingsTab } from '@/components/dashboard/listings-tab';
 import { LogsTab } from '@/components/dashboard/logs-tab';
 import { ShopsTab } from '@/components/dashboard/shops-tab';
-import {
-    StatusIndicator,
-    formatExpirySummary,
-    getConnectionColorClass,
-    getConnectionLabel
-} from '@/components/dashboard/status-indicator';
+import { StatusIndicator } from '@/components/dashboard/status-indicator';
 import { SettingsModal } from '@/components/settings-modal';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { useRealtimeQueryInvalidations } from '@/hooks/use-realtime-query-invalidations';
+import { trpc } from '@/lib/trpc-client';
 import {
     useEtsyOAuthConnection,
     type EtsyOAuthConnectionState
 } from '@/hooks/use-etsy-oauth-connection';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@clerk/clerk-react';
-import { Activity, Clock, Eye, ShoppingCart } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { Activity, Briefcase, Clock, Eye, ShoppingCart } from 'lucide-react';
 import { useCallback } from 'react';
 import {
     Navigate,
@@ -33,11 +30,46 @@ const tabs = [
     { id: 'shops', label: 'Shops', icon: Activity, to: '/shops' },
     { id: 'logs', label: 'Logs', icon: Clock, to: '/logs' }
 ] as const;
+const dashboardSummaryQueryOptions = trpc.app.dashboard.getSummary.queryOptions({});
+
+const DashboardJobsSummary = () => {
+    const { data } = useQuery({
+        ...dashboardSummaryQueryOptions,
+        refetchInterval: 60_000
+    });
+    const queuedJobs = data?.queuedJobs ?? '--';
+    const inFlightJobs = data?.inFlightJobs ?? '--';
+    const hasActive =
+        (typeof inFlightJobs === 'number' && inFlightJobs > 0) ||
+        (typeof queuedJobs === 'number' && queuedJobs > 0);
+
+    return (
+        <span
+            className={cn(
+                'inline-flex items-center gap-1.5 rounded px-1.5 py-0.5',
+                hasActive
+                    ? 'bg-terminal-blue/10 text-terminal-blue'
+                    : 'bg-secondary text-muted-foreground'
+            )}
+        >
+            <Briefcase className="size-2.5 text-terminal-dim" />
+            <span className="uppercase tracking-wider text-terminal-dim">jobs</span>
+            <span className={hasActive ? 'text-terminal-blue' : 'text-foreground'}>
+                {queuedJobs}
+            </span>
+            <span className="uppercase tracking-wider text-terminal-dim">queued</span>
+            <span className="text-terminal-dim">/</span>
+            <span className={hasActive ? 'text-terminal-blue' : 'text-foreground'}>
+                {inFlightJobs}
+            </span>
+            <span className="uppercase tracking-wider text-terminal-dim">in-flight</span>
+        </span>
+    );
+};
 
 function DashboardShell() {
     const connection = useEtsyOAuthConnection();
     const { getToken } = useAuth();
-    const connectionLabel = getConnectionLabel(connection);
     const getAuthToken = useCallback(async () => {
         return (await getToken()) ?? null;
     }, [getToken]);
@@ -117,38 +149,14 @@ function DashboardShell() {
 
             <footer
                 className={cn(
-                    'flex items-center justify-between border-t border-border',
-                    'bg-card px-4 py-1 text-[9px] text-terminal-dim'
+                    'flex items-center justify-end border-t border-border bg-card px-4 py-2',
+                    'text-[10px] text-terminal-dim'
                 )}
             >
-                <div className="flex items-center gap-3">
-                    <span>EtsySentry v0.1.0</span>
-                    <span>|</span>
-                    <span>
-                        API:{' '}
-                        <span className={getConnectionColorClass(connection)}>
-                            {connectionLabel}
-                        </span>
-                    </span>
-                    <span>|</span>
-                    <span>
-                        Session:{' '}
-                        <span className="text-foreground">{connection.sessionLabel ?? 'None'}</span>
-                    </span>
-                </div>
-                <div className="flex items-center gap-3">
-                    <span>
-                        Scopes: <span className="text-foreground">{connection.scopes.length}</span>
-                    </span>
-                    <span>|</span>
-                    <span>
-                        Expires:{' '}
-                        <span className="text-foreground">
-                            {formatExpirySummary(connection.expiresAt)}
-                        </span>
-                    </span>
-                    <span>|</span>
-                    <span>{new Date().toISOString().slice(0, 19).replace('T', ' ')} UTC</span>
+                <div className="flex items-center gap-1.5">
+                    <span className="uppercase tracking-wider">EtsySentry v0.1.0</span>
+                    <span className="text-border">|</span>
+                    <DashboardJobsSummary />
                 </div>
             </footer>
         </div>

@@ -1,33 +1,31 @@
 import { EventEmitter } from 'node:events';
-import { z } from 'zod';
+import {
+    realtimeEventSchema,
+    type RealtimeEvent
+} from './realtime-event-types';
+import { serializeEventForWire } from './serialize-realtime-event';
 
 const realtimeInvalidationEmitter = new EventEmitter();
 const realtimeInvalidationEventName = 'realtime.invalidation';
 
 realtimeInvalidationEmitter.setMaxListeners(0);
 
-export const realtimeInvalidationQuerySchema = z.enum([
-    'app.keywords.list',
-    'app.listings.list',
-    'app.shops.list',
-    'app.logs.list'
-]);
-
-const realtimeInvalidationEventSchema = z.object({
-    queries: z.array(realtimeInvalidationQuerySchema).min(1),
-    accountId: z.string().min(1)
-});
-
-export type RealtimeInvalidationEvent = z.infer<typeof realtimeInvalidationEventSchema>;
-
-export const emitEvent = (event: RealtimeInvalidationEvent): void => {
-    const parsedEvent = realtimeInvalidationEventSchema.parse(event);
-
-    realtimeInvalidationEmitter.emit(realtimeInvalidationEventName, parsedEvent);
+export type RealtimeWireEvent = {
+    accountId: string;
+    payload: string;
 };
 
-export const onEvent = (
-    listener: (event: RealtimeInvalidationEvent) => void
+export const sendRealtimeEvent = (event: RealtimeEvent): void => {
+    const parsedEvent = realtimeEventSchema.parse(event);
+
+    realtimeInvalidationEmitter.emit(realtimeInvalidationEventName, {
+        accountId: parsedEvent.accountId,
+        payload: serializeEventForWire(parsedEvent)
+    } satisfies RealtimeWireEvent);
+};
+
+export const onRealtimeEvent = (
+    listener: (event: RealtimeWireEvent) => void
 ): (() => void) => {
     realtimeInvalidationEmitter.on(realtimeInvalidationEventName, listener);
 
@@ -35,3 +33,18 @@ export const onEvent = (
         realtimeInvalidationEmitter.off(realtimeInvalidationEventName, listener);
     };
 };
+
+/**
+ * @deprecated Use `sendRealtimeEvent` instead.
+ */
+export const emitRealtimeEvent = sendRealtimeEvent;
+
+/**
+ * @deprecated Use `sendRealtimeEvent` instead.
+ */
+export const emitEvent = sendRealtimeEvent;
+
+/**
+ * @deprecated Use `onRealtimeEvent` instead.
+ */
+export const onEvent = onRealtimeEvent;

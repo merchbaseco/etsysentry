@@ -63,6 +63,58 @@ OAuth/session storage boundary:
   - query -> `GET` with URL-encoded `input`
   - mutation -> `POST` with JSON body
 
+## WebSocket Messages
+
+Realtime endpoint:
+
+- path: `/ws`
+- auth: Clerk bearer token passed as `?token=<clerk_jwt>`
+- server routing: account-scoped fan-out by resolved `accountId`
+
+Message contract (server -> client):
+
+`query.invalidate`
+
+```ts
+{
+  type: 'query.invalidate';
+  queries: Array<
+    | 'app.keywords.list'
+    | 'app.listings.list'
+    | 'app.shops.list'
+    | 'app.logs.list'
+  >;
+}
+```
+
+`sync-state.push`
+
+```ts
+{
+  type: 'sync-state.push';
+  entity: 'listing' | 'keyword' | 'shop';
+  ids: Record<string, 'idle' | 'queued' | 'syncing'>;
+}
+```
+
+`dashboard-summary.push`
+
+```ts
+{
+  type: 'dashboard-summary.push';
+  jobCounts: {
+    inFlightJobs: number;
+    queuedJobs: number;
+  };
+}
+```
+
+Notes:
+
+- `accountId` is included server-side for routing but stripped from wire payloads.
+- high-frequency sync transitions should use push payloads over full invalidation.
+- invalidation remains the default for broad or structural data changes.
+
 ## Dashboard App API (`api.app.*`) Procedures
 
 Current implemented procedures:
@@ -132,6 +184,28 @@ Output:
     callsPast24Hours: number;
     lastCallAt: string | null; // ISO timestamp
   };
+}
+```
+
+### Dashboard
+
+`app.dashboard.getSummary` (query)
+
+Input:
+
+```ts
+{}
+```
+
+Output:
+
+```ts
+{
+  etsyApiCallsPast24Hours: number;
+  etsyApiCallsPastHour: number;
+  totalTrackedListings: number;
+  queuedJobs: number;
+  inFlightJobs: number;
 }
 ```
 
