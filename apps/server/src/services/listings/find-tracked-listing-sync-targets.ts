@@ -2,15 +2,15 @@ import { and, eq, inArray } from 'drizzle-orm';
 import { db } from '../../db';
 import { trackedListings } from '../../db/schema';
 
-export type TrackedListingSyncTarget = {
-    trackedListingId: string;
+export interface TrackedListingSyncTarget {
     etsyListingId: string;
     syncState: (typeof trackedListings.$inferSelect)['syncState'];
-    trackingState: (typeof trackedListings.$inferSelect)['trackingState'];
+    trackedListingId: string;
     trackerClerkUserId: string;
-};
+    trackingState: (typeof trackedListings.$inferSelect)['trackingState'];
+}
 
-export const findTrackedListingSyncTargets = async (params: {
+export const findTrackedListingSyncTargets = (params: {
     trackedListingIds?: string[];
     accountId: string;
 }): Promise<TrackedListingSyncTarget[]> => {
@@ -35,7 +35,7 @@ export const findTrackedListingSyncTargets = async (params: {
             etsyListingId: trackedListings.etsyListingId,
             syncState: trackedListings.syncState,
             trackingState: trackedListings.trackingState,
-            trackerClerkUserId: trackedListings.trackerClerkUserId
+            trackerClerkUserId: trackedListings.trackerClerkUserId,
         })
         .from(trackedListings)
         .where(whereClause);

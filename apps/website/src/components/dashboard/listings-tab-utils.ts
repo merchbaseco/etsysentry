@@ -1,13 +1,13 @@
 import type { TrackedListingItem } from '@/lib/listings-api';
 import { TrpcRequestError } from '@/lib/trpc-http';
 
-export type ListingsFilterParams = {
-    search: string;
-    showPhysicalListings: boolean;
-    showDigitalListings: boolean;
-    priceRange: [number, number];
+export interface ListingsFilterParams {
     favsRange: [number, number];
-};
+    priceRange: [number, number];
+    search: string;
+    showDigitalListings: boolean;
+    showPhysicalListings: boolean;
+}
 
 const DEFAULT_MIN_PRICE = 0;
 const DEFAULT_MAX_PRICE = 40;
@@ -28,7 +28,7 @@ export const toListingsInfiniteResetKey = (
         `${params.priceRange[0]}:${params.priceRange[1]}`,
         `${params.favsRange[0]}:${params.favsRange[1]}`,
         String(Number(params.showDigitalListings)),
-        String(Number(params.showPhysicalListings))
+        String(Number(params.showPhysicalListings)),
     ].join('|');
 };
 
@@ -86,6 +86,48 @@ export const isListingSyncInFlight = (item: TrackedListingItem): boolean => {
     return item.syncState === 'queued' || item.syncState === 'syncing';
 };
 
+const isVisibleForListingType = (
+    item: TrackedListingItem,
+    params: Pick<ListingsFilterParams, 'showDigitalListings' | 'showPhysicalListings'>
+): boolean => {
+    if (item.isDigital) {
+        return params.showDigitalListings;
+    }
+
+    return params.showPhysicalListings;
+};
+
+const isWithinPriceRange = (item: TrackedListingItem, range: [number, number]): boolean => {
+    const price = item.price?.value ?? null;
+
+    if (price === null) {
+        return false;
+    }
+
+    return price >= range[0] && price <= range[1];
+};
+
+const isWithinFavsRange = (item: TrackedListingItem, range: [number, number]): boolean => {
+    if (item.numFavorers === null) {
+        return false;
+    }
+
+    return item.numFavorers >= range[0] && item.numFavorers <= range[1];
+};
+
+const matchesListingQuery = (item: TrackedListingItem, query: string): boolean => {
+    if (query.length === 0) {
+        return true;
+    }
+
+    return (
+        item.title.toLowerCase().includes(query) ||
+        item.etsyListingId.includes(query) ||
+        (item.shopName ?? '').toLowerCase().includes(query) ||
+        (item.shopId ?? '').includes(query)
+    );
+};
+
 export const filterTrackedListings = (
     items: TrackedListingItem[],
     params: ListingsFilterParams
@@ -97,41 +139,19 @@ export const filterTrackedListings = (
         params.favsRange[0] > DEFAULT_MIN_FAVS || params.favsRange[1] < DEFAULT_MAX_FAVS;
 
     return items.filter((item) => {
-        if (item.isDigital && !params.showDigitalListings) {
+        if (!isVisibleForListingType(item, params)) {
             return false;
         }
 
-        if (!item.isDigital && !params.showPhysicalListings) {
+        if (priceActive && !isWithinPriceRange(item, params.priceRange)) {
             return false;
         }
 
-        if (priceActive) {
-            const price = item.price?.value ?? null;
-            if (price === null || price < params.priceRange[0] || price > params.priceRange[1]) {
-                return false;
-            }
+        if (favsActive && !isWithinFavsRange(item, params.favsRange)) {
+            return false;
         }
 
-        if (favsActive) {
-            if (
-                item.numFavorers === null ||
-                item.numFavorers < params.favsRange[0] ||
-                item.numFavorers > params.favsRange[1]
-            ) {
-                return false;
-            }
-        }
-
-        if (query.length === 0) {
-            return true;
-        }
-
-        return (
-            item.title.toLowerCase().includes(query) ||
-            item.etsyListingId.includes(query) ||
-            (item.shopName ?? '').toLowerCase().includes(query) ||
-            (item.shopId ?? '').includes(query)
-        );
+        return matchesListingQuery(item, query);
     });
 };
 
@@ -165,10 +185,7 @@ const arePricesEqual = (
     );
 };
 
-const areTrackedListingsEqual = (
-    left: TrackedListingItem,
-    right: TrackedListingItem
-): boolean => {
+const areTrackedListingsEqual = (left: TrackedListingItem, right: TrackedListingItem): boolean => {
     return (
         left.accountId === right.accountId &&
         left.etsyListingId === right.etsyListingId &&

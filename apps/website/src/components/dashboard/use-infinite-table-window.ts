@@ -1,22 +1,19 @@
-import { useCallback, useEffect, useState, type RefObject } from 'react';
-import {
-    getInitialListingsRenderCount,
-    getNextListingsRenderCount
-} from './listings-tab-utils';
+import { type RefObject, useCallback, useEffect, useState } from 'react';
+import { getInitialListingsRenderCount, getNextListingsRenderCount } from './listings-tab-utils';
 
 const DEFAULT_PRELOAD_OFFSET_PX = 600;
 
-export type UseInfiniteTableWindowInput = {
+export interface UseInfiniteTableWindowInput {
     itemsLength: number;
+    preloadOffsetPx?: number;
     resetKey: string;
     scrollContainerRef: RefObject<HTMLDivElement | null>;
-    preloadOffsetPx?: number;
-};
+}
 
-export type UseInfiniteTableWindowOutput = {
+export interface UseInfiniteTableWindowOutput {
     hasMore: boolean;
     renderCount: number;
-};
+}
 
 export const useInfiniteTableWindow = (
     params: UseInfiniteTableWindowInput
@@ -31,14 +28,14 @@ export const useInfiniteTableWindow = (
         setRenderCount((currentCount) => {
             return getNextListingsRenderCount({
                 currentCount,
-                totalCount: params.itemsLength
+                totalCount: params.itemsLength,
             });
         });
     }, [params.itemsLength]);
 
     useEffect(() => {
         setRenderCount(getInitialListingsRenderCount(params.itemsLength));
-    }, [params.resetKey]);
+    }, [params.itemsLength]);
 
     useEffect(() => {
         setRenderCount((currentCount) => {
@@ -71,16 +68,16 @@ export const useInfiniteTableWindow = (
 
         maybeLoadMore();
         container.addEventListener('scroll', maybeLoadMore, {
-            passive: true
+            passive: true,
         });
 
         return () => {
             container.removeEventListener('scroll', maybeLoadMore);
         };
-    }, [hasMore, loadMore, params.scrollContainerRef, preloadOffsetPx, renderCount]);
+    }, [hasMore, loadMore, params.scrollContainerRef, preloadOffsetPx]);
 
     return {
         hasMore,
-        renderCount
+        renderCount,
     };
 };

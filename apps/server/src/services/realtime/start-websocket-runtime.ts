@@ -5,17 +5,17 @@ import type { FastifyInstance } from 'fastify';
 import { WebSocket, WebSocketServer } from 'ws';
 import { env } from '../../config/env';
 import { resolveAccountIdFromClerk } from '../auth/resolve-account-id-from-clerk';
-import {
-    onRealtimeEvent
-} from './emit-event';
+import { onRealtimeEvent } from './emit-event';
 
-type RealtimeConnectionIdentity = {
+interface RealtimeConnectionIdentity {
     accountId: string;
     clerkUserId: string;
-};
+}
+
+const TRAILING_SLASHES_REGEX = /\/+$/;
 
 const normalizeOrigin = (origin: string): string => {
-    return origin.trim().replace(/\/+$/, '');
+    return origin.trim().replace(TRAILING_SLASHES_REGEX, '');
 };
 
 const parsePathname = (request: IncomingMessage): string => {
@@ -58,13 +58,13 @@ const deriveIdentityFromToken = async (
 ): Promise<RealtimeConnectionIdentity | null> => {
     try {
         const payload = await verifyToken(token, {
-            secretKey: env.CLERK_SECRET_KEY
+            secretKey: env.CLERK_SECRET_KEY,
         });
 
         const subject = typeof payload.sub === 'string' ? payload.sub.trim() : '';
         const issuer = typeof payload.iss === 'string' ? payload.iss.trim() : '';
 
-        if (!subject || !issuer) {
+        if (!(subject && issuer)) {
             return null;
         }
 
@@ -74,12 +74,12 @@ const deriveIdentityFromToken = async (
             clerkIssuer: issuer,
             clerkOrgId: orgId.length > 0 ? orgId : null,
             clerkSubject: subject,
-            email
+            email,
         });
 
         return {
             accountId,
-            clerkUserId: subject
+            clerkUserId: subject,
         };
     } catch {
         return null;
@@ -99,7 +99,7 @@ export const startWebsocketRuntime = (params: {
     stop: () => Promise<void>;
 } => {
     const websocketServer = new WebSocketServer({
-        noServer: true
+        noServer: true,
     });
     const identityByConnection = new Map<WebSocket, RealtimeConnectionIdentity>();
     const removeInvalidationListener = onRealtimeEvent((event) => {
@@ -120,7 +120,7 @@ export const startWebsocketRuntime = (params: {
                 params.server.log.warn(
                     {
                         error,
-                        accountId: event.accountId
+                        accountId: event.accountId,
                     },
                     'Failed to send realtime invalidation event.'
                 );
@@ -145,7 +145,7 @@ export const startWebsocketRuntime = (params: {
             return;
         }
 
-        void deriveIdentityFromToken(token).then((connectionIdentity) => {
+        deriveIdentityFromToken(token).then((connectionIdentity) => {
             if (!connectionIdentity) {
                 rejectUpgrade(socket, '401 Unauthorized');
                 return;
@@ -190,6 +190,6 @@ export const startWebsocketRuntime = (params: {
             });
 
             identityByConnection.clear();
-        }
+        },
     };
 };

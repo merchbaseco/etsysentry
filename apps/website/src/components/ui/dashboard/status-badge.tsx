@@ -12,7 +12,7 @@ const STATUS_DOT_CLASS: Record<string, string> = {
     partial: 'bg-terminal-yellow',
     idle: 'bg-terminal-dim',
     queued: 'bg-terminal-blue',
-    syncing: 'bg-terminal-blue'
+    syncing: 'bg-terminal-blue',
 };
 
 const STATUS_BADGE_CLASS: Record<string, string> = {
@@ -27,7 +27,7 @@ const STATUS_BADGE_CLASS: Record<string, string> = {
     partial: 'bg-terminal-yellow/10 text-terminal-yellow',
     idle: 'bg-secondary text-terminal-dim',
     queued: 'bg-terminal-blue/10 text-terminal-blue',
-    syncing: 'bg-terminal-blue/10 text-terminal-blue'
+    syncing: 'bg-terminal-blue/10 text-terminal-blue',
 };
 
 export function StatusDot({ status }: { status: string }) {
@@ -46,7 +46,7 @@ export function StatusBadge({ status }: { status: string }) {
         <span
             className={cn(
                 'inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 text-[10px] uppercase',
-                'tracking-wider font-medium',
+                'font-medium tracking-wider',
                 STATUS_BADGE_CLASS[status] ?? STATUS_BADGE_CLASS.pending
             )}
         >

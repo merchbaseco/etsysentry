@@ -5,21 +5,21 @@ import { getEtsyApiKeyHeaderValue } from '../get-etsy-api-key-header-value';
 const inputSchema = z.object({
     limit: z.coerce.number().int().min(1).max(100).optional(),
     offset: z.coerce.number().int().min(0).optional(),
-    shopName: z.string().trim().min(1)
+    shopName: z.string().trim().min(1),
 });
 
 const shopResultSchema = z
     .object({
         shop_id: z.coerce.number().int().positive(),
         shop_name: z.string().min(1),
-        url: z.string().nullable().optional()
+        url: z.string().nullable().optional(),
     })
     .passthrough();
 
 const responseSchema = z
     .object({
         count: z.coerce.number().int().nonnegative(),
-        results: z.array(shopResultSchema)
+        results: z.array(shopResultSchema),
     })
     .passthrough();
 
@@ -27,20 +27,20 @@ const etsyErrorSchema = z
     .object({
         error: z.string().optional(),
         error_description: z.string().optional(),
-        message: z.string().optional()
+        message: z.string().optional(),
     })
     .passthrough();
 
 export type FindShopsBridgeInput = z.input<typeof inputSchema>;
 
-export type FindShopsBridgeResponse = {
+export interface FindShopsBridgeResponse {
     count: number;
     results: Array<{
         shopId: string;
         shopName: string;
         url: string | null;
     }>;
-};
+}
 
 export class EtsyFindShopsBridgeError extends Error {
     readonly responseBody: string;
@@ -104,8 +104,8 @@ const toResponse = (parsed: z.infer<typeof responseSchema>): FindShopsBridgeResp
         results: parsed.results.map((item) => ({
             shopId: String(item.shop_id),
             shopName: item.shop_name,
-            url: item.url ?? null
-        }))
+            url: item.url ?? null,
+        })),
     };
 };
 
@@ -120,11 +120,11 @@ export const findShops = async (input: FindShopsBridgeInput): Promise<FindShopsB
         init: {
             headers: {
                 Accept: 'application/json',
-                'x-api-key': getEtsyApiKeyHeaderValue()
+                'x-api-key': getEtsyApiKeyHeaderValue(),
             },
-            method: 'GET'
+            method: 'GET',
         },
-        url: buildEndpoint(parsedInput.data)
+        url: buildEndpoint(parsedInput.data),
     });
 
     const rawBody = await response.text();

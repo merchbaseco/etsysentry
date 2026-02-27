@@ -1,6 +1,6 @@
 import { queryClient, trpc, trpcClient } from './trpc-client';
-import { type InferProcedureOutput } from './trpc-inference';
 import { toTrpcRequestError } from './trpc-http';
+import type { InferProcedureOutput } from './trpc-inference';
 
 export type AdminStatus = InferProcedureOutput<typeof trpcClient.app.admin.status.query>;
 
@@ -13,7 +13,7 @@ export type EtsyApiUsage = InferProcedureOutput<typeof trpcClient.app.admin.getE
 const adminStatusQueryOptions = {
     ...trpc.app.admin.status.queryOptions({}),
     gcTime: Number.POSITIVE_INFINITY,
-    staleTime: Number.POSITIVE_INFINITY
+    staleTime: Number.POSITIVE_INFINITY,
 };
 
 export const getAdminStatus = async (): Promise<AdminStatus> => {
@@ -26,7 +26,7 @@ export const getAdminStatus = async (): Promise<AdminStatus> => {
 
 export const clearCachedAdminStatus = (): void => {
     queryClient.removeQueries({
-        queryKey: adminStatusQueryOptions.queryKey
+        queryKey: adminStatusQueryOptions.queryKey,
     });
 };
 

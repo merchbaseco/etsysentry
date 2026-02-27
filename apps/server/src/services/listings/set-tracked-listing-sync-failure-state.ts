@@ -9,13 +9,13 @@ export type FailedTrackedListingTrackingState = Extract<
     'error' | 'fatal'
 >;
 
-export type TrackedListingSyncFailureRecord = {
+export interface TrackedListingSyncFailureRecord {
     accountId: string;
     etsyListingId: string;
     listingId: string;
     shopId: string | null;
     trackingState: FailedTrackedListingTrackingState;
-};
+}
 
 export const computeNextTrackedListingFailureState = (
     currentTrackingState: TrackedListingTrackingState
@@ -41,7 +41,7 @@ const updateTrackedListingForSyncFailure = async (params: {
             lastRefreshedAt: params.now,
             syncState: 'idle',
             trackingState: nextTrackingState,
-            updatedAt: params.now
+            updatedAt: params.now,
         })
         .where(eq(trackedListings.listingId, params.listingId))
         .returning({
@@ -49,13 +49,13 @@ const updateTrackedListingForSyncFailure = async (params: {
             etsyListingId: trackedListings.etsyListingId,
             listingId: trackedListings.listingId,
             shopId: trackedListings.shopId,
-            trackingState: trackedListings.trackingState
+            trackingState: trackedListings.trackingState,
         });
 
     return updated
         ? {
               ...updated,
-              trackingState: updated.trackingState as FailedTrackedListingTrackingState
+              trackingState: updated.trackingState as FailedTrackedListingTrackingState,
           }
         : null;
 };
@@ -68,7 +68,7 @@ export const markTrackedListingSyncFailureByListingId = async (params: {
 }): Promise<TrackedListingSyncFailureRecord | null> => {
     const [current] = await db
         .select({
-            trackingState: trackedListings.trackingState
+            trackingState: trackedListings.trackingState,
         })
         .from(trackedListings)
         .where(
@@ -87,7 +87,7 @@ export const markTrackedListingSyncFailureByListingId = async (params: {
         currentTrackingState: current.trackingState,
         failureMessage: params.failureMessage,
         listingId: params.trackedListingId,
-        now: params.now ?? new Date()
+        now: params.now ?? new Date(),
     });
 };
 
@@ -100,7 +100,7 @@ export const markTrackedListingSyncFailureByEtsyListingId = async (params: {
     const [current] = await db
         .select({
             listingId: trackedListings.listingId,
-            trackingState: trackedListings.trackingState
+            trackingState: trackedListings.trackingState,
         })
         .from(trackedListings)
         .where(
@@ -119,6 +119,6 @@ export const markTrackedListingSyncFailureByEtsyListingId = async (params: {
         currentTrackingState: current.trackingState,
         failureMessage: params.failureMessage,
         listingId: current.listingId,
-        now: params.now ?? new Date()
+        now: params.now ?? new Date(),
     });
 };

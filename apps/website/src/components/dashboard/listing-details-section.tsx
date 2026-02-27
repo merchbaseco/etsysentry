@@ -1,16 +1,14 @@
 import { ExternalLink, Store } from 'lucide-react';
-import type { TrackedListingItem } from '@/lib/listings-api';
 import { formatNumber, StatusBadge, timeAgo } from '@/components/ui/dashboard';
+import type { TrackedListingItem } from '@/lib/listings-api';
 import { formatListingPrice } from './listings-tab-utils';
 
 const sectionBarClassName =
     'flex items-center justify-between -mt-px border-y border-border bg-secondary px-4 py-1.5';
 const sectionBarLabelClassName =
     'text-[11px] font-medium uppercase tracking-widest text-muted-foreground';
-const rowClassName =
-    'flex items-center justify-between gap-4 border-b border-border/50 px-4 py-2';
-const rowLabelClassName =
-    'shrink-0 text-[10px] uppercase tracking-wider text-muted-foreground';
+const rowClassName = 'flex items-center justify-between gap-4 border-b border-border/50 px-4 py-2';
+const rowLabelClassName = 'shrink-0 text-[10px] uppercase tracking-wider text-muted-foreground';
 const rowValueClassName = 'truncate text-right font-mono text-xs text-foreground';
 
 const formatMetricValue = (value: number | null): string => {
@@ -26,7 +24,7 @@ const formatIsoDateTime = (value: string): string => {
 
     return parsed.toLocaleString(undefined, {
         dateStyle: 'medium',
-        timeStyle: 'short'
+        timeStyle: 'short',
     });
 };
 
@@ -35,23 +33,25 @@ export function ListingDetailsSection({ item }: { item: TrackedListingItem }) {
         <>
             {item.thumbnailUrl ? (
                 <a
+                    className="block border-border border-b bg-secondary/30"
                     href={item.url ?? item.thumbnailUrl}
-                    target="_blank"
                     rel="noreferrer"
-                    className="block border-b border-border bg-secondary/30"
+                    target="_blank"
                 >
                     <img
-                        src={item.thumbnailUrl}
                         alt={item.title}
                         className="mx-auto max-h-64 object-contain"
+                        height={512}
+                        src={item.thumbnailUrl}
+                        width={512}
                     />
                 </a>
             ) : null}
 
             <div className={rowClassName}>
-                <div className="flex items-center gap-2 min-w-0">
+                <div className="flex min-w-0 items-center gap-2">
                     <Store className="size-3.5 shrink-0 text-muted-foreground" />
-                    <span className="truncate font-mono text-xs text-foreground">
+                    <span className="truncate font-mono text-foreground text-xs">
                         {item.shopName ?? '--'}
                     </span>
                     <span className="text-[10px] text-muted-foreground">
@@ -60,10 +60,10 @@ export function ListingDetailsSection({ item }: { item: TrackedListingItem }) {
                 </div>
                 {item.url ? (
                     <a
+                        className="inline-flex shrink-0 items-center gap-1.5 text-primary text-xs hover:underline"
                         href={item.url}
-                        target="_blank"
                         rel="noreferrer"
-                        className="shrink-0 inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
+                        target="_blank"
                     >
                         <ExternalLink className="size-3" />
                         Etsy
@@ -76,7 +76,7 @@ export function ListingDetailsSection({ item }: { item: TrackedListingItem }) {
             </div>
             <div className={rowClassName}>
                 <span className={rowLabelClassName}>Price</span>
-                <span className="truncate text-right font-mono text-xs text-terminal-green">
+                <span className="truncate text-right font-mono text-terminal-green text-xs">
                     {formatListingPrice(item)}
                 </span>
             </div>
@@ -86,15 +86,11 @@ export function ListingDetailsSection({ item }: { item: TrackedListingItem }) {
             </div>
             <div className={rowClassName}>
                 <span className={rowLabelClassName}>Favorites</span>
-                <span className={rowValueClassName}>
-                    {formatMetricValue(item.numFavorers)}
-                </span>
+                <span className={rowValueClassName}>{formatMetricValue(item.numFavorers)}</span>
             </div>
             <div className={rowClassName}>
                 <span className={rowLabelClassName}>Quantity</span>
-                <span className={rowValueClassName}>
-                    {item.quantity?.toString() ?? '--'}
-                </span>
+                <span className={rowValueClassName}>{item.quantity?.toString() ?? '--'}</span>
             </div>
 
             <div className={sectionBarClassName}>
@@ -123,7 +119,7 @@ export function ListingDetailsSection({ item }: { item: TrackedListingItem }) {
                     <div className={sectionBarClassName}>
                         <span className={sectionBarLabelClassName}>Last Refresh Error</span>
                     </div>
-                    <div className="px-4 py-3 text-xs text-terminal-red">
+                    <div className="px-4 py-3 text-terminal-red text-xs">
                         {item.lastRefreshError}
                     </div>
                 </>

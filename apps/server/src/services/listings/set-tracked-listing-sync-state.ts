@@ -21,21 +21,19 @@ const emitTrackedListingsSyncStatePush = (params: {
         ids: Object.fromEntries(
             params.listingIds.map((listingId) => [listingId, params.syncState] as const)
         ),
-        accountId: params.accountId
+        accountId: params.accountId,
     });
 };
 
-const emitDashboardSummaryPushBestEffort = (params: {
-    accountId: string;
-}): void => {
-    void getDashboardJobCounts({
-        accountId: params.accountId
+const emitDashboardSummaryPushBestEffort = (params: { accountId: string }): void => {
+    getDashboardJobCounts({
+        accountId: params.accountId,
     })
         .then((jobCounts) => {
             sendRealtimeEvent({
                 type: 'dashboard-summary.push',
                 accountId: params.accountId,
-                jobCounts
+                jobCounts,
             });
         })
         .catch(() => {
@@ -45,7 +43,7 @@ const emitDashboardSummaryPushBestEffort = (params: {
 
 const buildSyncStateUpdate = (syncState: TrackedListingSyncState) => {
     return {
-        syncState
+        syncState,
     };
 };
 
@@ -64,7 +62,7 @@ export const setTrackedListingSyncStateByListingId = async (params: {
             )
         )
         .returning({
-            listingId: trackedListings.listingId
+            listingId: trackedListings.listingId,
         });
 
     if (rows.length === 0) {
@@ -74,10 +72,10 @@ export const setTrackedListingSyncStateByListingId = async (params: {
     emitTrackedListingsSyncStatePush({
         accountId: params.accountId,
         listingIds: rows.map((row) => row.listingId),
-        syncState: params.syncState
+        syncState: params.syncState,
     });
     emitDashboardSummaryPushBestEffort({
-        accountId: params.accountId
+        accountId: params.accountId,
     });
 
     return true;
@@ -104,7 +102,7 @@ export const setTrackedListingsSyncStateByListingIds = async (params: {
             )
         )
         .returning({
-            listingId: trackedListings.listingId
+            listingId: trackedListings.listingId,
         });
 
     if (rows.length === 0) {
@@ -114,10 +112,10 @@ export const setTrackedListingsSyncStateByListingIds = async (params: {
     emitTrackedListingsSyncStatePush({
         accountId: params.accountId,
         listingIds: rows.map((row) => row.listingId),
-        syncState: params.syncState
+        syncState: params.syncState,
     });
     emitDashboardSummaryPushBestEffort({
-        accountId: params.accountId
+        accountId: params.accountId,
     });
 
     return rows.length;
@@ -144,7 +142,7 @@ export const setTrackedListingsSyncStateByEtsyListingIds = async (params: {
             )
         )
         .returning({
-            listingId: trackedListings.listingId
+            listingId: trackedListings.listingId,
         });
 
     if (rows.length === 0) {
@@ -154,10 +152,10 @@ export const setTrackedListingsSyncStateByEtsyListingIds = async (params: {
     emitTrackedListingsSyncStatePush({
         accountId: params.accountId,
         listingIds: rows.map((row) => row.listingId),
-        syncState: params.syncState
+        syncState: params.syncState,
     });
     emitDashboardSummaryPushBestEffort({
-        accountId: params.accountId
+        accountId: params.accountId,
     });
 
     return rows.length;

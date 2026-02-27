@@ -2,21 +2,21 @@ import { and, eq, gte, sql } from 'drizzle-orm';
 import { db } from '../../db';
 import { etsyApiCallEvents } from '../../db/schema';
 import {
+    type EtsyRateLimitRuntimeSnapshot,
     getEtsyRateLimitRuntimeSnapshot,
-    type EtsyRateLimitRuntimeSnapshot
 } from './etsy-rate-limit-runtime';
 
-export type EtsyApiUsageStats = {
+export interface EtsyApiUsageStats {
     callsPast5Minutes: number;
     callsPast24Hours: number;
     callsPastHour: number;
     lastCallAt: Date | null;
-};
+}
 
-export type EtsyApiUsage = {
+export interface EtsyApiUsage {
     rateLimit: EtsyRateLimitRuntimeSnapshot;
     stats: EtsyApiUsageStats;
-};
+}
 
 type DbTimestampValue = Date | string | null;
 
@@ -48,7 +48,7 @@ const countApiCallsSince = async (params: {
 }): Promise<number> => {
     const [row] = await db
         .select({
-            value: sql<number>`count(*)::int`
+            value: sql<number>`count(*)::int`,
         })
         .from(etsyApiCallEvents)
         .where(
@@ -64,7 +64,7 @@ const countApiCallsSince = async (params: {
 const getLastApiCallTimestamp = async (params: { accountId: string }): Promise<Date | null> => {
     const [row] = await db
         .select({
-            value: sql<DbTimestampValue>`max(${etsyApiCallEvents.createdAt})`
+            value: sql<DbTimestampValue>`max(${etsyApiCallEvents.createdAt})`,
         })
         .from(etsyApiCallEvents)
         .where(eq(etsyApiCallEvents.accountId, params.accountId));
@@ -82,20 +82,20 @@ export const getEtsyApiUsage = async (params: { accountId: string }): Promise<Et
         await Promise.all([
             countApiCallsSince({
                 accountId: params.accountId,
-                threshold: fiveMinutesAgo
+                threshold: fiveMinutesAgo,
             }),
             countApiCallsSince({
                 accountId: params.accountId,
-                threshold: oneHourAgo
+                threshold: oneHourAgo,
             }),
             countApiCallsSince({
                 accountId: params.accountId,
-                threshold: twentyFourHoursAgo
+                threshold: twentyFourHoursAgo,
             }),
             getLastApiCallTimestamp({
-                accountId: params.accountId
+                accountId: params.accountId,
             }),
-            getEtsyRateLimitRuntimeSnapshot()
+            getEtsyRateLimitRuntimeSnapshot(),
         ]);
 
     return {
@@ -104,7 +104,7 @@ export const getEtsyApiUsage = async (params: { accountId: string }): Promise<Et
             callsPast5Minutes,
             callsPast24Hours,
             callsPastHour,
-            lastCallAt
-        }
+            lastCallAt,
+        },
     };
 };

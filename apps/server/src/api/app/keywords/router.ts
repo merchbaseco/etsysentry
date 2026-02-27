@@ -8,5 +8,5 @@ export const keywordsRouter = router({
     getDailyProductRanksForKeyword: keywordsGetDailyProductRanksForKeywordProcedure,
     list: keywordsListProcedure,
     refresh: keywordsRefreshProcedure,
-    track: keywordsTrackProcedure
+    track: keywordsTrackProcedure,
 });

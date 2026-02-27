@@ -1,11 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 
 const base64UrlEncode = (buffer: Buffer): string => {
-    return buffer
-        .toString('base64')
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=/g, '');
+    return buffer.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 };
 
 export const toCodeChallenge = (codeVerifier: string): string => {
@@ -21,6 +17,6 @@ export const createPkcePair = (): {
 
     return {
         codeChallenge,
-        codeVerifier
+        codeVerifier,
     };
 };

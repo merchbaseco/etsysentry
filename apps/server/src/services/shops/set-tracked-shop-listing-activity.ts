@@ -19,7 +19,7 @@ export const setTrackedShopListingActivityByEtsyListingId = async (params: {
                     THEN ${trackedShopListings.lastChangedAt}
                 ELSE NOW()
             END`,
-            updatedAt: now
+            updatedAt: now,
         })
         .where(
             and(
@@ -28,14 +28,14 @@ export const setTrackedShopListingActivityByEtsyListingId = async (params: {
             )
         )
         .returning({
-            id: trackedShopListings.id
+            id: trackedShopListings.id,
         });
 
     if (rows.length > 0) {
         sendRealtimeEvent({
             type: 'query.invalidate',
             queries: ['app.shops.list'],
-            accountId: params.accountId
+            accountId: params.accountId,
         });
     }
 

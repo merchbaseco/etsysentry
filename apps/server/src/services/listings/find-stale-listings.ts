@@ -3,8 +3,8 @@ import { db } from '../../db';
 import { trackedListings } from '../../db/schema';
 import {
     SYNC_STALE_LISTINGS_BATCH_SIZE,
+    type SyncListingJobInput,
     syncListingJobInputSchema,
-    type SyncListingJobInput
 } from '../../jobs/sync-listing-shared';
 
 const LISTING_STALE_INTERVAL_MS = 24 * 60 * 60 * 1000;
@@ -28,7 +28,7 @@ export const findStaleListings = async (params?: {
             trackedListingId: trackedListings.listingId,
             clerkUserId: trackedListings.trackerClerkUserId,
             etsyListingId: trackedListings.etsyListingId,
-            accountId: trackedListings.accountId
+            accountId: trackedListings.accountId,
         })
         .from(trackedListings)
         .where(
@@ -56,7 +56,7 @@ export const findStaleListings = async (params?: {
 
         items.push({
             trackedListingId: row.trackedListingId,
-            ...parsedInput.data
+            ...parsedInput.data,
         });
     }
 

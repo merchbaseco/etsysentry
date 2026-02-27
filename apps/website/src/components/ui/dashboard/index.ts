@@ -1,3 +1,4 @@
+// biome-ignore lint/performance/noBarrelFile: Dashboard UI exports are intentionally grouped.
 export { DetailPanel, DetailRow } from './detail-panel';
 export { EmptyState } from './empty-state';
 export { FilterBar, FilterGroup } from './filter-bar';

@@ -9,14 +9,14 @@ describe('normalizeTrackedKeywordInput', () => {
     test('trims and collapses whitespace in keyword text', () => {
         expect(normalizeTrackedKeywordInput('  Mid   Century   Wall Art  ')).toEqual({
             keyword: 'Mid Century Wall Art',
-            normalizedKeyword: 'mid century wall art'
+            normalizedKeyword: 'mid century wall art',
         });
     });
 
     test('builds case-insensitive normalized keyword for dedupe', () => {
         expect(normalizeTrackedKeywordInput('WOODEN Sign')).toEqual({
             keyword: 'WOODEN Sign',
-            normalizedKeyword: 'wooden sign'
+            normalizedKeyword: 'wooden sign',
         });
     });
 });

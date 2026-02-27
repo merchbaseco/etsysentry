@@ -3,7 +3,7 @@ import { env } from '../../../config/env';
 import { resetEtsyRateLimitStateForTests } from '../fetch-etsy-api';
 import {
     EtsyFindAllActiveListingsByShopBridgeError,
-    findAllActiveListingsByShop
+    findAllActiveListingsByShop,
 } from './find-all-active-listings-by-shop';
 
 const originalFetch = globalThis.fetch;
@@ -17,39 +17,39 @@ afterEach(() => {
 
 describe('find-all-active-listings-by-shop bridge', () => {
     test('maps Etsy response into normalized output', async () => {
-        globalThis.fetch = mock(async () => {
+        globalThis.fetch = mock(() => {
             return new Response(
                 JSON.stringify({
                     count: 2,
                     results: [
                         {
-                            listing_id: 1234567890,
+                            listing_id: 1_234_567_890,
                             listing_type: 'physical',
                             num_favorers: 45,
                             price: {
                                 amount: 4500,
                                 currency_code: 'USD',
-                                divisor: 100
+                                divisor: 100,
                             },
                             quantity: 7,
-                            shop_id: 99887766,
+                            shop_id: 99_887_766,
                             state: 'active',
                             title: 'Mid Century Print',
-                            updated_timestamp: 1739400000,
-                            url: 'https://www.etsy.com/listing/1234567890/mid-century-print'
+                            updated_timestamp: 1_739_400_000,
+                            url: 'https://www.etsy.com/listing/1234567890/mid-century-print',
                         },
                         {
-                            listing_id: 1122334455,
+                            listing_id: 1_122_334_455,
                             listing_type: 'download',
                             price: null,
                             title: 'Vintage Lamp',
                             updated_timestamp: null,
-                            url: null
-                        }
-                    ]
+                            url: null,
+                        },
+                    ],
                 }),
                 {
-                    status: 200
+                    status: 200,
                 }
             );
         }) as unknown as typeof fetch;
@@ -59,7 +59,7 @@ describe('find-all-active-listings-by-shop bridge', () => {
             offset: 0,
             shopId: '99887766',
             sortOn: 'updated',
-            sortOrder: 'desc'
+            sortOrder: 'desc',
         });
 
         expect(response).toEqual({
@@ -73,13 +73,13 @@ describe('find-all-active-listings-by-shop bridge', () => {
                     price: {
                         amount: 4500,
                         currencyCode: 'USD',
-                        divisor: 100
+                        divisor: 100,
                     },
                     quantity: 7,
                     shopId: '99887766',
                     title: 'Mid Century Print',
-                    updatedTimestamp: 1739400000,
-                    url: 'https://www.etsy.com/listing/1234567890/mid-century-print'
+                    updatedTimestamp: 1_739_400_000,
+                    url: 'https://www.etsy.com/listing/1234567890/mid-century-print',
                 },
                 {
                     etsyState: null,
@@ -91,25 +91,25 @@ describe('find-all-active-listings-by-shop bridge', () => {
                     shopId: null,
                     title: 'Vintage Lamp',
                     updatedTimestamp: null,
-                    url: null
-                }
-            ]
+                    url: null,
+                },
+            ],
         });
     });
 
     test('passes documented OpenAPI query params to findAllActiveListingsByShop', async () => {
         let requestedUrl = '';
 
-        globalThis.fetch = mock(async (input: RequestInfo | URL) => {
+        globalThis.fetch = mock((input: RequestInfo | URL) => {
             requestedUrl = String(input);
 
             return new Response(
                 JSON.stringify({
                     count: 0,
-                    results: []
+                    results: [],
                 }),
                 {
-                    status: 200
+                    status: 200,
                 }
             );
         }) as unknown as typeof fetch;
@@ -121,7 +121,7 @@ describe('find-all-active-listings-by-shop bridge', () => {
             offset: 20,
             shopId: '99887766',
             sortOn: 'updated',
-            sortOrder: 'desc'
+            sortOrder: 'desc',
         });
 
         const url = new URL(requestedUrl);
@@ -140,22 +140,22 @@ describe('find-all-active-listings-by-shop bridge', () => {
 
         let xApiKeyHeader: string | null = null;
 
-        globalThis.fetch = mock(async (_input, init) => {
+        globalThis.fetch = mock((_input, init) => {
             xApiKeyHeader = new Headers(init?.headers).get('x-api-key');
 
             return new Response(
                 JSON.stringify({
                     count: 0,
-                    results: []
+                    results: [],
                 }),
                 {
-                    status: 200
+                    status: 200,
                 }
             );
         }) as unknown as typeof fetch;
 
         await findAllActiveListingsByShop({
-            shopId: '99887766'
+            shopId: '99887766',
         });
 
         if (typeof xApiKeyHeader !== 'string') {
@@ -166,21 +166,21 @@ describe('find-all-active-listings-by-shop bridge', () => {
     });
 
     test('throws EtsyFindAllActiveListingsByShopBridgeError for non-2xx responses', async () => {
-        globalThis.fetch = mock(async () => {
+        globalThis.fetch = mock(() => {
             return new Response(
                 JSON.stringify({
                     error: 'Not Found',
-                    message: 'Resource missing'
+                    message: 'Resource missing',
                 }),
                 {
-                    status: 404
+                    status: 404,
                 }
             );
         }) as unknown as typeof fetch;
 
         await expect(
             findAllActiveListingsByShop({
-                shopId: '99887766'
+                shopId: '99887766',
             })
         ).rejects.toBeInstanceOf(EtsyFindAllActiveListingsByShopBridgeError);
     });
@@ -188,7 +188,7 @@ describe('find-all-active-listings-by-shop bridge', () => {
     test('rejects invalid input before calling Etsy', async () => {
         await expect(
             findAllActiveListingsByShop({
-                shopId: 'not-a-number'
+                shopId: 'not-a-number',
             })
         ).rejects.toBeInstanceOf(EtsyFindAllActiveListingsByShopBridgeError);
     });

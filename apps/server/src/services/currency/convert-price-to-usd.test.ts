@@ -7,9 +7,9 @@ describe('convertPriceToUsd', () => {
             currencyCode: 'USD',
             ratesByCurrencyCode: {
                 CAD: 1.4,
-                USD: 1
+                USD: 1,
             },
-            value: 12.5
+            value: 12.5,
         });
 
         expect(result).toBe(12.5);
@@ -20,9 +20,9 @@ describe('convertPriceToUsd', () => {
             currencyCode: 'CAD',
             ratesByCurrencyCode: {
                 CAD: 1.4,
-                USD: 1
+                USD: 1,
             },
-            value: 28
+            value: 28,
         });
 
         expect(result).toBe(20);
@@ -32,9 +32,9 @@ describe('convertPriceToUsd', () => {
         const result = convertPriceToUsd({
             currencyCode: 'MAD',
             ratesByCurrencyCode: {
-                CAD: 1.4
+                CAD: 1.4,
             },
-            value: 100
+            value: 100,
         });
 
         expect(result).toBeNull();

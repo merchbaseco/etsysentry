@@ -1,25 +1,23 @@
 import { db } from '../../db';
 import { etsyApiCallEvents } from '../../db/schema';
 
-export type RecordEtsyApiCallInput = {
+export interface RecordEtsyApiCallInput {
+    accountId: string;
     clerkUserId: string;
     endpoint: string;
     occurredAt?: Date;
-    accountId: string;
-};
+}
 
 export const recordEtsyApiCall = async (input: RecordEtsyApiCallInput): Promise<void> => {
     await db.insert(etsyApiCallEvents).values({
         clerkUserId: input.clerkUserId,
         createdAt: input.occurredAt ?? new Date(),
         endpoint: input.endpoint,
-        accountId: input.accountId
+        accountId: input.accountId,
     });
 };
 
-export const recordEtsyApiCallBestEffort = async (
-    input: RecordEtsyApiCallInput
-): Promise<void> => {
+export const recordEtsyApiCallBestEffort = async (input: RecordEtsyApiCallInput): Promise<void> => {
     try {
         await recordEtsyApiCall(input);
     } catch (error) {
@@ -27,7 +25,7 @@ export const recordEtsyApiCallBestEffort = async (
             clerkUserId: input.clerkUserId,
             endpoint: input.endpoint,
             accountId: input.accountId,
-            error
+            error,
         });
     }
 };

@@ -1,39 +1,36 @@
+import { syncStaleKeywords } from '../services/keywords/sync-stale-keywords';
 import { defineJob } from './job-router';
 import {
     SYNC_STALE_KEYWORDS_CRON,
     SYNC_STALE_KEYWORDS_JOB_NAME,
-    syncStaleKeywordsJobInputSchema
+    syncStaleKeywordsJobInputSchema,
 } from './sync-keyword-shared';
-import { syncStaleKeywords } from '../services/keywords/sync-stale-keywords';
 
 export const syncStaleKeywordsJob = defineJob(SYNC_STALE_KEYWORDS_JOB_NAME, {
-    persistSuccess: 'didWork'
+    persistSuccess: 'didWork',
 })
     .input(syncStaleKeywordsJobInputSchema)
     .options({
         retryLimit: 0,
-        singletonKey: SYNC_STALE_KEYWORDS_JOB_NAME
+        singletonKey: SYNC_STALE_KEYWORDS_JOB_NAME,
     })
     .cron({
         cron: SYNC_STALE_KEYWORDS_CRON,
-        payload: {}
+        payload: {},
     })
-    .work(async (job, signal, log, context) => {
-        void job;
-        void signal;
-
+    .work(async (_job, _signal, log, context) => {
         const queuedCount = await syncStaleKeywords({
-            boss: context.boss
+            boss: context.boss,
         });
 
         if (queuedCount > 0) {
             log('Queued stale keyword sync jobs.', {
-                queuedCount
+                queuedCount,
             });
         }
 
         return {
             didWork: queuedCount > 0,
-            queuedCount
+            queuedCount,
         } as const;
     });

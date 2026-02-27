@@ -1,12 +1,12 @@
 import { env } from '../../config/env';
 import {
+    type EtsyFetch,
+    type EtsyRateLimitDependencies,
     observeEtsyRateLimitHeaders,
     parseRetryAfterMs,
     reserveEtsyRequestPermit,
-    resetEtsyRateLimitStateForTests,
+    resetEtsyRateLimitStateForTests as resetEtsyRateLimitRuntimeStateForTests,
     setEtsyRateLimitCooldown,
-    type EtsyFetch,
-    type EtsyRateLimitDependencies
 } from './etsy-rate-limit-runtime';
 
 type FetchEtsyApiDependencies = EtsyRateLimitDependencies & {
@@ -23,7 +23,7 @@ const getDefaultFetchEtsyApiDependencies = (): FetchEtsyApiDependencies => {
             }
 
             await new Promise((resolve) => setTimeout(resolve, delayMs));
-        }
+        },
     };
 };
 
@@ -54,7 +54,7 @@ export const fetchEtsyApi = async (
 ): Promise<Response> => {
     const deps: FetchEtsyApiDependencies = {
         ...getDefaultFetchEtsyApiDependencies(),
-        ...dependencies
+        ...dependencies,
     };
 
     for (let attempt = 0; ; attempt += 1) {
@@ -65,7 +65,7 @@ export const fetchEtsyApi = async (
 
         await observeEtsyRateLimitHeaders({
             headers: response.headers,
-            nowMs
+            nowMs,
         });
 
         if (!shouldRetryRateLimitedResponse(response)) {
@@ -81,11 +81,13 @@ export const fetchEtsyApi = async (
 
         await setEtsyRateLimitCooldown({
             delayMs,
-            nowMs
+            nowMs,
         });
 
         await deps.sleep(delayMs);
     }
 };
 
-export { resetEtsyRateLimitStateForTests };
+export const resetEtsyRateLimitStateForTests = (): void => {
+    resetEtsyRateLimitRuntimeStateForTests();
+};

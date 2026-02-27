@@ -14,45 +14,45 @@ afterEach(() => {
 
 describe('get-listing bridge', () => {
     test('maps Etsy listing response into normalized output', async () => {
-        globalThis.fetch = mock(async () => {
+        globalThis.fetch = mock(() => {
             return new Response(
                 JSON.stringify({
                     description: 'Sample description',
                     images: [
                         {
                             url_170x135:
-                                'https://i.etsystatic.com/123/r/il/aabbcc/1234567890/il_170x135.jpg'
-                        }
+                                'https://i.etsystatic.com/123/r/il/aabbcc/1234567890/il_170x135.jpg',
+                        },
                     ],
-                    listing_id: 1234567890,
+                    listing_id: 1_234_567_890,
                     listing_type: 'download',
                     num_favorers: 22,
                     price: {
                         amount: 2550,
                         currency_code: 'USD',
-                        divisor: 100
+                        divisor: 100,
                     },
                     quantity: 7,
                     shop: {
-                        shop_name: 'Needle & Oak'
+                        shop_name: 'Needle & Oak',
                     },
-                    shop_id: 987654321,
+                    shop_id: 987_654_321,
                     state: 'active',
                     tags: ['tag-a'],
                     title: 'Sample Listing',
-                    updated_timestamp: 1739400000,
+                    updated_timestamp: 1_739_400_000,
                     url: 'https://www.etsy.com/listing/1234567890/sample-listing',
-                    views: 1234
+                    views: 1234,
                 }),
                 {
-                    status: 200
+                    status: 200,
                 }
             );
         }) as unknown as typeof fetch;
 
         const response = await getListing({
             accessToken: 'token-1',
-            listingId: '1234567890'
+            listingId: '1234567890',
         });
 
         expect(response).toMatchObject({
@@ -64,45 +64,44 @@ describe('get-listing bridge', () => {
             price: {
                 amount: 2550,
                 currencyCode: 'USD',
-                divisor: 100
+                divisor: 100,
             },
             quantity: 7,
             shopId: '987654321',
             shopName: 'Needle & Oak',
             tags: ['tag-a'],
-            thumbnailUrl:
-                'https://i.etsystatic.com/123/r/il/aabbcc/1234567890/il_170x135.jpg',
+            thumbnailUrl: 'https://i.etsystatic.com/123/r/il/aabbcc/1234567890/il_170x135.jpg',
             title: 'Sample Listing',
-            updatedTimestamp: 1739400000,
+            updatedTimestamp: 1_739_400_000,
             url: 'https://www.etsy.com/listing/1234567890/sample-listing',
-            views: 1234
+            views: 1234,
         });
 
         expect(response.images).toEqual([
             {
-                url_170x135: 'https://i.etsystatic.com/123/r/il/aabbcc/1234567890/il_170x135.jpg'
-            }
+                url_170x135: 'https://i.etsystatic.com/123/r/il/aabbcc/1234567890/il_170x135.jpg',
+            },
         ]);
         expect(response.videos).toEqual([]);
     });
 
     test('normalizes Etsy edit state to inactive', async () => {
-        globalThis.fetch = mock(async () => {
+        globalThis.fetch = mock(() => {
             return new Response(
                 JSON.stringify({
-                    listing_id: 1234567890,
+                    listing_id: 1_234_567_890,
                     state: 'edit',
-                    title: 'Sample Listing'
+                    title: 'Sample Listing',
                 }),
                 {
-                    status: 200
+                    status: 200,
                 }
             );
         }) as unknown as typeof fetch;
 
         const response = await getListing({
             accessToken: 'token-1',
-            listingId: '1234567890'
+            listingId: '1234567890',
         });
 
         expect(response.etsyState).toBe('inactive');
@@ -111,17 +110,17 @@ describe('get-listing bridge', () => {
     test('passes documented OpenAPI query params to getListing', async () => {
         let requestedUrl = '';
 
-        globalThis.fetch = mock(async (input: RequestInfo | URL) => {
+        globalThis.fetch = mock((input: RequestInfo | URL) => {
             requestedUrl = String(input);
 
             return new Response(
                 JSON.stringify({
-                    listing_id: 1234567890,
+                    listing_id: 1_234_567_890,
                     state: 'active',
-                    title: 'Sample Listing'
+                    title: 'Sample Listing',
                 }),
                 {
-                    status: 200
+                    status: 200,
                 }
             );
         }) as unknown as typeof fetch;
@@ -132,7 +131,7 @@ describe('get-listing bridge', () => {
             includes: ['Shop', 'Images'],
             language: 'en',
             legacy: true,
-            listingId: '1234567890'
+            listingId: '1234567890',
         });
 
         const url = new URL(requestedUrl);
@@ -149,24 +148,24 @@ describe('get-listing bridge', () => {
 
         let xApiKeyHeader: string | null = null;
 
-        globalThis.fetch = mock(async (_input, init) => {
+        globalThis.fetch = mock((_input, init) => {
             xApiKeyHeader = new Headers(init?.headers).get('x-api-key');
 
             return new Response(
                 JSON.stringify({
-                    listing_id: 1234567890,
+                    listing_id: 1_234_567_890,
                     state: 'active',
-                    title: 'Sample Listing'
+                    title: 'Sample Listing',
                 }),
                 {
-                    status: 200
+                    status: 200,
                 }
             );
         }) as unknown as typeof fetch;
 
         await getListing({
             accessToken: 'token-1',
-            listingId: '1234567890'
+            listingId: '1234567890',
         });
 
         if (typeof xApiKeyHeader !== 'string') {
@@ -177,14 +176,14 @@ describe('get-listing bridge', () => {
     });
 
     test('throws EtsyGetListingBridgeError for non-2xx responses', async () => {
-        globalThis.fetch = mock(async () => {
+        globalThis.fetch = mock(() => {
             return new Response(
                 JSON.stringify({
                     error: 'Not Found',
-                    message: 'Listing missing'
+                    message: 'Listing missing',
                 }),
                 {
-                    status: 404
+                    status: 404,
                 }
             );
         }) as unknown as typeof fetch;
@@ -192,7 +191,7 @@ describe('get-listing bridge', () => {
         await expect(
             getListing({
                 accessToken: 'token-1',
-                listingId: '123'
+                listingId: '123',
             })
         ).rejects.toBeInstanceOf(EtsyGetListingBridgeError);
     });
@@ -201,7 +200,7 @@ describe('get-listing bridge', () => {
         await expect(
             getListing({
                 accessToken: 'token-1',
-                listingId: 'not-a-number'
+                listingId: 'not-a-number',
             })
         ).rejects.toBeInstanceOf(EtsyGetListingBridgeError);
     });

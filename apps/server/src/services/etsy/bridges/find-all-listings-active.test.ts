@@ -3,7 +3,7 @@ import { env } from '../../../config/env';
 import { resetEtsyRateLimitStateForTests } from '../fetch-etsy-api';
 import {
     EtsyFindAllListingsActiveBridgeError,
-    findAllListingsActive
+    findAllListingsActive,
 } from './find-all-listings-active';
 
 const originalFetch = globalThis.fetch;
@@ -17,38 +17,38 @@ afterEach(() => {
 
 describe('find-all-listings-active bridge', () => {
     test('maps Etsy search response into normalized output', async () => {
-        globalThis.fetch = mock(async () => {
+        globalThis.fetch = mock(() => {
             return new Response(
                 JSON.stringify({
                     count: 2,
                     results: [
                         {
-                            listing_id: 1234567890,
+                            listing_id: 1_234_567_890,
                             listing_type: 'physical',
                             main_image: {
                                 url_170x135:
-                                    'https://i.etsystatic.com/123/il/abc123/1234567890/il_170x135.jpg'
+                                    'https://i.etsystatic.com/123/il/abc123/1234567890/il_170x135.jpg',
                             },
                             price: {
                                 amount: 4500,
                                 currency_code: 'USD',
-                                divisor: 100
+                                divisor: 100,
                             },
-                            shop_id: 99112233,
+                            shop_id: 99_112_233,
                             title: 'Mid Century Print',
-                            url: 'https://www.etsy.com/listing/1234567890/mid-century-print'
+                            url: 'https://www.etsy.com/listing/1234567890/mid-century-print',
                         },
                         {
-                            listing_id: 1122334455,
+                            listing_id: 1_122_334_455,
                             listing_type: 'download',
                             price: null,
                             title: 'Vintage Lamp',
-                            url: null
-                        }
-                    ]
+                            url: null,
+                        },
+                    ],
                 }),
                 {
-                    status: 200
+                    status: 200,
                 }
             );
         }) as unknown as typeof fetch;
@@ -58,7 +58,7 @@ describe('find-all-listings-active bridge', () => {
             keywords: 'mid century wall art',
             limit: 25,
             offset: 0,
-            sortOn: 'score'
+            sortOn: 'score',
         });
 
         expect(response).toEqual({
@@ -70,13 +70,13 @@ describe('find-all-listings-active bridge', () => {
                     price: {
                         amount: 4500,
                         currencyCode: 'USD',
-                        divisor: 100
+                        divisor: 100,
                     },
                     shopId: '99112233',
                     thumbnailUrl:
                         'https://i.etsystatic.com/123/il/abc123/1234567890/il_170x135.jpg',
                     title: 'Mid Century Print',
-                    url: 'https://www.etsy.com/listing/1234567890/mid-century-print'
+                    url: 'https://www.etsy.com/listing/1234567890/mid-century-print',
                 },
                 {
                     listingId: '1122334455',
@@ -85,25 +85,25 @@ describe('find-all-listings-active bridge', () => {
                     shopId: null,
                     thumbnailUrl: null,
                     title: 'Vintage Lamp',
-                    url: null
-                }
-            ]
+                    url: null,
+                },
+            ],
         });
     });
 
     test('passes documented OpenAPI query params to findAllListingsActive', async () => {
         let requestedUrl = '';
 
-        globalThis.fetch = mock(async (input: RequestInfo | URL) => {
+        globalThis.fetch = mock((input: RequestInfo | URL) => {
             requestedUrl = String(input);
 
             return new Response(
                 JSON.stringify({
                     count: 0,
-                    results: []
+                    results: [],
                 }),
                 {
-                    status: 200
+                    status: 200,
                 }
             );
         }) as unknown as typeof fetch;
@@ -119,7 +119,7 @@ describe('find-all-listings-active bridge', () => {
             shopLocation: 'New York',
             sortOn: 'score',
             sortOrder: 'desc',
-            taxonomyId: 123
+            taxonomyId: 123,
         });
 
         const url = new URL(requestedUrl);
@@ -142,23 +142,23 @@ describe('find-all-listings-active bridge', () => {
 
         let xApiKeyHeader: string | null = null;
 
-        globalThis.fetch = mock(async (_input, init) => {
+        globalThis.fetch = mock((_input, init) => {
             xApiKeyHeader = new Headers(init?.headers).get('x-api-key');
 
             return new Response(
                 JSON.stringify({
                     count: 0,
-                    results: []
+                    results: [],
                 }),
                 {
-                    status: 200
+                    status: 200,
                 }
             );
         }) as unknown as typeof fetch;
 
         await findAllListingsActive({
             accessToken: 'token-1',
-            keywords: 'test'
+            keywords: 'test',
         });
 
         if (typeof xApiKeyHeader !== 'string') {
@@ -169,14 +169,14 @@ describe('find-all-listings-active bridge', () => {
     });
 
     test('throws EtsyFindAllListingsActiveBridgeError for non-2xx responses', async () => {
-        globalThis.fetch = mock(async () => {
+        globalThis.fetch = mock(() => {
             return new Response(
                 JSON.stringify({
                     error: 'Not Found',
-                    message: 'Resource missing'
+                    message: 'Resource missing',
                 }),
                 {
-                    status: 404
+                    status: 404,
                 }
             );
         }) as unknown as typeof fetch;
@@ -184,7 +184,7 @@ describe('find-all-listings-active bridge', () => {
         await expect(
             findAllListingsActive({
                 accessToken: 'token-1',
-                keywords: 'wall art'
+                keywords: 'wall art',
             })
         ).rejects.toBeInstanceOf(EtsyFindAllListingsActiveBridgeError);
     });
@@ -193,7 +193,7 @@ describe('find-all-listings-active bridge', () => {
         await expect(
             findAllListingsActive({
                 accessToken: '',
-                keywords: 'wall art'
+                keywords: 'wall art',
             })
         ).rejects.toBeInstanceOf(EtsyFindAllListingsActiveBridgeError);
     });

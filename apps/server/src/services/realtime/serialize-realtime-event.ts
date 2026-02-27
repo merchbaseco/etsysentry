@@ -1,7 +1,4 @@
-import {
-    realtimeEventSchema,
-    type RealtimeEvent
-} from './realtime-event-types';
+import { type RealtimeEvent, realtimeEventSchema } from './realtime-event-types';
 
 export const serializeEventForWire = (event: RealtimeEvent): string => {
     const parsedEvent = realtimeEventSchema.parse(event);
@@ -11,18 +8,21 @@ export const serializeEventForWire = (event: RealtimeEvent): string => {
             return JSON.stringify({
                 type: parsedEvent.type,
                 entity: parsedEvent.entity,
-                ids: parsedEvent.ids
+                ids: parsedEvent.ids,
             });
         case 'dashboard-summary.push':
             return JSON.stringify({
                 type: parsedEvent.type,
-                jobCounts: parsedEvent.jobCounts
+                jobCounts: parsedEvent.jobCounts,
             });
         case 'query.invalidate':
             return JSON.stringify({
                 type: parsedEvent.type,
-                queries: parsedEvent.queries
+                queries: parsedEvent.queries,
             });
+        default:
+            throw new Error(
+                `Unsupported realtime event type: ${(parsedEvent as RealtimeEvent).type}`
+            );
     }
 };
-

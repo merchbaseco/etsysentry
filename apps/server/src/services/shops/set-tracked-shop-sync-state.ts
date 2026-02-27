@@ -21,21 +21,19 @@ const emitTrackedShopsSyncStatePush = (params: {
         ids: Object.fromEntries(
             params.trackedShopIds.map((trackedShopId) => [trackedShopId, params.syncState] as const)
         ),
-        accountId: params.accountId
+        accountId: params.accountId,
     });
 };
 
-const emitDashboardSummaryPushBestEffort = (params: {
-    accountId: string;
-}): void => {
-    void getDashboardJobCounts({
-        accountId: params.accountId
+const emitDashboardSummaryPushBestEffort = (params: { accountId: string }): void => {
+    getDashboardJobCounts({
+        accountId: params.accountId,
     })
         .then((jobCounts) => {
             sendRealtimeEvent({
                 type: 'dashboard-summary.push',
                 accountId: params.accountId,
-                jobCounts
+                jobCounts,
             });
         })
         .catch(() => {
@@ -45,7 +43,7 @@ const emitDashboardSummaryPushBestEffort = (params: {
 
 const buildSyncStateUpdate = (syncState: TrackedShopSyncState) => {
     return {
-        syncState
+        syncState,
     };
 };
 
@@ -64,7 +62,7 @@ export const setTrackedShopSyncStateByTrackedShopId = async (params: {
             )
         )
         .returning({
-            trackedShopId: trackedShops.trackedShopId
+            trackedShopId: trackedShops.trackedShopId,
         });
 
     if (rows.length === 0) {
@@ -74,10 +72,10 @@ export const setTrackedShopSyncStateByTrackedShopId = async (params: {
     emitTrackedShopsSyncStatePush({
         accountId: params.accountId,
         trackedShopIds: rows.map((row) => row.trackedShopId),
-        syncState: params.syncState
+        syncState: params.syncState,
     });
     emitDashboardSummaryPushBestEffort({
-        accountId: params.accountId
+        accountId: params.accountId,
     });
 
     return true;
@@ -104,7 +102,7 @@ export const setTrackedShopsSyncStateByTrackedShopIds = async (params: {
             )
         )
         .returning({
-            trackedShopId: trackedShops.trackedShopId
+            trackedShopId: trackedShops.trackedShopId,
         });
 
     if (rows.length === 0) {
@@ -114,10 +112,10 @@ export const setTrackedShopsSyncStateByTrackedShopIds = async (params: {
     emitTrackedShopsSyncStatePush({
         accountId: params.accountId,
         trackedShopIds: rows.map((row) => row.trackedShopId),
-        syncState: params.syncState
+        syncState: params.syncState,
     });
     emitDashboardSummaryPushBestEffort({
-        accountId: params.accountId
+        accountId: params.accountId,
     });
 
     return rows.length;

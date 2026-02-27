@@ -1,8 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import {
-    sendRealtimeEvent,
-    onRealtimeEvent
-} from './emit-event';
+import { onRealtimeEvent, sendRealtimeEvent } from './emit-event';
 
 describe('sendRealtimeEvent', () => {
     test('emits serialized query invalidation events to subscribers', () => {
@@ -14,7 +11,7 @@ describe('sendRealtimeEvent', () => {
         sendRealtimeEvent({
             type: 'query.invalidate',
             queries: ['app.keywords.list', 'app.listings.list', 'app.shops.list', 'app.logs.list'],
-            accountId: 'tenant_123'
+            accountId: 'tenant_123',
         });
         stopListening();
 
@@ -27,10 +24,10 @@ describe('sendRealtimeEvent', () => {
                         'app.keywords.list',
                         'app.listings.list',
                         'app.shops.list',
-                        'app.logs.list'
-                    ]
-                })
-            }
+                        'app.logs.list',
+                    ],
+                }),
+            },
         ]);
     });
 
@@ -44,9 +41,9 @@ describe('sendRealtimeEvent', () => {
             type: 'sync-state.push',
             entity: 'listing',
             ids: {
-                listing_1: 'queued'
+                listing_1: 'queued',
             },
-            accountId: 'tenant_123'
+            accountId: 'tenant_123',
         });
         stopListening();
 
@@ -57,10 +54,10 @@ describe('sendRealtimeEvent', () => {
                     type: 'sync-state.push',
                     entity: 'listing',
                     ids: {
-                        listing_1: 'queued'
-                    }
-                })
-            }
+                        listing_1: 'queued',
+                    },
+                }),
+            },
         ]);
     });
 
@@ -69,9 +66,12 @@ describe('sendRealtimeEvent', () => {
             sendRealtimeEvent({
                 type: 'query.invalidate',
                 queries: ['invalid.query'] as unknown as (
-                    'app.keywords.list' | 'app.listings.list' | 'app.shops.list' | 'app.logs.list'
+                    | 'app.keywords.list'
+                    | 'app.listings.list'
+                    | 'app.shops.list'
+                    | 'app.logs.list'
                 )[],
-                accountId: 'tenant_123'
+                accountId: 'tenant_123',
             });
         }).toThrow();
     });

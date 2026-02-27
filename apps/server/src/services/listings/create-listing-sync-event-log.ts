@@ -1,6 +1,6 @@
 import { createEventLog } from '../logs/create-event-log';
 
-type ListingSyncedEventLogParams = {
+interface ListingSyncedEventLogParams {
     accountId: string;
     clerkUserId: string;
     etsyListingId: string;
@@ -10,9 +10,9 @@ type ListingSyncedEventLogParams = {
     requestId?: string | null;
     shopId: string | null;
     title: string;
-};
+}
 
-type ListingSyncFailedEventLogParams = {
+interface ListingSyncFailedEventLogParams {
     accountId: string;
     clerkUserId: string;
     errorMessage: string;
@@ -21,7 +21,7 @@ type ListingSyncFailedEventLogParams = {
     monitorRunId?: string | null;
     requestId?: string | null;
     shopId?: string | null;
-};
+}
 
 export const buildListingSyncedEventLogInput = (params: ListingSyncedEventLogParams) => {
     return {
@@ -30,7 +30,7 @@ export const buildListingSyncedEventLogInput = (params: ListingSyncedEventLogPar
         clerkUserId: params.clerkUserId,
         detailsJson: {
             etsyState: params.etsyState,
-            title: params.title
+            title: params.title,
         },
         level: 'info' as const,
         listingId: params.etsyListingId,
@@ -41,7 +41,7 @@ export const buildListingSyncedEventLogInput = (params: ListingSyncedEventLogPar
         requestId: params.requestId ?? null,
         shopId: params.shopId,
         status: 'success' as const,
-        accountId: params.accountId
+        accountId: params.accountId,
     };
 };
 
@@ -51,7 +51,7 @@ export const buildListingSyncFailedEventLogInput = (params: ListingSyncFailedEve
         category: 'listing',
         clerkUserId: params.clerkUserId,
         detailsJson: {
-            error: params.errorMessage
+            error: params.errorMessage,
         },
         level: 'error' as const,
         listingId: params.etsyListingId,
@@ -62,7 +62,7 @@ export const buildListingSyncFailedEventLogInput = (params: ListingSyncFailedEve
         requestId: params.requestId ?? null,
         shopId: params.shopId ?? null,
         status: 'failed' as const,
-        accountId: params.accountId
+        accountId: params.accountId,
     };
 };
 

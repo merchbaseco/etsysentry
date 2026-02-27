@@ -9,25 +9,19 @@ const clamp = (value: number, min: number, max: number): number => {
     return Math.min(Math.max(value, min), max);
 };
 
-type MouseThumbnailTooltipState = {
+interface MouseThumbnailTooltipState {
     imageAlt: string;
     imageUrl: string | null;
-};
+}
 
-type ShowMouseThumbnailTooltipInput = {
+interface ShowMouseThumbnailTooltipInput {
     cursorX: number;
     cursorY: number;
     imageAlt: string;
     imageUrl: string | null;
-};
+}
 
-const getTooltipPosition = ({
-    cursorX,
-    cursorY
-}: {
-    cursorX: number;
-    cursorY: number;
-}) => {
+const getTooltipPosition = ({ cursorX, cursorY }: { cursorX: number; cursorY: number }) => {
     const rightEdge = window.innerWidth - VIEWPORT_PADDING_PX;
     const bottomEdge = window.innerHeight - VIEWPORT_PADDING_PX;
     const left =
@@ -49,7 +43,7 @@ const getTooltipPosition = ({
             top,
             VIEWPORT_PADDING_PX,
             Math.max(VIEWPORT_PADDING_PX, bottomEdge - TOOLTIP_SIZE_PX)
-        )
+        ),
     };
 };
 
@@ -146,13 +140,13 @@ export const useMouseThumbnailTooltip = () => {
         queueTooltipPositionUpdate,
         showTooltip,
         tooltip,
-        tooltipRef
+        tooltipRef,
     };
 };
 
 export const MouseThumbnailTooltipPortal = ({
     tooltip,
-    tooltipRef
+    tooltipRef,
 }: {
     tooltip: MouseThumbnailTooltipState | null;
     tooltipRef: RefObject<HTMLDivElement | null>;
@@ -163,17 +157,19 @@ export const MouseThumbnailTooltipPortal = ({
 
     return createPortal(
         <div
-            ref={tooltipRef}
             aria-hidden
             className={
-                'pointer-events-none fixed left-0 top-0 z-[80] hidden overflow-hidden rounded-md ' +
+                'pointer-events-none fixed top-0 left-0 z-[80] hidden overflow-hidden rounded-md' +
                 'border border-border/70 bg-card shadow-xl will-change-transform sm:block'
             }
+            ref={tooltipRef}
         >
             <img
-                src={tooltip.imageUrl ?? undefined}
                 alt={tooltip.imageAlt}
                 className="size-44 max-w-none object-cover"
+                height={176}
+                src={tooltip.imageUrl ?? undefined}
+                width={176}
             />
         </div>,
         document.body

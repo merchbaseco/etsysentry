@@ -13,7 +13,7 @@ export const syncStaleKeywords = async (params: {
     for (const staleKeyword of staleKeywords) {
         const jobId = await enqueueSyncKeywordJob({
             boss: params.boss,
-            payload: staleKeyword
+            payload: staleKeyword,
         });
 
         if (jobId) {
@@ -28,7 +28,7 @@ export const syncStaleKeywords = async (params: {
         await setTrackedKeywordsSyncStateByKeywordIds({
             accountId,
             trackedKeywordIds,
-            syncState: 'queued'
+            syncState: 'queued',
         });
     }
 

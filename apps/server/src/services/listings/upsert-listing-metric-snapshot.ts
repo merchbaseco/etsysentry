@@ -2,17 +2,17 @@ import { sql } from 'drizzle-orm';
 import { db } from '../../db';
 import { listingMetricSnapshots } from '../../db/schema';
 
-export type UpsertListingMetricSnapshotInput = {
+export interface UpsertListingMetricSnapshotInput {
     accountId: string;
+    favorerCount: number | null;
     listingId: string;
     observedAt: Date;
-    views: number | null;
-    favorerCount: number | null;
-    quantity: number | null;
     priceAmount: number | null;
-    priceDivisor: number | null;
     priceCurrencyCode: string | null;
-};
+    priceDivisor: number | null;
+    quantity: number | null;
+    views: number | null;
+}
 
 type ListingMetricSnapshotInsert = Pick<
     UpsertListingMetricSnapshotInput,
@@ -50,7 +50,7 @@ export const toListingMetricSnapshotInsert = (
         priceDivisor: params.priceDivisor,
         priceCurrencyCode: params.priceCurrencyCode,
         createdAt: params.observedAt,
-        updatedAt: params.observedAt
+        updatedAt: params.observedAt,
     };
 };
 
@@ -66,7 +66,7 @@ export const upsertListingMetricSnapshot = async (
             target: [
                 listingMetricSnapshots.accountId,
                 listingMetricSnapshots.listingId,
-                listingMetricSnapshots.observedDate
+                listingMetricSnapshots.observedDate,
             ],
             set: {
                 observedAt: sql`GREATEST(
@@ -107,7 +107,7 @@ export const upsertListingMetricSnapshot = async (
                     WHEN excluded.observed_at >= ${listingMetricSnapshots.observedAt}
                         THEN excluded.updated_at
                     ELSE ${listingMetricSnapshots.updatedAt}
-                END`
-            }
+                END`,
+            },
         });
 };

@@ -2,11 +2,11 @@ import { and, desc, eq, ilike, inArray, lt, or } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '../../db';
 import { eventLogs } from '../../db/schema';
-import { type EventLogRecord } from './create-event-log';
+import type { EventLogRecord } from './create-event-log';
 import {
     eventLogLevelSchema,
     eventLogPrimitiveTypeSchema,
-    eventLogStatusSchema
+    eventLogStatusSchema,
 } from './event-log-types';
 
 const listEventLogsInputSchema = z
@@ -16,7 +16,7 @@ const listEventLogsInputSchema = z
         cursor: z
             .object({
                 occurredAt: z.string().datetime(),
-                id: z.string().uuid()
+                id: z.string().uuid(),
             })
             .optional(),
         search: z.string().trim().min(1).optional(),
@@ -27,21 +27,21 @@ const listEventLogsInputSchema = z
         listingId: z.string().min(1).optional(),
         shopId: z.string().min(1).optional(),
         keyword: z.string().min(1).optional(),
-        monitorRunId: z.string().min(1).optional()
+        monitorRunId: z.string().min(1).optional(),
     })
     .strict();
 
 export type ListEventLogsInput = z.input<typeof listEventLogsInputSchema>;
 
-export type EventLogsCursor = {
+export interface EventLogsCursor {
     id: string;
     occurredAt: string;
-};
+}
 
-export type ListEventLogsResult = {
+export interface ListEventLogsResult {
     items: EventLogRecord[];
     nextCursor: EventLogsCursor | null;
-};
+}
 
 const toDetailsJson = (value: unknown): Record<string, unknown> => {
     if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
@@ -68,7 +68,7 @@ const toRecord = (row: typeof eventLogs.$inferSelect): EventLogRecord => {
         message: row.message,
         detailsJson: toDetailsJson(row.detailsJson),
         monitorRunId: row.monitorRunId,
-        requestId: row.requestId
+        requestId: row.requestId,
     };
 };
 
@@ -130,10 +130,7 @@ export const listEventLogs = async (input: ListEventLogsInput): Promise<ListEven
         conditions.push(
             or(
                 lt(eventLogs.occurredAt, cursorOccurredAt),
-                and(
-                    eq(eventLogs.occurredAt, cursorOccurredAt),
-                    lt(eventLogs.id, parsed.cursor.id)
-                )
+                and(eq(eventLogs.occurredAt, cursorOccurredAt), lt(eventLogs.id, parsed.cursor.id))
             ) as NonNullable<ReturnType<typeof or>>
         );
     }
@@ -148,15 +145,16 @@ export const listEventLogs = async (input: ListEventLogsInput): Promise<ListEven
     const hasMore = rows.length > parsed.limit;
     const pageRows = hasMore ? rows.slice(0, parsed.limit) : rows;
     const items = pageRows.map(toRecord);
-    const tail = pageRows[pageRows.length - 1];
+    const tail = pageRows.at(-1);
 
     return {
         items,
-        nextCursor: hasMore && tail
-            ? {
-                  id: tail.id,
-                  occurredAt: tail.occurredAt.toISOString()
-              }
-            : null
+        nextCursor:
+            hasMore && tail
+                ? {
+                      id: tail.id,
+                      occurredAt: tail.occurredAt.toISOString(),
+                  }
+                : null,
     };
 };

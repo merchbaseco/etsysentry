@@ -7,7 +7,7 @@ export function SortableHeader({
     currentSort,
     currentDir,
     onSort,
-    className
+    className,
 }: {
     label: string;
     sortKey: string;
@@ -17,28 +17,29 @@ export function SortableHeader({
     className?: string;
 }) {
     const isActive = currentSort === sortKey;
+    let sortIcon = <ArrowUpDown className="size-3 opacity-30" />;
+
+    if (isActive) {
+        sortIcon =
+            currentDir === 'asc' ? (
+                <ArrowUp className="size-3" />
+            ) : (
+                <ArrowDown className="size-3" />
+            );
+    }
 
     return (
         <button
-            onClick={() => onSort(sortKey)}
             className={cn(
-                'inline-flex items-center gap-1 text-[10px] uppercase tracking-wider font-medium cursor-pointer select-none hover:text-primary transition-colors',
+                'inline-flex cursor-pointer select-none items-center gap-1 font-medium text-[10px] uppercase tracking-wider transition-colors hover:text-primary',
                 isActive ? 'text-primary' : 'text-muted-foreground',
                 className
             )}
+            onClick={() => onSort(sortKey)}
+            type="button"
         >
             {label}
-            <span className="inline-flex -mr-3.5">
-                {isActive ? (
-                    currentDir === 'asc' ? (
-                        <ArrowUp className="size-3" />
-                    ) : (
-                        <ArrowDown className="size-3" />
-                    )
-                ) : (
-                    <ArrowUpDown className="size-3 opacity-30" />
-                )}
-            </span>
+            <span className="-mr-3.5 inline-flex">{sortIcon}</span>
         </button>
     );
 }

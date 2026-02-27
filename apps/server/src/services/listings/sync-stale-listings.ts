@@ -16,8 +16,8 @@ export const syncStaleListings = async (params: {
             payload: {
                 clerkUserId: staleListing.clerkUserId,
                 etsyListingId: staleListing.etsyListingId,
-                accountId: staleListing.accountId
-            }
+                accountId: staleListing.accountId,
+            },
         });
 
         if (jobId) {
@@ -32,7 +32,7 @@ export const syncStaleListings = async (params: {
         await setTrackedListingsSyncStateByListingIds({
             accountId,
             trackedListingIds,
-            syncState: 'queued'
+            syncState: 'queued',
         });
     }
 

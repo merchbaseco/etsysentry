@@ -6,5 +6,5 @@ import { shopsTrackProcedure } from './track';
 export const shopsRouter = router({
     list: shopsListProcedure,
     refresh: shopsRefreshProcedure,
-    track: shopsTrackProcedure
+    track: shopsTrackProcedure,
 });

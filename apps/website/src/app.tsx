@@ -1,3 +1,8 @@
+import { useAuth } from '@clerk/clerk-react';
+import { useQuery } from '@tanstack/react-query';
+import { Activity, Briefcase, Clock, Eye, ShoppingCart } from 'lucide-react';
+import { useCallback } from 'react';
+import { createBrowserRouter, Navigate, NavLink, Outlet, RouterProvider } from 'react-router-dom';
 import { KeywordsTab } from '@/components/dashboard/keywords-tab';
 import { ListingsTab } from '@/components/dashboard/listings-tab';
 import { LogsTab } from '@/components/dashboard/logs-tab';
@@ -5,37 +10,23 @@ import { ShopsTab } from '@/components/dashboard/shops-tab';
 import { StatusIndicator } from '@/components/dashboard/status-indicator';
 import { SettingsModal } from '@/components/settings-modal';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { useEtsyOAuthConnection } from '@/hooks/use-etsy-oauth-connection';
 import { useRealtimeQueryInvalidations } from '@/hooks/use-realtime-query-invalidations';
 import { trpc } from '@/lib/trpc-client';
-import {
-    useEtsyOAuthConnection,
-    type EtsyOAuthConnectionState
-} from '@/hooks/use-etsy-oauth-connection';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@clerk/clerk-react';
-import { useQuery } from '@tanstack/react-query';
-import { Activity, Briefcase, Clock, Eye, ShoppingCart } from 'lucide-react';
-import { useCallback } from 'react';
-import {
-    Navigate,
-    NavLink,
-    Outlet,
-    RouterProvider,
-    createBrowserRouter
-} from 'react-router-dom';
 
 const tabs = [
     { id: 'listings', label: 'Listings', icon: ShoppingCart, to: '/' },
     { id: 'keywords', label: 'Keywords', icon: Eye, to: '/keywords' },
     { id: 'shops', label: 'Shops', icon: Activity, to: '/shops' },
-    { id: 'logs', label: 'Logs', icon: Clock, to: '/logs' }
+    { id: 'logs', label: 'Logs', icon: Clock, to: '/logs' },
 ] as const;
 const dashboardSummaryQueryOptions = trpc.app.dashboard.getSummary.queryOptions({});
 
 const DashboardJobsSummary = () => {
     const { data } = useQuery({
         ...dashboardSummaryQueryOptions,
-        refetchInterval: 60_000
+        refetchInterval: 60_000,
     });
     const queuedJobs = data?.queuedJobs ?? '--';
     const inFlightJobs = data?.inFlightJobs ?? '--';
@@ -53,16 +44,16 @@ const DashboardJobsSummary = () => {
             )}
         >
             <Briefcase className="size-2.5 text-terminal-dim" />
-            <span className="uppercase tracking-wider text-terminal-dim">jobs</span>
+            <span className="text-terminal-dim uppercase tracking-wider">jobs</span>
             <span className={hasActive ? 'text-terminal-blue' : 'text-foreground'}>
                 {queuedJobs}
             </span>
-            <span className="uppercase tracking-wider text-terminal-dim">queued</span>
+            <span className="text-terminal-dim uppercase tracking-wider">queued</span>
             <span className="text-terminal-dim">/</span>
             <span className={hasActive ? 'text-terminal-blue' : 'text-foreground'}>
                 {inFlightJobs}
             </span>
-            <span className="uppercase tracking-wider text-terminal-dim">in-flight</span>
+            <span className="text-terminal-dim uppercase tracking-wider">in-flight</span>
         </span>
     );
 };
@@ -79,22 +70,22 @@ function DashboardShell() {
         <div className="flex h-screen flex-col overflow-hidden bg-background">
             <header
                 className={cn(
-                    'flex items-center justify-between border-b border-border bg-card px-4 py-2'
+                    'flex items-center justify-between border-border border-b bg-card px-4 py-2'
                 )}
             >
                 <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2">
                         <div className="flex size-6 items-center justify-center rounded bg-primary">
-                            <span className="text-[10px] font-black text-primary-foreground">
+                            <span className="font-black text-[10px] text-primary-foreground">
                                 ES
                             </span>
                         </div>
-                        <h1 className="text-sm font-bold tracking-wider text-primary">
+                        <h1 className="font-bold text-primary text-sm tracking-wider">
                             EtsySentry
                         </h1>
                     </div>
                     <span className="text-border">|</span>
-                    <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-widest">
                         Monitor Dashboard
                     </span>
                 </div>
@@ -106,15 +97,12 @@ function DashboardShell() {
                 </div>
             </header>
 
-            <nav className="flex items-center border-b border-border bg-card px-2">
+            <nav className="flex items-center border-border border-b bg-card px-2">
                 {tabs.map((tab) => {
                     const Icon = tab.icon;
 
                     return (
                         <NavLink
-                            key={tab.id}
-                            to={tab.to}
-                            end={tab.to === '/'}
                             className={({ isActive }) =>
                                 cn(
                                     'relative flex cursor-pointer items-center gap-1.5',
@@ -124,15 +112,16 @@ function DashboardShell() {
                                         : 'text-muted-foreground hover:text-foreground'
                                 )
                             }
+                            end={tab.to === '/'}
+                            key={tab.id}
+                            to={tab.to}
                         >
                             {({ isActive }) => (
                                 <>
                                     <Icon className="size-3.5" />
                                     <span className="font-medium">{tab.label}</span>
                                     {isActive ? (
-                                        <span
-                                            className="absolute inset-x-2 bottom-0 h-px bg-primary"
-                                        />
+                                        <span className="absolute inset-x-2 bottom-0 h-px bg-primary" />
                                     ) : null}
                                 </>
                             )}
@@ -149,7 +138,7 @@ function DashboardShell() {
 
             <footer
                 className={cn(
-                    'flex items-center justify-end border-t border-border bg-card px-4 py-2',
+                    'flex items-center justify-end border-border border-t bg-card px-4 py-2',
                     'text-[10px] text-terminal-dim'
                 )}
             >
@@ -174,7 +163,7 @@ const router = createBrowserRouter([
                     <div className="h-full">
                         <ListingsTab />
                     </div>
-                )
+                ),
             },
             {
                 path: 'keywords',
@@ -182,7 +171,7 @@ const router = createBrowserRouter([
                     <div className="h-full">
                         <KeywordsTab />
                     </div>
-                )
+                ),
             },
             {
                 path: 'shops',
@@ -190,7 +179,7 @@ const router = createBrowserRouter([
                     <div className="h-full">
                         <ShopsTab />
                     </div>
-                )
+                ),
             },
             {
                 path: 'logs',
@@ -198,14 +187,14 @@ const router = createBrowserRouter([
                     <div className="h-full">
                         <LogsTab />
                     </div>
-                )
+                ),
             },
             {
                 path: '*',
-                element: <Navigate to="/" replace />
-            }
-        ]
-    }
+                element: <Navigate replace to="/" />,
+            },
+        ],
+    },
 ]);
 
 export function App() {

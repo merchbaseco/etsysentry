@@ -1,8 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import {
-    toListingMetricSnapshotInsert,
-    toUtcObservedDate
-} from './upsert-listing-metric-snapshot';
+import { toListingMetricSnapshotInsert, toUtcObservedDate } from './upsert-listing-metric-snapshot';
 
 describe('toUtcObservedDate', () => {
     test('builds UTC calendar day keys', () => {
@@ -23,7 +20,7 @@ describe('toListingMetricSnapshotInsert', () => {
             quantity: 8,
             priceAmount: 2499,
             priceDivisor: 100,
-            priceCurrencyCode: 'EUR'
+            priceCurrencyCode: 'EUR',
         });
 
         expect(values.observedDate).toBe('2026-02-24');

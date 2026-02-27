@@ -8,5 +8,5 @@ export const etsyAuthRouter = router({
     disconnect: etsyAuthDisconnectProcedure,
     refresh: etsyAuthRefreshProcedure,
     start: etsyAuthStartProcedure,
-    status: etsyAuthStatusProcedure
+    status: etsyAuthStatusProcedure,
 });

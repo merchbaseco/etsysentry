@@ -4,27 +4,24 @@ import { db } from '../../db';
 import { trackedShopSnapshots, trackedShops } from '../../db/schema';
 import { createEventLog, createEventLogs } from '../logs/create-event-log';
 import { sendRealtimeEvent } from '../realtime/emit-event';
-import { DAILY_SYNC_INTERVAL_MS } from './types';
-import {
-    fetchChangedActiveListings,
-    fetchShopFromEtsy
-} from './sync-tracked-shop-fetch';
+import { fetchChangedActiveListings, fetchShopFromEtsy } from './sync-tracked-shop-fetch';
 import {
     computeDelta,
     computeNextWatermark,
     discoverTrackedListings,
-    upsertTrackedShopListings
+    upsertTrackedShopListings,
 } from './sync-tracked-shop-persistence';
+import { DAILY_SYNC_INTERVAL_MS } from './types';
 
-export type SyncTrackedShopResult = {
-    trackedShopId: string;
-    etsyShopId: string;
-    shopName: string;
+export interface SyncTrackedShopResult {
     activeListingCount: number;
     changedListingCount: number;
+    etsyShopId: string;
     newListingCount: number;
     newlyDiscoveredEtsyListingIds: string[];
-};
+    shopName: string;
+    trackedShopId: string;
+}
 
 const getFailureMessage = (error: unknown): string => {
     if (error instanceof TRPCError) {
@@ -59,7 +56,7 @@ export const syncTrackedShop = async (params: {
     if (!trackedShop) {
         throw new TRPCError({
             code: 'NOT_FOUND',
-            message: 'Tracked shop was not found for this account.'
+            message: 'Tracked shop was not found for this account.',
         });
     }
 
@@ -82,14 +79,14 @@ export const syncTrackedShop = async (params: {
         const shopDetails = await fetchShopFromEtsy({
             clerkUserId: params.clerkUserId,
             etsyShopId: trackedShop.etsyShopId,
-            accountId: params.accountId
+            accountId: params.accountId,
         });
 
         const changedListings = await fetchChangedActiveListings({
             clerkUserId: params.clerkUserId,
             etsyShopId: trackedShop.etsyShopId,
             previousWatermark: trackedShop.lastSyncedListingUpdatedTimestamp,
-            accountId: params.accountId
+            accountId: params.accountId,
         });
 
         const newListingCount = await upsertTrackedShopListings({
@@ -97,7 +94,7 @@ export const syncTrackedShop = async (params: {
             accountId: params.accountId,
             trackedShopId: trackedShop.trackedShopId,
             etsyShopId: trackedShop.etsyShopId,
-            listings: changedListings
+            listings: changedListings,
         });
 
         const discoveredListings = await discoverTrackedListings({
@@ -105,7 +102,7 @@ export const syncTrackedShop = async (params: {
             clerkUserId: params.clerkUserId,
             accountId: params.accountId,
             etsyShopId: trackedShop.etsyShopId,
-            listings: changedListings
+            listings: changedListings,
         });
 
         await db.insert(trackedShopSnapshots).values({
@@ -116,12 +113,18 @@ export const syncTrackedShop = async (params: {
             activeListingCount: shopDetails.activeListingCount ?? 0,
             newListingCount,
             favoritesTotal: shopDetails.numFavorers,
-            favoritesDelta: computeDelta(shopDetails.numFavorers, previousSnapshot?.favoritesTotal ?? null),
+            favoritesDelta: computeDelta(
+                shopDetails.numFavorers,
+                previousSnapshot?.favoritesTotal ?? null
+            ),
             soldTotal: shopDetails.soldCount,
             soldDelta: computeDelta(shopDetails.soldCount, previousSnapshot?.soldTotal ?? null),
             reviewTotal: shopDetails.reviewCount,
-            reviewDelta: computeDelta(shopDetails.reviewCount, previousSnapshot?.reviewTotal ?? null),
-            createdAt: now
+            reviewDelta: computeDelta(
+                shopDetails.reviewCount,
+                previousSnapshot?.reviewTotal ?? null
+            ),
+            createdAt: now,
         });
 
         await db
@@ -135,16 +138,16 @@ export const syncTrackedShop = async (params: {
                 lastRefreshError: null,
                 lastSyncedListingUpdatedTimestamp: computeNextWatermark({
                     changedListings,
-                    previousWatermark: trackedShop.lastSyncedListingUpdatedTimestamp
+                    previousWatermark: trackedShop.lastSyncedListingUpdatedTimestamp,
                 }),
-                updatedAt: now
+                updatedAt: now,
             })
             .where(eq(trackedShops.trackedShopId, trackedShop.trackedShopId));
 
         sendRealtimeEvent({
             type: 'query.invalidate',
             queries: ['app.shops.list', 'app.listings.list'],
-            accountId: params.accountId
+            accountId: params.accountId,
         });
 
         const listingById = new Map(changedListings.map((listing) => [listing.listingId, listing]));
@@ -157,7 +160,7 @@ export const syncTrackedShop = async (params: {
                 detailsJson: {
                     shopId: trackedShop.etsyShopId,
                     shopName: trackedShop.shopName,
-                    title: listingById.get(listing.etsyListingId)?.title ?? null
+                    title: listingById.get(listing.etsyListingId)?.title ?? null,
                 },
                 level: 'info' as const,
                 listingId: listing.etsyListingId,
@@ -170,7 +173,7 @@ export const syncTrackedShop = async (params: {
                 requestId: params.requestId ?? null,
                 shopId: trackedShop.etsyShopId,
                 status: 'success' as const,
-                accountId: params.accountId
+                accountId: params.accountId,
             })),
             {
                 action: 'shop.synced',
@@ -180,7 +183,7 @@ export const syncTrackedShop = async (params: {
                     activeListingCount: shopDetails.activeListingCount ?? 0,
                     changedListingCount: changedListings.length,
                     discoveredCount: discoveredListings.length,
-                    newListingCount
+                    newListingCount,
                 },
                 level: 'info',
                 message:
@@ -192,8 +195,8 @@ export const syncTrackedShop = async (params: {
                 requestId: params.requestId ?? null,
                 shopId: trackedShop.etsyShopId,
                 status: 'success',
-                accountId: params.accountId
-            }
+                accountId: params.accountId,
+            },
         ]);
 
         return {
@@ -203,7 +206,7 @@ export const syncTrackedShop = async (params: {
             activeListingCount: shopDetails.activeListingCount ?? 0,
             changedListingCount: changedListings.length,
             newListingCount,
-            newlyDiscoveredEtsyListingIds: discoveredListings.map((item) => item.etsyListingId)
+            newlyDiscoveredEtsyListingIds: discoveredListings.map((item) => item.etsyListingId),
         };
     } catch (error) {
         const failureMessage = getFailureMessage(error);
@@ -215,14 +218,14 @@ export const syncTrackedShop = async (params: {
                 lastRefreshError: failureMessage,
                 lastRefreshedAt: now,
                 nextSyncAt,
-                updatedAt: now
+                updatedAt: now,
             })
             .where(eq(trackedShops.trackedShopId, trackedShop.trackedShopId));
 
         sendRealtimeEvent({
             type: 'query.invalidate',
             queries: ['app.shops.list'],
-            accountId: params.accountId
+            accountId: params.accountId,
         });
 
         try {
@@ -231,7 +234,7 @@ export const syncTrackedShop = async (params: {
                 category: 'shop',
                 clerkUserId: params.clerkUserId,
                 detailsJson: {
-                    error: failureMessage
+                    error: failureMessage,
                 },
                 level: 'error',
                 message:
@@ -243,7 +246,7 @@ export const syncTrackedShop = async (params: {
                 requestId: params.requestId ?? null,
                 shopId: trackedShop.etsyShopId,
                 status: 'failed',
-                accountId: params.accountId
+                accountId: params.accountId,
             });
         } catch {
             // Preserve original failure.

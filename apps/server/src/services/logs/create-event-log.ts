@@ -6,7 +6,7 @@ import {
     eventLogDetailsSchema,
     eventLogLevelSchema,
     eventLogPrimitiveTypeSchema,
-    eventLogStatusSchema
+    eventLogStatusSchema,
 } from './event-log-types';
 
 const createEventLogInputSchema = z
@@ -26,7 +26,7 @@ const createEventLogInputSchema = z
         message: z.string().min(1),
         detailsJson: eventLogDetailsSchema.optional().default({}),
         monitorRunId: z.string().min(1).nullable().optional().default(null),
-        requestId: z.string().min(1).nullable().optional().default(null)
+        requestId: z.string().min(1).nullable().optional().default(null),
     })
     .strict();
 
@@ -34,24 +34,24 @@ type CreateEventLogInput = z.input<typeof createEventLogInputSchema>;
 
 type RealtimeInvalidationQuery = 'app.logs.list' | 'app.shops.list';
 
-export type EventLogRecord = {
-    id: string;
+export interface EventLogRecord {
     accountId: string;
-    occurredAt: string;
-    level: z.infer<typeof eventLogLevelSchema>;
-    category: string;
     action: string;
-    status: z.infer<typeof eventLogStatusSchema>;
-    primitiveType: z.infer<typeof eventLogPrimitiveTypeSchema>;
-    primitiveId: string | null;
-    listingId: string | null;
-    shopId: string | null;
-    keyword: string | null;
-    message: string;
+    category: string;
     detailsJson: Record<string, unknown>;
+    id: string;
+    keyword: string | null;
+    level: z.infer<typeof eventLogLevelSchema>;
+    listingId: string | null;
+    message: string;
     monitorRunId: string | null;
+    occurredAt: string;
+    primitiveId: string | null;
+    primitiveType: z.infer<typeof eventLogPrimitiveTypeSchema>;
     requestId: string | null;
-};
+    shopId: string | null;
+    status: z.infer<typeof eventLogStatusSchema>;
+}
 
 const toDetailsJson = (value: unknown): Record<string, unknown> => {
     if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
@@ -78,7 +78,7 @@ const toRecord = (row: typeof eventLogs.$inferSelect): EventLogRecord => {
         message: row.message,
         detailsJson: toDetailsJson(row.detailsJson),
         monitorRunId: row.monitorRunId,
-        requestId: row.requestId
+        requestId: row.requestId,
     };
 };
 
@@ -101,8 +101,8 @@ const toInsertValues = (input: CreateEventLogInput) => {
             message: parsed.message,
             detailsJson: parsed.detailsJson,
             monitorRunId: parsed.monitorRunId,
-            requestId: parsed.requestId
-        }
+            requestId: parsed.requestId,
+        },
     };
 };
 
@@ -125,7 +125,7 @@ export const createEventLog = async (input: CreateEventLogInput): Promise<EventL
     sendRealtimeEvent({
         type: 'query.invalidate',
         queries: buildInvalidationQueries(parsed.values.primitiveType),
-        accountId: parsed.values.accountId
+        accountId: parsed.values.accountId,
     });
 
     return toRecord(row);
@@ -160,7 +160,7 @@ export const createEventLogs = async (input: CreateEventLogInput[]): Promise<Eve
         sendRealtimeEvent({
             type: 'query.invalidate',
             queries: [...queries],
-            accountId
+            accountId,
         });
     }
 

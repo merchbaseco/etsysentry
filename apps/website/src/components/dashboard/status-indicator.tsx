@@ -1,8 +1,8 @@
-import { type EtsyOAuthConnectionState } from '@/hooks/use-etsy-oauth-connection';
-import { trpc } from '@/lib/trpc-client';
-import { cn } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
 import { Activity, ShoppingCart } from 'lucide-react';
+import type { EtsyOAuthConnectionState } from '@/hooks/use-etsy-oauth-connection';
+import { trpc } from '@/lib/trpc-client';
+import { cn } from '@/lib/utils';
 
 export const getConnectionLabel = (connection: EtsyOAuthConnectionState): string => {
     if (connection.isCheckingStatus) {
@@ -92,7 +92,7 @@ export const StatusIndicator = ({ connection }: { connection: EtsyOAuthConnectio
     const connectionLabel = getConnectionLabel(connection);
     const { data: summary } = useQuery({
         ...dashboardSummaryQueryOptions,
-        refetchInterval: 60_000
+        refetchInterval: 60_000,
     });
 
     const apiCallsPastHour = summary?.etsyApiCallsPastHour ?? '--';
@@ -117,12 +117,7 @@ export const StatusIndicator = ({ connection }: { connection: EtsyOAuthConnectio
                             pingColor
                         )}
                     />
-                    <span
-                        className={cn(
-                            'relative inline-flex size-1.5 rounded-full',
-                            pingColor
-                        )}
-                    />
+                    <span className={cn('relative inline-flex size-1.5 rounded-full', pingColor)} />
                 </span>
                 {connectionLabel}
             </span>
@@ -134,11 +129,11 @@ export const StatusIndicator = ({ connection }: { connection: EtsyOAuthConnectio
                 )}
             >
                 <Activity className="size-2.5 text-terminal-dim" />
-                <span className="uppercase tracking-wider text-terminal-dim">syncs</span>
-                <span className="uppercase tracking-wider text-terminal-dim">1h</span>
+                <span className="text-terminal-dim uppercase tracking-wider">syncs</span>
+                <span className="text-terminal-dim uppercase tracking-wider">1h</span>
                 <span className="text-foreground">{apiCallsPastHour}</span>
                 <span className="text-terminal-dim">/</span>
-                <span className="uppercase tracking-wider text-terminal-dim">24h</span>
+                <span className="text-terminal-dim uppercase tracking-wider">24h</span>
                 <span className="text-foreground">{apiCallsPast24Hours}</span>
             </span>
 
@@ -150,7 +145,7 @@ export const StatusIndicator = ({ connection }: { connection: EtsyOAuthConnectio
             >
                 <ShoppingCart className="size-2.5 text-terminal-dim" />
                 <span className="text-terminal-green">{trackedListingsTotal}</span>
-                <span className="uppercase tracking-wider text-terminal-dim">tracked products</span>
+                <span className="text-terminal-dim uppercase tracking-wider">tracked products</span>
             </span>
         </div>
     );

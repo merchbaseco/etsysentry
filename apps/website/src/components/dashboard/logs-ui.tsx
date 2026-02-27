@@ -1,15 +1,21 @@
 'use client';
 
-import { cn } from '@/lib/utils';
 import type {
     EventLogItem,
     EventLogLevel,
     EventLogPrimitiveType,
-    EventLogStatus
+    EventLogStatus,
 } from '@/lib/logs-api';
+import { cn } from '@/lib/utils';
 
 export const LOG_LEVELS: EventLogLevel[] = ['info', 'warn', 'error', 'debug'];
-export const LOG_STATUSES: EventLogStatus[] = ['success', 'failed', 'retrying', 'pending', 'partial'];
+export const LOG_STATUSES: EventLogStatus[] = [
+    'success',
+    'failed',
+    'retrying',
+    'pending',
+    'partial',
+];
 export const LOG_TYPES: EventLogPrimitiveType[] = ['listing', 'keyword', 'shop', 'system'];
 
 export const toDetailValue = (value: unknown): string => {
@@ -37,7 +43,7 @@ export const formatLogTime = (dateStr: string): string => {
         hour12: false,
         minute: '2-digit',
         month: 'short',
-        second: '2-digit'
+        second: '2-digit',
     });
 };
 
@@ -61,7 +67,7 @@ export function LogLevelBadge({ level }: { level: EventLogLevel }) {
     return (
         <span
             className={cn(
-                'inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider',
+                'inline-flex items-center rounded px-1.5 py-0.5 font-bold text-[10px] uppercase tracking-wider',
                 level === 'info' && 'text-terminal-blue',
                 level === 'warn' && 'text-terminal-yellow',
                 level === 'error' && 'text-terminal-red',

@@ -5,32 +5,32 @@ import { listingMetricSnapshots, trackedListings } from '../../db/schema';
 
 const DEFAULT_HISTORY_DAYS = 30;
 
-export type ListingMetricHistoryPrice = {
+export interface ListingMetricHistoryPrice {
     amount: number;
-    divisor: number;
     currencyCode: string;
+    divisor: number;
     value: number;
-};
+}
 
-export type ListingMetricHistoryItem = {
-    observedDate: string;
-    observedAt: string;
-    views: number | null;
+export interface ListingMetricHistoryItem {
     favorerCount: number | null;
-    quantity: number | null;
+    observedAt: string;
+    observedDate: string;
     price: ListingMetricHistoryPrice | null;
-};
+    quantity: number | null;
+    views: number | null;
+}
 
-export type ListingMetricHistory = {
-    listingId: string;
-    etsyListingId: string;
-    title: string;
+export interface ListingMetricHistory {
     days: number;
+    etsyListingId: string;
     items: ListingMetricHistoryItem[];
-};
+    listingId: string;
+    title: string;
+}
 
 export const normalizeHistoryDays = (days: number | undefined): number => {
-    if (!days || !Number.isFinite(days) || days < 1) {
+    if (!(days && Number.isFinite(days)) || days < 1) {
         return DEFAULT_HISTORY_DAYS;
     }
 
@@ -61,7 +61,7 @@ const toHistoryItem = (
             amount: row.priceAmount,
             divisor: row.priceDivisor,
             currencyCode: row.priceCurrencyCode,
-            value: row.priceAmount / row.priceDivisor
+            value: row.priceAmount / row.priceDivisor,
         };
     }
 
@@ -71,7 +71,7 @@ const toHistoryItem = (
         views: row.views,
         favorerCount: row.favorerCount,
         quantity: row.quantity,
-        price
+        price,
     };
 };
 
@@ -83,14 +83,14 @@ export const getListingMetricHistory = async (params: {
     const days = normalizeHistoryDays(params.days);
     const earliestObservedDate = toEarliestObservedDate({
         now: new Date(),
-        days
+        days,
     });
 
     const [listing] = await db
         .select({
             listingId: trackedListings.listingId,
             etsyListingId: trackedListings.etsyListingId,
-            title: trackedListings.title
+            title: trackedListings.title,
         })
         .from(trackedListings)
         .where(
@@ -104,7 +104,7 @@ export const getListingMetricHistory = async (params: {
     if (!listing) {
         throw new TRPCError({
             code: 'NOT_FOUND',
-            message: 'Tracked listing was not found for this account.'
+            message: 'Tracked listing was not found for this account.',
         });
     }
 
@@ -125,6 +125,6 @@ export const getListingMetricHistory = async (params: {
         etsyListingId: listing.etsyListingId,
         title: listing.title,
         days,
-        items: rows.map(toHistoryItem)
+        items: rows.map(toHistoryItem),
     };
 };

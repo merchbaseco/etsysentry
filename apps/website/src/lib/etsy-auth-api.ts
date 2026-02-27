@@ -1,12 +1,12 @@
 import { queryClient, trpc, trpcClient } from './trpc-client';
-import {
-    type InferProcedureOutput
-} from './trpc-inference';
 import { toTrpcRequestError } from './trpc-http';
+import type { InferProcedureOutput } from './trpc-inference';
 
 export type EtsyAuthStatus = InferProcedureOutput<typeof trpcClient.app.etsyAuth.status.query>;
 
-export type EtsyAuthStartResponse = InferProcedureOutput<typeof trpcClient.app.etsyAuth.start.mutate>;
+export type EtsyAuthStartResponse = InferProcedureOutput<
+    typeof trpcClient.app.etsyAuth.start.mutate
+>;
 
 export const startEtsyAuth = async (): Promise<EtsyAuthStartResponse> => {
     try {

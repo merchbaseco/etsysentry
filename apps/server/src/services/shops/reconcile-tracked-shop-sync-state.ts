@@ -1,5 +1,5 @@
-import type { PgBoss } from 'pg-boss';
 import { inArray } from 'drizzle-orm';
+import type { PgBoss } from 'pg-boss';
 import { db } from '../../db';
 import { trackedShops } from '../../db/schema';
 import { SYNC_SHOP_JOB_NAME, type SyncShopJobInput } from '../../jobs/sync-shop-shared';
@@ -34,12 +34,12 @@ const hasLiveSyncShopJob = (jobs: Array<{ state: SyncShopJobState }>): boolean =
     return jobs.some((job) => isLiveSyncShopJobState(job.state));
 };
 
-export type ReconcileTrackedShopSyncStateResult = {
+export interface ReconcileTrackedShopSyncStateResult {
     checkedCount: number;
     fixedCount: number;
     liveCount: number;
     summary: string;
-};
+}
 
 export const reconcileTrackedShopSyncState = async (params: {
     boss: Pick<PgBoss, 'findJobs'>;
@@ -47,7 +47,7 @@ export const reconcileTrackedShopSyncState = async (params: {
     const rows = await db
         .select({
             accountId: trackedShops.accountId,
-            trackedShopId: trackedShops.trackedShopId
+            trackedShopId: trackedShops.trackedShopId,
         })
         .from(trackedShops)
         .where(inArray(trackedShops.syncState, ['queued', 'syncing']));
@@ -59,8 +59,8 @@ export const reconcileTrackedShopSyncState = async (params: {
         const jobs = await params.boss.findJobs<SyncShopJobInput>(SYNC_SHOP_JOB_NAME, {
             data: {
                 accountId: row.accountId,
-                trackedShopId: row.trackedShopId
-            }
+                trackedShopId: row.trackedShopId,
+            },
         });
 
         if (hasLiveSyncShopJob(jobs)) {
@@ -78,7 +78,7 @@ export const reconcileTrackedShopSyncState = async (params: {
         fixedCount += await setTrackedShopsSyncStateByTrackedShopIds({
             accountId,
             syncState: 'idle',
-            trackedShopIds
+            trackedShopIds,
         });
     }
 
@@ -92,6 +92,6 @@ export const reconcileTrackedShopSyncState = async (params: {
         checkedCount,
         fixedCount,
         liveCount,
-        summary
+        summary,
     };
 };

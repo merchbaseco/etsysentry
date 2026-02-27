@@ -6,7 +6,7 @@ export function Pagination({
     totalPages,
     onPageChange,
     totalItems,
-    pageSize
+    pageSize,
 }: {
     page: number;
     totalPages: number;
@@ -18,15 +18,16 @@ export function Pagination({
     const end = Math.min(page * pageSize, totalItems);
 
     return (
-        <div className="flex items-center justify-between border-t border-border px-3 py-2 text-[10px] text-muted-foreground">
+        <div className="flex items-center justify-between border-border border-t px-3 py-2 text-[10px] text-muted-foreground">
             <span>
                 {start}-{end} of {totalItems}
             </span>
             <div className="flex items-center gap-1">
                 <button
-                    onClick={() => onPageChange(page - 1)}
+                    className="cursor-pointer rounded p-1 transition-colors hover:bg-secondary disabled:cursor-default disabled:opacity-30"
                     disabled={page <= 1}
-                    className="rounded p-1 hover:bg-secondary disabled:opacity-30 cursor-pointer disabled:cursor-default transition-colors"
+                    onClick={() => onPageChange(page - 1)}
+                    type="button"
                 >
                     <ChevronLeft className="size-3" />
                 </button>
@@ -45,23 +46,25 @@ export function Pagination({
 
                     return (
                         <button
-                            key={value}
-                            onClick={() => onPageChange(value)}
                             className={cn(
-                                'min-w-5 rounded px-1.5 py-0.5 cursor-pointer transition-colors',
+                                'min-w-5 cursor-pointer rounded px-1.5 py-0.5 transition-colors',
                                 value === page
                                     ? 'bg-primary/15 text-primary'
-                                    : 'hover:bg-secondary text-muted-foreground'
+                                    : 'text-muted-foreground hover:bg-secondary'
                             )}
+                            key={value}
+                            onClick={() => onPageChange(value)}
+                            type="button"
                         >
                             {value}
                         </button>
                     );
                 })}
                 <button
-                    onClick={() => onPageChange(page + 1)}
+                    className="cursor-pointer rounded p-1 transition-colors hover:bg-secondary disabled:cursor-default disabled:opacity-30"
                     disabled={page >= totalPages}
-                    className="rounded p-1 hover:bg-secondary disabled:opacity-30 cursor-pointer disabled:cursor-default transition-colors"
+                    onClick={() => onPageChange(page + 1)}
+                    type="button"
                 >
                     <ChevronRight className="size-3" />
                 </button>
