@@ -18,3 +18,8 @@ es listings performance <tracked_listing_id> --range 30d --mode table
 bun run cli:build
 bun run cli:test
 ```
+
+## Release
+
+- Spec: `docs/cli-spec.md`
+- Canonical runbook: `docs/release-runbook.md`

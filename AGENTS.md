@@ -59,6 +59,8 @@ This file is the always-on guide for AI coding assistants in EtsySentry.
 - API surface and contract details: `docs/api-spec.md`
 - Realtime architecture and message contracts: `docs/realtime.md`
 - CLI behavior and contract: `docs/cli-spec.md`
+- HTTP client package/release contract: `docs/http-client-spec.md`
+- Release and npm publish runbook: `docs/release-runbook.md`
 - Etsy bridge implementation and runbook: `docs/etsy-openapi-bridges.md`
 - Logging strategy: `docs/logging-strategy.md`
 - Event log actions: `docs/event-log-actions.md`
