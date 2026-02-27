@@ -25,6 +25,7 @@ const envSchema = z.object({
     ETSY_RATE_LIMIT_MAX_RETRIES: z.coerce.number().int().nonnegative().default(5),
     ETSY_RATE_LIMIT_BACKOFF_INITIAL_MS: z.coerce.number().int().positive().default(1000),
     ETSY_RATE_LIMIT_BACKOFF_MAX_MS: z.coerce.number().int().positive().default(60_000),
+    ETSY_API_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(30_000),
     DATABASE_HOST: z.string().min(1).optional(),
     DATABASE_PORT: z.coerce.number().int().positive().optional(),
     DATABASE_NAME: z.string().min(1).optional(),

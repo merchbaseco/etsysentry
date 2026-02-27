@@ -97,6 +97,66 @@ describe('fetch-etsy-api', () => {
         expect(sleepCalls).toEqual([1000, 2000]);
     });
 
+    test('retries timed out requests and succeeds when a later attempt returns', async () => {
+        let nowMs = 25_000;
+        const sleepCalls: number[] = [];
+        let requestCount = 0;
+
+        const response = await fetchEtsyApi(
+            {
+                init: {
+                    method: 'GET',
+                },
+                url: 'https://example.com',
+            },
+            {
+                fetchImpl: async (_url, init) => {
+                    await Promise.resolve();
+                    requestCount += 1;
+
+                    if (requestCount < 3) {
+                        return await new Promise<Response>((_resolve, reject) => {
+                            const signal = init?.signal;
+
+                            if (!signal) {
+                                reject(new Error('Expected fetch timeout signal.'));
+                                return;
+                            }
+
+                            if (signal.aborted) {
+                                reject(new DOMException('Aborted', 'AbortError'));
+                                return;
+                            }
+
+                            signal.addEventListener(
+                                'abort',
+                                () => {
+                                    reject(new DOMException('Aborted', 'AbortError'));
+                                },
+                                { once: true }
+                            );
+                        });
+                    }
+
+                    return new Response('ok', {
+                        status: 200,
+                    });
+                },
+                now: () => nowMs,
+                requestTimeoutMs: 5,
+                sleep: async (delayMs) => {
+                    await Promise.resolve();
+                    sleepCalls.push(delayMs);
+                    nowMs += delayMs;
+                },
+            }
+        );
+
+        expect(response.status).toBe(200);
+        expect(requestCount).toBe(3);
+        expect(sleepCalls).toEqual([1000, 2000]);
+    });
+
     test('waits for the next second window when response reports no remaining second quota', async () => {
         let nowMs = 10_000;
         const sleepCalls: number[] = [];
@@ -167,6 +227,7 @@ describe('fetch-etsy-api', () => {
             },
             {
                 fetchImpl: async () => {
+                    await Promise.resolve();
                     return new Response('ok', {
                         headers: {
                             'x-limit-per-day': '100000',
@@ -179,6 +240,7 @@ describe('fetch-etsy-api', () => {
                 },
                 now: () => nowMs,
                 sleep: async (delayMs) => {
+                    await Promise.resolve();
                     nowMs += delayMs;
                 },
             }
