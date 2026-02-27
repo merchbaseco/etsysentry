@@ -1,8 +1,7 @@
 import type { DashboardSummary } from '@/lib/dashboard-api';
+import { dashboardSummaryQueryKey } from '@/lib/dashboard-summary-query';
 import type { RealtimeMessage } from '@/lib/realtime-message-types';
-import { queryClient, trpc } from '@/lib/trpc-client';
-
-const dashboardSummaryQueryKey = trpc.app.dashboard.getSummary.queryOptions({}).queryKey;
+import { queryClient } from '@/lib/trpc-client';
 
 type DashboardSummaryPushMessage = Extract<RealtimeMessage, { type: 'dashboard-summary.push' }>;
 

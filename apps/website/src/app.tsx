@@ -1,5 +1,4 @@
 import { useAuth } from '@clerk/clerk-react';
-import { useQuery } from '@tanstack/react-query';
 import { Activity, Briefcase, Clock, Eye, ShoppingCart } from 'lucide-react';
 import { useCallback } from 'react';
 import { createBrowserRouter, Navigate, NavLink, Outlet, RouterProvider } from 'react-router-dom';
@@ -8,11 +7,12 @@ import { ListingsTab } from '@/components/dashboard/listings-tab';
 import { LogsTab } from '@/components/dashboard/logs-tab';
 import { ShopsTab } from '@/components/dashboard/shops-tab';
 import { StatusIndicator } from '@/components/dashboard/status-indicator';
+import { SummaryCount } from '@/components/dashboard/summary-count';
 import { SettingsModal } from '@/components/settings-modal';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { useDashboardSummaryQuery } from '@/hooks/use-dashboard-summary-query';
 import { useEtsyOAuthConnection } from '@/hooks/use-etsy-oauth-connection';
 import { useRealtimeQueryInvalidations } from '@/hooks/use-realtime-query-invalidations';
-import { trpc } from '@/lib/trpc-client';
 import { cn } from '@/lib/utils';
 
 const tabs = [
@@ -21,15 +21,10 @@ const tabs = [
     { id: 'shops', label: 'Shops', icon: Activity, to: '/shops' },
     { id: 'logs', label: 'Logs', icon: Clock, to: '/logs' },
 ] as const;
-const dashboardSummaryQueryOptions = trpc.app.dashboard.getSummary.queryOptions({});
-
 const DashboardJobsSummary = () => {
-    const { data } = useQuery({
-        ...dashboardSummaryQueryOptions,
-        refetchInterval: 60_000,
-    });
-    const queuedJobs = data?.queuedJobs ?? '--';
-    const inFlightJobs = data?.inFlightJobs ?? '--';
+    const { data, isPending } = useDashboardSummaryQuery();
+    const queuedJobs = data?.queuedJobs;
+    const inFlightJobs = data?.inFlightJobs;
     const hasActive =
         (typeof inFlightJobs === 'number' && inFlightJobs > 0) ||
         (typeof queuedJobs === 'number' && queuedJobs > 0);
@@ -45,14 +40,22 @@ const DashboardJobsSummary = () => {
         >
             <Briefcase className="size-2.5 text-terminal-dim" />
             <span className="text-terminal-dim uppercase tracking-wider">jobs</span>
-            <span className={hasActive ? 'text-terminal-blue' : 'text-foreground'}>
-                {queuedJobs}
-            </span>
+            <SummaryCount
+                isLoading={isPending}
+                minWidthClassName="min-w-[3ch]"
+                skeletonWidthClassName="w-[3ch]"
+                value={queuedJobs}
+                valueClassName={hasActive ? 'text-terminal-blue' : 'text-foreground'}
+            />
             <span className="text-terminal-dim uppercase tracking-wider">queued</span>
             <span className="text-terminal-dim">/</span>
-            <span className={hasActive ? 'text-terminal-blue' : 'text-foreground'}>
-                {inFlightJobs}
-            </span>
+            <SummaryCount
+                isLoading={isPending}
+                minWidthClassName="min-w-[3ch]"
+                skeletonWidthClassName="w-[3ch]"
+                value={inFlightJobs}
+                valueClassName={hasActive ? 'text-terminal-blue' : 'text-foreground'}
+            />
             <span className="text-terminal-dim uppercase tracking-wider">in-flight</span>
         </span>
     );
