@@ -1,25 +1,21 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import { EmptyState } from '@/components/ui/dashboard';
+import { logsInvalidatedEventName } from '@/hooks/use-realtime-query-invalidations';
 import {
-    listEventLogs,
     type EventLogCursor,
     type EventLogItem,
     type EventLogLevel,
     type EventLogPrimitiveType,
-    type EventLogStatus
+    type EventLogStatus,
+    listEventLogs,
 } from '@/lib/logs-api';
-import { logsInvalidatedEventName } from '@/hooks/use-realtime-query-invalidations';
+import { captureScrollAnchor, isScrollNearTop, restoreScrollAnchor } from '@/lib/scroll-anchor';
 import { TrpcRequestError } from '@/lib/trpc-http';
-import {
-    captureScrollAnchor,
-    isScrollNearTop,
-    restoreScrollAnchor
-} from '@/lib/scroll-anchor';
 import { LogsDetailPanel } from './logs-detail-panel';
 import { LogsTable } from './logs-table';
 import { LogsToolbar } from './logs-toolbar';
-import { EmptyState } from '@/components/ui/dashboard';
 
 const PAGE_SIZE = 20;
 
@@ -73,7 +69,7 @@ export function LogsTab() {
             limit: PAGE_SIZE,
             primitiveTypes: filterType ? [filterType] : undefined,
             search: search.trim().length > 0 ? search.trim() : undefined,
-            statuses: filterStatus ? [filterStatus] : undefined
+            statuses: filterStatus ? [filterStatus] : undefined,
         }),
         [filterLevel, filterStatus, filterType, search]
     );
@@ -126,7 +122,7 @@ export function LogsTab() {
     }, [getQueryInput, pendingHeadLogs]);
 
     useEffect(() => {
-        void loadFirstPage();
+        loadFirstPage();
     }, [loadFirstPage]);
 
     useEffect(() => {
@@ -135,7 +131,7 @@ export function LogsTab() {
         }
 
         const intervalId = window.setInterval(() => {
-            void refreshHeadPage();
+            refreshHeadPage();
         }, 15_000);
 
         return () => {
@@ -145,7 +141,7 @@ export function LogsTab() {
 
     useEffect(() => {
         const onInvalidated = () => {
-            void refreshHeadPage();
+            refreshHeadPage();
         };
 
         window.addEventListener(logsInvalidatedEventName, onInvalidated);
@@ -199,19 +195,19 @@ export function LogsTab() {
         const observerRoot = scrollViewportRef.current;
         const loadMoreTarget = loadMoreTriggerRef.current;
 
-        if (!observerRoot || !loadMoreTarget) {
+        if (!(observerRoot && loadMoreTarget)) {
             return;
         }
 
         const observer = new IntersectionObserver(
             (entries) => {
                 if (entries[0]?.isIntersecting) {
-                    void handleLoadMore();
+                    handleLoadMore();
                 }
             },
             {
                 root: observerRoot,
-                rootMargin: '200px 0px 200px 0px'
+                rootMargin: '200px 0px 200px 0px',
             }
         );
 
@@ -219,7 +215,26 @@ export function LogsTab() {
         return () => {
             observer.disconnect();
         };
-    }, [handleLoadMore, logs.length]);
+    }, [handleLoadMore]);
+
+    let logsContent: ReactNode;
+    if (isLoading && logs.length === 0) {
+        logsContent = (
+            <div className="px-3 py-6 text-muted-foreground text-xs">Loading event logs...</div>
+        );
+    } else if (logs.length === 0) {
+        logsContent = <EmptyState message="No logs match your filters." />;
+    } else {
+        logsContent = (
+            <LogsTable
+                hasMore={Boolean(nextCursor)}
+                isLoadingMore={isLoadingMore}
+                items={logs}
+                loadMoreTriggerRef={loadMoreTriggerRef}
+                onSelectLog={setSelectedLog}
+            />
+        );
+    }
 
     return (
         <div className="flex h-full flex-col">
@@ -243,37 +258,29 @@ export function LogsTab() {
             />
 
             {errorMessage ? (
-                <div className="border-b border-terminal-red/20 bg-terminal-red/10 px-3 py-2 text-xs text-terminal-red">
+                <div className="border-terminal-red/20 border-b bg-terminal-red/10 px-3 py-2 text-terminal-red text-xs">
                     {errorMessage}
                 </div>
             ) : null}
 
             {pendingHeadLogs.length > 0 ? (
-                <div className="border-b border-terminal-green/20 bg-terminal-green/10 px-3 py-2 text-xs text-terminal-green">
-                    <button className="cursor-pointer hover:underline" onClick={applyPendingHeadLogs}>
+                <div className="border-terminal-green/20 border-b bg-terminal-green/10 px-3 py-2 text-terminal-green text-xs">
+                    <button
+                        className="cursor-pointer hover:underline"
+                        onClick={applyPendingHeadLogs}
+                        type="button"
+                    >
                         {pendingHeadLogs.length} new log
                         {pendingHeadLogs.length === 1 ? '' : 's'} available. Click to load.
                     </button>
                 </div>
             ) : null}
 
-            <div ref={scrollViewportRef} className="flex-1 overflow-auto">
-                {isLoading && logs.length === 0 ? (
-                    <div className="px-3 py-6 text-xs text-muted-foreground">Loading event logs...</div>
-                ) : logs.length === 0 ? (
-                    <EmptyState message="No logs match your filters." />
-                ) : (
-                    <LogsTable
-                        hasMore={Boolean(nextCursor)}
-                        isLoadingMore={isLoadingMore}
-                        items={logs}
-                        loadMoreTriggerRef={loadMoreTriggerRef}
-                        onSelectLog={setSelectedLog}
-                    />
-                )}
+            <div className="flex-1 overflow-auto" ref={scrollViewportRef}>
+                {logsContent}
             </div>
 
-            <LogsDetailPanel selectedLog={selectedLog} onClose={() => setSelectedLog(null)} />
+            <LogsDetailPanel onClose={() => setSelectedLog(null)} selectedLog={selectedLog} />
         </div>
     );
 }

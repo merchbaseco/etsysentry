@@ -4,43 +4,45 @@ import { db } from '../../db';
 import { productKeywordRanks, trackedKeywords, trackedListings } from '../../db/schema';
 import {
     EtsyFindAllListingsActiveBridgeError,
+    type FindAllListingsActiveBridgeResponse,
     findAllListingsActive,
-    type FindAllListingsActiveBridgeResponse
 } from '../etsy/bridges/find-all-listings-active';
-import { isExcludedDigitalListingType } from '../listings/is-excluded-digital-listing-type';
 import { getEtsyOAuthAccessToken } from '../etsy/oauth-service';
 import { recordEtsyApiCallBestEffort } from '../etsy/record-etsy-api-call';
+import { isExcludedDigitalListingType } from '../listings/is-excluded-digital-listing-type';
 import { createEventLog, createEventLogs } from '../logs/create-event-log';
 import { sendRealtimeEvent } from '../realtime/emit-event';
 
 const DAILY_SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const keywordSyncInvalidationQueries = ['app.keywords.list', 'app.listings.list'] as const;
+const DIGITS_ONLY_REGEX = /^\d+$/;
+const ETSY_LISTING_PATH_REGEX = /\/listing\/(\d+)(?:\/|$)/i;
 
 export const computeNextKeywordSyncAt = (now: Date): Date => {
     return new Date(now.getTime() + DAILY_SYNC_INTERVAL_MS);
 };
 
-export type ProductKeywordRankRecord = {
+export interface ProductKeywordRankRecord {
     etsyListingId: string;
     listingId: string;
     observedAt: string;
     rank: number;
     trackedKeywordId: string;
-};
+}
 
-export type DailyProductRanksForKeyword = {
+export interface DailyProductRanksForKeyword {
+    items: ProductKeywordRankRecord[];
     keyword: string;
     normalizedKeyword: string;
     observedAt: string | null;
     trackedKeywordId: string;
-    items: ProductKeywordRankRecord[];
-};
+}
 
 export type SyncRanksForKeywordResult = DailyProductRanksForKeyword & {
     newlyDiscoveredEtsyListingIds: string[];
 };
 
-export type KeywordRankForProduct = {
+export interface KeywordRankForProduct {
     bestRank: number;
     currentRank: number;
     daysSeen: number;
@@ -49,9 +51,93 @@ export type KeywordRankForProduct = {
     latestObservedAt: string;
     normalizedKeyword: string;
     trackedKeywordId: string;
-};
+}
 
 type RankedListingResult = FindAllListingsActiveBridgeResponse['results'][number];
+type RankedListingById = Map<string, RankedListingResult>;
+
+interface ProductKeywordRankInsertValue {
+    accountId: string;
+    etsyListingId: string;
+    listingId: string;
+    observedAt: Date;
+    rank: number;
+    trackedKeywordId: string;
+}
+
+const toUniqueRankedListings = (results: RankedListingResult[]) => {
+    const rankedListingsById: RankedListingById = new Map();
+
+    for (const item of results) {
+        if (!rankedListingsById.has(item.listingId)) {
+            rankedListingsById.set(item.listingId, item);
+        }
+    }
+
+    return {
+        rankedListingsById,
+        uniqueRankedListings: [...rankedListingsById.values()],
+    };
+};
+
+const getListingIdOrThrow = (
+    listingIdByEtsyListingId: Map<string, string>,
+    etsyListingId: string
+): string => {
+    const listingId = listingIdByEtsyListingId.get(etsyListingId);
+
+    if (!listingId) {
+        throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Ranked listing was not available in tracked listings.',
+        });
+    }
+
+    return listingId;
+};
+
+const buildProductKeywordRankInsertValues = (params: {
+    accountId: string;
+    now: Date;
+    results: RankedListingResult[];
+    trackedKeywordId: string;
+    listingIdByEtsyListingId: Map<string, string>;
+}): ProductKeywordRankInsertValue[] => {
+    return params.results.map((item, index) => ({
+        etsyListingId: item.listingId,
+        listingId: getListingIdOrThrow(params.listingIdByEtsyListingId, item.listingId),
+        observedAt: params.now,
+        rank: index + 1,
+        accountId: params.accountId,
+        trackedKeywordId: params.trackedKeywordId,
+    }));
+};
+
+const findNewlyDiscoveredEtsyListingIds = (
+    insertedListings: Array<{ etsyListingId: string }>,
+    rankedListingsById: RankedListingById
+): string[] => {
+    return insertedListings
+        .map((inserted) => inserted.etsyListingId)
+        .filter((etsyListingId) => rankedListingsById.has(etsyListingId));
+};
+
+const buildDiscoveredListings = (params: {
+    newlyDiscoveredEtsyListingIds: string[];
+    rankedListingsById: RankedListingById;
+    listingIdByEtsyListingId: Map<string, string>;
+}) => {
+    return params.newlyDiscoveredEtsyListingIds.map((etsyListingId) => {
+        const rankedListing = params.rankedListingsById.get(etsyListingId);
+
+        return {
+            etsyListingId,
+            primitiveId: params.listingIdByEtsyListingId.get(etsyListingId) ?? null,
+            shopId: rankedListing?.shopId ?? null,
+            title: rankedListing?.title ?? null,
+        };
+    });
+};
 
 export const buildTrackedListingDiscoveryValues = (params: {
     clerkUserId: string;
@@ -70,14 +156,14 @@ export const buildTrackedListingDiscoveryValues = (params: {
         trackerClerkUserId: params.clerkUserId,
         trackingState: 'active' as const,
         updatedAt: params.now,
-        url: params.rankedListing.url
+        url: params.rankedListing.url,
     };
 };
 
 const parseListingIdentifier = (rawInput: string): string | null => {
     const trimmed = rawInput.trim();
 
-    if (/^\d+$/.test(trimmed)) {
+    if (DIGITS_ONLY_REGEX.test(trimmed)) {
         return trimmed;
     }
 
@@ -88,7 +174,7 @@ const parseListingIdentifier = (rawInput: string): string | null => {
             return null;
         }
 
-        const match = url.pathname.match(/\/listing\/(\d+)(?:\/|$)/i);
+        const match = url.pathname.match(ETSY_LISTING_PATH_REGEX);
 
         if (match?.[1]) {
             return match[1];
@@ -96,7 +182,7 @@ const parseListingIdentifier = (rawInput: string): string | null => {
 
         const listingIdFromQuery = url.searchParams.get('listing_id');
 
-        if (listingIdFromQuery && /^\d+$/.test(listingIdFromQuery)) {
+        if (listingIdFromQuery && DIGITS_ONLY_REGEX.test(listingIdFromQuery)) {
             return listingIdFromQuery;
         }
 
@@ -106,32 +192,28 @@ const parseListingIdentifier = (rawInput: string): string | null => {
     }
 };
 
-const toRecord = (
-    row: typeof productKeywordRanks.$inferSelect
-): ProductKeywordRankRecord => {
+const toRecord = (row: typeof productKeywordRanks.$inferSelect): ProductKeywordRankRecord => {
     return {
         etsyListingId: row.etsyListingId,
         listingId: row.listingId,
         observedAt: row.observedAt.toISOString(),
         rank: row.rank,
-        trackedKeywordId: row.trackedKeywordId
+        trackedKeywordId: row.trackedKeywordId,
     };
 };
 
-const mapBridgeErrorToTrpcError = (
-    error: EtsyFindAllListingsActiveBridgeError
-): TRPCError => {
+const mapBridgeErrorToTrpcError = (error: EtsyFindAllListingsActiveBridgeError): TRPCError => {
     if (error.statusCode === 404) {
         return new TRPCError({
             code: 'NOT_FOUND',
-            message: 'Etsy search endpoint did not return results.'
+            message: 'Etsy search endpoint did not return results.',
         });
     }
 
     if (error.statusCode === 400) {
         return new TRPCError({
             code: 'BAD_REQUEST',
-            message: error.message
+            message: error.message,
         });
     }
 
@@ -143,20 +225,17 @@ const mapBridgeErrorToTrpcError = (
             message:
                 error.message === genericStatusMessage
                     ? 'Etsy access token is invalid or missing required scope.'
-                    : error.message
+                    : error.message,
         });
     }
 
     return new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
-        message: error.message
+        message: error.message,
     });
 };
 
-const getTrackedKeyword = async (params: {
-    accountId: string;
-    trackedKeywordId: string;
-}) => {
+const getTrackedKeyword = async (params: { accountId: string; trackedKeywordId: string }) => {
     const [keyword] = await db
         .select()
         .from(trackedKeywords)
@@ -171,7 +250,7 @@ const getTrackedKeyword = async (params: {
     if (!keyword) {
         throw new TRPCError({
             code: 'NOT_FOUND',
-            message: 'Tracked keyword was not found for this account.'
+            message: 'Tracked keyword was not found for this account.',
         });
     }
 
@@ -184,14 +263,14 @@ const fetchKeywordRanksFromEtsy = async (params: {
     accountId: string;
 }) => {
     const oauthToken = await getEtsyOAuthAccessToken({
-        accountId: params.accountId
+        accountId: params.accountId,
     });
 
     try {
         await recordEtsyApiCallBestEffort({
             clerkUserId: params.clerkUserId,
             endpoint: 'findAllListingsActive',
-            accountId: params.accountId
+            accountId: params.accountId,
         });
 
         return await findAllListingsActive({
@@ -199,7 +278,7 @@ const fetchKeywordRanksFromEtsy = async (params: {
             keywords: params.keyword,
             limit: 25,
             offset: 0,
-            sortOn: 'score'
+            sortOn: 'score',
         });
     } catch (error) {
         if (error instanceof EtsyFindAllListingsActiveBridgeError) {
@@ -219,7 +298,7 @@ export const syncRanksForKeyword = async (params: {
 }): Promise<SyncRanksForKeywordResult> => {
     const trackedKeyword = await getTrackedKeyword({
         accountId: params.accountId,
-        trackedKeywordId: params.trackedKeywordId
+        trackedKeywordId: params.trackedKeywordId,
     });
 
     const now = new Date();
@@ -229,23 +308,15 @@ export const syncRanksForKeyword = async (params: {
         const response = await fetchKeywordRanksFromEtsy({
             clerkUserId: params.clerkUserId,
             keyword: trackedKeyword.keyword,
-            accountId: params.accountId
+            accountId: params.accountId,
         });
 
         const insertValues = await db.transaction(async (tx) => {
             const listingIdByEtsyListingId = new Map<string, string>();
-            const uniqueRankedListingsById = new Map<string, RankedListingResult>();
-            const newlyDiscoveredEtsyListingIds: string[] = [];
-
-            for (const item of response.results) {
-                if (uniqueRankedListingsById.has(item.listingId)) {
-                    continue;
-                }
-
-                uniqueRankedListingsById.set(item.listingId, item);
-            }
-
-            const uniqueRankedListings = [...uniqueRankedListingsById.values()];
+            const { rankedListingsById, uniqueRankedListings } = toUniqueRankedListings(
+                response.results
+            );
+            let newlyDiscoveredEtsyListingIds: string[] = [];
 
             if (uniqueRankedListings.length > 0) {
                 const discoveryValues = uniqueRankedListings.map((rankedListing) =>
@@ -253,7 +324,7 @@ export const syncRanksForKeyword = async (params: {
                         clerkUserId: params.clerkUserId,
                         now,
                         rankedListing,
-                        accountId: params.accountId
+                        accountId: params.accountId,
                     })
                 );
 
@@ -262,22 +333,21 @@ export const syncRanksForKeyword = async (params: {
                     .values(discoveryValues)
                     // Keyword sync only discovers listings. Existing tracked listings are untouched.
                     .onConflictDoNothing({
-                        target: [trackedListings.accountId, trackedListings.etsyListingId]
+                        target: [trackedListings.accountId, trackedListings.etsyListingId],
                     })
                     .returning({
-                        etsyListingId: trackedListings.etsyListingId
+                        etsyListingId: trackedListings.etsyListingId,
                     });
 
-                for (const inserted of insertedListings) {
-                    if (uniqueRankedListingsById.has(inserted.etsyListingId)) {
-                        newlyDiscoveredEtsyListingIds.push(inserted.etsyListingId);
-                    }
-                }
+                newlyDiscoveredEtsyListingIds = findNewlyDiscoveredEtsyListingIds(
+                    insertedListings,
+                    rankedListingsById
+                );
 
                 const trackedListingRows = await tx
                     .select({
                         etsyListingId: trackedListings.etsyListingId,
-                        listingId: trackedListings.listingId
+                        listingId: trackedListings.listingId,
                     })
                     .from(trackedListings)
                     .where(
@@ -296,64 +366,31 @@ export const syncRanksForKeyword = async (params: {
             }
 
             for (const item of uniqueRankedListings) {
-                const listingId = listingIdByEtsyListingId.get(item.listingId);
-
-                if (!listingId) {
-                    throw new TRPCError({
-                        code: 'INTERNAL_SERVER_ERROR',
-                        message: 'Ranked listing was not available in tracked listings.'
-                    });
-                }
+                getListingIdOrThrow(listingIdByEtsyListingId, item.listingId);
             }
 
-            const values: Array<{
-                etsyListingId: string;
-                listingId: string;
-                observedAt: Date;
-                rank: number;
-                accountId: string;
-                trackedKeywordId: string;
-            }> = [];
-
-            for (const [index, item] of response.results.entries()) {
-                const listingId = listingIdByEtsyListingId.get(item.listingId);
-
-                if (!listingId) {
-                    throw new TRPCError({
-                        code: 'INTERNAL_SERVER_ERROR',
-                        message: 'Ranked listing was not available in tracked listings.'
-                    });
-                }
-
-                values.push({
-                    etsyListingId: item.listingId,
-                    listingId,
-                    observedAt: now,
-                    rank: index + 1,
-                    accountId: params.accountId,
-                    trackedKeywordId: trackedKeyword.id
-                });
-            }
+            const values = buildProductKeywordRankInsertValues({
+                accountId: params.accountId,
+                now,
+                results: response.results,
+                trackedKeywordId: trackedKeyword.id,
+                listingIdByEtsyListingId,
+            });
 
             if (values.length > 0) {
                 await tx.insert(productKeywordRanks).values(values);
             }
 
-            const discoveredListings = newlyDiscoveredEtsyListingIds.map((etsyListingId) => {
-                const rankedListing = uniqueRankedListingsById.get(etsyListingId);
-
-                return {
-                    etsyListingId,
-                    primitiveId: listingIdByEtsyListingId.get(etsyListingId) ?? null,
-                    shopId: rankedListing?.shopId ?? null,
-                    title: rankedListing?.title ?? null
-                };
+            const discoveredListings = buildDiscoveredListings({
+                newlyDiscoveredEtsyListingIds,
+                rankedListingsById,
+                listingIdByEtsyListingId,
             });
 
             return {
                 discoveredListings,
                 newlyDiscoveredEtsyListingIds,
-                values
+                values,
             };
         });
 
@@ -364,7 +401,7 @@ export const syncRanksForKeyword = async (params: {
                 lastRefreshedAt: now,
                 nextSyncAt,
                 trackingState: 'active',
-                updatedAt: now
+                updatedAt: now,
             })
             .where(
                 and(
@@ -376,7 +413,7 @@ export const syncRanksForKeyword = async (params: {
         sendRealtimeEvent({
             type: 'query.invalidate',
             queries: [...keywordSyncInvalidationQueries],
-            accountId: params.accountId
+            accountId: params.accountId,
         });
 
         await createEventLogs([
@@ -386,7 +423,7 @@ export const syncRanksForKeyword = async (params: {
                 clerkUserId: params.clerkUserId,
                 detailsJson: {
                     keyword: trackedKeyword.keyword,
-                    title: listing.title
+                    title: listing.title,
                 },
                 keyword: trackedKeyword.keyword,
                 level: 'info' as const,
@@ -400,7 +437,7 @@ export const syncRanksForKeyword = async (params: {
                 requestId: params.requestId ?? null,
                 shopId: listing.shopId,
                 status: 'success' as const,
-                accountId: params.accountId
+                accountId: params.accountId,
             })),
             {
                 action: 'keyword.synced',
@@ -408,7 +445,7 @@ export const syncRanksForKeyword = async (params: {
                 clerkUserId: params.clerkUserId,
                 detailsJson: {
                     capturedCount: insertValues.values.length,
-                    discoveredCount: insertValues.newlyDiscoveredEtsyListingIds.length
+                    discoveredCount: insertValues.newlyDiscoveredEtsyListingIds.length,
                 },
                 keyword: trackedKeyword.keyword,
                 level: 'info',
@@ -420,8 +457,8 @@ export const syncRanksForKeyword = async (params: {
                 primitiveType: 'keyword',
                 requestId: params.requestId ?? null,
                 status: 'success',
-                accountId: params.accountId
-            }
+                accountId: params.accountId,
+            },
         ]);
 
         return {
@@ -435,12 +472,14 @@ export const syncRanksForKeyword = async (params: {
                 listingId: item.listingId,
                 observedAt: now.toISOString(),
                 rank: item.rank,
-                trackedKeywordId: item.trackedKeywordId
-            }))
+                trackedKeywordId: item.trackedKeywordId,
+            })),
         };
     } catch (error) {
         const failureMessage =
-            error instanceof TRPCError ? error.message : 'Unexpected daily product rank sync error.';
+            error instanceof TRPCError
+                ? error.message
+                : 'Unexpected daily product rank sync error.';
 
         await db
             .update(trackedKeywords)
@@ -449,7 +488,7 @@ export const syncRanksForKeyword = async (params: {
                 lastRefreshedAt: now,
                 nextSyncAt,
                 trackingState: 'active',
-                updatedAt: now
+                updatedAt: now,
             })
             .where(
                 and(
@@ -461,7 +500,7 @@ export const syncRanksForKeyword = async (params: {
         sendRealtimeEvent({
             type: 'query.invalidate',
             queries: [...keywordSyncInvalidationQueries],
-            accountId: params.accountId
+            accountId: params.accountId,
         });
 
         try {
@@ -470,7 +509,7 @@ export const syncRanksForKeyword = async (params: {
                 category: 'keyword',
                 clerkUserId: params.clerkUserId,
                 detailsJson: {
-                    error: failureMessage
+                    error: failureMessage,
                 },
                 keyword: trackedKeyword.keyword,
                 level: 'error',
@@ -480,7 +519,7 @@ export const syncRanksForKeyword = async (params: {
                 primitiveType: 'keyword',
                 requestId: params.requestId ?? null,
                 status: 'failed',
-                accountId: params.accountId
+                accountId: params.accountId,
             });
         } catch {
             // Preserve the original sync failure.
@@ -496,12 +535,12 @@ export const getDailyProductRanksForKeyword = async (params: {
 }): Promise<DailyProductRanksForKeyword> => {
     const trackedKeyword = await getTrackedKeyword({
         accountId: params.accountId,
-        trackedKeywordId: params.trackedKeywordId
+        trackedKeywordId: params.trackedKeywordId,
     });
 
     const [latest] = await db
         .select({
-            observedAt: productKeywordRanks.observedAt
+            observedAt: productKeywordRanks.observedAt,
         })
         .from(productKeywordRanks)
         .where(
@@ -519,7 +558,7 @@ export const getDailyProductRanksForKeyword = async (params: {
             normalizedKeyword: trackedKeyword.normalizedKeyword,
             observedAt: null,
             trackedKeywordId: trackedKeyword.id,
-            items: []
+            items: [],
         };
     }
 
@@ -540,7 +579,7 @@ export const getDailyProductRanksForKeyword = async (params: {
         normalizedKeyword: trackedKeyword.normalizedKeyword,
         observedAt: latest.observedAt.toISOString(),
         trackedKeywordId: trackedKeyword.id,
-        items: rows.map(toRecord)
+        items: rows.map(toRecord),
     };
 };
 
@@ -556,7 +595,7 @@ export const getKeywordRanksForProduct = async (params: {
     if (!etsyListingId) {
         throw new TRPCError({
             code: 'BAD_REQUEST',
-            message: 'Listing must be an Etsy listing URL or numeric listing id.'
+            message: 'Listing must be an Etsy listing URL or numeric listing id.',
         });
     }
 
@@ -566,7 +605,7 @@ export const getKeywordRanksForProduct = async (params: {
             normalizedKeyword: trackedKeywords.normalizedKeyword,
             observedAt: productKeywordRanks.observedAt,
             rank: productKeywordRanks.rank,
-            trackedKeywordId: productKeywordRanks.trackedKeywordId
+            trackedKeywordId: productKeywordRanks.trackedKeywordId,
         })
         .from(productKeywordRanks)
         .innerJoin(
@@ -611,7 +650,7 @@ export const getKeywordRanksForProduct = async (params: {
                 latestObservedAt: row.observedAt,
                 normalizedKeyword: row.normalizedKeyword,
                 seenDays: new Set([observedDayKey]),
-                trackedKeywordId: row.trackedKeywordId
+                trackedKeywordId: row.trackedKeywordId,
             });
             continue;
         }
@@ -633,8 +672,8 @@ export const getKeywordRanksForProduct = async (params: {
                 keyword: item.keyword,
                 latestObservedAt: item.latestObservedAt.toISOString(),
                 normalizedKeyword: item.normalizedKeyword,
-                trackedKeywordId: item.trackedKeywordId
+                trackedKeywordId: item.trackedKeywordId,
             }))
-            .sort((a, b) => b.latestObservedAt.localeCompare(a.latestObservedAt))
+            .sort((a, b) => b.latestObservedAt.localeCompare(a.latestObservedAt)),
     };
 };

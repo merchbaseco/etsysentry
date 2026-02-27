@@ -1,27 +1,27 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-    getDailyProductRanksForKeyword,
-    type ListTrackedKeywordsOutput,
-    listTrackedKeywords,
-    refreshTrackedKeyword,
-    trackKeyword,
-    type DailyProductRanksForKeyword,
-    type TrackedKeywordItem
-} from '@/lib/keywords-api';
-import {
-    getKeywordRanksForProduct,
-    type GetKeywordRanksForProductOutput
-} from '@/lib/listings-api';
-import { TrpcRequestError } from '@/lib/trpc-http';
-import { queryClient, trpc } from '@/lib/trpc-client';
-import { cn } from '@/lib/utils';
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     EmptyState,
     FilterChip,
     FilterGroup,
     TopToolbar,
-    timeAgo
+    timeAgo,
 } from '@/components/ui/dashboard';
+import {
+    type DailyProductRanksForKeyword,
+    getDailyProductRanksForKeyword,
+    type ListTrackedKeywordsOutput,
+    listTrackedKeywords,
+    refreshTrackedKeyword,
+    type TrackedKeywordItem,
+    trackKeyword,
+} from '@/lib/keywords-api';
+import {
+    type GetKeywordRanksForProductOutput,
+    getKeywordRanksForProduct,
+} from '@/lib/listings-api';
+import { queryClient, trpc } from '@/lib/trpc-client';
+import { TrpcRequestError } from '@/lib/trpc-http';
+import { cn } from '@/lib/utils';
 import { KeywordsTable } from './keywords-table';
 
 const trackedKeywordsQueryKey = trpc.app.keywords.list.queryOptions({}).queryKey;
@@ -39,7 +39,10 @@ const toErrorMessage = (error: unknown): string => {
     return 'Unexpected request failure.';
 };
 
-const upsertById = (items: TrackedKeywordItem[], nextItem: TrackedKeywordItem): TrackedKeywordItem[] => {
+const upsertById = (
+    items: TrackedKeywordItem[],
+    nextItem: TrackedKeywordItem
+): TrackedKeywordItem[] => {
     const existingIndex = items.findIndex((item) => item.id === nextItem.id);
 
     if (existingIndex === -1) {
@@ -56,10 +59,156 @@ const isKeywordSyncInFlight = (item: TrackedKeywordItem): boolean => {
     return item.syncState === 'queued' || item.syncState === 'syncing';
 };
 
-export function KeywordsTab() {
-    const cachedTrackedKeywords = queryClient.getQueryData<ListTrackedKeywordsOutput>(
-        trackedKeywordsQueryKey
+const renderKeywordsContent = (params: {
+    filtered: TrackedKeywordItem[];
+    isLoading: boolean;
+    onRefresh: (item: TrackedKeywordItem) => Promise<void>;
+    onSelectKeyword: (item: TrackedKeywordItem) => void;
+    refreshingById: Record<string, boolean>;
+    resetKey: string;
+    scrollViewportRef: { current: HTMLDivElement | null };
+    selectedKeywordId: string | null;
+}): ReactNode => {
+    if (params.isLoading) {
+        return (
+            <div className="px-3 py-6 text-muted-foreground text-xs">
+                Loading tracked keywords...
+            </div>
+        );
+    }
+
+    if (params.filtered.length === 0) {
+        return <EmptyState message="No tracked keywords yet. Add one above." />;
+    }
+
+    return (
+        <KeywordsTable
+            items={params.filtered}
+            onRefresh={(item) => params.onRefresh(item)}
+            onSelectKeyword={params.onSelectKeyword}
+            refreshingById={params.refreshingById}
+            resetKey={params.resetKey}
+            scrollContainerRef={params.scrollViewportRef}
+            selectedKeywordId={params.selectedKeywordId}
+        />
     );
+};
+
+const renderLatestRanksContent = (params: {
+    isLatestLoading: boolean;
+    loadReverseKeywords: (listingId: string) => Promise<void>;
+    selectedDailyProductRanks: DailyProductRanksForKeyword | undefined;
+}): ReactNode => {
+    if (params.isLatestLoading) {
+        return (
+            <div className="px-3 py-4 text-muted-foreground text-xs">
+                Loading latest keyword ranks...
+            </div>
+        );
+    }
+
+    if (params.selectedDailyProductRanks && params.selectedDailyProductRanks.items.length > 0) {
+        return (
+            <table className="w-full text-xs">
+                <thead className="sticky top-0 z-10 bg-card">
+                    <tr className="border-border border-b">
+                        <th className="px-3 py-2 text-left text-[10px] text-muted-foreground uppercase tracking-wider">
+                            Rank
+                        </th>
+                        <th className="px-2 py-2 text-left text-[10px] text-muted-foreground uppercase tracking-wider">
+                            Listing Id
+                        </th>
+                        <th className="px-2 py-2 text-right text-[10px] text-muted-foreground uppercase tracking-wider">
+                            Observed
+                        </th>
+                        <th className="px-2 py-2 text-right text-[10px] text-muted-foreground uppercase tracking-wider">
+                            Product
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {params.selectedDailyProductRanks.items.map((item) => (
+                        <tr
+                            className="border-border/50 border-b"
+                            key={`${item.trackedKeywordId}:${item.rank}`}
+                        >
+                            <td className="px-3 py-1.5 text-terminal-green">{item.rank}</td>
+                            <td className="px-2 py-1.5 font-mono text-[11px] text-terminal-dim">
+                                <a
+                                    className="hover:text-primary"
+                                    href={`https://www.etsy.com/listing/${item.etsyListingId}`}
+                                    rel="noreferrer"
+                                    target="_blank"
+                                >
+                                    {item.etsyListingId}
+                                </a>
+                            </td>
+                            <td className="px-2 py-1.5 text-right text-terminal-dim">
+                                {timeAgo(item.observedAt)}
+                            </td>
+                            <td className="px-2 py-1.5 text-right">
+                                <button
+                                    className={cn(
+                                        'h-7 rounded border border-border bg-secondary px-2 text-[11px] uppercase tracking-wider',
+                                        'transition-colors hover:text-foreground'
+                                    )}
+                                    onClick={() => params.loadReverseKeywords(item.etsyListingId)}
+                                    type="button"
+                                >
+                                    Keywords
+                                </button>
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        );
+    }
+
+    return (
+        <div className="px-3 py-4 text-muted-foreground text-xs">
+            No rank data captured yet for this keyword.
+        </div>
+    );
+};
+
+const renderReverseKeywordContent = (params: {
+    isReverseLoading: boolean;
+    keywordRanksForProduct: GetKeywordRanksForProductOutput | null;
+}): ReactNode => {
+    if (params.isReverseLoading) {
+        return <div className="text-muted-foreground">Loading keyword appearances...</div>;
+    }
+
+    if (params.keywordRanksForProduct && params.keywordRanksForProduct.items.length > 0) {
+        return (
+            <div className="space-y-1">
+                {params.keywordRanksForProduct.items.map((item) => (
+                    <div
+                        className="flex items-center justify-between rounded border border-border/60 px-2 py-1.5"
+                        key={`${item.trackedKeywordId}:${item.latestObservedAt}`}
+                    >
+                        <span className="text-foreground">{item.keyword}</span>
+                        <span className="text-terminal-dim">
+                            current #{item.currentRank} | best #{item.bestRank} | days{' '}
+                            {item.daysSeen}
+                        </span>
+                    </div>
+                ))}
+            </div>
+        );
+    }
+
+    return (
+        <div className="text-muted-foreground">
+            This listing has not appeared in tracked keyword captures yet.
+        </div>
+    );
+};
+
+export function KeywordsTab() {
+    const cachedTrackedKeywords =
+        queryClient.getQueryData<ListTrackedKeywordsOutput>(trackedKeywordsQueryKey);
     const initialItems = cachedTrackedKeywords?.items ?? [];
 
     const [search, setSearch] = useState('');
@@ -99,7 +248,7 @@ export function KeywordsTab() {
     }, []);
 
     useEffect(() => {
-        void loadKeywords();
+        loadKeywords();
     }, [loadKeywords]);
 
     useEffect(() => {
@@ -131,7 +280,7 @@ export function KeywordsTab() {
 
     useEffect(() => {
         const intervalId = window.setInterval(() => {
-            void loadKeywords();
+            loadKeywords();
         }, 60_000);
 
         return () => {
@@ -152,8 +301,7 @@ export function KeywordsTab() {
             }
 
             return (
-                item.keyword.toLowerCase().includes(query) ||
-                item.normalizedKeyword.includes(query)
+                item.keyword.toLowerCase().includes(query) || item.normalizedKeyword.includes(query)
             );
         });
     }, [items, search, trackingStateFilter]);
@@ -161,9 +309,9 @@ export function KeywordsTab() {
 
     useEffect(() => {
         scrollViewportRef.current?.scrollTo({
-            top: 0
+            top: 0,
         });
-    }, [tableResetKey]);
+    }, []);
 
     const handleTrack = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -176,14 +324,14 @@ export function KeywordsTab() {
 
         try {
             const response = await trackKeyword({
-                keyword: keywordInput
+                keyword: keywordInput,
             });
 
             setItems((current) => {
                 const nextItems = upsertById(current, response.item);
 
                 queryClient.setQueryData<ListTrackedKeywordsOutput>(trackedKeywordsQueryKey, {
-                    items: nextItems
+                    items: nextItems,
                 });
 
                 return nextItems;
@@ -206,20 +354,20 @@ export function KeywordsTab() {
 
         try {
             const refreshed = await refreshTrackedKeyword({
-                trackedKeywordId: item.id
+                trackedKeywordId: item.id,
             });
 
             setItems((current) => {
                 const nextItems = upsertById(current, refreshed);
                 queryClient.setQueryData<ListTrackedKeywordsOutput>(trackedKeywordsQueryKey, {
-                    items: nextItems
+                    items: nextItems,
                 });
                 return nextItems;
             });
             setErrorMessage(null);
         } catch (error) {
             setErrorMessage(toErrorMessage(error));
-            void loadKeywords();
+            loadKeywords();
         } finally {
             setRefreshingById((current) => ({ ...current, [item.id]: false }));
         }
@@ -230,12 +378,12 @@ export function KeywordsTab() {
 
         try {
             const dailyProductRanks = await getDailyProductRanksForKeyword({
-                trackedKeywordId
+                trackedKeywordId,
             });
 
             setRanksByKeywordId((current) => ({
                 ...current,
-                [trackedKeywordId]: dailyProductRanks
+                [trackedKeywordId]: dailyProductRanks,
             }));
             setErrorMessage(null);
         } catch (error) {
@@ -251,7 +399,7 @@ export function KeywordsTab() {
 
         try {
             const response = await getKeywordRanksForProduct({
-                listing: listingId
+                listing: listingId,
             });
             setKeywordRanksForProduct(response);
             setErrorMessage(null);
@@ -266,24 +414,45 @@ export function KeywordsTab() {
         setSelectedKeywordId(item.id);
         setSelectedListingId(null);
         setKeywordRanksForProduct(null);
-        void loadLatestForKeyword(item.id);
+        loadLatestForKeyword(item.id);
     };
 
     const selectedKeyword = useMemo(
         () => items.find((item) => item.id === selectedKeywordId) ?? null,
         [items, selectedKeywordId]
     );
-    const selectedDailyProductRanks = selectedKeywordId ? ranksByKeywordId[selectedKeywordId] : undefined;
+    const selectedDailyProductRanks = selectedKeywordId
+        ? ranksByKeywordId[selectedKeywordId]
+        : undefined;
+    const keywordsContent = renderKeywordsContent({
+        filtered,
+        isLoading,
+        onRefresh: handleRefreshRow,
+        onSelectKeyword: handleSelectKeyword,
+        refreshingById,
+        resetKey: tableResetKey,
+        scrollViewportRef,
+        selectedKeywordId,
+    });
+    const latestRanksContent = renderLatestRanksContent({
+        isLatestLoading,
+        loadReverseKeywords,
+        selectedDailyProductRanks,
+    });
+    const reverseKeywordContent = renderReverseKeywordContent({
+        isReverseLoading,
+        keywordRanksForProduct,
+    });
 
     return (
         <div className="flex h-full flex-col">
-            <TopToolbar search={search} onSearchChange={setSearch}>
+            <TopToolbar onSearchChange={setSearch} search={search}>
                 <FilterGroup label="Tracking">
                     {(['active', 'paused', 'error'] as const).map((stateValue) => (
                         <FilterChip
+                            active={trackingStateFilter === stateValue}
                             key={stateValue}
                             label={stateValue}
-                            active={trackingStateFilter === stateValue}
                             onClick={() =>
                                 setTrackingStateFilter(
                                     trackingStateFilter === stateValue ? null : stateValue
@@ -295,57 +464,47 @@ export function KeywordsTab() {
             </TopToolbar>
 
             <form
+                className="flex items-center gap-2 border-border border-b px-3 py-2 text-xs"
                 onSubmit={handleTrack}
-                className="flex items-center gap-2 border-b border-border px-3 py-2 text-xs"
             >
                 <input
-                    value={keywordInput}
-                    onChange={(event) => setKeywordInput(event.target.value)}
-                    type="text"
-                    placeholder='Enter Etsy keyword (for example: "mid century wall art")'
                     className="h-8 flex-1 rounded border border-border bg-secondary px-2 text-xs outline-none placeholder:text-muted-foreground"
+                    onChange={(event) => setKeywordInput(event.target.value)}
+                    placeholder='Enter Etsy keyword (for example: "mid century wall art")'
+                    type="text"
+                    value={keywordInput}
                 />
                 <button
-                    type="submit"
-                    disabled={isTracking}
                     className={cn(
                         'h-8 rounded border border-border bg-secondary px-3 text-[11px] uppercase tracking-wider transition-colors',
                         'disabled:cursor-default disabled:opacity-50',
                         'hover:text-foreground'
                     )}
+                    disabled={isTracking}
+                    type="submit"
                 >
                     {isTracking ? 'Tracking...' : 'Track Keyword'}
                 </button>
             </form>
 
             {errorMessage ? (
-                <div className="border-b border-terminal-red/20 bg-terminal-red/10 px-3 py-2 text-xs text-terminal-red">
+                <div className="border-terminal-red/20 border-b bg-terminal-red/10 px-3 py-2 text-terminal-red text-xs">
                     {errorMessage}
                 </div>
             ) : null}
 
-            <div ref={scrollViewportRef} className="min-h-0 flex-1 overflow-auto">
-                {!isLoading && filtered.length === 0 ? (
-                    <EmptyState message="No tracked keywords yet. Add one above." />
-                ) : (
-                    <KeywordsTable
-                        items={filtered}
-                        onRefresh={(item) => void handleRefreshRow(item)}
-                        onSelectKeyword={handleSelectKeyword}
-                        refreshingById={refreshingById}
-                        resetKey={tableResetKey}
-                        selectedKeywordId={selectedKeywordId}
-                        scrollContainerRef={scrollViewportRef}
-                    />
-                )}
+            <div className="min-h-0 flex-1 overflow-auto" ref={scrollViewportRef}>
+                {keywordsContent}
             </div>
 
             {selectedKeyword ? (
-                <div className="border-t border-border">
+                <div className="border-border border-t">
                     <div className="px-3 py-2 text-xs">
                         <div>
                             <span className="text-muted-foreground">Latest Rankings:</span>{' '}
-                            <span className="font-medium text-foreground">{selectedKeyword.keyword}</span>
+                            <span className="font-medium text-foreground">
+                                {selectedKeyword.keyword}
+                            </span>
                             {selectedDailyProductRanks?.observedAt ? (
                                 <span className="ml-2 text-[11px] text-terminal-dim">
                                     Captured {timeAgo(selectedDailyProductRanks.observedAt)}
@@ -354,97 +513,19 @@ export function KeywordsTab() {
                         </div>
                     </div>
 
-                    <div className="max-h-72 overflow-auto border-t border-border/60">
-                        {isLatestLoading ? (
-                            <div className="px-3 py-4 text-xs text-muted-foreground">
-                                Loading latest keyword ranks...
-                            </div>
-                        ) : !selectedDailyProductRanks || selectedDailyProductRanks.items.length === 0 ? (
-                            <div className="px-3 py-4 text-xs text-muted-foreground">
-                                No rank data captured yet for this keyword.
-                            </div>
-                        ) : (
-                            <table className="w-full text-xs">
-                                <thead className="sticky top-0 z-10 bg-card">
-                                    <tr className="border-b border-border">
-                                        <th className="px-3 py-2 text-left text-[10px] uppercase tracking-wider text-muted-foreground">
-                                            Rank
-                                        </th>
-                                        <th className="px-2 py-2 text-left text-[10px] uppercase tracking-wider text-muted-foreground">
-                                            Listing Id
-                                        </th>
-                                        <th className="px-2 py-2 text-right text-[10px] uppercase tracking-wider text-muted-foreground">
-                                            Observed
-                                        </th>
-                                        <th className="px-2 py-2 text-right text-[10px] uppercase tracking-wider text-muted-foreground">
-                                            Product
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {selectedDailyProductRanks.items.map((item) => (
-                                        <tr key={`${item.trackedKeywordId}:${item.rank}`} className="border-b border-border/50">
-                                            <td className="px-3 py-1.5 text-terminal-green">{item.rank}</td>
-                                            <td className="px-2 py-1.5 font-mono text-[11px] text-terminal-dim">
-                                                <a
-                                                    href={`https://www.etsy.com/listing/${item.etsyListingId}`}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="hover:text-primary"
-                                                >
-                                                    {item.etsyListingId}
-                                                </a>
-                                            </td>
-                                            <td className="px-2 py-1.5 text-right text-terminal-dim">
-                                                {timeAgo(item.observedAt)}
-                                            </td>
-                                            <td className="px-2 py-1.5 text-right">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => void loadReverseKeywords(item.etsyListingId)}
-                                                    className={cn(
-                                                        'h-7 rounded border border-border bg-secondary px-2 text-[11px] uppercase tracking-wider',
-                                                        'transition-colors hover:text-foreground'
-                                                    )}
-                                                >
-                                                    Keywords
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        )}
+                    <div className="max-h-72 overflow-auto border-border/60 border-t">
+                        {latestRanksContent}
                     </div>
 
                     {selectedListingId ? (
-                        <div className="border-t border-border px-3 py-2 text-xs">
+                        <div className="border-border border-t px-3 py-2 text-xs">
                             <div className="mb-2 text-muted-foreground">
                                 Daily keyword ranks for product{' '}
-                                <span className="font-mono text-foreground">{selectedListingId}</span>
+                                <span className="font-mono text-foreground">
+                                    {selectedListingId}
+                                </span>
                             </div>
-                            {isReverseLoading ? (
-                                <div className="text-muted-foreground">Loading keyword appearances...</div>
-                            ) : !keywordRanksForProduct || keywordRanksForProduct.items.length === 0 ? (
-                                <div className="text-muted-foreground">
-                                    This listing has not appeared in tracked keyword captures yet.
-                                </div>
-                            ) : (
-                                <div className="space-y-1">
-                                    {keywordRanksForProduct.items.map((item) => (
-                                        <div
-                                            key={`${item.trackedKeywordId}:${item.latestObservedAt}`}
-                                            className="flex items-center justify-between rounded border border-border/60 px-2 py-1.5"
-                                        >
-                                            <span className="text-foreground">{item.keyword}</span>
-                                            <span className="text-terminal-dim">
-                                                current #{item.currentRank} | best #{item.bestRank} | days{' '}
-                                                {item.daysSeen}
-                                            </span>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
+                            {reverseKeywordContent}
                         </div>
                     ) : null}
                 </div>

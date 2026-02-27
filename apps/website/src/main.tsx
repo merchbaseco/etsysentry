@@ -8,7 +8,9 @@ import { clearCachedAdminStatus } from './lib/admin-api';
 import { configureTrpcAuthTokenGetter, queryClient } from './lib/trpc-client';
 import './styles/global.css';
 
-const clerkPublishableKey = (import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string | undefined)?.trim();
+const clerkPublishableKey = (
+    import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string | undefined
+)?.trim();
 
 const rootElement = document.getElementById('root');
 
@@ -20,9 +22,12 @@ const MissingConfig = () => {
     return (
         <div className="flex min-h-screen items-center justify-center bg-background px-6">
             <div className="max-w-xl rounded border border-border bg-card p-5">
-                <h1 className="text-base font-semibold text-foreground">EtsySentry is misconfigured</h1>
-                <p className="mt-2 text-sm text-muted-foreground">
-                    Missing <code className="font-mono">VITE_CLERK_PUBLISHABLE_KEY</code> in your env.
+                <h1 className="font-semibold text-base text-foreground">
+                    EtsySentry is misconfigured
+                </h1>
+                <p className="mt-2 text-muted-foreground text-sm">
+                    Missing <code className="font-mono">VITE_CLERK_PUBLISHABLE_KEY</code> in your
+                    env.
                 </p>
             </div>
         </div>
@@ -55,9 +60,7 @@ const AuthenticatedApp = () => {
 
 createRoot(rootElement).render(
     <StrictMode>
-        {!clerkPublishableKey ? (
-            <MissingConfig />
-        ) : (
+        {clerkPublishableKey ? (
             <ClerkProvider publishableKey={clerkPublishableKey}>
                 <SignedIn>
                     <AuthenticatedApp />
@@ -68,6 +71,8 @@ createRoot(rootElement).render(
                     </div>
                 </SignedOut>
             </ClerkProvider>
+        ) : (
+            <MissingConfig />
         )}
     </StrictMode>
 );

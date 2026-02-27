@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import {
     getInitialListingsRenderCount,
     getNextListingsRenderCount,
-    LISTINGS_INITIAL_RENDER_COUNT
+    LISTINGS_INITIAL_RENDER_COUNT,
 } from './listings-tab-utils';
 
 describe('getInitialListingsRenderCount', () => {
@@ -11,7 +11,7 @@ describe('getInitialListingsRenderCount', () => {
     });
 
     test('caps initial render size for large datasets', () => {
-        expect(getInitialListingsRenderCount(2_000)).toBe(LISTINGS_INITIAL_RENDER_COUNT);
+        expect(getInitialListingsRenderCount(2000)).toBe(LISTINGS_INITIAL_RENDER_COUNT);
     });
 });
 
@@ -20,7 +20,7 @@ describe('getNextListingsRenderCount', () => {
         expect(
             getNextListingsRenderCount({
                 currentCount: 200,
-                totalCount: 1_000
+                totalCount: 1000,
             })
         ).toBe(400);
     });
@@ -29,17 +29,17 @@ describe('getNextListingsRenderCount', () => {
         expect(
             getNextListingsRenderCount({
                 currentCount: 950,
-                totalCount: 1_000
+                totalCount: 1000,
             })
-        ).toBe(1_000);
+        ).toBe(1000);
     });
 
     test('supports explicit increment sizes', () => {
         expect(
             getNextListingsRenderCount({
                 currentCount: 300,
-                totalCount: 1_000,
-                incrementSize: 150
+                totalCount: 1000,
+                incrementSize: 150,
             })
         ).toBe(450);
     });

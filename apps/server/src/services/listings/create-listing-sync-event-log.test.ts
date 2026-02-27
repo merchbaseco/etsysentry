@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import {
+    buildListingSyncedEventLogInput,
     buildListingSyncFailedEventLogInput,
-    buildListingSyncedEventLogInput
 } from './create-listing-sync-event-log';
 
 describe('buildListingSyncedEventLogInput', () => {
@@ -15,7 +15,7 @@ describe('buildListingSyncedEventLogInput', () => {
             monitorRunId: 'job_123',
             requestId: 'request_123',
             shopId: 'shop_123',
-            title: 'Sample listing'
+            title: 'Sample listing',
         });
 
         expect(payload).toEqual({
@@ -24,7 +24,7 @@ describe('buildListingSyncedEventLogInput', () => {
             clerkUserId: 'user_123',
             detailsJson: {
                 etsyState: 'active',
-                title: 'Sample listing'
+                title: 'Sample listing',
             },
             level: 'info',
             listingId: '1234567890',
@@ -35,7 +35,7 @@ describe('buildListingSyncedEventLogInput', () => {
             requestId: 'request_123',
             shopId: 'shop_123',
             status: 'success',
-            accountId: 'tenant_123'
+            accountId: 'tenant_123',
         });
     });
 });
@@ -46,7 +46,7 @@ describe('buildListingSyncFailedEventLogInput', () => {
             accountId: 'tenant_123',
             clerkUserId: 'user_123',
             errorMessage: 'Etsy listing was not found.',
-            etsyListingId: '1234567890'
+            etsyListingId: '1234567890',
         });
 
         expect(payload).toEqual({
@@ -54,7 +54,7 @@ describe('buildListingSyncFailedEventLogInput', () => {
             category: 'listing',
             clerkUserId: 'user_123',
             detailsJson: {
-                error: 'Etsy listing was not found.'
+                error: 'Etsy listing was not found.',
             },
             level: 'error',
             listingId: '1234567890',
@@ -65,7 +65,7 @@ describe('buildListingSyncFailedEventLogInput', () => {
             requestId: null,
             shopId: null,
             status: 'failed',
-            accountId: 'tenant_123'
+            accountId: 'tenant_123',
         });
     });
 });

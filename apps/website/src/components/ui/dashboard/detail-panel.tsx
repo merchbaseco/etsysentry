@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 
 const SIZE_CLASS = {
     default: 'max-w-lg',
-    wide: 'max-w-2xl'
+    wide: 'max-w-2xl',
 } as const;
 
 export function DetailPanel({
@@ -12,7 +12,7 @@ export function DetailPanel({
     title,
     subtitle,
     size = 'default',
-    children
+    children,
 }: {
     open: boolean;
     onClose: () => void;
@@ -27,11 +27,21 @@ export function DetailPanel({
 
     return (
         <div className="fixed inset-0 z-50 flex justify-end">
-            <div className="absolute inset-0 bg-background/60 backdrop-blur-sm" onClick={onClose} />
-            <div className={cn('relative z-10 w-full border-l border-border bg-card overflow-y-auto animate-in slide-in-from-right duration-300', SIZE_CLASS[size])}>
-                <div className="sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-card px-5 py-4">
+            <button
+                aria-label="Close detail panel"
+                className="absolute inset-0 bg-background/60 backdrop-blur-sm"
+                onClick={onClose}
+                type="button"
+            />
+            <div
+                className={cn(
+                    'slide-in-from-right relative z-10 w-full animate-in overflow-y-auto border-border border-l bg-card duration-300',
+                    SIZE_CLASS[size]
+                )}
+            >
+                <div className="sticky top-0 z-10 flex items-center gap-3 border-border border-b bg-card px-5 py-4">
                     <div className="min-w-0 flex-1">
-                        <h3 className="truncate text-sm font-semibold text-primary" title={title}>
+                        <h3 className="truncate font-semibold text-primary text-sm" title={title}>
                             {title}
                         </h3>
                         {subtitle ? (
@@ -44,8 +54,9 @@ export function DetailPanel({
                         ) : null}
                     </div>
                     <button
+                        className="shrink-0 cursor-pointer rounded p-1.5 transition-colors hover:bg-secondary"
                         onClick={onClose}
-                        className="shrink-0 rounded p-1.5 hover:bg-secondary cursor-pointer transition-colors"
+                        type="button"
                     >
                         <X className="size-4 text-muted-foreground" />
                     </button>
@@ -59,15 +70,15 @@ export function DetailPanel({
 export function DetailRow({
     label,
     value,
-    valueColor
+    valueColor,
 }: {
     label: string;
     value: React.ReactNode;
     valueColor?: string;
 }) {
     return (
-        <div className="flex items-center justify-between gap-4 border-b border-border/50 py-2">
-            <span className="shrink-0 text-[10px] uppercase tracking-wider text-muted-foreground">
+        <div className="flex items-center justify-between gap-4 border-border/50 border-b py-2">
+            <span className="shrink-0 text-[10px] text-muted-foreground uppercase tracking-wider">
                 {label}
             </span>
             <span

@@ -10,12 +10,20 @@ const envSchema = z.object({
     ETSY_API_SHARED_SECRET: z.string().min(1),
     ETSY_OAUTH_REDIRECT_URI: z.string().url(),
     ETSY_OAUTH_SCOPES: z.string().default('listings_r listings_w shops_r transactions_r'),
-    ETSY_OAUTH_STATE_TTL_MS: z.coerce.number().int().positive().default(10 * 60 * 1000),
-    ETSY_OAUTH_REFRESH_SKEW_MS: z.coerce.number().int().nonnegative().default(2 * 60 * 1000),
+    ETSY_OAUTH_STATE_TTL_MS: z.coerce
+        .number()
+        .int()
+        .positive()
+        .default(10 * 60 * 1000),
+    ETSY_OAUTH_REFRESH_SKEW_MS: z.coerce
+        .number()
+        .int()
+        .nonnegative()
+        .default(2 * 60 * 1000),
     ETSY_RATE_LIMIT_DEFAULT_PER_SECOND: z.coerce.number().int().positive().default(150),
     ETSY_RATE_LIMIT_DEFAULT_PER_DAY: z.coerce.number().int().positive().default(100_000),
     ETSY_RATE_LIMIT_MAX_RETRIES: z.coerce.number().int().nonnegative().default(5),
-    ETSY_RATE_LIMIT_BACKOFF_INITIAL_MS: z.coerce.number().int().positive().default(1_000),
+    ETSY_RATE_LIMIT_BACKOFF_INITIAL_MS: z.coerce.number().int().positive().default(1000),
     ETSY_RATE_LIMIT_BACKOFF_MAX_MS: z.coerce.number().int().positive().default(60_000),
     DATABASE_HOST: z.string().min(1).optional(),
     DATABASE_PORT: z.coerce.number().int().positive().optional(),
@@ -24,16 +32,17 @@ const envSchema = z.object({
     DATABASE_PASSWORD: z.string().min(1).optional(),
     ETSYSENTRY_DATABASE_NAME: z.string().min(1).optional(),
     ETSYSENTRY_DATABASE_USER: z.string().min(1).optional(),
-    ETSYSENTRY_DATABASE_PASSWORD: z.string().min(1).optional()
+    ETSYSENTRY_DATABASE_PASSWORD: z.string().min(1).optional(),
 });
 
 const rawEnv = envSchema.parse(process.env);
 
 const REQUIRED_ETSY_OAUTH_SCOPES = ['listings_r'] as const;
+const OAUTH_SCOPE_DELIMITER_REGEX = /[\s,]+/;
 
 const parseOAuthScopes = (rawScopes: string): string[] => {
     return rawScopes
-        .split(/[\s,]+/)
+        .split(OAUTH_SCOPE_DELIMITER_REGEX)
         .map((scope) => scope.trim())
         .filter((scope) => scope.length > 0);
 };
@@ -61,7 +70,7 @@ const validateOAuthRedirectUri = (params: {
 
 validateOAuthRedirectUri({
     nodeEnv: rawEnv.NODE_ENV,
-    redirectUri: rawEnv.ETSY_OAUTH_REDIRECT_URI
+    redirectUri: rawEnv.ETSY_OAUTH_REDIRECT_URI,
 });
 
 const etsyOAuthScopes = Array.from(
@@ -82,5 +91,5 @@ export const env = {
         'etsysentry_local_dev_password',
     databasePort: rawEnv.DATABASE_PORT ?? 5435,
     databaseUser: rawEnv.DATABASE_USER ?? rawEnv.ETSYSENTRY_DATABASE_USER ?? 'etsysentry',
-    etsyOAuthScopes
+    etsyOAuthScopes,
 };

@@ -6,29 +6,28 @@ describe('sumDashboardJobCounts', () => {
         const result = sumDashboardJobCounts([
             {
                 inFlightJobs: 2,
-                queuedJobs: 1
+                queuedJobs: 1,
             },
             {
                 inFlightJobs: 4,
-                queuedJobs: 3
+                queuedJobs: 3,
             },
             {
                 inFlightJobs: 6,
-                queuedJobs: 5
-            }
+                queuedJobs: 5,
+            },
         ]);
 
         expect(result).toEqual({
             inFlightJobs: 12,
-            queuedJobs: 9
+            queuedJobs: 9,
         });
     });
 
     test('returns zeros when no counts are present', () => {
         expect(sumDashboardJobCounts([])).toEqual({
             inFlightJobs: 0,
-            queuedJobs: 0
+            queuedJobs: 0,
         });
     });
 });
-

@@ -3,7 +3,7 @@ import { db } from '../../db';
 import { trackedShopSnapshots, trackedShops } from '../../db/schema';
 import { createEventLog } from '../logs/create-event-log';
 import { resolveShopFromInput } from './resolve-shop-input';
-import { toTrackedShopRecord, type TrackedShopRecord } from './types';
+import { type TrackedShopRecord, toTrackedShopRecord } from './types';
 
 const getLatestSnapshotByTrackedShopId = async (params: {
     accountId: string;
@@ -46,16 +46,16 @@ export const listTrackedShops = async (params: {
 
     const latestSnapshotsByTrackedShopId = await getLatestSnapshotByTrackedShopId({
         accountId: params.accountId,
-        trackedShopIds: shopRows.map((row) => row.trackedShopId)
+        trackedShopIds: shopRows.map((row) => row.trackedShopId),
     });
 
     return {
         items: shopRows.map((row) =>
             toTrackedShopRecord({
                 row,
-                latestSnapshot: latestSnapshotsByTrackedShopId.get(row.trackedShopId) ?? null
+                latestSnapshot: latestSnapshotsByTrackedShopId.get(row.trackedShopId) ?? null,
             })
-        )
+        ),
     };
 };
 
@@ -92,7 +92,7 @@ export const getTrackedShop = async (params: {
 
     return toTrackedShopRecord({
         row: shopRow,
-        latestSnapshot: latestSnapshot ?? null
+        latestSnapshot: latestSnapshot ?? null,
     });
 };
 
@@ -108,12 +108,12 @@ export const trackShop = async (params: {
     const resolvedShop = await resolveShopFromInput({
         shopInput: params.shopInput,
         clerkUserId: params.clerkUserId,
-        accountId: params.accountId
+        accountId: params.accountId,
     });
 
     const [existing] = await db
         .select({
-            trackedShopId: trackedShops.trackedShopId
+            trackedShopId: trackedShops.trackedShopId,
         })
         .from(trackedShops)
         .where(
@@ -135,7 +135,7 @@ export const trackShop = async (params: {
         lastRefreshedAt: now,
         nextSyncAt: now,
         lastRefreshError: null,
-        updatedAt: now
+        updatedAt: now,
     };
 
     const [row] = await db
@@ -148,15 +148,15 @@ export const trackShop = async (params: {
                 trackingState: insertValues.trackingState,
                 nextSyncAt: insertValues.nextSyncAt,
                 lastRefreshError: null,
-                updatedAt: insertValues.updatedAt
+                updatedAt: insertValues.updatedAt,
             },
-            target: [trackedShops.accountId, trackedShops.etsyShopId]
+            target: [trackedShops.accountId, trackedShops.etsyShopId],
         })
         .returning();
 
     const item = toTrackedShopRecord({
         row,
-        latestSnapshot: null
+        latestSnapshot: null,
     });
     const created = !existing;
 
@@ -168,7 +168,7 @@ export const trackShop = async (params: {
             activeListingCount: resolvedShop.activeListingCount,
             favoritesTotal: resolvedShop.numFavorers,
             reviewTotal: resolvedShop.reviewCount,
-            soldTotal: resolvedShop.soldCount
+            soldTotal: resolvedShop.soldCount,
         },
         level: 'info',
         message: created
@@ -179,11 +179,11 @@ export const trackShop = async (params: {
         requestId: params.requestId ?? null,
         shopId: item.etsyShopId,
         status: 'success',
-        accountId: item.accountId
+        accountId: item.accountId,
     });
 
     return {
         created,
-        item
+        item,
     };
 };

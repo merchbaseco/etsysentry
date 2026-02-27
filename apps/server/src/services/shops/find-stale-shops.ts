@@ -3,20 +3,18 @@ import { db } from '../../db';
 import { trackedShops } from '../../db/schema';
 import {
     SYNC_STALE_SHOPS_BATCH_SIZE,
+    type SyncShopJobInput,
     syncShopJobInputSchema,
-    type SyncShopJobInput
 } from '../../jobs/sync-shop-shared';
 import { findLatestClerkUserIdByAccountId } from '../auth/find-latest-clerk-user-id-by-account-id';
 
-export const findStaleShops = async (params?: {
-    now?: Date;
-}): Promise<SyncShopJobInput[]> => {
+export const findStaleShops = async (params?: { now?: Date }): Promise<SyncShopJobInput[]> => {
     const now = params?.now ?? new Date();
 
     const rows = await db
         .select({
             accountId: trackedShops.accountId,
-            trackedShopId: trackedShops.trackedShopId
+            trackedShopId: trackedShops.trackedShopId,
         })
         .from(trackedShops)
         .where(
@@ -37,7 +35,7 @@ export const findStaleShops = async (params?: {
         const clerkUserId =
             cachedClerkUserId === undefined
                 ? await findLatestClerkUserIdByAccountId({
-                      accountId: row.accountId
+                      accountId: row.accountId,
                   })
                 : cachedClerkUserId;
 
@@ -50,7 +48,7 @@ export const findStaleShops = async (params?: {
         const parsedInput = syncShopJobInputSchema.safeParse({
             accountId: row.accountId,
             clerkUserId,
-            trackedShopId: row.trackedShopId
+            trackedShopId: row.trackedShopId,
         });
 
         if (!parsedInput.success) {

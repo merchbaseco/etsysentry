@@ -6,75 +6,66 @@ import { z } from 'zod';
 import { createTrpcContext } from './api/context';
 import { rootRouter } from './api/root';
 import { env } from './config/env';
-import { runMigrations } from './db/migrate';
 import { testDbConnection } from './db';
-import {
-    startKeywordSyncJobs,
-    stopKeywordSyncJobs
-} from './jobs/sync-keyword-jobs';
-import { completeEtsyOAuthFlow } from './services/etsy/oauth-service';
+import { runMigrations } from './db/migrate';
+import { startKeywordSyncJobs, stopKeywordSyncJobs } from './jobs/sync-keyword-jobs';
 import { renderOAuthErrorHtml, renderOAuthSuccessHtml } from './services/etsy/oauth-html';
+import { completeEtsyOAuthFlow } from './services/etsy/oauth-service';
 import { startWebsocketRuntime } from './services/realtime/start-websocket-runtime';
 
 const callbackQuerySchema = z.object({
     code: z.string().optional(),
     error: z.string().optional(),
     error_description: z.string().optional(),
-    state: z.string().optional()
+    state: z.string().optional(),
 });
 
-type BuildServerOptions = {
+interface BuildServerOptions {
     completeOAuthFlow?: typeof completeEtsyOAuthFlow;
     logger?: boolean;
-};
+}
 
 export const buildServer = async (options: BuildServerOptions = {}) => {
     const completeOAuthFlow = options.completeOAuthFlow ?? completeEtsyOAuthFlow;
     const logger =
         options.logger === undefined
             ? {
-                  level: env.NODE_ENV === 'development' ? 'info' : 'warn'
+                  level: env.NODE_ENV === 'development' ? 'info' : 'warn',
               }
             : options.logger;
 
     const server = Fastify({
-        logger
+        logger,
     });
 
     await server.register(cors, {
         credentials: true,
-        origin: [env.APP_ORIGIN]
+        origin: [env.APP_ORIGIN],
     });
 
     await server.register(fastifyTRPCPlugin, {
         prefix: '/api',
         trpcOptions: {
             createContext: createTrpcContext,
-            onError({
-                error,
-                path
-            }: {
-                error: unknown;
-                path: string | undefined;
-            }) {
+            onError({ error, path }: { error: unknown; path: string | undefined }) {
                 server.log.error({ error, path }, 'tRPC procedure failed');
             },
-            router: rootRouter
-        }
+            router: rootRouter,
+        },
     });
 
     const realtimeRuntime = startWebsocketRuntime({
-        server
+        server,
     });
 
     server.addHook('onClose', async () => {
         await realtimeRuntime.stop();
     });
 
-    server.get('/healthz', async () => {
+    server.get('/healthz', () => {
         return {
             service: 'etsy-sentry-server',
-            status: 'ok'
+            status: 'ok',
         };
     });
 
@@ -106,7 +97,7 @@ export const buildServer = async (options: BuildServerOptions = {}) => {
                 .send(renderOAuthErrorHtml(errorDescription ?? error));
         }
 
-        if (!code || !state) {
+        if (!(code && state)) {
             return reply
                 .status(400)
                 .type('text/html')
@@ -118,7 +109,7 @@ export const buildServer = async (options: BuildServerOptions = {}) => {
         try {
             await completeOAuthFlow({
                 code,
-                state
+                state,
             });
 
             return reply.status(200).type('text/html').send(renderOAuthSuccessHtml());
@@ -152,7 +143,7 @@ if (import.meta.main) {
 
     const server = await buildServer();
     await startKeywordSyncJobs({
-        logger: server.log
+        logger: server.log,
     });
 
     server.addHook('onClose', async () => {
@@ -175,15 +166,15 @@ if (import.meta.main) {
                 backoffMaxMs: env.ETSY_RATE_LIMIT_BACKOFF_MAX_MS,
                 maxRetries: env.ETSY_RATE_LIMIT_MAX_RETRIES,
                 perDay: env.ETSY_RATE_LIMIT_DEFAULT_PER_DAY,
-                perSecond: env.ETSY_RATE_LIMIT_DEFAULT_PER_SECOND
+                perSecond: env.ETSY_RATE_LIMIT_DEFAULT_PER_SECOND,
             },
-            port: env.PORT
+            port: env.PORT,
         },
         'Startup status summary'
     );
 
     await server.listen({
         host: '0.0.0.0',
-        port: env.PORT
+        port: env.PORT,
     });
 }

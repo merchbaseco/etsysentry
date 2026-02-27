@@ -1,9 +1,9 @@
 import { randomBytes } from 'node:crypto';
 
-export type EtsyOAuthStatePayload = {
-    codeVerifier: string;
+export interface EtsyOAuthStatePayload {
     accountId: string;
-};
+    codeVerifier: string;
+}
 
 type EtsyOAuthStoredState = EtsyOAuthStatePayload & {
     createdAtMs: number;
@@ -31,12 +31,12 @@ export class EtsyOAuthStateStore {
         this.pruneExpired(createdAtMs);
         this.states.set(state, {
             ...payload,
-            createdAtMs
+            createdAtMs,
         });
 
         return {
             expiresAt: new Date(createdAtMs + this.ttlMs),
-            state
+            state,
         };
     }
 
@@ -54,7 +54,7 @@ export class EtsyOAuthStateStore {
 
         return {
             codeVerifier: found.codeVerifier,
-            accountId: found.accountId
+            accountId: found.accountId,
         };
     }
 

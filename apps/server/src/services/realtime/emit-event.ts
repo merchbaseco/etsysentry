@@ -1,8 +1,5 @@
 import { EventEmitter } from 'node:events';
-import {
-    realtimeEventSchema,
-    type RealtimeEvent
-} from './realtime-event-types';
+import { type RealtimeEvent, realtimeEventSchema } from './realtime-event-types';
 import { serializeEventForWire } from './serialize-realtime-event';
 
 const realtimeInvalidationEmitter = new EventEmitter();
@@ -10,23 +7,21 @@ const realtimeInvalidationEventName = 'realtime.invalidation';
 
 realtimeInvalidationEmitter.setMaxListeners(0);
 
-export type RealtimeWireEvent = {
+export interface RealtimeWireEvent {
     accountId: string;
     payload: string;
-};
+}
 
 export const sendRealtimeEvent = (event: RealtimeEvent): void => {
     const parsedEvent = realtimeEventSchema.parse(event);
 
     realtimeInvalidationEmitter.emit(realtimeInvalidationEventName, {
         accountId: parsedEvent.accountId,
-        payload: serializeEventForWire(parsedEvent)
+        payload: serializeEventForWire(parsedEvent),
     } satisfies RealtimeWireEvent);
 };
 
-export const onRealtimeEvent = (
-    listener: (event: RealtimeWireEvent) => void
-): (() => void) => {
+export const onRealtimeEvent = (listener: (event: RealtimeWireEvent) => void): (() => void) => {
     realtimeInvalidationEmitter.on(realtimeInvalidationEventName, listener);
 
     return () => {

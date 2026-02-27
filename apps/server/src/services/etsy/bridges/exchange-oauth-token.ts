@@ -1,5 +1,5 @@
-import { env } from '../../../config/env';
 import { z } from 'zod';
+import { env } from '../../../config/env';
 import { fetchEtsyApi } from '../fetch-etsy-api';
 import { getEtsyApiKeyHeaderValue } from '../get-etsy-api-key-header-value';
 
@@ -8,15 +8,16 @@ const etsyOAuthSuccessResponseSchema = z.object({
     expires_in: z.coerce.number().int().positive(),
     refresh_token: z.string().min(1),
     scope: z.string().optional(),
-    token_type: z.string().min(1)
+    token_type: z.string().min(1),
 });
 
 const etsyOAuthErrorResponseSchema = z
     .object({
         error: z.string().optional(),
-        error_description: z.string().optional()
+        error_description: z.string().optional(),
     })
     .passthrough();
+const OAUTH_SCOPE_DELIMITER_REGEX = /[\s,]+/;
 
 export type EtsyOAuthTokenRequest =
     | {
@@ -30,13 +31,13 @@ export type EtsyOAuthTokenRequest =
           refreshToken: string;
       };
 
-export type EtsyOAuthTokenResponse = {
+export interface EtsyOAuthTokenResponse {
     accessToken: string;
     expiresInSeconds: number;
     refreshToken: string;
     scopes: string[];
     tokenType: string;
-};
+}
 
 export class EtsyOAuthBridgeError extends Error {
     readonly responseBody: string;
@@ -57,14 +58,14 @@ const buildRequestBody = (input: EtsyOAuthTokenRequest): URLSearchParams => {
             code: input.code,
             code_verifier: input.codeVerifier,
             grant_type: input.grantType,
-            redirect_uri: input.redirectUri
+            redirect_uri: input.redirectUri,
         });
     }
 
     return new URLSearchParams({
         client_id: env.ETSY_API_KEY,
         grant_type: input.grantType,
-        refresh_token: input.refreshToken
+        refresh_token: input.refreshToken,
     });
 };
 
@@ -74,7 +75,7 @@ const parseScopes = (scopeValue: string | undefined): string[] => {
     }
 
     return scopeValue
-        .split(/[\s,]+/)
+        .split(OAUTH_SCOPE_DELIMITER_REGEX)
         .map((scope) => scope.trim())
         .filter((scope) => scope.length > 0);
 };
@@ -107,7 +108,7 @@ export const exchangeOAuthToken = async (
     input: EtsyOAuthTokenRequest
 ): Promise<EtsyOAuthTokenResponse> => {
     logOAuthBridgeDebug('starting token exchange', {
-        grantType: input.grantType
+        grantType: input.grantType,
     });
 
     const response = await fetchEtsyApi({
@@ -115,11 +116,11 @@ export const exchangeOAuthToken = async (
             body: buildRequestBody(input),
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
-                'x-api-key': getEtsyApiKeyHeaderValue()
+                'x-api-key': getEtsyApiKeyHeaderValue(),
             },
-            method: 'POST'
+            method: 'POST',
         },
-        url: 'https://api.etsy.com/v3/public/oauth/token'
+        url: 'https://api.etsy.com/v3/public/oauth/token',
     });
 
     const rawBody = await response.text();
@@ -128,15 +129,15 @@ export const exchangeOAuthToken = async (
         const parsedError = etsyOAuthErrorResponseSchema.safeParse(tryParseJson(rawBody) ?? {});
 
         const errorMessage = parsedError.success
-            ? parsedError.data.error_description ??
+            ? (parsedError.data.error_description ??
               parsedError.data.error ??
-              `Etsy OAuth token exchange failed with HTTP ${response.status}.`
+              `Etsy OAuth token exchange failed with HTTP ${response.status}.`)
             : `Etsy OAuth token exchange failed with HTTP ${response.status}.`;
 
         logOAuthBridgeDebug('token exchange failed', {
             grantType: input.grantType,
             rawBodyPreview: truncateForLog(rawBody),
-            statusCode: response.status
+            statusCode: response.status,
         });
 
         throw new EtsyOAuthBridgeError(errorMessage, response.status, rawBody);
@@ -149,7 +150,7 @@ export const exchangeOAuthToken = async (
         logOAuthBridgeDebug('token exchange response shape was invalid', {
             grantType: input.grantType,
             rawBodyPreview: truncateForLog(rawBody),
-            statusCode: response.status
+            statusCode: response.status,
         });
 
         throw new EtsyOAuthBridgeError(
@@ -167,7 +168,7 @@ export const exchangeOAuthToken = async (
         rawScope: parsed.data.scope ?? null,
         scopeCount: parsedScopes.length,
         scopes: parsedScopes,
-        statusCode: response.status
+        statusCode: response.status,
     });
 
     return {
@@ -175,6 +176,6 @@ export const exchangeOAuthToken = async (
         expiresInSeconds: parsed.data.expires_in,
         refreshToken: parsed.data.refresh_token,
         scopes: parsedScopes,
-        tokenType: parsed.data.token_type
+        tokenType: parsed.data.token_type,
     };
 };

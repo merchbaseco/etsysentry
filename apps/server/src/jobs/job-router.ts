@@ -1,14 +1,11 @@
 import type { Job, PgBoss, SendOptions, WorkOptions } from 'pg-boss';
 import { z } from 'zod';
+import { buildStartupSummary, createJobLog } from './job-runtime-utils';
 import { createJobsLogger, type JobsLogger } from './jobs-logger';
-import {
-    buildStartupSummary,
-    createJobLog
-} from './job-runtime-utils';
 
-type JobWorkContext = {
+interface JobWorkContext {
     boss: PgBoss;
-};
+}
 
 type JobWorkFn<TInput, TResult> = (
     job: Job<TInput>,
@@ -31,7 +28,7 @@ type JobSchedule =
           scheduleOptions?: SendOptions;
       };
 
-type AnyJobDefinition = {
+interface AnyJobDefinition {
     jobName: string;
     parseInput: (input: unknown) => unknown;
     persistSuccess: 'always' | 'didWork';
@@ -40,15 +37,15 @@ type AnyJobDefinition = {
     startupSummary: string;
     work: JobWorkFn<unknown, unknown>;
     workOptions?: WorkOptions;
-};
+}
 
-export type StartRegisteredJobsResult = {
+export interface StartRegisteredJobsResult {
     startupSummary: string[];
     stop: () => Promise<void>;
-};
+}
 
 const defaultJobsLogger = createJobsLogger({
-    scope: 'jobs.router'
+    scope: 'jobs.router',
 });
 
 const registeredJobsByName = new Map<string, AnyJobDefinition>();
@@ -83,7 +80,7 @@ class JobBuilder<TInput = unknown> {
     options(options: SendOptions) {
         this.sendOptions = {
             ...this.sendOptions,
-            ...options
+            ...options,
         };
 
         return this;
@@ -94,31 +91,23 @@ class JobBuilder<TInput = unknown> {
         return this;
     }
 
-    interval(params: {
-        everyMs: number;
-        payload?: object | null;
-        sendOptions?: SendOptions;
-    }) {
+    interval(params: { everyMs: number; payload?: object | null; sendOptions?: SendOptions }) {
         this.schedule = {
             type: 'interval',
             everyMs: params.everyMs,
             payload: params.payload ?? {},
-            sendOptions: params.sendOptions
+            sendOptions: params.sendOptions,
         };
 
         return this;
     }
 
-    cron(params: {
-        cron: string;
-        payload?: object | null;
-        scheduleOptions?: SendOptions;
-    }) {
+    cron(params: { cron: string; payload?: object | null; scheduleOptions?: SendOptions }) {
         this.schedule = {
             type: 'cron',
             cron: params.cron,
             payload: params.payload ?? {},
-            scheduleOptions: params.scheduleOptions
+            scheduleOptions: params.scheduleOptions,
         };
 
         return this;
@@ -132,10 +121,9 @@ class JobBuilder<TInput = unknown> {
             schedule: this.schedule,
             sendOptions: this.sendOptions,
             startupSummary:
-                this.startupSummary ??
-                buildStartupSummary(this.schedule, this.sendOptions),
+                this.startupSummary ?? buildStartupSummary(this.schedule, this.sendOptions),
             work: workFn as JobWorkFn<unknown, unknown>,
-            workOptions: this.workerOptions
+            workOptions: this.workerOptions,
         };
 
         const existingDefinition = registeredJobsByName.get(this.jobName);
@@ -163,15 +151,13 @@ export const startRegisteredJobs = async (params: {
     logger?: JobsLogger;
 }): Promise<StartRegisteredJobsResult> => {
     if (hasStartedJobsRuntime) {
-        throw new Error(
-            '[Jobs] startRegisteredJobs() can only be called once per process.'
-        );
+        throw new Error('[Jobs] startRegisteredJobs() can only be called once per process.');
     }
 
     const logger = params.logger
         ? createJobsLogger({
               baseLogger: params.logger,
-              scope: 'jobs.router'
+              scope: 'jobs.router',
           })
         : defaultJobsLogger;
     const jobs = Array.from(registeredJobsByName.values());
@@ -189,9 +175,7 @@ export const startRegisteredJobs = async (params: {
 
     for (const jobDefinition of jobs) {
         const worker = async (incomingJobs: Job<unknown> | Job<unknown>[]) => {
-            const queuedJobs = Array.isArray(incomingJobs)
-                ? incomingJobs
-                : [incomingJobs];
+            const queuedJobs = Array.isArray(incomingJobs) ? incomingJobs : [incomingJobs];
 
             for (const queuedJob of queuedJobs) {
                 let parsedInput: unknown;
@@ -203,7 +187,7 @@ export const startRegisteredJobs = async (params: {
                         {
                             error,
                             jobId: queuedJob.id,
-                            jobName: jobDefinition.jobName
+                            jobName: jobDefinition.jobName,
                         },
                         'Skipping job with invalid payload.'
                     );
@@ -212,44 +196,21 @@ export const startRegisteredJobs = async (params: {
 
                 const typedJob = {
                     ...queuedJob,
-                    data: parsedInput
+                    data: parsedInput,
                 } as Job<unknown>;
                 const signal = new AbortController().signal;
                 const log = createJobLog(jobDefinition.jobName, logger);
 
                 try {
-                    const result = await jobDefinition.work(
-                        typedJob,
-                        signal,
-                        log,
-                        {
-                            boss: params.boss
-                        }
-                    );
-
-                    if (jobDefinition.persistSuccess === 'didWork') {
-                        if (
-                            typeof result === 'object' &&
-                            result !== null &&
-                            'didWork' in result
-                        ) {
-                            const didWork = (
-                                result as {
-                                    didWork?: unknown;
-                                }
-                            ).didWork;
-
-                            if (didWork !== true) {
-                                continue;
-                            }
-                        }
-                    }
+                    await jobDefinition.work(typedJob, signal, log, {
+                        boss: params.boss,
+                    });
                 } catch (error) {
                     logger.error(
                         {
                             error,
                             jobId: queuedJob.id,
-                            jobName: jobDefinition.jobName
+                            jobName: jobDefinition.jobName,
                         },
                         'Job execution failed.'
                     );
@@ -259,11 +220,7 @@ export const startRegisteredJobs = async (params: {
         };
 
         if (jobDefinition.workOptions) {
-            await params.boss.work(
-                jobDefinition.jobName,
-                jobDefinition.workOptions,
-                worker
-            );
+            await params.boss.work(jobDefinition.jobName, jobDefinition.workOptions, worker);
         } else {
             await params.boss.work(jobDefinition.jobName, worker);
         }
@@ -275,20 +232,16 @@ export const startRegisteredJobs = async (params: {
         if (jobDefinition.schedule.type === 'interval') {
             const intervalSchedule = jobDefinition.schedule;
             const timer = setInterval(() => {
-                void params.boss
-                    .send(
-                        jobDefinition.jobName,
-                        intervalSchedule.payload,
-                        {
-                            ...jobDefinition.sendOptions,
-                            ...intervalSchedule.sendOptions
-                        }
-                    )
+                params.boss
+                    .send(jobDefinition.jobName, intervalSchedule.payload, {
+                        ...jobDefinition.sendOptions,
+                        ...intervalSchedule.sendOptions,
+                    })
                     .catch((error) => {
                         logger.error(
                             {
                                 error,
-                                jobName: jobDefinition.jobName
+                                jobName: jobDefinition.jobName,
                             },
                             'Failed to enqueue interval job.'
                         );
@@ -305,7 +258,7 @@ export const startRegisteredJobs = async (params: {
             jobDefinition.schedule.payload,
             {
                 ...jobDefinition.sendOptions,
-                ...jobDefinition.schedule.scheduleOptions
+                ...jobDefinition.schedule.scheduleOptions,
             }
         );
     }
@@ -316,11 +269,13 @@ export const startRegisteredJobs = async (params: {
         startupSummary: jobs.map((jobDefinition) => {
             return `${jobDefinition.jobName} (${jobDefinition.startupSummary})`;
         }),
-        stop: async () => {
+        stop: () => {
             for (const timer of intervalTimers) {
                 clearInterval(timer);
             }
             hasStartedJobsRuntime = false;
-        }
+
+            return Promise.resolve();
+        },
     };
 };

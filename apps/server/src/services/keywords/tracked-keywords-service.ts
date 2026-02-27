@@ -4,19 +4,19 @@ import { db } from '../../db';
 import { trackedKeywords } from '../../db/schema';
 import { createEventLog } from '../logs/create-event-log';
 
-export type TrackedKeywordRecord = {
+export interface TrackedKeywordRecord {
+    accountId: string;
     id: string;
     keyword: string;
     lastRefreshError: string | null;
     lastRefreshedAt: string;
     nextSyncAt: string;
     normalizedKeyword: string;
-    accountId: string;
-    trackerClerkUserId: string;
     syncState: (typeof trackedKeywords.$inferSelect)['syncState'];
+    trackerClerkUserId: string;
     trackingState: (typeof trackedKeywords.$inferSelect)['trackingState'];
     updatedAt: string;
-};
+}
 
 export const normalizeTrackedKeywordInput = (
     rawInput: string
@@ -34,7 +34,7 @@ export const normalizeTrackedKeywordInput = (
 
     return {
         keyword: collapsed,
-        normalizedKeyword: collapsed.toLowerCase()
+        normalizedKeyword: collapsed.toLowerCase(),
     };
 };
 
@@ -50,7 +50,7 @@ const toRecord = (row: typeof trackedKeywords.$inferSelect): TrackedKeywordRecor
         trackerClerkUserId: row.trackerClerkUserId,
         syncState: row.syncState,
         trackingState: row.trackingState,
-        updatedAt: row.updatedAt.toISOString()
+        updatedAt: row.updatedAt.toISOString(),
     };
 };
 
@@ -90,7 +90,7 @@ export const listTrackedKeywords = async (params: {
         .orderBy(desc(trackedKeywords.updatedAt));
 
     return {
-        items: rows.map(toRecord)
+        items: rows.map(toRecord),
     };
 };
 
@@ -108,13 +108,13 @@ export const trackKeyword = async (params: {
     if (!normalized) {
         throw new TRPCError({
             code: 'BAD_REQUEST',
-            message: 'Keyword must not be empty.'
+            message: 'Keyword must not be empty.',
         });
     }
 
     const existing = await db
         .select({
-            id: trackedKeywords.id
+            id: trackedKeywords.id,
         })
         .from(trackedKeywords)
         .where(
@@ -135,7 +135,7 @@ export const trackKeyword = async (params: {
         accountId: params.accountId,
         trackerClerkUserId: params.trackerClerkUserId,
         trackingState: 'active' as const,
-        updatedAt: now
+        updatedAt: now,
     };
 
     const [row] = await db
@@ -143,7 +143,7 @@ export const trackKeyword = async (params: {
         .values(upsertValues)
         .onConflictDoUpdate({
             set: upsertValues,
-            target: [trackedKeywords.accountId, trackedKeywords.normalizedKeyword]
+            target: [trackedKeywords.accountId, trackedKeywords.normalizedKeyword],
         })
         .returning();
 
@@ -155,7 +155,7 @@ export const trackKeyword = async (params: {
         category: 'keyword',
         clerkUserId: params.trackerClerkUserId,
         detailsJson: {
-            normalizedKeyword: item.normalizedKeyword
+            normalizedKeyword: item.normalizedKeyword,
         },
         keyword: item.keyword,
         level: 'info',
@@ -166,11 +166,11 @@ export const trackKeyword = async (params: {
         primitiveType: 'keyword',
         requestId: params.requestId ?? null,
         status: 'success',
-        accountId: item.accountId
+        accountId: item.accountId,
     });
 
     return {
         created,
-        item
+        item,
     };
 };

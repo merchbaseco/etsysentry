@@ -1,10 +1,10 @@
+import { CheckCircle2, Link2, RefreshCw, ShieldAlert, ShieldCheck, Unplug } from 'lucide-react';
 import type { EtsyOAuthConnectionState } from '@/hooks/use-etsy-oauth-connection';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, Link2, RefreshCw, ShieldAlert, ShieldCheck, Unplug } from 'lucide-react';
 
-type EtsyApiConnectionPanelProps = {
+interface EtsyApiConnectionPanelProps {
     connection: EtsyOAuthConnectionState;
-};
+}
 
 const formatTimestamp = (value: string | null): string => {
     if (!value) {
@@ -54,7 +54,7 @@ export const EtsyApiConnectionPanel = ({ connection }: EtsyApiConnectionPanelPro
         'disabled:cursor-default disabled:opacity-50';
 
     return (
-        <section className="border-b border-border bg-secondary/40 px-4 py-3">
+        <section className="border-border border-b bg-secondary/40 px-4 py-3">
             <div className="flex flex-wrap items-start gap-4">
                 <div className="min-w-64 flex-1 space-y-2">
                     <div className="flex items-center gap-2">
@@ -72,7 +72,7 @@ export const EtsyApiConnectionPanel = ({ connection }: EtsyApiConnectionPanelPro
                         </div>
                         <h2
                             className={cn(
-                                'text-xs font-semibold uppercase tracking-wider',
+                                'font-semibold text-xs uppercase tracking-wider',
                                 'text-foreground'
                             )}
                         >
@@ -129,8 +129,9 @@ export const EtsyApiConnectionPanel = ({ connection }: EtsyApiConnectionPanelPro
                         className={buttonClassName}
                         disabled={isActionBusy}
                         onClick={() => {
-                            void connection.connect();
+                            connection.connect();
                         }}
+                        type="button"
                     >
                         <Link2 className="size-3" />
                         {connection.hasSession ? 'Reconnect' : 'Connect'}
@@ -140,8 +141,9 @@ export const EtsyApiConnectionPanel = ({ connection }: EtsyApiConnectionPanelPro
                         className={buttonClassName}
                         disabled={isActionBusy || !connection.connected}
                         onClick={() => {
-                            void connection.refreshConnection();
+                            connection.refreshConnection();
                         }}
+                        type="button"
                     >
                         <RefreshCw
                             className={cn(
@@ -156,8 +158,9 @@ export const EtsyApiConnectionPanel = ({ connection }: EtsyApiConnectionPanelPro
                         className={buttonClassName}
                         disabled={isActionBusy}
                         onClick={() => {
-                            void connection.checkStatus();
+                            connection.checkStatus();
                         }}
+                        type="button"
                     >
                         <CheckCircle2 className="size-3" />
                         Check Status
@@ -167,8 +170,9 @@ export const EtsyApiConnectionPanel = ({ connection }: EtsyApiConnectionPanelPro
                         className={dangerButtonClassName}
                         disabled={isActionBusy || !connection.connected}
                         onClick={() => {
-                            void connection.forgetSession();
+                            connection.forgetSession();
                         }}
+                        type="button"
                     >
                         <Unplug className="size-3" />
                         Forget Session

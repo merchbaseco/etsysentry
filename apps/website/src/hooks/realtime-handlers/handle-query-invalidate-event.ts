@@ -1,5 +1,5 @@
+import type { RealtimeInvalidationQuery } from '@/lib/realtime-message-types';
 import { queryClient, trpc } from '@/lib/trpc-client';
-import { type RealtimeInvalidationQuery } from '@/lib/realtime-message-types';
 
 const logsInvalidatedEventName = 'etsysentry:logs-invalidated';
 const listingsInvalidatedEventName = 'etsysentry:listings-invalidated';
@@ -7,7 +7,7 @@ const queryKeyByInvalidationQuery: Record<
     Exclude<RealtimeInvalidationQuery, 'app.shops.list' | 'app.logs.list' | 'app.listings.list'>,
     readonly unknown[]
 > = {
-    'app.keywords.list': trpc.app.keywords.list.queryOptions({}).queryKey
+    'app.keywords.list': trpc.app.keywords.list.queryOptions({}).queryKey,
 };
 const listingsListQueryKey = trpc.app.listings.list.queryOptions({}).queryKey;
 const dashboardSummaryQueryKey = trpc.app.dashboard.getSummary.queryOptions({}).queryKey;
@@ -33,9 +33,7 @@ const isShopsListQuery = (query: { queryKey: readonly unknown[] }): boolean => {
     );
 };
 
-const refetchInvalidatedQueries = async (
-    queries: RealtimeInvalidationQuery[]
-): Promise<void> => {
+const refetchInvalidatedQueries = async (queries: RealtimeInvalidationQuery[]): Promise<void> => {
     const uniqueQueries = Array.from(new Set(queries));
     const shouldInvalidateDashboardSummary = uniqueQueries.some((queryName) => {
         return (
@@ -49,7 +47,7 @@ const refetchInvalidatedQueries = async (
         uniqueQueries.map(async (queryName) => {
             if (queryName === 'app.logs.list') {
                 await queryClient.invalidateQueries({
-                    predicate: isLogsListQuery
+                    predicate: isLogsListQuery,
                 });
                 window.dispatchEvent(new CustomEvent(logsInvalidatedEventName));
                 return;
@@ -57,7 +55,7 @@ const refetchInvalidatedQueries = async (
 
             if (queryName === 'app.listings.list') {
                 await queryClient.invalidateQueries({
-                    queryKey: listingsListQueryKey
+                    queryKey: listingsListQueryKey,
                 });
                 window.dispatchEvent(new CustomEvent(listingsInvalidatedEventName));
                 return;
@@ -65,22 +63,22 @@ const refetchInvalidatedQueries = async (
 
             if (queryName === 'app.shops.list') {
                 await queryClient.invalidateQueries({
-                    predicate: isShopsListQuery
+                    predicate: isShopsListQuery,
                 });
                 await queryClient.refetchQueries({
                     predicate: isShopsListQuery,
-                    type: 'all'
+                    type: 'all',
                 });
                 return;
             }
 
             const queryKey = queryKeyByInvalidationQuery[queryName];
             await queryClient.invalidateQueries({
-                queryKey
+                queryKey,
             });
             await queryClient.refetchQueries({
                 queryKey,
-                type: 'all'
+                type: 'all',
             });
         })
     );
@@ -90,7 +88,7 @@ const refetchInvalidatedQueries = async (
     }
 
     await queryClient.invalidateQueries({
-        queryKey: dashboardSummaryQueryKey
+        queryKey: dashboardSummaryQueryKey,
     });
 };
 
@@ -110,7 +108,7 @@ export const createQueryInvalidateEventHandler = (): {
         const queued = [...queuedQueries];
         queuedQueries.clear();
         flushTimeoutId = null;
-        void refetchInvalidatedQueries(queued);
+        refetchInvalidatedQueries(queued);
     };
 
     const handleQueryInvalidateEvent = (queries: RealtimeInvalidationQuery[]) => {
@@ -136,6 +134,6 @@ export const createQueryInvalidateEventHandler = (): {
 
     return {
         handleQueryInvalidateEvent,
-        cleanup
+        cleanup,
     };
 };

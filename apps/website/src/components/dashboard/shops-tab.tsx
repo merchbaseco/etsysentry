@@ -1,20 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { EmptyState, FilterChip, FilterGroup, TopToolbar } from '@/components/ui/dashboard';
 import {
     type ListTrackedShopsOutput,
     listTrackedShops,
     refreshTrackedShop,
+    type TrackedShopItem,
     trackShop,
-    type TrackedShopItem
 } from '@/lib/shops-api';
-import { TrpcRequestError } from '@/lib/trpc-http';
 import { queryClient, trpc } from '@/lib/trpc-client';
+import { TrpcRequestError } from '@/lib/trpc-http';
 import { cn } from '@/lib/utils';
-import {
-    EmptyState,
-    FilterChip,
-    FilterGroup,
-    TopToolbar
-} from '@/components/ui/dashboard';
 import { ShopsTable } from './shops-table';
 
 const trackedShopsQueryKey = trpc.app.shops.list.queryOptions({}).queryKey;
@@ -50,7 +45,8 @@ const isShopSyncInFlight = (item: TrackedShopItem): boolean => {
 };
 
 export function ShopsTab() {
-    const cachedTrackedShops = queryClient.getQueryData<ListTrackedShopsOutput>(trackedShopsQueryKey);
+    const cachedTrackedShops =
+        queryClient.getQueryData<ListTrackedShopsOutput>(trackedShopsQueryKey);
     const initialItems = cachedTrackedShops?.items ?? [];
 
     const [search, setSearch] = useState('');
@@ -80,7 +76,7 @@ export function ShopsTab() {
     }, []);
 
     useEffect(() => {
-        void loadShops();
+        loadShops();
     }, [loadShops]);
 
     useEffect(() => {
@@ -119,9 +115,9 @@ export function ShopsTab() {
 
     useEffect(() => {
         scrollViewportRef.current?.scrollTo({
-            top: 0
+            top: 0,
         });
-    }, [tableResetKey]);
+    }, []);
 
     const handleTrack = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -134,14 +130,14 @@ export function ShopsTab() {
 
         try {
             const response = await trackShop({
-                shop: shopInput
+                shop: shopInput,
             });
 
             setItems((current) => {
                 const nextItems = upsertById(current, response.item);
 
                 queryClient.setQueryData<ListTrackedShopsOutput>(trackedShopsQueryKey, {
-                    items: nextItems
+                    items: nextItems,
                 });
 
                 return nextItems;
@@ -162,19 +158,19 @@ export function ShopsTab() {
 
         setRefreshingById((current) => ({
             ...current,
-            [item.id]: true
+            [item.id]: true,
         }));
 
         try {
             const refreshed = await refreshTrackedShop({
-                trackedShopId: item.id
+                trackedShopId: item.id,
             });
 
             setItems((current) => {
                 const nextItems = upsertById(current, refreshed);
 
                 queryClient.setQueryData<ListTrackedShopsOutput>(trackedShopsQueryKey, {
-                    items: nextItems
+                    items: nextItems,
                 });
 
                 return nextItems;
@@ -182,24 +178,43 @@ export function ShopsTab() {
             setErrorMessage(null);
         } catch (error) {
             setErrorMessage(toErrorMessage(error));
-            void loadShops();
+            loadShops();
         } finally {
             setRefreshingById((current) => ({
                 ...current,
-                [item.id]: false
+                [item.id]: false,
             }));
         }
     };
 
+    let shopsContent: ReactNode;
+    if (isLoading) {
+        shopsContent = (
+            <div className="px-3 py-6 text-muted-foreground text-xs">Loading tracked shops...</div>
+        );
+    } else if (filtered.length === 0) {
+        shopsContent = <EmptyState message="No tracked shops yet. Add one above." />;
+    } else {
+        shopsContent = (
+            <ShopsTable
+                items={filtered}
+                onRefresh={(item) => handleRefreshRow(item)}
+                refreshingById={refreshingById}
+                resetKey={tableResetKey}
+                scrollContainerRef={scrollViewportRef}
+            />
+        );
+    }
+
     return (
         <div className="flex h-full flex-col">
-            <TopToolbar search={search} onSearchChange={setSearch}>
+            <TopToolbar onSearchChange={setSearch} search={search}>
                 <FilterGroup label="Tracking">
                     {(['active', 'paused', 'error'] as const).map((stateValue) => (
                         <FilterChip
+                            active={trackingStateFilter === stateValue}
                             key={stateValue}
                             label={stateValue}
-                            active={trackingStateFilter === stateValue}
                             onClick={() =>
                                 setTrackingStateFilter(
                                     trackingStateFilter === stateValue ? null : stateValue
@@ -211,47 +226,37 @@ export function ShopsTab() {
             </TopToolbar>
 
             <form
+                className="flex items-center gap-2 border-border border-b px-3 py-2 text-xs"
                 onSubmit={handleTrack}
-                className="flex items-center gap-2 border-b border-border px-3 py-2 text-xs"
             >
                 <input
-                    value={shopInput}
-                    onChange={(event) => setShopInput(event.target.value)}
-                    type="text"
-                    placeholder="Paste Etsy shop URL, shop id, or shop name"
                     className="h-8 flex-1 rounded border border-border bg-secondary px-2 text-xs outline-none placeholder:text-muted-foreground"
+                    onChange={(event) => setShopInput(event.target.value)}
+                    placeholder="Paste Etsy shop URL, shop id, or shop name"
+                    type="text"
+                    value={shopInput}
                 />
                 <button
-                    type="submit"
-                    disabled={isTracking}
                     className={cn(
                         'h-8 rounded border border-border bg-secondary px-3 text-[11px] uppercase tracking-wider transition-colors',
                         'disabled:cursor-default disabled:opacity-50',
                         'hover:text-foreground'
                     )}
+                    disabled={isTracking}
+                    type="submit"
                 >
                     {isTracking ? 'Tracking...' : 'Track Shop'}
                 </button>
             </form>
 
             {errorMessage ? (
-                <div className="border-b border-terminal-red/20 bg-terminal-red/10 px-3 py-2 text-xs text-terminal-red">
+                <div className="border-terminal-red/20 border-b bg-terminal-red/10 px-3 py-2 text-terminal-red text-xs">
                     {errorMessage}
                 </div>
             ) : null}
 
-            <div ref={scrollViewportRef} className="min-h-0 flex-1 overflow-auto">
-                {!isLoading && filtered.length === 0 ? (
-                    <EmptyState message="No tracked shops yet. Add one above." />
-                ) : (
-                    <ShopsTable
-                        items={filtered}
-                        refreshingById={refreshingById}
-                        onRefresh={(item) => void handleRefreshRow(item)}
-                        resetKey={tableResetKey}
-                        scrollContainerRef={scrollViewportRef}
-                    />
-                )}
+            <div className="min-h-0 flex-1 overflow-auto" ref={scrollViewportRef}>
+                {shopsContent}
             </div>
         </div>
     );

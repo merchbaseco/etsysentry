@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 export function FilterChip({
     label,
     active,
-    onClick
+    onClick,
 }: {
     label: string;
     active: boolean;
@@ -12,13 +12,14 @@ export function FilterChip({
 }) {
     return (
         <button
-            onClick={onClick}
             className={cn(
-                'inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] uppercase tracking-wider font-medium transition-colors cursor-pointer',
+                'inline-flex cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 font-medium text-[10px] uppercase tracking-wider transition-colors',
                 active
                     ? 'bg-primary/15 text-primary'
-                    : 'bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80'
+                    : 'bg-secondary text-muted-foreground hover:bg-secondary/80 hover:text-foreground'
             )}
+            onClick={onClick}
+            type="button"
         >
             {label}
             {active ? <X className="size-2.5 opacity-60" /> : null}

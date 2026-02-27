@@ -4,7 +4,7 @@ import { router } from './trpc';
 
 export const rootRouter = router({
     app: appRouter,
-    public: publicRouter
+    public: publicRouter,
 });
 
 export type RootRouter = typeof rootRouter;

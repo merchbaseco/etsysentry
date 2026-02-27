@@ -10,7 +10,7 @@ export const appProcedure = t.procedure.use(({ ctx, next }) => {
     if (ctx.authType !== 'clerk' || !ctx.user || !ctx.accountId) {
         throw new TRPCError({
             code: 'UNAUTHORIZED',
-            message: 'Clerk authentication required.'
+            message: 'Clerk authentication required.',
         });
     }
 
@@ -19,8 +19,8 @@ export const appProcedure = t.procedure.use(({ ctx, next }) => {
             ...ctx,
             isAdmin: ctx.isAdmin,
             accountId: ctx.accountId,
-            user: ctx.user
-        }
+            user: ctx.user,
+        },
     });
 });
 
@@ -28,14 +28,14 @@ export const adminProcedure = appProcedure.use(({ ctx, next }) => {
     if (!ctx.isAdmin) {
         throw new TRPCError({
             code: 'FORBIDDEN',
-            message: 'Admin access required.'
+            message: 'Admin access required.',
         });
     }
 
     return next({
         ctx: {
             ...ctx,
-            isAdmin: true
-        }
+            isAdmin: true,
+        },
     });
 });

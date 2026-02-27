@@ -1,10 +1,10 @@
 import { z } from 'zod';
-import { listEventLogs } from '../../../services/logs/list-event-logs';
 import {
     eventLogLevelSchema,
     eventLogPrimitiveTypeSchema,
-    eventLogStatusSchema
+    eventLogStatusSchema,
 } from '../../../services/logs/event-log-types';
+import { listEventLogs } from '../../../services/logs/list-event-logs';
 import { appProcedure } from '../../trpc';
 
 const listLogsInputSchema = z.object({
@@ -12,7 +12,7 @@ const listLogsInputSchema = z.object({
     cursor: z
         .object({
             occurredAt: z.string().datetime(),
-            id: z.string().uuid()
+            id: z.string().uuid(),
         })
         .optional(),
     search: z.string().trim().min(1).optional(),
@@ -23,14 +23,12 @@ const listLogsInputSchema = z.object({
     listingId: z.string().min(1).optional(),
     shopId: z.string().min(1).optional(),
     keyword: z.string().min(1).optional(),
-    monitorRunId: z.string().min(1).optional()
+    monitorRunId: z.string().min(1).optional(),
 });
 
-export const logsListProcedure = appProcedure
-    .input(listLogsInputSchema)
-    .query(async ({ ctx, input }) => {
-        return listEventLogs({
-            ...input,
-            accountId: ctx.accountId
-        });
+export const logsListProcedure = appProcedure.input(listLogsInputSchema).query(({ ctx, input }) => {
+    return listEventLogs({
+        ...input,
+        accountId: ctx.accountId,
     });
+});

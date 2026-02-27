@@ -6,7 +6,7 @@ import { appProcedure } from '../../trpc';
 export const listingsRefreshProcedure = appProcedure
     .input(
         z.object({
-            trackedListingId: z.string().uuid()
+            trackedListingId: z.string().uuid(),
         })
     )
     .mutation(async ({ ctx, input }) => {
@@ -15,7 +15,7 @@ export const listingsRefreshProcedure = appProcedure
             requestId: ctx.requestId,
             accountId: ctx.accountId,
             trackedListingId: input.trackedListingId,
-            trackerClerkUserId: ctx.user.sub
+            trackerClerkUserId: ctx.user.sub,
         });
 
         return decorateTrackedListingWithUsd(item);

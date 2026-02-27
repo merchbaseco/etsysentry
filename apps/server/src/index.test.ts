@@ -22,7 +22,7 @@ describe('oauth callback route', () => {
             method: 'GET',
             url:
                 '/auth/etsy/callback?error=access_denied&' +
-                'error_description=%3Cscript%3Ealert(1)%3C%2Fscript%3E'
+                'error_description=%3Cscript%3Ealert(1)%3C%2Fscript%3E',
         });
 
         expect(response.statusCode).toBe(400);
@@ -35,7 +35,7 @@ describe('oauth callback route', () => {
 
         const response = await server.inject({
             method: 'GET',
-            url: '/auth/etsy/callback?code=code-1&state=missing-state'
+            url: '/auth/etsy/callback?code=code-1&state=missing-state',
         });
 
         expect(response.statusCode).toBe(400);
@@ -48,14 +48,14 @@ describe('oauth callback route', () => {
                 connected: true,
                 expiresAt: new Date(1_234_567_890),
                 needsRefresh: false,
-                scopes: ['listings_r']
+                scopes: ['listings_r'],
             }),
-            logger: false
+            logger: false,
         });
 
         const response = await server.inject({
             method: 'GET',
-            url: '/auth/etsy/callback?code=code-1&state=state-1'
+            url: '/auth/etsy/callback?code=code-1&state=state-1',
         });
 
         expect(response.statusCode).toBe(200);
@@ -64,15 +64,13 @@ describe('oauth callback route', () => {
 
     test('returns 500 for non-trpc callback errors', async () => {
         server = await buildServer({
-            completeOAuthFlow: async () => {
-                throw new Error('network failure');
-            },
-            logger: false
+            completeOAuthFlow: () => Promise.reject(new Error('network failure')),
+            logger: false,
         });
 
         const response = await server.inject({
             method: 'GET',
-            url: '/auth/etsy/callback?code=code-1&state=state-1'
+            url: '/auth/etsy/callback?code=code-1&state=state-1',
         });
 
         expect(response.statusCode).toBe(500);
@@ -81,18 +79,19 @@ describe('oauth callback route', () => {
 
     test('maps BAD_REQUEST trpc errors to 400', async () => {
         server = await buildServer({
-            completeOAuthFlow: async () => {
-                throw new TRPCError({
-                    code: 'BAD_REQUEST',
-                    message: 'bad state'
-                });
-            },
-            logger: false
+            completeOAuthFlow: () =>
+                Promise.reject(
+                    new TRPCError({
+                        code: 'BAD_REQUEST',
+                        message: 'bad state',
+                    })
+                ),
+            logger: false,
         });
 
         const response = await server.inject({
             method: 'GET',
-            url: '/auth/etsy/callback?code=code-1&state=state-1'
+            url: '/auth/etsy/callback?code=code-1&state=state-1',
         });
 
         expect(response.statusCode).toBe(400);

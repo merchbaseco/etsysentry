@@ -1,7 +1,7 @@
-import { type ListTrackedKeywordsOutput } from '@/lib/keywords-api';
-import { type ListTrackedListingsOutput } from '@/lib/listings-api';
-import { type RealtimeMessage } from '@/lib/realtime-message-types';
-import { type ListTrackedShopsOutput } from '@/lib/shops-api';
+import type { ListTrackedKeywordsOutput } from '@/lib/keywords-api';
+import type { ListTrackedListingsOutput } from '@/lib/listings-api';
+import type { RealtimeMessage } from '@/lib/realtime-message-types';
+import type { ListTrackedShopsOutput } from '@/lib/shops-api';
 import { queryClient, trpc } from '@/lib/trpc-client';
 
 const listingsInvalidatedEventName = 'etsysentry:listings-invalidated';
@@ -27,7 +27,7 @@ const patchItemsSyncState = <TItem extends { id: string; syncState: string }>(
 
         return {
             ...item,
-            syncState: nextSyncState
+            syncState: nextSyncState,
         };
     });
 
@@ -43,14 +43,14 @@ export const handleSyncStatePushEvent = (message: SyncStatePushMessage): void =>
 
             return {
                 ...current,
-                items: patchItemsSyncState(current.items, message.ids)
+                items: patchItemsSyncState(current.items, message.ids),
             };
         });
         window.dispatchEvent(
             new CustomEvent(listingsInvalidatedEventName, {
                 detail: {
-                    reason: 'sync-state.push'
-                }
+                    reason: 'sync-state.push',
+                },
             })
         );
         return;
@@ -64,7 +64,7 @@ export const handleSyncStatePushEvent = (message: SyncStatePushMessage): void =>
 
             return {
                 ...current,
-                items: patchItemsSyncState(current.items, message.ids)
+                items: patchItemsSyncState(current.items, message.ids),
             };
         });
         return;
@@ -77,7 +77,7 @@ export const handleSyncStatePushEvent = (message: SyncStatePushMessage): void =>
 
         return {
             ...current,
-            items: patchItemsSyncState(current.items, message.ids)
+            items: patchItemsSyncState(current.items, message.ids),
         };
     });
 };

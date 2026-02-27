@@ -1,25 +1,20 @@
-import { defineJob } from './job-router';
-import {
-    SYNC_KEYWORD_JOB_NAME,
-    syncKeywordJobInputSchema
-} from './sync-keyword-shared';
 import { syncRanksForKeyword } from '../services/keywords/keyword-rankings-service';
+import { setTrackedKeywordSyncStateByKeywordId } from '../services/keywords/set-tracked-keyword-sync-state';
 import { enqueueSyncListingJob } from '../services/listings/enqueue-sync-listing-job';
 import { setTrackedListingsSyncStateByEtsyListingIds } from '../services/listings/set-tracked-listing-sync-state';
-import { setTrackedKeywordSyncStateByKeywordId } from '../services/keywords/set-tracked-keyword-sync-state';
+import { defineJob } from './job-router';
+import { SYNC_KEYWORD_JOB_NAME, syncKeywordJobInputSchema } from './sync-keyword-shared';
 
 export const syncKeywordJob = defineJob(SYNC_KEYWORD_JOB_NAME, {
     persistSuccess: 'didWork',
-    startupSummary: 'triggered by stale keyword sync job'
+    startupSummary: 'triggered by stale keyword sync job',
 })
     .input(syncKeywordJobInputSchema)
-    .work(async (job, signal, log, context) => {
-        void signal;
-
+    .work(async (job, _signal, log, context) => {
         await setTrackedKeywordSyncStateByKeywordId({
             accountId: job.data.accountId,
             trackedKeywordId: job.data.trackedKeywordId,
-            syncState: 'syncing'
+            syncState: 'syncing',
         });
 
         try {
@@ -27,7 +22,7 @@ export const syncKeywordJob = defineJob(SYNC_KEYWORD_JOB_NAME, {
                 clerkUserId: job.data.clerkUserId,
                 monitorRunId: job.id,
                 accountId: job.data.accountId,
-                trackedKeywordId: job.data.trackedKeywordId
+                trackedKeywordId: job.data.trackedKeywordId,
             });
 
             const enqueuedEtsyListingIds: string[] = [];
@@ -38,8 +33,8 @@ export const syncKeywordJob = defineJob(SYNC_KEYWORD_JOB_NAME, {
                     payload: {
                         clerkUserId: job.data.clerkUserId,
                         etsyListingId,
-                        accountId: job.data.accountId
-                    }
+                        accountId: job.data.accountId,
+                    },
                 });
 
                 if (queuedJobId) {
@@ -50,24 +45,24 @@ export const syncKeywordJob = defineJob(SYNC_KEYWORD_JOB_NAME, {
             await setTrackedListingsSyncStateByEtsyListingIds({
                 accountId: job.data.accountId,
                 etsyListingIds: enqueuedEtsyListingIds,
-                syncState: 'queued'
+                syncState: 'queued',
             });
 
             log('Synced keyword ranks.', {
                 discoveredListingsCount: syncResult.newlyDiscoveredEtsyListingIds.length,
-                trackedKeywordId: job.data.trackedKeywordId
+                trackedKeywordId: job.data.trackedKeywordId,
             });
 
             return {
                 didWork: true,
                 discoveredListingsCount: syncResult.newlyDiscoveredEtsyListingIds.length,
-                trackedKeywordId: job.data.trackedKeywordId
+                trackedKeywordId: job.data.trackedKeywordId,
             } as const;
         } finally {
             await setTrackedKeywordSyncStateByKeywordId({
                 accountId: job.data.accountId,
                 trackedKeywordId: job.data.trackedKeywordId,
-                syncState: 'idle'
+                syncState: 'idle',
             });
         }
     });

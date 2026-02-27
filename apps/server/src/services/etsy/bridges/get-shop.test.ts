@@ -14,26 +14,26 @@ afterEach(() => {
 
 describe('get-shop bridge', () => {
     test('maps Etsy getShop response into normalized output', async () => {
-        globalThis.fetch = mock(async () => {
+        globalThis.fetch = mock(() => {
             return new Response(
                 JSON.stringify({
                     listing_active_count: 152,
                     num_favorers: 912,
                     review_count: 77,
-                    shop_id: 99887766,
+                    shop_id: 99_887_766,
                     shop_name: 'Needle and Oak',
                     transaction_sold_count: 3120,
-                    updated_timestamp: 1739400000,
-                    url: 'https://www.etsy.com/shop/needleandoak'
+                    updated_timestamp: 1_739_400_000,
+                    url: 'https://www.etsy.com/shop/needleandoak',
                 }),
                 {
-                    status: 200
+                    status: 200,
                 }
             );
         }) as unknown as typeof fetch;
 
         const response = await getShop({
-            shopId: '99887766'
+            shopId: '99887766',
         });
 
         expect(response).toEqual({
@@ -43,30 +43,30 @@ describe('get-shop bridge', () => {
             shopId: '99887766',
             shopName: 'Needle and Oak',
             soldCount: 3120,
-            updatedTimestamp: 1739400000,
-            url: 'https://www.etsy.com/shop/needleandoak'
+            updatedTimestamp: 1_739_400_000,
+            url: 'https://www.etsy.com/shop/needleandoak',
         });
     });
 
     test('passes documented OpenAPI path params to getShop', async () => {
         let requestedUrl = '';
 
-        globalThis.fetch = mock(async (input: RequestInfo | URL) => {
+        globalThis.fetch = mock((input: RequestInfo | URL) => {
             requestedUrl = String(input);
 
             return new Response(
                 JSON.stringify({
-                    shop_id: 99887766,
-                    shop_name: 'Needle and Oak'
+                    shop_id: 99_887_766,
+                    shop_name: 'Needle and Oak',
                 }),
                 {
-                    status: 200
+                    status: 200,
                 }
             );
         }) as unknown as typeof fetch;
 
         await getShop({
-            shopId: '99887766'
+            shopId: '99887766',
         });
 
         const url = new URL(requestedUrl);
@@ -79,22 +79,22 @@ describe('get-shop bridge', () => {
 
         let xApiKeyHeader: string | null = null;
 
-        globalThis.fetch = mock(async (_input, init) => {
+        globalThis.fetch = mock((_input, init) => {
             xApiKeyHeader = new Headers(init?.headers).get('x-api-key');
 
             return new Response(
                 JSON.stringify({
-                    shop_id: 99887766,
-                    shop_name: 'Needle and Oak'
+                    shop_id: 99_887_766,
+                    shop_name: 'Needle and Oak',
                 }),
                 {
-                    status: 200
+                    status: 200,
                 }
             );
         }) as unknown as typeof fetch;
 
         await getShop({
-            shopId: '99887766'
+            shopId: '99887766',
         });
 
         if (typeof xApiKeyHeader !== 'string') {
@@ -105,21 +105,21 @@ describe('get-shop bridge', () => {
     });
 
     test('throws EtsyGetShopBridgeError for non-2xx responses', async () => {
-        globalThis.fetch = mock(async () => {
+        globalThis.fetch = mock(() => {
             return new Response(
                 JSON.stringify({
                     error: 'Not Found',
-                    message: 'Shop missing'
+                    message: 'Shop missing',
                 }),
                 {
-                    status: 404
+                    status: 404,
                 }
             );
         }) as unknown as typeof fetch;
 
         await expect(
             getShop({
-                shopId: '99887766'
+                shopId: '99887766',
             })
         ).rejects.toBeInstanceOf(EtsyGetShopBridgeError);
     });
@@ -127,7 +127,7 @@ describe('get-shop bridge', () => {
     test('rejects invalid input before calling Etsy', async () => {
         await expect(
             getShop({
-                shopId: 'shop-name'
+                shopId: 'shop-name',
             })
         ).rejects.toBeInstanceOf(EtsyGetShopBridgeError);
     });

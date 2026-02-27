@@ -1,28 +1,28 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
+    type EtsyApiUsage,
     enqueueSyncAllListings,
     getAdminStatus,
     getEtsyApiUsage,
-    type EtsyApiUsage
 } from '@/lib/admin-api';
-import { getCurrencyStatus, refreshCurrencyRates, type CurrencyStatus } from '@/lib/currency-api';
+import { type CurrencyStatus, getCurrencyStatus, refreshCurrencyRates } from '@/lib/currency-api';
 import { toTrpcRequestError } from '@/lib/trpc-http';
 import {
     formatCurrencyErrorMessage,
     formatEtsyApiUsageErrorMessage,
     formatListingResyncErrorMessage,
-    type SettingsPage
+    type SettingsPage,
 } from './shared';
 
-type UseSettingsModalStateParams = {
+interface UseSettingsModalStateParams {
     activePage: SettingsPage;
     open: boolean;
     setActivePage: (page: SettingsPage) => void;
-};
+}
 
-type UseSettingsModalStateOutput = {
-    adminErrorMessage: string | null;
+interface UseSettingsModalStateOutput {
     adminEnqueueMessage: string | null;
+    adminErrorMessage: string | null;
     apiUsage: EtsyApiUsage | null;
     apiUsageErrorMessage: string | null;
     currencyErrorMessage: string | null;
@@ -35,12 +35,12 @@ type UseSettingsModalStateOutput = {
     isLoadingCurrencyStatus: boolean;
     isRefreshingCurrencyRates: boolean;
     loadApiUsage: () => Promise<void>;
-};
+}
 
 export const useSettingsModalState = ({
     activePage,
     open,
-    setActivePage
+    setActivePage,
 }: UseSettingsModalStateParams): UseSettingsModalStateOutput => {
     const [currencyStatus, setCurrencyStatus] = useState<CurrencyStatus | null>(null);
     const [isLoadingCurrencyStatus, setIsLoadingCurrencyStatus] = useState(false);
@@ -129,26 +129,21 @@ export const useSettingsModalState = ({
             return;
         }
 
-        const shouldEnqueue = window.confirm(
-            'Queue a listing resync for all tracked listings in this tenant?'
-        );
-
-        if (!shouldEnqueue) {
-            return;
-        }
-
         setIsEnqueuingListingResync(true);
 
         try {
             const response = await enqueueSyncAllListings();
 
-            const summary =
-                response.totalCount === 0
-                    ? 'No tracked listings were found to enqueue.'
-                    : response.skippedCount === 0
-                      ? `Queued ${response.enqueuedCount} listing resync jobs.`
-                      : `Queued ${response.enqueuedCount} of ${response.totalCount}` +
+            let summary = 'No tracked listings were found to enqueue.';
+            if (response.totalCount !== 0) {
+                if (response.skippedCount === 0) {
+                    summary = `Queued ${response.enqueuedCount} listing resync jobs.`;
+                } else {
+                    summary =
+                        `Queued ${response.enqueuedCount} of ${response.totalCount}` +
                         ' listing resync jobs.';
+                }
+            }
 
             setAdminEnqueueMessage(summary);
             setAdminErrorMessage(null);
@@ -165,7 +160,7 @@ export const useSettingsModalState = ({
             return;
         }
 
-        void loadCurrencyStatus();
+        loadCurrencyStatus();
     }, [activePage, loadCurrencyStatus, open]);
 
     useEffect(() => {
@@ -173,7 +168,7 @@ export const useSettingsModalState = ({
             return;
         }
 
-        void loadAdminPrivileges();
+        loadAdminPrivileges();
     }, [loadAdminPrivileges, open]);
 
     useEffect(() => {
@@ -181,7 +176,7 @@ export const useSettingsModalState = ({
             return;
         }
 
-        void loadApiUsage();
+        loadApiUsage();
     }, [activePage, hasAdminAccess, loadApiUsage, open]);
 
     useEffect(() => {
@@ -217,6 +212,6 @@ export const useSettingsModalState = ({
         isLoadingApiUsage,
         isLoadingCurrencyStatus,
         isRefreshingCurrencyRates,
-        loadApiUsage
+        loadApiUsage,
     };
 };

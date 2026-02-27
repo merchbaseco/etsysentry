@@ -1,7 +1,5 @@
 import { useEffect, useState } from 'react';
-import {
-    createRealtimeEventHandler
-} from '@/hooks/realtime-handlers/handle-realtime-event';
+import { createRealtimeEventHandler } from '@/hooks/realtime-handlers/handle-realtime-event';
 import { parseRealtimeMessage } from '@/lib/realtime-message-types';
 
 type AuthTokenGetter = () => Promise<string | null>;
@@ -17,12 +15,12 @@ export type RealtimeWebsocketStatus =
     | 'reconnecting'
     | 'waiting_for_auth';
 
-export type RealtimeWebsocketState = {
+export interface RealtimeWebsocketState {
     lastConnectedAt: string | null;
     lastErrorAt: string | null;
     reconnectAttempt: number;
     status: RealtimeWebsocketStatus;
-};
+}
 
 const buildRealtimeWebsocketUrl = (token: string): string => {
     const configuredOrigin = (import.meta.env.VITE_SERVER_ORIGIN as string | undefined)?.trim();
@@ -43,7 +41,7 @@ export const useRealtimeQueryInvalidations = (
         lastConnectedAt: null,
         lastErrorAt: null,
         reconnectAttempt: 0,
-        status: 'disconnected'
+        status: 'disconnected',
     });
 
     useEffect(() => {
@@ -58,17 +56,17 @@ export const useRealtimeQueryInvalidations = (
                 return;
             }
 
-            const delayMs = Math.min(1_000 * 2 ** reconnectAttempt, 10_000);
+            const delayMs = Math.min(1000 * 2 ** reconnectAttempt, 10_000);
             reconnectAttempt += 1;
             setState((current) => ({
                 ...current,
                 reconnectAttempt,
-                status: 'reconnecting'
+                status: 'reconnecting',
             }));
 
             reconnectTimeoutId = window.setTimeout(() => {
                 reconnectTimeoutId = null;
-                void connect();
+                connect();
             }, delayMs);
         };
 
@@ -79,14 +77,14 @@ export const useRealtimeQueryInvalidations = (
 
             setState((current) => ({
                 ...current,
-                status: reconnectAttempt > 0 ? 'reconnecting' : 'connecting'
+                status: reconnectAttempt > 0 ? 'reconnecting' : 'connecting',
             }));
             const authToken = await getAuthToken();
 
             if (!authToken) {
                 setState((current) => ({
                     ...current,
-                    status: 'waiting_for_auth'
+                    status: 'waiting_for_auth',
                 }));
                 scheduleReconnect();
                 return;
@@ -100,7 +98,7 @@ export const useRealtimeQueryInvalidations = (
                     ...current,
                     lastConnectedAt: new Date().toISOString(),
                     reconnectAttempt: 0,
-                    status: 'connected'
+                    status: 'connected',
                 }));
             };
 
@@ -120,7 +118,7 @@ export const useRealtimeQueryInvalidations = (
                 if (isStopped) {
                     setState((current) => ({
                         ...current,
-                        status: 'disconnected'
+                        status: 'disconnected',
                     }));
                     return;
                 }
@@ -132,13 +130,13 @@ export const useRealtimeQueryInvalidations = (
                 setState((current) => ({
                     ...current,
                     lastErrorAt: new Date().toISOString(),
-                    status: 'error'
+                    status: 'error',
                 }));
                 websocket?.close();
             };
         };
 
-        void connect();
+        connect();
 
         return () => {
             isStopped = true;
@@ -151,7 +149,7 @@ export const useRealtimeQueryInvalidations = (
             websocket?.close();
             setState((current) => ({
                 ...current,
-                status: 'disconnected'
+                status: 'disconnected',
             }));
         };
     }, [getAuthToken]);

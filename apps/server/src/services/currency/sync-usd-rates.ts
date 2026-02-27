@@ -20,7 +20,7 @@ export const syncUsdRates = async (): Promise<void> => {
             fetchedAt: latestRates.fetchedAt,
             nextRefreshAt,
             provider: latestRates.provider,
-            rates: latestRates.rates
+            rates: latestRates.rates,
         });
     } catch (error) {
         const message =
@@ -31,7 +31,7 @@ export const syncUsdRates = async (): Promise<void> => {
         await saveUsdRatesRefreshError({
             errorMessage: message,
             nextRefreshAt,
-            provider: 'open.er-api.com'
+            provider: 'open.er-api.com',
         });
 
         throw new SyncUsdRatesError(message);

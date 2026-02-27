@@ -6,5 +6,5 @@ import { adminStatusProcedure } from './status';
 export const adminRouter = router({
     enqueueSyncAllListings: adminEnqueueSyncAllListingsProcedure,
     getEtsyApiUsage: adminGetEtsyApiUsageProcedure,
-    status: adminStatusProcedure
+    status: adminStatusProcedure,
 });

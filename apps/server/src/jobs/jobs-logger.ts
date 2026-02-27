@@ -1,26 +1,26 @@
-export type JobsLogger = {
+export interface JobsLogger {
     error: (payload: unknown, message?: string) => void;
     info: (payload: unknown, message?: string) => void;
     warn: (payload: unknown, message?: string) => void;
-};
+}
 
-type LoggerLike = {
+interface LoggerLike {
     error: (payload: unknown, message?: string) => void;
     info: (payload: unknown, message?: string) => void;
     warn: (payload: unknown, message?: string) => void;
-};
+}
 
 const toLogPayload = (scope: string, payload: unknown) => {
     if (typeof payload === 'object' && payload !== null) {
         return {
             scope,
-            ...payload
+            ...payload,
         };
     }
 
     return {
         payload,
-        scope
+        scope,
     };
 };
 
@@ -41,7 +41,7 @@ export const createJobsLogger = (params?: {
             },
             warn(payload, message) {
                 console.warn(message ?? 'Job warning', toLogPayload(scope, payload));
-            }
+            },
         };
     }
 
@@ -54,6 +54,6 @@ export const createJobsLogger = (params?: {
         },
         warn(payload, message) {
             baseLogger.warn(toLogPayload(scope, payload), message);
-        }
+        },
     };
 };

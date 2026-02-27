@@ -1,22 +1,16 @@
-import { createColumnHelper, type ColumnDef } from '@tanstack/react-table';
+import { type ColumnDef, createColumnHelper } from '@tanstack/react-table';
 import { RefreshCw } from 'lucide-react';
-import type { TrackedListingItem } from '@/lib/listings-api';
 import { Button } from '@/components/ui/button';
+import { formatNumber, timeAgo } from '@/components/ui/dashboard';
+import type { TrackedListingItem } from '@/lib/listings-api';
 import { cn } from '@/lib/utils';
-import {
-    formatNumber,
-    timeAgo
-} from '@/components/ui/dashboard';
-import {
-    formatListingPrice,
-    isListingSyncInFlight
-} from './listings-tab-utils';
+import { formatListingPrice, isListingSyncInFlight } from './listings-tab-utils';
 
-export type ListingsColumnMeta = {
+export interface ListingsColumnMeta {
     cellClassName: string;
     headClassName: string;
     isGrow?: boolean;
-};
+}
 
 const columnHelper = createColumnHelper<TrackedListingItem>();
 const toHeadClassName = (value: string): string => {
@@ -47,12 +41,14 @@ export const createListingsColumns = (params: {
                     <div className="size-12 overflow-hidden rounded bg-secondary">
                         {item.thumbnailUrl ? (
                             <img
-                                src={item.thumbnailUrl}
                                 alt=""
                                 className={[
                                     'size-full max-w-none origin-center scale-[1.2]',
-                                    'object-cover'
+                                    'object-cover',
                                 ].join(' ')}
+                                height={48}
+                                src={item.thumbnailUrl}
+                                width={48}
                             />
                         ) : null}
                     </div>
@@ -60,8 +56,8 @@ export const createListingsColumns = (params: {
             },
             meta: {
                 headClassName: toHeadClassName('pl-3 pr-3 text-left'),
-                cellClassName: 'pl-3 pr-3 py-1.5'
-            } satisfies ListingsColumnMeta
+                cellClassName: 'pl-3 pr-3 py-1.5',
+            } satisfies ListingsColumnMeta,
         }),
         columnHelper.display({
             id: 'title',
@@ -73,10 +69,10 @@ export const createListingsColumns = (params: {
                 return (
                     <div className="space-y-0.5">
                         <a
-                            href={item.url ?? undefined}
-                            target="_blank"
-                            rel="noreferrer"
                             className="block min-w-0 truncate hover:text-primary"
+                            href={item.url ?? undefined}
+                            rel="noreferrer"
+                            target="_blank"
                         >
                             {item.title}
                         </a>
@@ -89,8 +85,8 @@ export const createListingsColumns = (params: {
             meta: {
                 headClassName: toHeadClassName('pl-2 pr-2 text-left'),
                 cellClassName: 'pl-2 pr-2 py-1.5 text-foreground',
-                isGrow: true
-            } satisfies ListingsColumnMeta
+                isGrow: true,
+            } satisfies ListingsColumnMeta,
         }),
         columnHelper.accessor('shopName', {
             size: 100,
@@ -98,8 +94,8 @@ export const createListingsColumns = (params: {
             cell: (context) => context.getValue() ?? '--',
             meta: {
                 headClassName: toHeadClassName('px-2 text-left'),
-                cellClassName: 'truncate px-2 py-1.5'
-            } satisfies ListingsColumnMeta
+                cellClassName: 'truncate px-2 py-1.5',
+            } satisfies ListingsColumnMeta,
         }),
         columnHelper.display({
             id: 'price',
@@ -108,8 +104,8 @@ export const createListingsColumns = (params: {
             cell: (context) => formatListingPrice(context.row.original),
             meta: {
                 headClassName: toHeadClassName('px-2 text-right'),
-                cellClassName: 'whitespace-nowrap px-2 py-1.5 text-right text-terminal-green'
-            } satisfies ListingsColumnMeta
+                cellClassName: 'whitespace-nowrap px-2 py-1.5 text-right text-terminal-green',
+            } satisfies ListingsColumnMeta,
         }),
         columnHelper.accessor('views', {
             size: 80,
@@ -120,8 +116,8 @@ export const createListingsColumns = (params: {
             },
             meta: {
                 headClassName: toHeadClassName('px-2 text-right'),
-                cellClassName: 'whitespace-nowrap px-2 py-1.5 text-right text-terminal-dim'
-            } satisfies ListingsColumnMeta
+                cellClassName: 'whitespace-nowrap px-2 py-1.5 text-right text-terminal-dim',
+            } satisfies ListingsColumnMeta,
         }),
         columnHelper.accessor('numFavorers', {
             size: 70,
@@ -132,8 +128,8 @@ export const createListingsColumns = (params: {
             },
             meta: {
                 headClassName: toHeadClassName('px-2 text-right'),
-                cellClassName: 'whitespace-nowrap px-2 py-1.5 text-right text-terminal-dim'
-            } satisfies ListingsColumnMeta
+                cellClassName: 'whitespace-nowrap px-2 py-1.5 text-right text-terminal-dim',
+            } satisfies ListingsColumnMeta,
         }),
         columnHelper.accessor('quantity', {
             size: 50,
@@ -141,8 +137,8 @@ export const createListingsColumns = (params: {
             cell: (context) => context.getValue() ?? '--',
             meta: {
                 headClassName: toHeadClassName('px-2 text-center'),
-                cellClassName: 'whitespace-nowrap px-2 py-1.5 text-center'
-            } satisfies ListingsColumnMeta
+                cellClassName: 'whitespace-nowrap px-2 py-1.5 text-center',
+            } satisfies ListingsColumnMeta,
         }),
         columnHelper.accessor('lastRefreshedAt', {
             size: 110,
@@ -150,8 +146,8 @@ export const createListingsColumns = (params: {
             cell: (context) => timeAgo(context.getValue()),
             meta: {
                 headClassName: toHeadClassName('px-2 text-right'),
-                cellClassName: 'px-2 py-1.5 text-right text-terminal-dim'
-            } satisfies ListingsColumnMeta
+                cellClassName: 'px-2 py-1.5 text-right text-terminal-dim',
+            } satisfies ListingsColumnMeta,
         }),
         columnHelper.display({
             id: 'refresh',
@@ -160,29 +156,28 @@ export const createListingsColumns = (params: {
             cell: (context) => {
                 const item = context.row.original;
                 const isQueuedOrSyncing = isListingSyncInFlight(item);
-                const isRefreshing =
-                    isQueuedOrSyncing || params.refreshingById[item.id] === true;
-                const refreshTitle = isQueuedOrSyncing
-                    ? 'Listing sync in progress'
-                    : isRefreshing
-                      ? 'Refreshing listing'
-                      : 'Refresh listing';
-                const refreshAriaLabel = isQueuedOrSyncing
-                    ? `Syncing ${item.title}`
-                    : isRefreshing
-                      ? `Refreshing ${item.title}`
-                      : `Refresh ${item.title}`;
+                const isRefreshing = isQueuedOrSyncing || params.refreshingById[item.id] === true;
+                let refreshTitle = 'Refresh listing';
+                let refreshAriaLabel = `Refresh ${item.title}`;
+
+                if (isQueuedOrSyncing) {
+                    refreshTitle = 'Listing sync in progress';
+                    refreshAriaLabel = `Syncing ${item.title}`;
+                } else if (isRefreshing) {
+                    refreshTitle = 'Refreshing listing';
+                    refreshAriaLabel = `Refreshing ${item.title}`;
+                }
 
                 return (
                     <Button
+                        aria-label={refreshAriaLabel}
+                        className="size-6 text-terminal-dim hover:text-foreground"
+                        disabled={isRefreshing}
+                        onClick={() => params.onRefresh(item)}
+                        size="icon-sm"
+                        title={refreshTitle}
                         type="button"
                         variant="transparent"
-                        size="icon-sm"
-                        onClick={() => params.onRefresh(item)}
-                        disabled={isRefreshing}
-                        aria-label={refreshAriaLabel}
-                        title={refreshTitle}
-                        className="size-6 text-terminal-dim hover:text-foreground"
                     >
                         <RefreshCw className={cn('size-3.5', isRefreshing && 'animate-spin')} />
                     </Button>
@@ -190,8 +185,8 @@ export const createListingsColumns = (params: {
             },
             meta: {
                 headClassName: toHeadClassName('px-2 text-right'),
-                cellClassName: 'px-2 py-1.5 text-right'
-            } satisfies ListingsColumnMeta
-        })
+                cellClassName: 'px-2 py-1.5 text-right',
+            } satisfies ListingsColumnMeta,
+        }),
     ];
 };

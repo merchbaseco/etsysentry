@@ -2,51 +2,55 @@ import { eq } from 'drizzle-orm';
 import { db } from '../../db';
 import { etsyOAuthConnections } from '../../db/schema';
 
-export type EtsyOAuthConnectionKey = {
+export interface EtsyOAuthConnectionKey {
     accountId: string;
-};
+}
 
-export type EtsyOAuthTokens = {
+export interface EtsyOAuthTokens {
     accessToken: string;
     expiresAt: Date;
     refreshToken: string;
     scopes: string[];
     tokenType: string;
-};
+}
 
-export type EtsyOAuthConnectionStore = {
+export interface EtsyOAuthConnectionStore {
     clear: (key: EtsyOAuthConnectionKey) => Promise<void>;
     get: (key: EtsyOAuthConnectionKey) => Promise<EtsyOAuthTokens | null>;
     set: (key: EtsyOAuthConnectionKey, tokens: EtsyOAuthTokens) => Promise<void>;
-};
+}
 
 export class InMemoryEtsyOAuthConnectionStore implements EtsyOAuthConnectionStore {
     private readonly tokensByConnection = new Map<string, EtsyOAuthTokens>();
 
-    async clear(key: EtsyOAuthConnectionKey): Promise<void> {
+    clear(key: EtsyOAuthConnectionKey): Promise<void> {
         this.tokensByConnection.delete(this.toStorageKey(key));
+
+        return Promise.resolve();
     }
 
-    async get(key: EtsyOAuthConnectionKey): Promise<EtsyOAuthTokens | null> {
+    get(key: EtsyOAuthConnectionKey): Promise<EtsyOAuthTokens | null> {
         const tokens = this.tokensByConnection.get(this.toStorageKey(key));
 
         if (!tokens) {
-            return null;
+            return Promise.resolve(null);
         }
 
-        return {
+        return Promise.resolve({
             ...tokens,
             expiresAt: new Date(tokens.expiresAt.getTime()),
-            scopes: [...tokens.scopes]
-        };
+            scopes: [...tokens.scopes],
+        });
     }
 
-    async set(key: EtsyOAuthConnectionKey, tokens: EtsyOAuthTokens): Promise<void> {
+    set(key: EtsyOAuthConnectionKey, tokens: EtsyOAuthTokens): Promise<void> {
         this.tokensByConnection.set(this.toStorageKey(key), {
             ...tokens,
             expiresAt: new Date(tokens.expiresAt.getTime()),
-            scopes: [...tokens.scopes]
+            scopes: [...tokens.scopes],
         });
+
+        return Promise.resolve();
     }
 
     private toStorageKey(key: EtsyOAuthConnectionKey): string {
@@ -56,7 +60,9 @@ export class InMemoryEtsyOAuthConnectionStore implements EtsyOAuthConnectionStor
 
 export const etsyOAuthConnectionStore: EtsyOAuthConnectionStore = {
     async clear(key) {
-        await db.delete(etsyOAuthConnections).where(eq(etsyOAuthConnections.accountId, key.accountId));
+        await db
+            .delete(etsyOAuthConnections)
+            .where(eq(etsyOAuthConnections.accountId, key.accountId));
     },
     async get(key) {
         const [row] = await db
@@ -74,12 +80,14 @@ export const etsyOAuthConnectionStore: EtsyOAuthConnectionStore = {
             expiresAt: row.expiresAt,
             refreshToken: row.refreshToken,
             scopes: [...row.scopes],
-            tokenType: row.tokenType
+            tokenType: row.tokenType,
         };
     },
     async set(key, tokens) {
         await db.transaction(async (tx) => {
-            await tx.delete(etsyOAuthConnections).where(eq(etsyOAuthConnections.accountId, key.accountId));
+            await tx
+                .delete(etsyOAuthConnections)
+                .where(eq(etsyOAuthConnections.accountId, key.accountId));
 
             await tx.insert(etsyOAuthConnections).values({
                 accessToken: tokens.accessToken,
@@ -88,8 +96,8 @@ export const etsyOAuthConnectionStore: EtsyOAuthConnectionStore = {
                 scopes: tokens.scopes,
                 accountId: key.accountId,
                 tokenType: tokens.tokenType,
-                updatedAt: new Date()
+                updatedAt: new Date(),
             });
         });
-    }
+    },
 };

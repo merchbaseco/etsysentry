@@ -1,32 +1,41 @@
-import { useMemo, useState } from 'react';
-import * as DialogPrimitive from '@radix-ui/react-dialog';
+import {
+    Close,
+    Content,
+    Description,
+    Overlay,
+    Portal,
+    Root,
+    Title,
+    Trigger,
+} from '@radix-ui/react-dialog';
 import { ArrowDownUp, Cog, Key, Settings, Shield, XIcon } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { AdminSettingsPage } from '@/components/settings/admin-settings-page';
 import { CurrencySettingsPage } from '@/components/settings/currency-settings-page';
 import { EtsyApiSettingsPage } from '@/components/settings/etsy-api-settings-page';
 import { GeneralSettingsPage } from '@/components/settings/general-settings-page';
-import { type SettingsPage } from '@/components/settings/shared';
+import type { SettingsPage } from '@/components/settings/shared';
 import { useSettingsModalState } from '@/components/settings/use-settings-modal-state';
 import { Button } from '@/components/ui/button';
 import type { EtsyOAuthConnectionState } from '@/hooks/use-etsy-oauth-connection';
 import type { RealtimeWebsocketState } from '@/hooks/use-realtime-query-invalidations';
 import { cn } from '@/lib/utils';
 
-type SettingsModalProps = {
+interface SettingsModalProps {
     connection: EtsyOAuthConnectionState;
     realtime: RealtimeWebsocketState;
-};
+}
 
-type NavItem = {
+interface NavItem {
     icon: typeof Settings;
     id: SettingsPage;
     label: string;
-};
+}
 
 const baseNavItems: NavItem[] = [
     { id: 'general', label: 'General', icon: Cog },
     { id: 'etsy-api', label: 'Etsy API', icon: Key },
-    { id: 'currency', label: 'Currency', icon: ArrowDownUp }
+    { id: 'currency', label: 'Currency', icon: ArrowDownUp },
 ];
 
 const adminNavItem: NavItem = { id: 'admin', label: 'Admin', icon: Shield };
@@ -49,11 +58,11 @@ export const SettingsModal = ({ connection, realtime }: SettingsModalProps) => {
         isLoadingApiUsage,
         isLoadingCurrencyStatus,
         isRefreshingCurrencyRates,
-        loadApiUsage
+        loadApiUsage,
     } = useSettingsModalState({
         activePage,
         open,
-        setActivePage
+        setActivePage,
     });
 
     const navItems = useMemo(() => {
@@ -65,55 +74,53 @@ export const SettingsModal = ({ connection, realtime }: SettingsModalProps) => {
     }, [hasAdminAccess]);
 
     return (
-        <DialogPrimitive.Root open={open} onOpenChange={setOpen}>
-            <DialogPrimitive.Trigger asChild>
-                <Button variant="ghost" size="icon-sm" className="size-6">
+        <Root onOpenChange={setOpen} open={open}>
+            <Trigger asChild>
+                <Button className="size-6" size="icon-sm" variant="ghost">
                     <Settings className="size-3.5" />
                     <span className="sr-only">Settings</span>
                 </Button>
-            </DialogPrimitive.Trigger>
+            </Trigger>
 
-            <DialogPrimitive.Portal>
-                <DialogPrimitive.Overlay
+            <Portal>
+                <Overlay
                     className={cn(
                         'fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px]',
-                        'data-[state=open]:animate-in data-[state=closed]:animate-out',
+                        'data-[state=closed]:animate-out data-[state=open]:animate-in',
                         'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0'
                     )}
                 />
-                <DialogPrimitive.Content
+                <Content
                     className={cn(
                         'fixed top-[50%] left-[50%] z-50',
                         'translate-x-[-50%] translate-y-[-50%]',
                         'h-[600px] max-h-[85vh] w-[860px] max-w-[90vw]',
                         'flex flex-col overflow-hidden rounded border border-border',
                         'bg-card',
-                        'data-[state=open]:animate-in data-[state=closed]:animate-out',
+                        'data-[state=closed]:animate-out data-[state=open]:animate-in',
                         'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
                         'data-[state=closed]:zoom-out-[0.98]',
                         'data-[state=open]:zoom-in-[0.98]',
                         'duration-200'
                     )}
                 >
-                    <DialogPrimitive.Title className="sr-only">
-                        Settings
-                    </DialogPrimitive.Title>
-                    <DialogPrimitive.Description className="sr-only">
+                    <Title className="sr-only">Settings</Title>
+                    <Description className="sr-only">
                         Application settings and configuration
-                    </DialogPrimitive.Description>
+                    </Description>
 
                     <div className="flex min-h-0 flex-1">
                         <nav
                             className={cn(
                                 'flex w-[160px] shrink-0 flex-col',
-                                'border-r border-border bg-background'
+                                'border-border border-r bg-background'
                             )}
                         >
                             <div className="px-3 py-2.5">
                                 <span
                                     className={cn(
-                                        'text-[11px] font-semibold uppercase',
-                                        'tracking-widest text-terminal-dim'
+                                        'font-semibold text-[11px] uppercase',
+                                        'text-terminal-dim tracking-widest'
                                     )}
                                 >
                                     Settings
@@ -127,9 +134,6 @@ export const SettingsModal = ({ connection, realtime }: SettingsModalProps) => {
 
                                     return (
                                         <button
-                                            key={item.id}
-                                            type="button"
-                                            onClick={() => setActivePage(item.id)}
                                             className={cn(
                                                 'flex w-full cursor-pointer items-center',
                                                 'gap-2 rounded px-2.5 py-1.5',
@@ -137,8 +141,11 @@ export const SettingsModal = ({ connection, realtime }: SettingsModalProps) => {
                                                 isActive
                                                     ? 'bg-secondary font-medium text-foreground'
                                                     : 'text-muted-foreground hover:bg-secondary/50',
-                                                !isActive ? 'hover:text-foreground' : ''
+                                                isActive ? '' : 'hover:text-foreground'
                                             )}
+                                            key={item.id}
+                                            onClick={() => setActivePage(item.id)}
+                                            type="button"
                                         >
                                             <Icon className="size-4" />
                                             <span>{item.label}</span>
@@ -147,7 +154,7 @@ export const SettingsModal = ({ connection, realtime }: SettingsModalProps) => {
                                 })}
                             </div>
 
-                            <div className="mt-auto border-t border-border px-3 py-2">
+                            <div className="mt-auto border-border border-t px-3 py-2">
                                 <span className="text-[10px] text-terminal-dim">
                                     EtsySentry v0.1.0
                                 </span>
@@ -156,11 +163,10 @@ export const SettingsModal = ({ connection, realtime }: SettingsModalProps) => {
 
                         <div className="min-h-0 flex-1 overflow-y-auto">
                             <div className="flex items-center justify-between px-4 py-2.5">
-                                <h2 className="text-base font-semibold text-foreground">
-                                    {navItems.find((n) => n.id === activePage)?.label ??
-                                        'Settings'}
+                                <h2 className="font-semibold text-base text-foreground">
+                                    {navItems.find((n) => n.id === activePage)?.label ?? 'Settings'}
                                 </h2>
-                                <DialogPrimitive.Close
+                                <Close
                                     className={cn(
                                         'flex size-6 cursor-pointer items-center',
                                         'justify-center rounded text-muted-foreground',
@@ -170,15 +176,12 @@ export const SettingsModal = ({ connection, realtime }: SettingsModalProps) => {
                                 >
                                     <XIcon className="size-4" />
                                     <span className="sr-only">Close</span>
-                                </DialogPrimitive.Close>
+                                </Close>
                             </div>
 
                             {activePage === 'general' ? <GeneralSettingsPage /> : null}
                             {activePage === 'etsy-api' ? (
-                                <EtsyApiSettingsPage
-                                    connection={connection}
-                                    realtime={realtime}
-                                />
+                                <EtsyApiSettingsPage connection={connection} realtime={realtime} />
                             ) : null}
                             {activePage === 'currency' ? (
                                 <CurrencySettingsPage
@@ -203,8 +206,8 @@ export const SettingsModal = ({ connection, realtime }: SettingsModalProps) => {
                             ) : null}
                         </div>
                     </div>
-                </DialogPrimitive.Content>
-            </DialogPrimitive.Portal>
-        </DialogPrimitive.Root>
+                </Content>
+            </Portal>
+        </Root>
     );
 };

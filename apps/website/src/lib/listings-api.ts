@@ -1,9 +1,6 @@
 import { queryClient, trpc, trpcClient } from './trpc-client';
-import {
-    type InferProcedureInput,
-    type InferProcedureOutput
-} from './trpc-inference';
 import { toTrpcRequestError } from './trpc-http';
+import type { InferProcedureInput, InferProcedureOutput } from './trpc-inference';
 
 export type ListTrackedListingsInput = InferProcedureInput<
     typeof trpcClient.app.listings.list.query

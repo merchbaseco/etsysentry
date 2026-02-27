@@ -10,7 +10,7 @@ const listingTypeSchema = z.enum(['physical', 'download', 'both']);
 const moneySchema = z.object({
     amount: z.coerce.number().int(),
     currency_code: z.string().min(1),
-    divisor: z.coerce.number().int().positive()
+    divisor: z.coerce.number().int().positive(),
 });
 
 const listingSchema = z
@@ -22,14 +22,14 @@ const listingSchema = z
         price: moneySchema.nullable().optional(),
         shop_id: z.coerce.number().int().positive().nullable().optional(),
         title: z.string().min(1),
-        url: z.string().nullable().optional()
+        url: z.string().nullable().optional(),
     })
     .passthrough();
 
 const responseSchema = z
     .object({
         count: z.coerce.number().int().nonnegative(),
-        results: z.array(listingSchema)
+        results: z.array(listingSchema),
     })
     .passthrough();
 
@@ -44,14 +44,14 @@ const inputSchema = z.object({
     shopLocation: z.string().min(1).optional(),
     sortOn: sortOnSchema.optional(),
     sortOrder: sortOrderSchema.optional(),
-    taxonomyId: z.coerce.number().int().positive().optional()
+    taxonomyId: z.coerce.number().int().positive().optional(),
 });
 
 const etsyErrorSchema = z
     .object({
         error: z.string().optional(),
         error_description: z.string().optional(),
-        message: z.string().optional()
+        message: z.string().optional(),
     })
     .passthrough();
 
@@ -59,7 +59,7 @@ export type EtsyFindAllListingsActiveSortOn = z.infer<typeof sortOnSchema>;
 export type EtsyFindAllListingsActiveSortOrder = z.infer<typeof sortOrderSchema>;
 export type EtsyFindAllListingsActiveListingType = z.infer<typeof listingTypeSchema>;
 
-export type FindAllListingsActiveBridgeInput = {
+export interface FindAllListingsActiveBridgeInput {
     accessToken: string;
     keywords?: string;
     legacy?: boolean;
@@ -71,9 +71,9 @@ export type FindAllListingsActiveBridgeInput = {
     sortOn?: EtsyFindAllListingsActiveSortOn;
     sortOrder?: EtsyFindAllListingsActiveSortOrder;
     taxonomyId?: number;
-};
+}
 
-export type FindAllListingsActiveBridgeResponse = {
+export interface FindAllListingsActiveBridgeResponse {
     count: number;
     results: Array<{
         listingId: string;
@@ -88,7 +88,7 @@ export type FindAllListingsActiveBridgeResponse = {
         title: string;
         url: string | null;
     }>;
-};
+}
 
 export class EtsyFindAllListingsActiveBridgeError extends Error {
     readonly responseBody: string;
@@ -201,7 +201,9 @@ const extractThumbnailUrl = (listing: z.infer<typeof listingSchema>): string | n
     return extractThumbnailUrlFromImage(listing.images[0]);
 };
 
-const toResponse = (parsed: z.infer<typeof responseSchema>): FindAllListingsActiveBridgeResponse => {
+const toResponse = (
+    parsed: z.infer<typeof responseSchema>
+): FindAllListingsActiveBridgeResponse => {
     return {
         count: parsed.count,
         results: parsed.results.map((item) => ({
@@ -211,14 +213,15 @@ const toResponse = (parsed: z.infer<typeof responseSchema>): FindAllListingsActi
                 ? {
                       amount: item.price.amount,
                       currencyCode: item.price.currency_code,
-                      divisor: item.price.divisor
+                      divisor: item.price.divisor,
                   }
                 : null,
-            shopId: item.shop_id === null || item.shop_id === undefined ? null : String(item.shop_id),
+            shopId:
+                item.shop_id === null || item.shop_id === undefined ? null : String(item.shop_id),
             thumbnailUrl: extractThumbnailUrl(item),
             title: item.title,
-            url: item.url ?? null
-        }))
+            url: item.url ?? null,
+        })),
     };
 };
 
@@ -240,11 +243,11 @@ export const findAllListingsActive = async (
             headers: {
                 Accept: 'application/json',
                 Authorization: `Bearer ${parsedInput.data.accessToken}`,
-                'x-api-key': getEtsyApiKeyHeaderValue()
+                'x-api-key': getEtsyApiKeyHeaderValue(),
             },
-            method: 'GET'
+            method: 'GET',
         },
-        url: buildEndpoint(parsedInput.data)
+        url: buildEndpoint(parsedInput.data),
     });
 
     const rawBody = await response.text();
