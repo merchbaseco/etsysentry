@@ -61,7 +61,7 @@ export const GeneralSettingsPage = () => {
 
             <div className={dataRowClassName}>
                 <span className="text-[11px] text-muted-foreground">Version</span>
-                <span className="font-medium text-[11px] text-foreground">0.1.0</span>
+                <span className="font-medium text-[11px] text-foreground">0.1.1</span>
             </div>
         </div>
     );

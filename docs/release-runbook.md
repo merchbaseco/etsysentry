@@ -47,6 +47,13 @@ Compatibility posture:
 
 Pick a target version (example: `0.1.1`).
 
+Before writing the release entry, derive changelog scope from git history:
+
+- Find the previous release commit (example: `git log --oneline --grep "release: v"`).
+- Build the commit range from previous release to current `HEAD` (example: `prev_release..HEAD`).
+- Summarize all user-visible changes in that range into the new changelog entry.
+- Exclude internal-only changes with no user-visible impact.
+
 Update:
 
 - `CHANGELOG.md` with `## v0.1.1 - YYYY-MM-DD`

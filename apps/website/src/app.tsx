@@ -146,7 +146,7 @@ function DashboardShell() {
                 )}
             >
                 <div className="flex items-center gap-1.5">
-                    <span className="uppercase tracking-wider">EtsySentry v0.1.0</span>
+                    <span className="uppercase tracking-wider">EtsySentry v0.1.1</span>
                     <span className="text-border">|</span>
                     <DashboardJobsSummary />
                 </div>

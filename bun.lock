@@ -32,7 +32,7 @@
     },
     "apps/website": {
       "name": "@etsysentry/website",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "dependencies": {
         "@clerk/clerk-react": "^5.61.1",
         "@hookform/resolvers": "^3.9.1",
@@ -105,7 +105,7 @@
     },
     "packages/cli": {
       "name": "@etsysentry/cli",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "bin": {
         "es": "dist/index.js",
         "etsysentry": "dist/index.js",
@@ -121,7 +121,7 @@
     },
     "packages/http-client": {
       "name": "@etsysentry/http-client",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "dependencies": {
         "@tanstack/react-query": "^5.90.21",
         "@trpc/client": "^11.10.0",

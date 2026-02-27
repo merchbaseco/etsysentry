@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+## v0.1.1 - 2026-02-27
+
+### Added
+
+- CLI `list` commands now support `--limit` and `--offset` pagination controls.
+- Dashboard settings now provide single-key API key management with validation-focused UX.
+
+### Changed
+
+- CLI now defaults to the hosted EtsySentry API base URL for first-run configuration.
+- Server database query logging is disabled by default to reduce operational log noise.
+
 ## v0.1.0 - 2026-02-27
 
 ### Added
