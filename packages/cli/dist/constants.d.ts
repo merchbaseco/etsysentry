@@ -1,0 +1,11 @@
+export declare const CONFIG_DIR: string;
+export declare const CONFIG_PATH: string;
+export declare const RANGE_VALUES: readonly ["7d", "30d", "90d"];
+export declare const METRIC_VALUES: readonly ["views", "favorites", "quantity", "price"];
+export declare const PERFORMANCE_MODE_VALUES: readonly ["metrics", "table"];
+export declare const TRACKING_STATE_VALUES: readonly ["active", "paused", "error"];
+export declare const LISTING_TRACKING_STATE_VALUES: readonly ["active", "paused", "error", "fatal"];
+export declare const SYNC_STATE_VALUES: readonly ["idle", "queued", "syncing"];
+export declare const RANGE_ABSOLUTE_REGEX: RegExp;
+export declare const TRAILING_SLASHES_REGEX: RegExp;
+export declare const DEFAULT_PRETTY_JSON = true;
