@@ -29,3 +29,8 @@ const tracked = await client.trpcClient.public.listings.track.mutate({
   - `keywords.list`, `keywords.track`
   - `listings.list`, `listings.track`, `listings.getPerformance`
   - `shops.list`, `shops.track`
+
+## Release
+
+- Spec: `docs/http-client-spec.md`
+- Canonical runbook: `docs/release-runbook.md`

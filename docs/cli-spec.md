@@ -4,6 +4,8 @@
 
 This spec defines the CLI contract to build now for EtsySentry.
 
+Canonical release process: `docs/release-runbook.md`.
+
 Goals:
 - match implemented EtsySentry behavior as of February 24, 2026
 - keep CLI and public API aligned (`api.public.*`)
@@ -344,6 +346,45 @@ es listings performance 0fdd5a64-24f5-4e75-9326-63c201f7f489 --range 2026-01-01.
 
 es shops list --tracking-state active
 ```
+
+## Build + Publish
+
+```bash
+bun run cli:build
+```
+
+```bash
+cd packages/cli
+set -a
+source ../../.env
+set +a
+npm whoami --userconfig ../../.npmrc
+npm publish --access public --userconfig ../../.npmrc
+```
+
+## Release Checklist
+
+1. Bump `packages/cli/package.json` `version` to match target `vX.Y.Z` in `CHANGELOG.md`.
+2. Bump `@etsysentry/http-client` dependency in `packages/cli/package.json` to `^X.Y.Z`.
+3. Run `bun install` from repo root so `bun.lock` stays in sync.
+4. Run `bun run cli:build` from repo root.
+5. Publish from `packages/cli` using the commands above.
+6. Verify package access status:
+
+```bash
+cd packages/cli
+set -a
+source ../../.env
+set +a
+npm access get status @etsysentry/cli --userconfig ../../.npmrc
+```
+
+## Troubleshooting
+
+- `401 Unauthorized` / token errors:
+  Ensure repo-root `.env` is loaded before publish so `NPM_TOKEN` is available to `.npmrc`.
+- `403 You cannot publish over the previously published versions`:
+  Bump patch/minor version and publish again.
 
 ## Deferred (Post Initial CLI Build)
 

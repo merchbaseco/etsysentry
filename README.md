@@ -18,6 +18,7 @@ EtsySentry tracks three primitives over time:
 ## Packages
 
 - `packages/http-client` - typed tRPC client for public API and CLI workflows
+- `packages/cli` - publishable CLI package (`@etsysentry/cli`)
 
 ## API Design
 
@@ -38,7 +39,9 @@ EtsySentry tracks three primitives over time:
 - `docs/architecture.md` - system architecture and module boundaries
 - `docs/etsy-openapi-bridges.md` - Etsy OpenAPI bridge implementation rules
 - `docs/cli-spec.md` - canonical CLI command shape and behavior
+- `docs/http-client-spec.md` - typed npm client release and versioning contract
 - `docs/api-spec.md` - canonical `api.public.*` contract shared by CLI and HTTP client
+- `docs/release-runbook.md` - canonical changelog/version bump/npm publish workflow
 - `docs/log-view.md` - rich event log UX and storage specification
 - `apps/server/README.md` - server-specific runbook
 

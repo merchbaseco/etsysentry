@@ -17,8 +17,11 @@
     "build": "rm -rf dist && tsc -p tsconfig.json",
     "test": "bun test"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
-    "@etsysentry/http-client": "workspace:*",
+    "@etsysentry/http-client": "^0.1.0",
     "@trpc/client": "^11.10.0"
   },
   "devDependencies": {
