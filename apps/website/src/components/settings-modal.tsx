@@ -11,6 +11,7 @@ import {
 import { ArrowDownUp, Cog, Key, Settings, Shield, XIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { AdminSettingsPage } from '@/components/settings/admin-settings-page';
+import { ApiKeysSettingsPage } from '@/components/settings/api-keys-settings-page';
 import { CurrencySettingsPage } from '@/components/settings/currency-settings-page';
 import { EtsyApiSettingsPage } from '@/components/settings/etsy-api-settings-page';
 import { GeneralSettingsPage } from '@/components/settings/general-settings-page';
@@ -18,12 +19,10 @@ import type { SettingsPage } from '@/components/settings/shared';
 import { useSettingsModalState } from '@/components/settings/use-settings-modal-state';
 import { Button } from '@/components/ui/button';
 import type { EtsyOAuthConnectionState } from '@/hooks/use-etsy-oauth-connection';
-import type { RealtimeWebsocketState } from '@/hooks/use-realtime-query-invalidations';
 import { cn } from '@/lib/utils';
 
 interface SettingsModalProps {
     connection: EtsyOAuthConnectionState;
-    realtime: RealtimeWebsocketState;
 }
 
 interface NavItem {
@@ -35,18 +34,21 @@ interface NavItem {
 const baseNavItems: NavItem[] = [
     { id: 'general', label: 'General', icon: Cog },
     { id: 'etsy-api', label: 'Etsy API', icon: Key },
+    { id: 'api-keys', label: 'API Keys', icon: Key },
     { id: 'currency', label: 'Currency', icon: ArrowDownUp },
 ];
 
 const adminNavItem: NavItem = { id: 'admin', label: 'Admin', icon: Shield };
 
-export const SettingsModal = ({ connection, realtime }: SettingsModalProps) => {
+export const SettingsModal = ({ connection }: SettingsModalProps) => {
     const [open, setOpen] = useState(false);
     const [activePage, setActivePage] = useState<SettingsPage>('general');
 
     const {
+        activeApiKey,
         adminErrorMessage,
         adminEnqueueMessage,
+        apiKeyErrorMessage,
         apiUsage,
         apiUsageErrorMessage,
         currencyErrorMessage,
@@ -55,14 +57,19 @@ export const SettingsModal = ({ connection, realtime }: SettingsModalProps) => {
         handleRefreshCurrencyRates,
         hasAdminAccess,
         isEnqueuingListingResync,
+        isLoadingApiKey,
         isLoadingApiUsage,
         isLoadingCurrencyStatus,
         isLoadingListingRefreshPolicy,
         isRefreshingCurrencyRates,
+        isRotatingApiKey,
         listingRefreshPolicy,
         listingRefreshPolicyErrorMessage,
+        loadApiKey,
         loadListingRefreshPolicy,
         loadApiUsage,
+        rawApiKey,
+        rotateApiKey,
     } = useSettingsModalState({
         activePage,
         open,
@@ -192,6 +199,21 @@ export const SettingsModal = ({ connection, realtime }: SettingsModalProps) => {
                                     }
                                     onRefreshApiUsage={loadApiUsage}
                                     onRefreshListingRefreshPolicy={loadListingRefreshPolicy}
+                                />
+                            ) : null}
+                            {activePage === 'api-keys' ? (
+                                <ApiKeysSettingsPage
+                                    activeApiKey={activeApiKey}
+                                    apiUsage={apiUsage}
+                                    errorMessage={apiKeyErrorMessage}
+                                    hasAdminAccess={hasAdminAccess}
+                                    isLoadingApiKey={isLoadingApiKey}
+                                    isLoadingApiUsage={isLoadingApiUsage}
+                                    isRotatingApiKey={isRotatingApiKey}
+                                    onRefreshApiKey={loadApiKey}
+                                    onRefreshApiUsage={loadApiUsage}
+                                    onRotateApiKey={rotateApiKey}
+                                    rawApiKey={rawApiKey}
                                 />
                             ) : null}
                             {activePage === 'currency' ? (
