@@ -167,6 +167,7 @@ Current app surface:
   - immediate enqueue when a shop is tracked or manually refreshed
   - daily scheduled dispatch for due tracked shops
 - Listing monitors are auto-synced by `pg-boss` workers:
+  - `sync-listing` worker uses local concurrency `5` per server process
   - daily scheduled dispatch for due tracked listings (`trackingState != paused`)
 - USD conversion rates are auto-synced by `pg-boss` workers every 24 hours.
 - Etsy bridge HTTP calls are protected by in-process rate limiting with dynamic header sync:

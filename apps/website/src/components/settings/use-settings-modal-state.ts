@@ -6,10 +6,7 @@ import {
     getEtsyApiUsage,
 } from '@/lib/admin-api';
 import { type CurrencyStatus, getCurrencyStatus, refreshCurrencyRates } from '@/lib/currency-api';
-import {
-    getListingRefreshPolicy,
-    type GetListingRefreshPolicyOutput,
-} from '@/lib/listings-api';
+import { type GetListingRefreshPolicyOutput, getListingRefreshPolicy } from '@/lib/listings-api';
 import { toTrpcRequestError } from '@/lib/trpc-http';
 import {
     formatCurrencyErrorMessage,
@@ -44,7 +41,7 @@ interface UseSettingsModalStateOutput {
     listingRefreshPolicyErrorMessage: string | null;
     loadApiUsage: () => Promise<void>;
     loadListingRefreshPolicy: () => Promise<void>;
-};
+}
 
 export const useSettingsModalState = ({
     activePage,
@@ -58,8 +55,9 @@ export const useSettingsModalState = ({
     const [listingRefreshPolicy, setListingRefreshPolicy] =
         useState<GetListingRefreshPolicyOutput | null>(null);
     const [isLoadingListingRefreshPolicy, setIsLoadingListingRefreshPolicy] = useState(false);
-    const [listingRefreshPolicyErrorMessage, setListingRefreshPolicyErrorMessage] =
-        useState<string | null>(null);
+    const [listingRefreshPolicyErrorMessage, setListingRefreshPolicyErrorMessage] = useState<
+        string | null
+    >(null);
 
     const [isAdmin, setIsAdmin] = useState(false);
     const [isLoadingAdminStatus, setIsLoadingAdminStatus] = useState(false);
@@ -200,7 +198,7 @@ export const useSettingsModalState = ({
     }, [loadAdminPrivileges, open]);
 
     useEffect(() => {
-        if (!open || activePage !== 'admin' || !hasAdminAccess) {
+        if (!open || activePage !== 'etsy-api' || !hasAdminAccess) {
             return;
         }
 
@@ -254,6 +252,6 @@ export const useSettingsModalState = ({
         listingRefreshPolicy,
         listingRefreshPolicyErrorMessage,
         loadListingRefreshPolicy,
-        loadApiUsage
+        loadApiUsage,
     };
 };

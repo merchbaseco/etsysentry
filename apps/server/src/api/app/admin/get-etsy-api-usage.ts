@@ -10,6 +10,7 @@ export const adminGetEtsyApiUsageProcedure = adminProcedure
         });
 
         return {
+            fetchedAt: new Date().toISOString(),
             rateLimit: usage.rateLimit,
             stats: {
                 callsPast5Minutes: usage.stats.callsPast5Minutes,

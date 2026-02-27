@@ -62,7 +62,7 @@ export const SettingsModal = ({ connection, realtime }: SettingsModalProps) => {
         listingRefreshPolicy,
         listingRefreshPolicyErrorMessage,
         loadListingRefreshPolicy,
-        loadApiUsage
+        loadApiUsage,
     } = useSettingsModalState({
         activePage,
         open,
@@ -186,14 +186,18 @@ export const SettingsModal = ({ connection, realtime }: SettingsModalProps) => {
                             {activePage === 'general' ? <GeneralSettingsPage /> : null}
                             {activePage === 'etsy-api' ? (
                                 <EtsyApiSettingsPage
+                                    apiUsage={apiUsage}
+                                    apiUsageErrorMessage={apiUsageErrorMessage}
                                     connection={connection}
+                                    hasAdminAccess={hasAdminAccess}
+                                    isLoadingApiUsage={isLoadingApiUsage}
                                     isLoadingListingRefreshPolicy={isLoadingListingRefreshPolicy}
                                     listingRefreshPolicy={listingRefreshPolicy}
                                     listingRefreshPolicyErrorMessage={
                                         listingRefreshPolicyErrorMessage
                                     }
+                                    onRefreshApiUsage={loadApiUsage}
                                     onRefreshListingRefreshPolicy={loadListingRefreshPolicy}
-                                    realtime={realtime}
                                 />
                             ) : null}
                             {activePage === 'currency' ? (
@@ -207,14 +211,10 @@ export const SettingsModal = ({ connection, realtime }: SettingsModalProps) => {
                             ) : null}
                             {activePage === 'admin' && hasAdminAccess ? (
                                 <AdminSettingsPage
-                                    apiUsage={apiUsage}
-                                    apiUsageErrorMessage={apiUsageErrorMessage}
                                     enqueueErrorMessage={adminErrorMessage}
                                     enqueueMessage={adminEnqueueMessage}
                                     isEnqueuingListingResync={isEnqueuingListingResync}
-                                    isLoadingApiUsage={isLoadingApiUsage}
                                     onEnqueueListingResync={handleEnqueueListingResync}
-                                    onRefreshApiUsage={loadApiUsage}
                                 />
                             ) : null}
                         </div>

@@ -8,13 +8,13 @@ import {
 } from '../../jobs/sync-listing-shared';
 import {
     computeListingRefreshStaleBefore,
-    resolveListingRefreshCadenceTierFromSnapshots
+    resolveListingRefreshCadenceTierFromSnapshots,
 } from './listing-refresh-cadence';
 
 export const computeListingStaleBefore = (now: Date): Date => {
     return computeListingRefreshStaleBefore({
         cadenceTier: '1d',
-        now
+        now,
     });
 };
 
@@ -31,7 +31,7 @@ export const findStaleListings = async (params?: {
     const now = params?.now ?? new Date();
     const staleBeforeDaily = computeListingRefreshStaleBefore({
         cadenceTier: '1d',
-        now
+        now,
     });
 
     const candidateRows = await db
@@ -40,7 +40,7 @@ export const findStaleListings = async (params?: {
             clerkUserId: trackedListings.trackerClerkUserId,
             etsyListingId: trackedListings.etsyListingId,
             accountId: trackedListings.accountId,
-            lastRefreshedAt: trackedListings.lastRefreshedAt
+            lastRefreshedAt: trackedListings.lastRefreshedAt,
         })
         .from(trackedListings)
         .where(
@@ -67,7 +67,7 @@ export const findStaleListings = async (params?: {
             observedAt: listingMetricSnapshots.observedAt,
             views: listingMetricSnapshots.views,
             favorerCount: listingMetricSnapshots.favorerCount,
-            quantity: listingMetricSnapshots.quantity
+            quantity: listingMetricSnapshots.quantity,
         })
         .from(listingMetricSnapshots)
         .where(
@@ -99,7 +99,7 @@ export const findStaleListings = async (params?: {
             observedAt: snapshotRow.observedAt,
             favorerCount: snapshotRow.favorerCount,
             quantity: snapshotRow.quantity,
-            views: snapshotRow.views
+            views: snapshotRow.views,
         });
         recentSnapshotsByListingId.set(snapshotRow.listingId, currentRows);
     }
@@ -110,11 +110,11 @@ export const findStaleListings = async (params?: {
         const recentSnapshots = recentSnapshotsByListingId.get(row.trackedListingId) ?? [];
         const cadenceTier = resolveListingRefreshCadenceTierFromSnapshots({
             now,
-            snapshots: recentSnapshots
+            snapshots: recentSnapshots,
         });
         const staleBeforeForTier = computeListingRefreshStaleBefore({
             cadenceTier,
-            now
+            now,
         });
 
         if (row.lastRefreshedAt > staleBeforeForTier) {

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { env } from '../../config/env';
+import { getEtsyRateLimitRuntimeSnapshot } from './etsy-rate-limit-runtime';
 import { fetchEtsyApi, resetEtsyRateLimitStateForTests } from './fetch-etsy-api';
 
 describe('fetch-etsy-api', () => {
@@ -152,6 +153,46 @@ describe('fetch-etsy-api', () => {
 
         expect(requestTimes).toEqual([10_000, 11_000]);
         expect(sleepCalls).toEqual([1000]);
+    });
+
+    test('captures x-limit and x-remaining headers in runtime snapshot', async () => {
+        let nowMs = 50_000;
+
+        await fetchEtsyApi(
+            {
+                init: {
+                    method: 'GET',
+                },
+                url: 'https://example.com',
+            },
+            {
+                fetchImpl: async () => {
+                    return new Response('ok', {
+                        headers: {
+                            'x-limit-per-day': '100000',
+                            'x-limit-per-second': '150',
+                            'x-remaining-this-second': '149',
+                            'x-remaining-today': '97834',
+                        },
+                        status: 200,
+                    });
+                },
+                now: () => nowMs,
+                sleep: async (delayMs) => {
+                    nowMs += delayMs;
+                },
+            }
+        );
+
+        const snapshot = await getEtsyRateLimitRuntimeSnapshot({
+            nowMs,
+        });
+
+        expect(snapshot.perDayLimit).toBe(100_000);
+        expect(snapshot.perSecondLimit).toBe(150);
+        expect(snapshot.remainingThisSecond).toBe(149);
+        expect(snapshot.remainingToday).toBe(97_834);
+        expect(snapshot.headersObservedAt).toBe(new Date(nowMs).toISOString());
     });
 
     test('stops retrying after configured max retries', async () => {
