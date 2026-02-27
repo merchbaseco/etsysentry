@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { assertValidRange, normalizeBaseUrl } from './config.js';
+import { assertValidRange, normalizeBaseUrl, resolveBaseUrl } from './config.js';
+import type { CliFlags } from './types.js';
 
 describe('assertValidRange', () => {
     test('accepts supported relative ranges', () => {
@@ -20,5 +21,27 @@ describe('assertValidRange', () => {
 describe('normalizeBaseUrl', () => {
     test('removes trailing slashes', () => {
         expect(normalizeBaseUrl('http://localhost:8080///')).toBe('http://localhost:8080');
+    });
+});
+
+describe('resolveBaseUrl', () => {
+    test('falls back to hosted default when no override is set', () => {
+        const previousBaseUrl = process.env.ETSYSENTRY_API_BASE_URL;
+        process.env.ETSYSENTRY_API_BASE_URL = undefined;
+
+        const flags: CliFlags = {
+            help: false,
+            showDigital: false,
+        };
+
+        try {
+            expect(resolveBaseUrl({ config: {}, flags })).toBe('https://etsysentry.merchbase.co');
+        } finally {
+            if (previousBaseUrl === undefined) {
+                process.env.ETSYSENTRY_API_BASE_URL = undefined;
+            } else {
+                process.env.ETSYSENTRY_API_BASE_URL = previousBaseUrl;
+            }
+        }
     });
 });

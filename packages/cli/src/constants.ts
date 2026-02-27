@@ -3,6 +3,7 @@ import path from 'node:path';
 
 export const CONFIG_DIR = path.join(homedir(), '.etsysentry');
 export const CONFIG_PATH = path.join(CONFIG_DIR, 'config.json');
+export const DEFAULT_BASE_URL = 'https://etsysentry.merchbase.co';
 
 export const RANGE_VALUES = ['7d', '30d', '90d'] as const;
 export const METRIC_VALUES = ['views', 'favorites', 'quantity', 'price'] as const;
