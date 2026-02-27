@@ -54,6 +54,7 @@ This file is the always-on guide for AI coding assistants in EtsySentry.
 ## Knowledge Index
 
 - Product requirements: `docs/requirements.md`
+- Product refresh strategy: `docs/refresh-strategy.md`
 - System architecture: `docs/architecture.md`
 - API surface and contract details: `docs/api-spec.md`
 - Realtime architecture and message contracts: `docs/realtime.md`

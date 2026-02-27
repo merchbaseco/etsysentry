@@ -40,6 +40,10 @@ export type GetTrackedListingMetricHistoryOutput = InferProcedureOutput<
     typeof trpcClient.app.listings.getMetricHistory.query
 >;
 
+export type GetListingRefreshPolicyOutput = InferProcedureOutput<
+    typeof trpcClient.app.listings.getRefreshPolicy.query
+>;
+
 export const listTrackedListings = async (
     params: ListTrackedListingsInput = {}
 ): Promise<ListTrackedListingsOutput> => {
@@ -111,6 +115,14 @@ export const getTrackedListingMetricHistory = async (
         );
 
         return response;
+    } catch (error) {
+        throw toTrpcRequestError(error);
+    }
+};
+
+export const getListingRefreshPolicy = async (): Promise<GetListingRefreshPolicyOutput> => {
+    try {
+        return await trpcClient.app.listings.getRefreshPolicy.query({});
     } catch (error) {
         throw toTrpcRequestError(error);
     }
