@@ -4,7 +4,7 @@ import {
     getListingRefreshCadenceTier,
     isListingAutoRefreshEligible,
     resolveListingRefreshCadenceTierFromSnapshots,
-    toListingMomentumSignals
+    toListingMomentumSignals,
 } from './listing-refresh-cadence';
 
 describe('getListingRefreshCadenceTier', () => {
@@ -12,7 +12,7 @@ describe('getListingRefreshCadenceTier', () => {
         const tier = getListingRefreshCadenceTier({
             favorersDelta: 0,
             quantityDrop: 1,
-            viewsDelta: 0
+            viewsDelta: 0,
         });
 
         expect(tier).toBe('1d');
@@ -22,7 +22,7 @@ describe('getListingRefreshCadenceTier', () => {
         const tier = getListingRefreshCadenceTier({
             favorersDelta: 1,
             quantityDrop: 0,
-            viewsDelta: 0
+            viewsDelta: 0,
         });
 
         expect(tier).toBe('1d');
@@ -32,7 +32,7 @@ describe('getListingRefreshCadenceTier', () => {
         const tier = getListingRefreshCadenceTier({
             favorersDelta: 0,
             quantityDrop: 0,
-            viewsDelta: 5
+            viewsDelta: 5,
         });
 
         expect(tier).toBe('3d');
@@ -43,7 +43,7 @@ describe('computeListingRefreshStaleBefore', () => {
     test('computes a 24 hour stale threshold for daily cadence', () => {
         const staleBefore = computeListingRefreshStaleBefore({
             cadenceTier: '1d',
-            now: new Date('2026-02-27T12:34:56.000Z')
+            now: new Date('2026-02-27T12:34:56.000Z'),
         });
 
         expect(staleBefore.toISOString()).toBe('2026-02-26T12:34:56.000Z');
@@ -57,20 +57,20 @@ describe('toListingMomentumSignals', () => {
                 observedAt: new Date('2026-02-27T00:00:00.000Z'),
                 favorerCount: 10,
                 quantity: 8,
-                views: 150
+                views: 150,
             },
             previous: {
                 observedAt: new Date('2026-02-26T00:00:00.000Z'),
                 favorerCount: 7,
                 quantity: 12,
-                views: 100
-            }
+                views: 100,
+            },
         });
 
         expect(signals).toEqual({
             favorersDelta: 3,
             quantityDrop: 4,
-            viewsDelta: 50
+            viewsDelta: 50,
         });
     });
 });
@@ -79,7 +79,7 @@ describe('resolveListingRefreshCadenceTierFromSnapshots', () => {
     test('defaults to 1d when there is no snapshot baseline yet', () => {
         const tier = resolveListingRefreshCadenceTierFromSnapshots({
             now: new Date('2026-02-27T00:00:00.000Z'),
-            snapshots: []
+            snapshots: [],
         });
 
         expect(tier).toBe('1d');
@@ -93,15 +93,15 @@ describe('resolveListingRefreshCadenceTierFromSnapshots', () => {
                     observedAt: new Date('2026-02-24T00:00:00.000Z'),
                     favorerCount: 11,
                     quantity: 10,
-                    views: 100
+                    views: 100,
                 },
                 {
                     observedAt: new Date('2026-02-23T00:00:00.000Z'),
                     favorerCount: 10,
                     quantity: 10,
-                    views: 90
-                }
-            ]
+                    views: 90,
+                },
+            ],
         });
 
         expect(tier).toBe('1d');
@@ -115,21 +115,21 @@ describe('resolveListingRefreshCadenceTierFromSnapshots', () => {
                     observedAt: new Date('2026-02-21T00:00:00.000Z'),
                     favorerCount: 11,
                     quantity: 10,
-                    views: 100
+                    views: 100,
                 },
                 {
                     observedAt: new Date('2026-02-20T00:00:00.000Z'),
                     favorerCount: 11,
                     quantity: 10,
-                    views: 95
+                    views: 95,
                 },
                 {
                     observedAt: new Date('2026-02-19T00:00:00.000Z'),
                     favorerCount: 10,
                     quantity: 10,
-                    views: 80
-                }
-            ]
+                    views: 80,
+                },
+            ],
         });
 
         expect(tier).toBe('3d');
@@ -143,21 +143,21 @@ describe('resolveListingRefreshCadenceTierFromSnapshots', () => {
                     observedAt: new Date('2026-02-10T00:00:00.000Z'),
                     favorerCount: 12,
                     quantity: 10,
-                    views: 100
+                    views: 100,
                 },
                 {
                     observedAt: new Date('2026-02-09T00:00:00.000Z'),
                     favorerCount: 12,
                     quantity: 10,
-                    views: 90
+                    views: 90,
                 },
                 {
                     observedAt: new Date('2026-02-08T00:00:00.000Z'),
                     favorerCount: 11,
                     quantity: 10,
-                    views: 80
-                }
-            ]
+                    views: 80,
+                },
+            ],
         });
 
         expect(tier).toBe('7d');
@@ -169,7 +169,7 @@ describe('isListingAutoRefreshEligible', () => {
         expect(
             isListingAutoRefreshEligible({
                 isDigital: false,
-                trackingState: 'fatal'
+                trackingState: 'fatal',
             })
         ).toBe(false);
     });
@@ -178,7 +178,7 @@ describe('isListingAutoRefreshEligible', () => {
         expect(
             isListingAutoRefreshEligible({
                 isDigital: true,
-                trackingState: 'paused'
+                trackingState: 'paused',
             })
         ).toBe(true);
     });

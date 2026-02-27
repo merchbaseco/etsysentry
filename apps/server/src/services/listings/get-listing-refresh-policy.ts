@@ -3,44 +3,44 @@ import { db } from '../../db';
 import { listingMetricSnapshots, trackedListings } from '../../db/schema';
 import {
     LISTING_REFRESH_POLICY_LABEL_BY_TIER,
-    resolveListingRefreshCadenceTierFromSnapshots
+    resolveListingRefreshCadenceTierFromSnapshots,
 } from './listing-refresh-cadence';
 
 const listingRefreshPolicyBuckets = [
     {
         id: 'daily_signal',
-        bucket: 'Recent favorites/sales signal',
+        bucket: 'Active (favorites or purchases in last 5 days)',
         cadence: '1d',
-        policy: LISTING_REFRESH_POLICY_LABEL_BY_TIER['1d']
+        policy: LISTING_REFRESH_POLICY_LABEL_BY_TIER['1d'],
     },
     {
         id: 'cooldown_3d',
-        bucket: 'Cooling (no signal in last 5d)',
+        bucket: 'Cooling (no activity in 5 days)',
         cadence: '3d',
-        policy: LISTING_REFRESH_POLICY_LABEL_BY_TIER['3d']
+        policy: LISTING_REFRESH_POLICY_LABEL_BY_TIER['3d'],
     },
     {
         id: 'cooldown_7d',
-        bucket: 'Quiet (no signal in last 14d)',
+        bucket: 'Quiet (no activity in 14 days)',
         cadence: '7d',
-        policy: LISTING_REFRESH_POLICY_LABEL_BY_TIER['7d']
-    }
+        policy: LISTING_REFRESH_POLICY_LABEL_BY_TIER['7d'],
+    },
 ] as const;
 const MOMENTUM_SNAPSHOT_HISTORY_LIMIT = 8;
 
-export type ListingRefreshPolicyBucket = {
+export interface ListingRefreshPolicyBucket {
     bucket: string;
     bucketId: (typeof listingRefreshPolicyBuckets)[number]['id'];
     cadence: (typeof listingRefreshPolicyBuckets)[number]['cadence'];
     count: number;
     policy: string;
-};
+}
 
-export type ListingRefreshPolicySummary = {
+export interface ListingRefreshPolicySummary {
     autoEnqueueCount: number;
     buckets: ListingRefreshPolicyBucket[];
     queuedCount: number;
-};
+}
 
 export const getListingRefreshPolicySummary = async (params: {
     accountId: string;
@@ -52,24 +52,21 @@ export const getListingRefreshPolicySummary = async (params: {
         .select({
             queuedCount: sql<number>`
                 count(*) filter (where ${trackedListings.syncState} = 'queued')::int
-            `
+            `,
         })
         .from(trackedListings)
         .where(eq(trackedListings.accountId, params.accountId));
 
     const autoEligibleRows = await db
         .select({
-            listingId: trackedListings.listingId
+            listingId: trackedListings.listingId,
         })
         .from(trackedListings)
         .where(
             and(
                 eq(trackedListings.accountId, params.accountId),
                 ne(trackedListings.trackingState, 'fatal'),
-                or(
-                    eq(trackedListings.isDigital, true),
-                    ne(trackedListings.trackingState, 'paused')
-                )
+                or(eq(trackedListings.isDigital, true), ne(trackedListings.trackingState, 'paused'))
             )
         );
 
@@ -81,9 +78,9 @@ export const getListingRefreshPolicySummary = async (params: {
                 bucketId: bucket.id,
                 cadence: bucket.cadence,
                 count: 0,
-                policy: bucket.policy
+                policy: bucket.policy,
             })),
-            queuedCount: queuedRow?.queuedCount ?? 0
+            queuedCount: queuedRow?.queuedCount ?? 0,
         };
     }
 
@@ -95,7 +92,7 @@ export const getListingRefreshPolicySummary = async (params: {
             listingId: listingMetricSnapshots.listingId,
             observedAt: listingMetricSnapshots.observedAt,
             quantity: listingMetricSnapshots.quantity,
-            views: listingMetricSnapshots.views
+            views: listingMetricSnapshots.views,
         })
         .from(listingMetricSnapshots)
         .where(inArray(listingMetricSnapshots.listingId, autoEligibleListingIds))
@@ -122,7 +119,7 @@ export const getListingRefreshPolicySummary = async (params: {
             observedAt: snapshotRow.observedAt,
             favorerCount: snapshotRow.favorerCount,
             quantity: snapshotRow.quantity,
-            views: snapshotRow.views
+            views: snapshotRow.views,
         });
         recentSnapshotsByListingId.set(snapshotRow.listingId, currentRows);
     }
@@ -133,14 +130,14 @@ export const getListingRefreshPolicySummary = async (params: {
     > = {
         daily_signal: 0,
         cooldown_3d: 0,
-        cooldown_7d: 0
+        cooldown_7d: 0,
     };
 
     for (const row of autoEligibleRows) {
         const recentSnapshots = recentSnapshotsByListingId.get(row.listingId) ?? [];
         const cadenceTier = resolveListingRefreshCadenceTierFromSnapshots({
             now,
-            snapshots: recentSnapshots
+            snapshots: recentSnapshots,
         });
 
         if (cadenceTier === '1d') {
@@ -163,8 +160,8 @@ export const getListingRefreshPolicySummary = async (params: {
             bucketId: bucket.id,
             cadence: bucket.cadence,
             count: mutableBucketCountsById[bucket.id],
-            policy: bucket.policy
+            policy: bucket.policy,
         })),
-        queuedCount: queuedRow?.queuedCount ?? 0
+        queuedCount: queuedRow?.queuedCount ?? 0,
     };
 };

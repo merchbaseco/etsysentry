@@ -169,11 +169,15 @@ Output:
 
 ```ts
 {
+  fetchedAt: string; // ISO timestamp
   rateLimit: {
     blockedForMs: number;
     blockedUntil: string | null; // ISO timestamp
+    headersObservedAt: string | null; // ISO timestamp for latest x-limit/x-remaining header read
     perDayLimit: number;
     perSecondLimit: number;
+    remainingThisSecond: number | null;
+    remainingToday: number | null;
     requestsInCurrentSecond: number;
     secondWindowResetsInMs: number;
     secondWindowStartedAt: string | null; // ISO timestamp

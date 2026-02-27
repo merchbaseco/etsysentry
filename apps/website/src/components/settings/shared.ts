@@ -37,6 +37,36 @@ export const formatTimestamp = (value: string | null): string => {
     return parsed.toLocaleString();
 };
 
+export const formatElapsedSinceTimestamp = (value: string | null, nowMs: number): string => {
+    if (!value) {
+        return 'N/A';
+    }
+
+    const parsedMs = new Date(value).getTime();
+
+    if (Number.isNaN(parsedMs)) {
+        return 'N/A';
+    }
+
+    const elapsedSeconds = Math.max(0, Math.floor((nowMs - parsedMs) / 1000));
+
+    if (elapsedSeconds < 5) {
+        return 'just now';
+    }
+
+    if (elapsedSeconds < 60) {
+        return `${elapsedSeconds} sec ago`;
+    }
+
+    const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+
+    if (elapsedMinutes < 60) {
+        return `${elapsedMinutes} min ago`;
+    }
+
+    return `${Math.floor(elapsedMinutes / 60)} hr ago`;
+};
+
 export const formatDurationMs = (value: number): string => {
     if (value <= 0) {
         return '0 ms';

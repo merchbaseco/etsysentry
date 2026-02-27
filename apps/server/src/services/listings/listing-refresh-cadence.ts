@@ -1,4 +1,4 @@
-import { trackedListings } from '../../db/schema';
+import type { trackedListings } from '../../db/schema';
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 const THREE_DAYS_IN_MS = 3 * DAY_IN_MS;
@@ -13,32 +13,32 @@ export type ListingRefreshCadenceTier = (typeof listingRefreshCadenceTiers)[numb
 export const LISTING_REFRESH_INTERVAL_MS_BY_TIER = {
     '1d': DAY_IN_MS,
     '3d': THREE_DAYS_IN_MS,
-    '7d': SEVEN_DAYS_IN_MS
+    '7d': SEVEN_DAYS_IN_MS,
 } as const satisfies Record<ListingRefreshCadenceTier, number>;
 
 export const LISTING_REFRESH_POLICY_LABEL_BY_TIER = {
     '1d': 'Auto enqueue every 24h (recent favorites or sales)',
     '3d': 'Auto enqueue every 72h (quiet for 5+ days)',
-    '7d': 'Auto enqueue every 168h (quiet for 14+ days)'
+    '7d': 'Auto enqueue every 168h (quiet for 14+ days)',
 } as const satisfies Record<ListingRefreshCadenceTier, string>;
 
 export const listingMomentumThresholds = {
     dailyFavorersDelta: 1,
-    dailyQuantityDrop: 1
+    dailyQuantityDrop: 1,
 } as const;
 
-export type ListingMomentumSignals = {
+export interface ListingMomentumSignals {
     favorersDelta: number;
     quantityDrop: number;
     viewsDelta: number;
-};
+}
 
-export type ListingMomentumSnapshot = {
-    observedAt: Date;
+export interface ListingMomentumSnapshot {
     favorerCount: number | null;
+    observedAt: Date;
     quantity: number | null;
     views: number | null;
-};
+}
 
 export const getListingRefreshCadenceTier = (
     signals: ListingMomentumSignals
@@ -87,25 +87,31 @@ export const toListingMomentumSignals = (params: {
     const previousQuantity = params.previous?.quantity;
 
     const viewsDelta =
-        latestViews !== null && latestViews !== undefined &&
-        previousViews !== null && previousViews !== undefined
+        latestViews !== null &&
+        latestViews !== undefined &&
+        previousViews !== null &&
+        previousViews !== undefined
             ? Math.max(0, latestViews - previousViews)
             : 0;
     const favorersDelta =
-        latestFavorers !== null && latestFavorers !== undefined &&
-        previousFavorers !== null && previousFavorers !== undefined
+        latestFavorers !== null &&
+        latestFavorers !== undefined &&
+        previousFavorers !== null &&
+        previousFavorers !== undefined
             ? Math.max(0, latestFavorers - previousFavorers)
             : 0;
     const quantityDrop =
-        latestQuantity !== null && latestQuantity !== undefined &&
-        previousQuantity !== null && previousQuantity !== undefined
+        latestQuantity !== null &&
+        latestQuantity !== undefined &&
+        previousQuantity !== null &&
+        previousQuantity !== undefined
             ? Math.max(0, previousQuantity - latestQuantity)
             : 0;
 
     return {
         favorersDelta,
         quantityDrop,
-        viewsDelta
+        viewsDelta,
     };
 };
 
@@ -123,14 +129,14 @@ export const resolveListingRefreshCadenceTierFromSnapshots = (params: {
         const latest = params.snapshots[index];
         const previous = params.snapshots[index + 1];
 
-        if (!latest || !previous) {
+        if (!(latest && previous)) {
             continue;
         }
 
         const tierForPair = getListingRefreshCadenceTier(
             toListingMomentumSignals({
                 latest,
-                previous
+                previous,
             })
         );
 
@@ -142,9 +148,9 @@ export const resolveListingRefreshCadenceTierFromSnapshots = (params: {
 
     if (!latestSignalObservedAt) {
         const newest = params.snapshots[0]?.observedAt;
-        const oldest = params.snapshots[params.snapshots.length - 1]?.observedAt;
+        const oldest = params.snapshots.at(-1)?.observedAt;
 
-        if (!newest || !oldest) {
+        if (!(newest && oldest)) {
             return '1d';
         }
 

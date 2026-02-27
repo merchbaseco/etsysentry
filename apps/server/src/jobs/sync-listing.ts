@@ -9,14 +9,23 @@ import { markTrackedListingSyncFailureByEtsyListingId } from '../services/listin
 import { setTrackedListingsSyncStateByEtsyListingIds } from '../services/listings/set-tracked-listing-sync-state';
 import { syncTrackedListingFromEtsy } from '../services/listings/tracked-listings-service';
 import { defineJob } from './job-router';
-import { SYNC_LISTING_JOB_NAME, syncListingJobInputSchema } from './sync-listing-shared';
+import {
+    SYNC_LISTING_JOB_NAME,
+    SYNC_LISTING_WORKER_LOCAL_CONCURRENCY,
+    syncListingJobInputSchema,
+} from './sync-listing-shared';
 
 export const syncListingJob = defineJob(SYNC_LISTING_JOB_NAME, {
     persistSuccess: 'didWork',
     startupSummary: 'triggered by keyword discovery',
 })
     .input(syncListingJobInputSchema)
-    .work(async (job, _signal, log) => {
+    .workOptions({
+        localConcurrency: SYNC_LISTING_WORKER_LOCAL_CONCURRENCY,
+    })
+    .work(async (job, signal, log) => {
+        void signal;
+
         const [current] = await db
             .select({
                 trackingState: trackedListings.trackingState,
