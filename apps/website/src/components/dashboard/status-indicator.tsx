@@ -1,7 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
 import { Activity, ShoppingCart } from 'lucide-react';
+import { SummaryCount } from '@/components/dashboard/summary-count';
+import { useDashboardSummaryQuery } from '@/hooks/use-dashboard-summary-query';
 import type { EtsyOAuthConnectionState } from '@/hooks/use-etsy-oauth-connection';
-import { trpc } from '@/lib/trpc-client';
 import { cn } from '@/lib/utils';
 
 export const getConnectionLabel = (connection: EtsyOAuthConnectionState): string => {
@@ -86,18 +86,13 @@ export const formatExpirySummary = (expiresAt: string | null): string => {
     return parsed.toLocaleTimeString();
 };
 
-const dashboardSummaryQueryOptions = trpc.app.dashboard.getSummary.queryOptions({});
-
 export const StatusIndicator = ({ connection }: { connection: EtsyOAuthConnectionState }) => {
     const connectionLabel = getConnectionLabel(connection);
-    const { data: summary } = useQuery({
-        ...dashboardSummaryQueryOptions,
-        refetchInterval: 60_000,
-    });
+    const { data: summary, isPending } = useDashboardSummaryQuery();
 
-    const apiCallsPastHour = summary?.etsyApiCallsPastHour ?? '--';
-    const apiCallsPast24Hours = summary?.etsyApiCallsPast24Hours ?? '--';
-    const trackedListingsTotal = summary?.totalTrackedListings ?? '--';
+    const apiCallsPastHour = summary?.etsyApiCallsPastHour;
+    const apiCallsPast24Hours = summary?.etsyApiCallsPast24Hours;
+    const trackedListingsTotal = summary?.totalTrackedListings;
     const pingColor = getPingColorClass(connection);
 
     return (
@@ -131,10 +126,22 @@ export const StatusIndicator = ({ connection }: { connection: EtsyOAuthConnectio
                 <Activity className="size-2.5 text-terminal-dim" />
                 <span className="text-terminal-dim uppercase tracking-wider">syncs</span>
                 <span className="text-terminal-dim uppercase tracking-wider">1h</span>
-                <span className="text-foreground">{apiCallsPastHour}</span>
+                <SummaryCount
+                    isLoading={isPending}
+                    minWidthClassName="min-w-[3ch]"
+                    skeletonWidthClassName="w-[3ch]"
+                    value={apiCallsPastHour}
+                    valueClassName="text-foreground"
+                />
                 <span className="text-terminal-dim">/</span>
                 <span className="text-terminal-dim uppercase tracking-wider">24h</span>
-                <span className="text-foreground">{apiCallsPast24Hours}</span>
+                <SummaryCount
+                    isLoading={isPending}
+                    minWidthClassName="min-w-[5ch]"
+                    skeletonWidthClassName="w-[5ch]"
+                    value={apiCallsPast24Hours}
+                    valueClassName="text-foreground"
+                />
             </span>
 
             <span
@@ -144,7 +151,13 @@ export const StatusIndicator = ({ connection }: { connection: EtsyOAuthConnectio
                 )}
             >
                 <ShoppingCart className="size-2.5 text-terminal-dim" />
-                <span className="text-terminal-green">{trackedListingsTotal}</span>
+                <SummaryCount
+                    isLoading={isPending}
+                    minWidthClassName="min-w-[6ch]"
+                    skeletonWidthClassName="w-[6ch]"
+                    value={trackedListingsTotal}
+                    valueClassName="text-terminal-green"
+                />
                 <span className="text-terminal-dim uppercase tracking-wider">tracked products</span>
             </span>
         </div>
