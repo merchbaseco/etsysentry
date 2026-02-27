@@ -63,10 +63,6 @@ export const GeneralSettingsPage = () => {
                 <span className="text-[11px] text-muted-foreground">Version</span>
                 <span className="font-medium text-[11px] text-foreground">0.1.0</span>
             </div>
-            <div className={dataRowClassName}>
-                <span className="text-[11px] text-muted-foreground">Platform</span>
-                <span className="font-medium text-[11px] text-foreground">Etsy API v3</span>
-            </div>
         </div>
     );
 };

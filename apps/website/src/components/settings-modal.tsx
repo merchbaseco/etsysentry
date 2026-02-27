@@ -157,12 +157,6 @@ export const SettingsModal = ({ connection, realtime }: SettingsModalProps) => {
                                     );
                                 })}
                             </div>
-
-                            <div className="mt-auto border-border border-t px-3 py-2">
-                                <span className="text-[10px] text-terminal-dim">
-                                    EtsySentry v0.1.0
-                                </span>
-                            </div>
                         </nav>
 
                         <div className="min-h-0 flex-1 overflow-y-auto">
