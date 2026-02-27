@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { appRouter } from '../router';
 import type { TrpcContext } from '../../context';
+import { appRouter } from '../router';
 
 const createContext = (params: { email?: string; isAdmin: boolean }): TrpcContext => {
     return {
@@ -14,8 +14,8 @@ const createContext = (params: { email?: string; isAdmin: boolean }): TrpcContex
             email: params.email,
             issuer: 'https://clerk.example',
             orgId: null,
-            sub: 'user-1'
-        }
+            sub: 'user-1',
+        },
     };
 };
 
@@ -24,13 +24,13 @@ describe('admin get Etsy API usage procedure', () => {
         const caller = appRouter.createCaller(
             createContext({
                 email: 'user@example.com',
-                isAdmin: false
+                isAdmin: false,
             })
         );
 
         await expect(caller.admin.getEtsyApiUsage({})).rejects.toMatchObject({
             code: 'FORBIDDEN',
-            message: 'Admin access required.'
+            message: 'Admin access required.',
         });
     });
 });

@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
     disconnectEtsyAuth,
+    type EtsyAuthStatus,
     getEtsyAuthStatus,
     refreshEtsyAuth,
     startEtsyAuth,
-    type EtsyAuthStatus
 } from '@/lib/etsy-auth-api';
 import { TrpcRequestError } from '@/lib/trpc-http';
 
@@ -12,7 +12,7 @@ const disconnectedStatus: EtsyAuthStatus = {
     connected: false,
     expiresAt: null,
     needsRefresh: false,
-    scopes: []
+    scopes: [],
 };
 
 const wait = async (ms: number): Promise<void> => {
@@ -45,14 +45,14 @@ const buildPopupFeatures = (): string => {
         `left=${Math.floor(left)}`,
         `top=${Math.floor(top)}`,
         'resizable=yes',
-        'scrollbars=yes'
+        'scrollbars=yes',
     ].join(',');
 };
 
-export type EtsyOAuthConnectionState = {
+export interface EtsyOAuthConnectionState {
     checkStatus: () => Promise<void>;
-    connected: boolean;
     connect: () => Promise<void>;
+    connected: boolean;
     errorMessage: string | null;
     expiresAt: string | null;
     forgetSession: () => Promise<void>;
@@ -65,7 +65,7 @@ export type EtsyOAuthConnectionState = {
     refreshConnection: () => Promise<void>;
     scopes: string[];
     sessionLabel: string | null;
-};
+}
 
 export const useEtsyOAuthConnection = (): EtsyOAuthConnectionState => {
     const [status, setStatus] = useState<EtsyAuthStatus>(disconnectedStatus);
@@ -80,11 +80,7 @@ export const useEtsyOAuthConnection = (): EtsyOAuthConnectionState => {
     const popupCloseWatcherRef = useRef<number | null>(null);
 
     const fetchStatus = useCallback(
-        async (
-            options: {
-                silent?: boolean;
-            } = {}
-        ): Promise<EtsyAuthStatus | null> => {
+        async (options: { silent?: boolean } = {}): Promise<EtsyAuthStatus | null> => {
             if (!options.silent) {
                 setIsCheckingStatus(true);
             }
@@ -122,7 +118,7 @@ export const useEtsyOAuthConnection = (): EtsyOAuthConnectionState => {
 
     const pollForConnection = useCallback(async (): Promise<void> => {
         const timeoutMs = 90_000;
-        const intervalMs = 1_500;
+        const intervalMs = 1500;
         const deadline = Date.now() + timeoutMs;
 
         while (Date.now() < deadline) {
@@ -150,7 +146,7 @@ export const useEtsyOAuthConnection = (): EtsyOAuthConnectionState => {
             popupRef.current = null;
             stopPopupWatcher();
             setIsPendingConnection(false);
-            void fetchStatus({ silent: true });
+            fetchStatus({ silent: true });
         }, 500);
     }, [fetchStatus, stopPopupWatcher]);
 
@@ -167,7 +163,11 @@ export const useEtsyOAuthConnection = (): EtsyOAuthConnectionState => {
             setStatus(disconnectedStatus);
             setIsPendingConnection(true);
 
-            const popupWindow = window.open(flow.authorizationUrl, 'etsy-oauth', buildPopupFeatures());
+            const popupWindow = window.open(
+                flow.authorizationUrl,
+                'etsy-oauth',
+                buildPopupFeatures()
+            );
 
             if (!popupWindow) {
                 setErrorMessage('Popup was blocked. Continuing OAuth in this tab.');
@@ -178,7 +178,7 @@ export const useEtsyOAuthConnection = (): EtsyOAuthConnectionState => {
             popupRef.current = popupWindow;
             popupWindow.focus();
             startPopupWatcher();
-            void pollForConnection();
+            pollForConnection();
         } catch (connectError) {
             setErrorMessage(formatErrorMessage(connectError));
             setIsPendingConnection(false);
@@ -231,7 +231,7 @@ export const useEtsyOAuthConnection = (): EtsyOAuthConnectionState => {
     }, [stopPopupWatcher]);
 
     useEffect(() => {
-        void fetchStatus();
+        fetchStatus();
     }, [fetchStatus]);
 
     useEffect(() => {
@@ -246,7 +246,7 @@ export const useEtsyOAuthConnection = (): EtsyOAuthConnectionState => {
                 return;
             }
 
-            void pollForConnection();
+            pollForConnection();
         };
 
         window.addEventListener('message', handleMessage);
@@ -279,6 +279,6 @@ export const useEtsyOAuthConnection = (): EtsyOAuthConnectionState => {
         needsRefresh: status.needsRefresh,
         refreshConnection,
         scopes: status.scopes,
-        sessionLabel: hasSession ? 'server-managed' : null
+        sessionLabel: hasSession ? 'server-managed' : null,
     };
 };

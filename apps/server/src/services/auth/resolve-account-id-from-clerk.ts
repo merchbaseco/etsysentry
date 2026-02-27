@@ -1,19 +1,19 @@
-import { and, desc, eq } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
+import { and, desc, eq } from 'drizzle-orm';
 import { db } from '../../db';
 import { accounts, clerkIdentities } from '../../db/schema';
 
-export type ResolveAccountIdFromClerkInput = {
+export interface ResolveAccountIdFromClerkInput {
     clerkIssuer: string;
     clerkOrgId: string | null;
     clerkSubject: string;
     email: string | null;
-};
+}
 
-type ResolvePreferredAccountIdInput = {
-    accountIdFromIdentity: string | null;
+interface ResolvePreferredAccountIdInput {
     accountIdFromEmail: string | null;
-};
+    accountIdFromIdentity: string | null;
+}
 
 const normalizeEmail = (email: string | null): string | null => {
     if (!email) {
@@ -72,16 +72,16 @@ const upsertIdentity = async (params: {
             createdAt: now,
             email: params.email,
             lastSeenAt: now,
-            updatedAt: now
+            updatedAt: now,
         })
         .onConflictDoUpdate({
             set: {
                 clerkOrgId: params.clerkOrgId,
                 email: params.email,
                 lastSeenAt: now,
-                updatedAt: now
+                updatedAt: now,
             },
-            target: [clerkIdentities.clerkIssuer, clerkIdentities.clerkSubject]
+            target: [clerkIdentities.clerkIssuer, clerkIdentities.clerkSubject],
         });
 };
 
@@ -95,12 +95,12 @@ export const resolveAccountIdFromClerk = async (
     const normalizedEmail = normalizeEmail(input.email);
     const accountIdFromIdentity = await findExistingByIdentity({
         clerkIssuer: input.clerkIssuer,
-        clerkSubject: input.clerkSubject
+        clerkSubject: input.clerkSubject,
     });
     const accountIdFromEmail = normalizedEmail ? await findExistingByEmail(normalizedEmail) : null;
     const linkedAccountId = resolvePreferredAccountId({
         accountIdFromEmail,
-        accountIdFromIdentity
+        accountIdFromIdentity,
     });
     const accountId = linkedAccountId ?? randomUUID();
 
@@ -110,7 +110,7 @@ export const resolveAccountIdFromClerk = async (
         await db.insert(accounts).values({
             createdAt: now,
             id: accountId,
-            updatedAt: now
+            updatedAt: now,
         });
     }
 
@@ -119,7 +119,7 @@ export const resolveAccountIdFromClerk = async (
         clerkIssuer: input.clerkIssuer,
         clerkOrgId: input.clerkOrgId,
         clerkSubject: input.clerkSubject,
-        email: normalizedEmail
+        email: normalizedEmail,
     });
 
     return accountId;

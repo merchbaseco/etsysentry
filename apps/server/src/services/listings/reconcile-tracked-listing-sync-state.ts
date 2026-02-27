@@ -1,5 +1,5 @@
-import type { PgBoss } from 'pg-boss';
 import { inArray } from 'drizzle-orm';
+import type { PgBoss } from 'pg-boss';
 import { db } from '../../db';
 import { trackedListings } from '../../db/schema';
 import { SYNC_LISTING_JOB_NAME, type SyncListingJobInput } from '../../jobs/sync-listing-shared';
@@ -34,12 +34,12 @@ const hasLiveSyncListingJob = (jobs: Array<{ state: SyncListingJobState }>): boo
     return jobs.some((job) => isLiveSyncListingJobState(job.state));
 };
 
-export type ReconcileTrackedListingSyncStateResult = {
+export interface ReconcileTrackedListingSyncStateResult {
     checkedCount: number;
     fixedCount: number;
     liveCount: number;
     summary: string;
-};
+}
 
 export const reconcileTrackedListingSyncState = async (params: {
     boss: Pick<PgBoss, 'findJobs'>;
@@ -48,7 +48,7 @@ export const reconcileTrackedListingSyncState = async (params: {
         .select({
             accountId: trackedListings.accountId,
             etsyListingId: trackedListings.etsyListingId,
-            listingId: trackedListings.listingId
+            listingId: trackedListings.listingId,
         })
         .from(trackedListings)
         .where(inArray(trackedListings.syncState, ['queued', 'syncing']));
@@ -60,8 +60,8 @@ export const reconcileTrackedListingSyncState = async (params: {
         const jobs = await params.boss.findJobs<SyncListingJobInput>(SYNC_LISTING_JOB_NAME, {
             data: {
                 accountId: row.accountId,
-                etsyListingId: row.etsyListingId
-            }
+                etsyListingId: row.etsyListingId,
+            },
         });
 
         if (hasLiveSyncListingJob(jobs)) {
@@ -79,7 +79,7 @@ export const reconcileTrackedListingSyncState = async (params: {
         fixedCount += await setTrackedListingsSyncStateByListingIds({
             accountId,
             syncState: 'idle',
-            trackedListingIds
+            trackedListingIds,
         });
     }
 
@@ -93,6 +93,6 @@ export const reconcileTrackedListingSyncState = async (params: {
         checkedCount,
         fixedCount,
         liveCount,
-        summary
+        summary,
     };
 };

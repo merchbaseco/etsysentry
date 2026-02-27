@@ -1,34 +1,25 @@
-import { defineJob } from './job-router';
-import {
-    SYNC_LISTING_JOB_NAME,
-    syncListingJobInputSchema
-} from './sync-listing-shared';
 import { and, eq } from 'drizzle-orm';
 import { db } from '../db';
 import { trackedListings } from '../db/schema';
-import { syncTrackedListingFromEtsy } from '../services/listings/tracked-listings-service';
 import {
+    createListingSyncedEventLog,
     createListingSyncFailedEventLog,
-    createListingSyncedEventLog
 } from '../services/listings/create-listing-sync-event-log';
-import {
-    markTrackedListingSyncFailureByEtsyListingId
-} from '../services/listings/set-tracked-listing-sync-failure-state';
-import {
-    setTrackedListingsSyncStateByEtsyListingIds
-} from '../services/listings/set-tracked-listing-sync-state';
+import { markTrackedListingSyncFailureByEtsyListingId } from '../services/listings/set-tracked-listing-sync-failure-state';
+import { setTrackedListingsSyncStateByEtsyListingIds } from '../services/listings/set-tracked-listing-sync-state';
+import { syncTrackedListingFromEtsy } from '../services/listings/tracked-listings-service';
+import { defineJob } from './job-router';
+import { SYNC_LISTING_JOB_NAME, syncListingJobInputSchema } from './sync-listing-shared';
 
 export const syncListingJob = defineJob(SYNC_LISTING_JOB_NAME, {
     persistSuccess: 'didWork',
-    startupSummary: 'triggered by keyword discovery'
+    startupSummary: 'triggered by keyword discovery',
 })
     .input(syncListingJobInputSchema)
-    .work(async (job, signal, log) => {
-        void signal;
-
+    .work(async (job, _signal, log) => {
         const [current] = await db
             .select({
-                trackingState: trackedListings.trackingState
+                trackingState: trackedListings.trackingState,
             })
             .from(trackedListings)
             .where(
@@ -41,19 +32,19 @@ export const syncListingJob = defineJob(SYNC_LISTING_JOB_NAME, {
 
         if (current?.trackingState === 'fatal') {
             log('Skipped sync for fatal tracked listing.', {
-                etsyListingId: job.data.etsyListingId
+                etsyListingId: job.data.etsyListingId,
             });
 
             return {
                 didWork: false,
-                etsyListingId: job.data.etsyListingId
+                etsyListingId: job.data.etsyListingId,
             } as const;
         }
 
         await setTrackedListingsSyncStateByEtsyListingIds({
             accountId: job.data.accountId,
             etsyListingIds: [job.data.etsyListingId],
-            syncState: 'syncing'
+            syncState: 'syncing',
         });
 
         try {
@@ -61,7 +52,7 @@ export const syncListingJob = defineJob(SYNC_LISTING_JOB_NAME, {
                 clerkUserId: job.data.clerkUserId,
                 etsyListingId: job.data.etsyListingId,
                 accountId: job.data.accountId,
-                trackerClerkUserId: job.data.clerkUserId
+                trackerClerkUserId: job.data.clerkUserId,
             });
 
             await createListingSyncedEventLog({
@@ -72,11 +63,11 @@ export const syncListingJob = defineJob(SYNC_LISTING_JOB_NAME, {
                 listingId: syncedListing.listingId,
                 monitorRunId: job.id,
                 shopId: syncedListing.shopId,
-                title: syncedListing.title
+                title: syncedListing.title,
             });
 
             log('Synced listing from Etsy.', {
-                etsyListingId: job.data.etsyListingId
+                etsyListingId: job.data.etsyListingId,
             });
         } catch (error) {
             const failureMessage =
@@ -84,7 +75,7 @@ export const syncListingJob = defineJob(SYNC_LISTING_JOB_NAME, {
             const failedListing = await markTrackedListingSyncFailureByEtsyListingId({
                 accountId: job.data.accountId,
                 etsyListingId: job.data.etsyListingId,
-                failureMessage
+                failureMessage,
             });
 
             try {
@@ -95,7 +86,7 @@ export const syncListingJob = defineJob(SYNC_LISTING_JOB_NAME, {
                     etsyListingId: job.data.etsyListingId,
                     listingId: failedListing?.listingId ?? null,
                     monitorRunId: job.id,
-                    shopId: failedListing?.shopId ?? null
+                    shopId: failedListing?.shopId ?? null,
                 });
             } catch {
                 // Preserve the original sync failure.
@@ -106,12 +97,12 @@ export const syncListingJob = defineJob(SYNC_LISTING_JOB_NAME, {
             await setTrackedListingsSyncStateByEtsyListingIds({
                 accountId: job.data.accountId,
                 etsyListingIds: [job.data.etsyListingId],
-                syncState: 'idle'
+                syncState: 'idle',
             });
         }
 
         return {
             didWork: true,
-            etsyListingId: job.data.etsyListingId
+            etsyListingId: job.data.etsyListingId,
         } as const;
     });

@@ -12,11 +12,11 @@ export type ListingSyncSelection =
           trackedListingIds: string[];
       };
 
-export type EnqueueTrackedListingSyncJobsResult = {
+export interface EnqueueTrackedListingSyncJobsResult {
     enqueuedCount: number;
     skippedCount: number;
     totalCount: number;
-};
+}
 
 export const enqueueTrackedListingSyncJobs = async (params: {
     selection: ListingSyncSelection;
@@ -25,7 +25,7 @@ export const enqueueTrackedListingSyncJobs = async (params: {
     const syncTargets = await findTrackedListingSyncTargets({
         accountId: params.accountId,
         trackedListingIds:
-            params.selection.mode === 'selected' ? params.selection.trackedListingIds : undefined
+            params.selection.mode === 'selected' ? params.selection.trackedListingIds : undefined,
     });
 
     let enqueuedCount = 0;
@@ -39,7 +39,7 @@ export const enqueueTrackedListingSyncJobs = async (params: {
         const jobId = await enqueueListingSyncJob({
             clerkUserId: target.trackerClerkUserId,
             etsyListingId: target.etsyListingId,
-            accountId: params.accountId
+            accountId: params.accountId,
         });
 
         if (jobId) {
@@ -51,7 +51,7 @@ export const enqueueTrackedListingSyncJobs = async (params: {
     await setTrackedListingsSyncStateByListingIds({
         accountId: params.accountId,
         syncState: 'queued',
-        trackedListingIds: queuedTrackedListingIds
+        trackedListingIds: queuedTrackedListingIds,
     });
 
     const totalCount = syncTargets.length;
@@ -60,6 +60,6 @@ export const enqueueTrackedListingSyncJobs = async (params: {
     return {
         enqueuedCount,
         skippedCount,
-        totalCount
+        totalCount,
     };
 };

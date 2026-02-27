@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import {
     buildTrackedListingDiscoveryValues,
-    computeNextKeywordSyncAt
+    computeNextKeywordSyncAt,
 } from './keyword-rankings-service';
 
 describe('computeNextKeywordSyncAt', () => {
@@ -25,15 +25,15 @@ describe('buildTrackedListingDiscoveryValues', () => {
                 price: {
                     amount: 2599,
                     currencyCode: 'USD',
-                    divisor: 100
+                    divisor: 100,
                 },
                 listingType: 'physical',
                 shopId: '99887766',
                 thumbnailUrl: 'https://i.etsystatic.com/123/il/abc123/1234567890/il_170x135.jpg',
                 title: 'Mid Century Wall Art',
-                url: 'https://www.etsy.com/listing/1234567890/mid-century-wall-art'
+                url: 'https://www.etsy.com/listing/1234567890/mid-century-wall-art',
             },
-            accountId: 'tenant_123'
+            accountId: 'tenant_123',
         });
 
         expect(result).toEqual({
@@ -47,7 +47,7 @@ describe('buildTrackedListingDiscoveryValues', () => {
             trackerClerkUserId: 'user_123',
             trackingState: 'active',
             updatedAt: now,
-            url: 'https://www.etsy.com/listing/1234567890/mid-century-wall-art'
+            url: 'https://www.etsy.com/listing/1234567890/mid-century-wall-art',
         });
     });
 
@@ -64,9 +64,9 @@ describe('buildTrackedListingDiscoveryValues', () => {
                 shopId: null,
                 thumbnailUrl: null,
                 title: 'Sample Title',
-                url: null
+                url: null,
             },
-            accountId: 'tenant_123'
+            accountId: 'tenant_123',
         });
 
         expect(result.shopId).toBeNull();
@@ -88,9 +88,9 @@ describe('buildTrackedListingDiscoveryValues', () => {
                 shopId: null,
                 thumbnailUrl: null,
                 title: 'Sample Title',
-                url: null
+                url: null,
             },
-            accountId: 'tenant_123'
+            accountId: 'tenant_123',
         });
 
         expect(result.trackingState).toBe('active');

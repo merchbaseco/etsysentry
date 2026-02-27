@@ -1,4 +1,4 @@
-type Procedure = (...args: any[]) => unknown;
+type Procedure = (...args: unknown[]) => unknown;
 
 export type InferProcedureInput<TProcedure extends Procedure> = Parameters<TProcedure>[0];
 

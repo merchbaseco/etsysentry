@@ -6,7 +6,7 @@ export const adminGetEtsyApiUsageProcedure = adminProcedure
     .input(z.object({}))
     .query(async ({ ctx }) => {
         const usage = await getEtsyApiUsage({
-            accountId: ctx.accountId
+            accountId: ctx.accountId,
         });
 
         return {
@@ -15,7 +15,7 @@ export const adminGetEtsyApiUsageProcedure = adminProcedure
                 callsPast5Minutes: usage.stats.callsPast5Minutes,
                 callsPast24Hours: usage.stats.callsPast24Hours,
                 callsPastHour: usage.stats.callsPastHour,
-                lastCallAt: usage.stats.lastCallAt?.toISOString() ?? null
-            }
+                lastCallAt: usage.stats.lastCallAt?.toISOString() ?? null,
+            },
         };
     });

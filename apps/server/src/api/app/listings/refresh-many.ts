@@ -1,12 +1,10 @@
 import { z } from 'zod';
-import {
-    enqueueTrackedListingSyncJobs
-} from '../../../services/listings/enqueue-tracked-listing-sync-jobs';
+import { enqueueTrackedListingSyncJobs } from '../../../services/listings/enqueue-tracked-listing-sync-jobs';
 import { createEventLog } from '../../../services/logs/create-event-log';
 import { appProcedure } from '../../trpc';
 
 const refreshManyInputSchema = z.object({
-    trackedListingIds: z.array(z.string().uuid()).min(1).max(100)
+    trackedListingIds: z.array(z.string().uuid()).min(1).max(100),
 });
 
 export const listingsRefreshManyProcedure = appProcedure
@@ -16,28 +14,40 @@ export const listingsRefreshManyProcedure = appProcedure
         const result = await enqueueTrackedListingSyncJobs({
             selection: {
                 mode: 'selected',
-                trackedListingIds
+                trackedListingIds,
             },
-            accountId: ctx.accountId
+            accountId: ctx.accountId,
         });
         const { enqueuedCount, skippedCount, totalCount } = result;
 
-        const status =
-            totalCount === 0
-                ? 'success'
-                : skippedCount === 0
-                  ? 'pending'
-                  : enqueuedCount === 0
-                    ? 'failed'
-                    : 'partial';
-        const level = status === 'failed' ? 'error' : status === 'partial' ? 'warn' : 'info';
-        const message =
-            totalCount === 0
-                ? 'No selected tracked listings were found to queue for sync.'
-                : skippedCount === 0
-                  ? `Queued listing sync for ${enqueuedCount} selected tracked listings.`
-                  : `Queued listing sync for ${enqueuedCount} of ${totalCount}` +
+        let status: 'failed' | 'partial' | 'pending' | 'success';
+        if (totalCount === 0) {
+            status = 'success';
+        } else if (skippedCount === 0) {
+            status = 'pending';
+        } else if (enqueuedCount === 0) {
+            status = 'failed';
+        } else {
+            status = 'partial';
+        }
+
+        let level: 'error' | 'info' | 'warn' = 'info';
+        if (status === 'failed') {
+            level = 'error';
+        } else if (status === 'partial') {
+            level = 'warn';
+        }
+
+        let message = 'No selected tracked listings were found to queue for sync.';
+        if (totalCount !== 0) {
+            if (skippedCount === 0) {
+                message = `Queued listing sync for ${enqueuedCount} selected tracked listings.`;
+            } else {
+                message =
+                    `Queued listing sync for ${enqueuedCount} of ${totalCount}` +
                     ' selected tracked listings.';
+            }
+        }
 
         await createEventLog({
             action: 'listing.bulk_sync_queued',
@@ -47,19 +57,19 @@ export const listingsRefreshManyProcedure = appProcedure
                 enqueuedCount,
                 requestedCount: trackedListingIds.length,
                 skippedCount,
-                totalCount
+                totalCount,
             },
             level,
             message,
             primitiveType: 'system',
             requestId: ctx.requestId,
             status,
-            accountId: ctx.accountId
+            accountId: ctx.accountId,
         });
 
         return {
             enqueuedCount,
             skippedCount,
-            totalCount
+            totalCount,
         };
     });

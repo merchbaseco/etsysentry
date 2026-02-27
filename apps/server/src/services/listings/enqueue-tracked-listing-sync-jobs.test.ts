@@ -6,14 +6,14 @@ describe('isTrackedListingSyncEnqueueEligible', () => {
         expect(
             isTrackedListingSyncEnqueueEligible({
                 syncState: 'queued',
-                trackingState: 'active'
+                trackingState: 'active',
             })
         ).toBe(false);
 
         expect(
             isTrackedListingSyncEnqueueEligible({
                 syncState: 'syncing',
-                trackingState: 'error'
+                trackingState: 'error',
             })
         ).toBe(false);
     });
@@ -22,7 +22,7 @@ describe('isTrackedListingSyncEnqueueEligible', () => {
         expect(
             isTrackedListingSyncEnqueueEligible({
                 syncState: 'idle',
-                trackingState: 'fatal'
+                trackingState: 'fatal',
             })
         ).toBe(false);
     });
@@ -31,14 +31,14 @@ describe('isTrackedListingSyncEnqueueEligible', () => {
         expect(
             isTrackedListingSyncEnqueueEligible({
                 syncState: 'idle',
-                trackingState: 'active'
+                trackingState: 'active',
             })
         ).toBe(true);
 
         expect(
             isTrackedListingSyncEnqueueEligible({
                 syncState: 'idle',
-                trackingState: 'error'
+                trackingState: 'error',
             })
         ).toBe(true);
     });

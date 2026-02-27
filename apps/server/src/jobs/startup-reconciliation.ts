@@ -1,25 +1,23 @@
 import type { PgBoss } from 'pg-boss';
 import type { JobsLogger } from './jobs-logger';
 
-export type StartupReconciliationTaskResult = {
+export interface StartupReconciliationTaskResult {
     checkedCount: number;
     fixedCount: number;
     summary: string;
-};
+}
 
-export type StartupReconciliationTask = {
+export interface StartupReconciliationTask {
     name: string;
-    run: (params: {
-        boss: Pick<PgBoss, 'findJobs'>;
-    }) => Promise<StartupReconciliationTaskResult>;
-};
+    run: (params: { boss: Pick<PgBoss, 'findJobs'> }) => Promise<StartupReconciliationTaskResult>;
+}
 
-export type StartupReconciliationSummary = {
+export interface StartupReconciliationSummary {
     checkedCount: number;
     fixedCount: number;
     summaries: string[];
     taskCount: number;
-};
+}
 
 export const runStartupReconciliation = async (params: {
     boss: Pick<PgBoss, 'findJobs'>;
@@ -33,7 +31,7 @@ export const runStartupReconciliation = async (params: {
     for (const task of params.tasks) {
         try {
             const result = await task.run({
-                boss: params.boss
+                boss: params.boss,
             });
 
             checkedCount += result.checkedCount;
@@ -43,7 +41,7 @@ export const runStartupReconciliation = async (params: {
             params.logger.warn(
                 {
                     error,
-                    taskName: task.name
+                    taskName: task.name,
                 },
                 'Startup reconciliation task failed; continuing startup.'
             );
@@ -55,6 +53,6 @@ export const runStartupReconciliation = async (params: {
         checkedCount,
         fixedCount,
         summaries,
-        taskCount: params.tasks.length
+        taskCount: params.tasks.length,
     };
 };

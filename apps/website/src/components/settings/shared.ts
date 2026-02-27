@@ -42,11 +42,11 @@ export const formatDurationMs = (value: number): string => {
         return '0 ms';
     }
 
-    if (value < 1_000) {
+    if (value < 1000) {
         return `${value} ms`;
     }
 
-    const seconds = value / 1_000;
+    const seconds = value / 1000;
 
     if (seconds < 60) {
         return `${seconds.toFixed(1)} sec`;

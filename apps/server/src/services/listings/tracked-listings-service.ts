@@ -2,41 +2,40 @@ import { TRPCError } from '@trpc/server';
 import { and, eq } from 'drizzle-orm';
 import { db } from '../../db';
 import { trackedListings } from '../../db/schema';
-import { createEventLog } from '../logs/create-event-log';
 import {
     EtsyGetListingBridgeError,
+    type GetListingBridgeResponse,
     getListing,
-    type GetListingBridgeResponse
 } from '../etsy/bridges/get-listing';
 import { getEtsyOAuthAccessToken } from '../etsy/oauth-service';
 import { recordEtsyApiCallBestEffort } from '../etsy/record-etsy-api-call';
+import { createEventLog } from '../logs/create-event-log';
+import { setTrackedShopListingActivityByEtsyListingId } from '../shops/set-tracked-shop-listing-activity';
 import {
-    isExcludedDigitalListingType
-} from './is-excluded-digital-listing-type';
+    createListingSyncedEventLog,
+    createListingSyncFailedEventLog,
+} from './create-listing-sync-event-log';
+import { isExcludedDigitalListingType } from './is-excluded-digital-listing-type';
+import { markTrackedListingSyncFailureByListingId } from './set-tracked-listing-sync-failure-state';
 import {
     isTrackedListingSyncInFlight,
-    setTrackedListingSyncStateByListingId
+    setTrackedListingSyncStateByListingId,
 } from './set-tracked-listing-sync-state';
-import {
-    createListingSyncFailedEventLog,
-    createListingSyncedEventLog
-} from './create-listing-sync-event-log';
-import {
-    markTrackedListingSyncFailureByListingId
-} from './set-tracked-listing-sync-failure-state';
-import {
-    setTrackedShopListingActivityByEtsyListingId
-} from '../shops/set-tracked-shop-listing-activity';
-import { upsertListingMetricSnapshot } from './upsert-listing-metric-snapshot';
 import { sortTrackedListingRowsByCreatedAtDesc } from './sort-tracked-listing-rows';
+import { upsertListingMetricSnapshot } from './upsert-listing-metric-snapshot';
 
-export type TrackedListingRecord = {
+const DIGITS_ONLY_REGEX = /^\d+$/;
+const ETSY_LISTING_PATH_REGEX = /\/listing\/(\d+)(?:\/|$)/i;
+
+export interface TrackedListingRecord {
+    accountId: string;
     etsyListingId: string;
     etsyState: (typeof trackedListings.$inferSelect)['etsyState'];
     id: string;
     isDigital: boolean;
     lastRefreshError: string | null;
     lastRefreshedAt: string;
+    numFavorers: number | null;
     price: {
         amount: number;
         currencyCode: string;
@@ -46,31 +45,29 @@ export type TrackedListingRecord = {
     quantity: number | null;
     shopId: string | null;
     shopName: string | null;
-    accountId: string;
+    syncState: (typeof trackedListings.$inferSelect)['syncState'];
     thumbnailUrl: string | null;
     title: string;
     trackerClerkUserId: string;
-    syncState: (typeof trackedListings.$inferSelect)['syncState'];
     trackingState: (typeof trackedListings.$inferSelect)['trackingState'];
     updatedAt: string;
     updatedTimestamp: number | null;
     url: string | null;
     views: number | null;
-    numFavorers: number | null;
-};
+}
 
 const mapBridgeErrorToTrpcError = (error: EtsyGetListingBridgeError): TRPCError => {
     if (error.statusCode === 404) {
         return new TRPCError({
             code: 'NOT_FOUND',
-            message: 'Etsy listing was not found.'
+            message: 'Etsy listing was not found.',
         });
     }
 
     if (error.statusCode === 400) {
         return new TRPCError({
             code: 'BAD_REQUEST',
-            message: error.message
+            message: error.message,
         });
     }
 
@@ -82,20 +79,20 @@ const mapBridgeErrorToTrpcError = (error: EtsyGetListingBridgeError): TRPCError 
             message:
                 error.message === genericStatusMessage
                     ? 'Etsy access token is invalid or missing required scope.'
-                    : error.message
+                    : error.message,
         });
     }
 
     return new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
-        message: error.message
+        message: error.message,
     });
 };
 
 const parseListingIdentifier = (rawInput: string): string | null => {
     const trimmed = rawInput.trim();
 
-    if (/^\d+$/.test(trimmed)) {
+    if (DIGITS_ONLY_REGEX.test(trimmed)) {
         return trimmed;
     }
 
@@ -106,7 +103,7 @@ const parseListingIdentifier = (rawInput: string): string | null => {
             return null;
         }
 
-        const match = url.pathname.match(/\/listing\/(\d+)(?:\/|$)/i);
+        const match = url.pathname.match(ETSY_LISTING_PATH_REGEX);
 
         if (match?.[1]) {
             return match[1];
@@ -114,7 +111,7 @@ const parseListingIdentifier = (rawInput: string): string | null => {
 
         const listingIdFromQuery = url.searchParams.get('listing_id');
 
-        if (listingIdFromQuery && /^\d+$/.test(listingIdFromQuery)) {
+        if (listingIdFromQuery && DIGITS_ONLY_REGEX.test(listingIdFromQuery)) {
             return listingIdFromQuery;
         }
 
@@ -137,7 +134,7 @@ const toRecord = (row: typeof trackedListings.$inferSelect): TrackedListingRecor
             amount: row.priceAmount,
             currencyCode: row.priceCurrencyCode,
             divisor: row.priceDivisor,
-            value: row.priceAmount / row.priceDivisor
+            value: row.priceAmount / row.priceDivisor,
         };
     }
 
@@ -162,7 +159,7 @@ const toRecord = (row: typeof trackedListings.$inferSelect): TrackedListingRecor
         updatedAt: row.updatedAt.toISOString(),
         updatedTimestamp: row.updatedTimestamp,
         url: row.url,
-        views: row.views
+        views: row.views,
     };
 };
 
@@ -194,7 +191,7 @@ const bridgeToUpsertValues = (params: {
         updatedAt: params.now,
         updatedTimestamp: params.bridgeResponse.updatedTimestamp,
         url: params.bridgeResponse.url,
-        views: params.bridgeResponse.views
+        views: params.bridgeResponse.views,
     };
 };
 
@@ -204,20 +201,20 @@ const fetchListingFromEtsy = async (params: {
     accountId: string;
 }): Promise<GetListingBridgeResponse> => {
     const oauthToken = await getEtsyOAuthAccessToken({
-        accountId: params.accountId
+        accountId: params.accountId,
     });
 
     try {
         await recordEtsyApiCallBestEffort({
             clerkUserId: params.clerkUserId,
             endpoint: 'getListing',
-            accountId: params.accountId
+            accountId: params.accountId,
         });
 
         return await getListing({
             accessToken: oauthToken.accessToken,
             includes: ['Images', 'Shop'],
-            listingId: params.etsyListingId
+            listingId: params.etsyListingId,
         });
     } catch (error) {
         if (error instanceof EtsyGetListingBridgeError) {
@@ -238,7 +235,7 @@ const upsertTrackedListingFromBridgeResponse = async (params: {
         bridgeResponse: params.bridgeResponse,
         now: params.now,
         accountId: params.accountId,
-        trackerClerkUserId: params.trackerClerkUserId
+        trackerClerkUserId: params.trackerClerkUserId,
     });
 
     const [row] = await db
@@ -246,14 +243,14 @@ const upsertTrackedListingFromBridgeResponse = async (params: {
         .values(upsertValues)
         .onConflictDoUpdate({
             set: upsertValues,
-            target: [trackedListings.accountId, trackedListings.etsyListingId]
+            target: [trackedListings.accountId, trackedListings.etsyListingId],
         })
         .returning();
 
     if (!row) {
         throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: 'Unable to upsert tracked listing.'
+            message: 'Unable to upsert tracked listing.',
         });
     }
 
@@ -270,14 +267,14 @@ export const syncTrackedListingFromEtsy = async (params: {
     const listingFromEtsy = await fetchListingFromEtsy({
         clerkUserId: params.clerkUserId,
         etsyListingId: params.etsyListingId,
-        accountId: params.accountId
+        accountId: params.accountId,
     });
 
     const row = await upsertTrackedListingFromBridgeResponse({
         bridgeResponse: listingFromEtsy,
         now,
         accountId: params.accountId,
-        trackerClerkUserId: params.trackerClerkUserId
+        trackerClerkUserId: params.trackerClerkUserId,
     });
 
     await upsertListingMetricSnapshot({
@@ -289,13 +286,13 @@ export const syncTrackedListingFromEtsy = async (params: {
         quantity: row.quantity,
         priceAmount: row.priceAmount,
         priceDivisor: row.priceDivisor,
-        priceCurrencyCode: row.priceCurrencyCode
+        priceCurrencyCode: row.priceCurrencyCode,
     });
 
     await setTrackedShopListingActivityByEtsyListingId({
         accountId: params.accountId,
         etsyListingId: row.etsyListingId,
-        isActive: row.etsyState === 'active'
+        isActive: row.etsyState === 'active',
     });
 
     return row;
@@ -312,13 +309,10 @@ export const listTrackedListings = async (params: {
           )
         : eq(trackedListings.accountId, params.accountId);
 
-    const rows = await db
-        .select()
-        .from(trackedListings)
-        .where(whereClause);
+    const rows = await db.select().from(trackedListings).where(whereClause);
 
     return {
-        items: sortTrackedListingRowsByCreatedAtDesc(rows).map(toRecord)
+        items: sortTrackedListingRowsByCreatedAtDesc(rows).map(toRecord),
     };
 };
 
@@ -336,13 +330,13 @@ export const trackListing = async (params: {
     if (!etsyListingId) {
         throw new TRPCError({
             code: 'BAD_REQUEST',
-            message: 'Listing must be an Etsy listing URL or numeric listing id.'
+            message: 'Listing must be an Etsy listing URL or numeric listing id.',
         });
     }
 
     const existing = await db
         .select({
-            listingId: trackedListings.listingId
+            listingId: trackedListings.listingId,
         })
         .from(trackedListings)
         .where(
@@ -357,7 +351,7 @@ export const trackListing = async (params: {
         clerkUserId: params.trackerClerkUserId,
         etsyListingId,
         accountId: params.accountId,
-        trackerClerkUserId: params.trackerClerkUserId
+        trackerClerkUserId: params.trackerClerkUserId,
     });
 
     const created = existing.length === 0;
@@ -368,7 +362,7 @@ export const trackListing = async (params: {
         category: 'listing',
         clerkUserId: params.trackerClerkUserId,
         detailsJson: {
-            title: item.title
+            title: item.title,
         },
         level: 'info',
         listingId: item.etsyListingId,
@@ -380,12 +374,12 @@ export const trackListing = async (params: {
         requestId: params.requestId ?? null,
         shopId: item.shopId,
         status: 'success',
-        accountId: item.accountId
+        accountId: item.accountId,
     });
 
     return {
         created,
-        item
+        item,
     };
 };
 
@@ -410,34 +404,34 @@ export const refreshTrackedListing = async (params: {
     if (!current) {
         throw new TRPCError({
             code: 'NOT_FOUND',
-            message: 'Tracked listing was not found for this account.'
+            message: 'Tracked listing was not found for this account.',
         });
     }
 
     if (current.trackingState === 'fatal') {
         throw new TRPCError({
             code: 'FORBIDDEN',
-            message: 'Tracked listing is in a fatal sync state and requires admin intervention.'
+            message: 'Tracked listing is in a fatal sync state and requires admin intervention.',
         });
     }
 
     if (isTrackedListingSyncInFlight(current.syncState)) {
         throw new TRPCError({
             code: 'CONFLICT',
-            message: 'Tracked listing sync is already queued or in progress.'
+            message: 'Tracked listing sync is already queued or in progress.',
         });
     }
 
     const didSetSyncing = await setTrackedListingSyncStateByListingId({
         accountId: params.accountId,
         syncState: 'syncing',
-        trackedListingId: current.listingId
+        trackedListingId: current.listingId,
     });
 
     if (!didSetSyncing) {
         throw new TRPCError({
             code: 'NOT_FOUND',
-            message: 'Tracked listing was not found for this account.'
+            message: 'Tracked listing was not found for this account.',
         });
     }
 
@@ -446,13 +440,13 @@ export const refreshTrackedListing = async (params: {
             clerkUserId: params.clerkUserId,
             etsyListingId: current.etsyListingId,
             accountId: params.accountId,
-            trackerClerkUserId: params.trackerClerkUserId
+            trackerClerkUserId: params.trackerClerkUserId,
         });
 
         await setTrackedListingSyncStateByListingId({
             accountId: params.accountId,
             syncState: 'idle',
-            trackedListingId: current.listingId
+            trackedListingId: current.listingId,
         });
 
         await createListingSyncedEventLog({
@@ -463,7 +457,7 @@ export const refreshTrackedListing = async (params: {
             listingId: updated.listingId,
             requestId: params.requestId ?? null,
             shopId: updated.shopId,
-            title: updated.title
+            title: updated.title,
         });
 
         return toRecord(updated);
@@ -473,7 +467,7 @@ export const refreshTrackedListing = async (params: {
         const updated = await markTrackedListingSyncFailureByListingId({
             accountId: params.accountId,
             failureMessage,
-            trackedListingId: current.listingId
+            trackedListingId: current.listingId,
         });
 
         if (!updated) {
@@ -483,7 +477,7 @@ export const refreshTrackedListing = async (params: {
         await setTrackedListingSyncStateByListingId({
             accountId: params.accountId,
             syncState: 'idle',
-            trackedListingId: current.listingId
+            trackedListingId: current.listingId,
         });
 
         try {
@@ -494,7 +488,7 @@ export const refreshTrackedListing = async (params: {
                 etsyListingId: updated.etsyListingId,
                 listingId: updated.listingId,
                 requestId: params.requestId ?? null,
-                shopId: updated.shopId
+                shopId: updated.shopId,
             });
         } catch {
             // Preserve the original sync failure.

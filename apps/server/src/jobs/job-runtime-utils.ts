@@ -3,11 +3,7 @@ import type { JobsLogger } from './jobs-logger';
 
 export type JobLogLevel = 'info' | 'warn' | 'error';
 
-export type JobLogFn = (
-    message: string,
-    context?: unknown,
-    level?: JobLogLevel
-) => void;
+export type JobLogFn = (message: string, context?: unknown, level?: JobLogLevel) => void;
 
 type JobSchedule =
     | {
@@ -52,8 +48,7 @@ export const buildStartupSummary = (
     }
 
     const intervalLabel = `interval: ${formatInterval(schedule.everyMs)}`;
-    const singletonKey =
-        schedule.sendOptions?.singletonKey ?? sendOptions.singletonKey;
+    const singletonKey = schedule.sendOptions?.singletonKey ?? sendOptions.singletonKey;
 
     if (typeof singletonKey === 'string' && singletonKey.length > 0) {
         return `${intervalLabel}, singleton`;
@@ -62,14 +57,11 @@ export const buildStartupSummary = (
     return intervalLabel;
 };
 
-export const createJobLog = (
-    jobName: string,
-    logger: JobsLogger
-): JobLogFn => {
+export const createJobLog = (jobName: string, logger: JobsLogger): JobLogFn => {
     return (message, context, level = 'info') => {
         const payload = {
             context: context ?? null,
-            jobName
+            jobName,
         };
 
         if (level === 'warn') {

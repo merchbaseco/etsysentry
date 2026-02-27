@@ -1,25 +1,29 @@
 import { TRPCError } from '@trpc/server';
-import {
-    EtsyFindShopsBridgeError,
-    findShops
-} from '../etsy/bridges/find-shops';
+import { EtsyFindShopsBridgeError, findShops } from '../etsy/bridges/find-shops';
 import {
     EtsyGetShopBridgeError,
+    type GetShopBridgeResponse,
     getShop,
-    type GetShopBridgeResponse
 } from '../etsy/bridges/get-shop';
 import { recordEtsyApiCallBestEffort } from '../etsy/record-etsy-api-call';
 
+const DIGITS_ONLY_REGEX = /^\d+$/;
+const ETSY_SHOP_PATH_REGEX = /\/shop\/([^/]+)(?:\/|$)/i;
+const SHOP_NAME_NORMALIZATION_REGEX = /[\s_-]+/g;
+
 export type ResolvedShop = Pick<
     GetShopBridgeResponse,
-    'shopId' | 'shopName' | 'url' | 'activeListingCount' | 'numFavorers' | 'soldCount' | 'reviewCount'
+    | 'shopId'
+    | 'shopName'
+    | 'url'
+    | 'activeListingCount'
+    | 'numFavorers'
+    | 'soldCount'
+    | 'reviewCount'
 >;
 
 const normalizeShopNameForLookup = (value: string): string => {
-    return value
-        .trim()
-        .toLowerCase()
-        .replace(/[\s_-]+/g, '');
+    return value.trim().toLowerCase().replace(SHOP_NAME_NORMALIZATION_REGEX, '');
 };
 
 const parseShopIdentifier = (
@@ -40,10 +44,10 @@ const parseShopIdentifier = (
         return null;
     }
 
-    if (/^\d+$/.test(trimmed)) {
+    if (DIGITS_ONLY_REGEX.test(trimmed)) {
         return {
             type: 'id',
-            value: trimmed
+            value: trimmed,
         };
     }
 
@@ -56,19 +60,19 @@ const parseShopIdentifier = (
 
         const shopIdFromQuery = url.searchParams.get('shop_id');
 
-        if (shopIdFromQuery && /^\d+$/.test(shopIdFromQuery)) {
+        if (shopIdFromQuery && DIGITS_ONLY_REGEX.test(shopIdFromQuery)) {
             return {
                 type: 'id',
-                value: shopIdFromQuery
+                value: shopIdFromQuery,
             };
         }
 
-        const match = url.pathname.match(/\/shop\/([^/]+)(?:\/|$)/i);
+        const match = url.pathname.match(ETSY_SHOP_PATH_REGEX);
 
         if (match?.[1]) {
             return {
                 type: 'name',
-                value: decodeURIComponent(match[1])
+                value: decodeURIComponent(match[1]),
             };
         }
 
@@ -76,7 +80,7 @@ const parseShopIdentifier = (
     } catch {
         return {
             type: 'name',
-            value: trimmed
+            value: trimmed,
         };
     }
 };
@@ -87,20 +91,20 @@ const mapBridgeErrorToTrpcError = (
     if (error.statusCode === 404) {
         return new TRPCError({
             code: 'NOT_FOUND',
-            message: 'Etsy shop was not found.'
+            message: 'Etsy shop was not found.',
         });
     }
 
     if (error.statusCode === 400) {
         return new TRPCError({
             code: 'BAD_REQUEST',
-            message: error.message
+            message: error.message,
         });
     }
 
     return new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
-        message: error.message
+        message: error.message,
     });
 };
 
@@ -114,7 +118,7 @@ export const resolveShopFromInput = async (params: {
     if (!parsed) {
         throw new TRPCError({
             code: 'BAD_REQUEST',
-            message: 'Shop must be an Etsy shop URL, numeric shop id, or shop name.'
+            message: 'Shop must be an Etsy shop URL, numeric shop id, or shop name.',
         });
     }
 
@@ -123,24 +127,24 @@ export const resolveShopFromInput = async (params: {
             await recordEtsyApiCallBestEffort({
                 clerkUserId: params.clerkUserId,
                 endpoint: 'getShop',
-                accountId: params.accountId
+                accountId: params.accountId,
             });
 
             return await getShop({
-                shopId: parsed.value
+                shopId: parsed.value,
             });
         }
 
         await recordEtsyApiCallBestEffort({
             clerkUserId: params.clerkUserId,
             endpoint: 'findShops',
-            accountId: params.accountId
+            accountId: params.accountId,
         });
 
         const findResponse = await findShops({
             limit: 25,
             offset: 0,
-            shopName: parsed.value
+            shopName: parsed.value,
         });
 
         const normalizedInput = normalizeShopNameForLookup(parsed.value);
@@ -152,18 +156,18 @@ export const resolveShopFromInput = async (params: {
         if (!resolved) {
             throw new TRPCError({
                 code: 'NOT_FOUND',
-                message: 'Etsy shop was not found.'
+                message: 'Etsy shop was not found.',
             });
         }
 
         await recordEtsyApiCallBestEffort({
             clerkUserId: params.clerkUserId,
             endpoint: 'getShop',
-            accountId: params.accountId
+            accountId: params.accountId,
         });
 
         return await getShop({
-            shopId: resolved.shopId
+            shopId: resolved.shopId,
         });
     } catch (error) {
         if (error instanceof TRPCError) {

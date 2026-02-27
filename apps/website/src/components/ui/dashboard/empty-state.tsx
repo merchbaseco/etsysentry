@@ -5,7 +5,7 @@ export function EmptyState({ message }: { message: string }) {
         <div
             className={[
                 'flex h-full min-h-40 flex-col items-center',
-                'justify-center text-muted-foreground'
+                'justify-center text-muted-foreground',
             ].join(' ')}
         >
             <Search className="mb-3 size-8 opacity-30" />

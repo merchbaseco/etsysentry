@@ -21,7 +21,7 @@ export const saveUsdRatesCache = async (params: {
             nextRefreshAt: params.nextRefreshAt,
             provider: params.provider,
             ratesJson: JSON.stringify(params.rates),
-            updatedAt: now
+            updatedAt: now,
         })
         .onConflictDoUpdate({
             set: {
@@ -30,9 +30,9 @@ export const saveUsdRatesCache = async (params: {
                 nextRefreshAt: params.nextRefreshAt,
                 provider: params.provider,
                 ratesJson: JSON.stringify(params.rates),
-                updatedAt: now
+                updatedAt: now,
             },
-            target: currencyRates.baseCurrency
+            target: currencyRates.baseCurrency,
         });
 };
 
@@ -56,7 +56,7 @@ export const saveUsdRatesRefreshError = async (params: {
             nextRefreshAt: params.nextRefreshAt,
             provider: params.provider,
             ratesJson: null,
-            updatedAt: now
+            updatedAt: now,
         });
         return;
     }
@@ -66,7 +66,7 @@ export const saveUsdRatesRefreshError = async (params: {
         .set({
             lastRefreshError: params.errorMessage,
             nextRefreshAt: params.nextRefreshAt,
-            updatedAt: now
+            updatedAt: now,
         })
         .where(eq(currencyRates.baseCurrency, USD_BASE_CURRENCY));
 };

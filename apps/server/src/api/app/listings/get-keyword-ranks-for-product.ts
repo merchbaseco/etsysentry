@@ -5,12 +5,12 @@ import { appProcedure } from '../../trpc';
 export const listingsGetKeywordRanksForProductProcedure = appProcedure
     .input(
         z.object({
-            listing: z.string().min(1)
+            listing: z.string().min(1),
         })
     )
-    .query(async ({ ctx, input }) => {
+    .query(({ ctx, input }) => {
         return getKeywordRanksForProduct({
             listingInput: input.listing,
-            accountId: ctx.accountId
+            accountId: ctx.accountId,
         });
     });

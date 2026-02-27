@@ -28,19 +28,19 @@ export const toTrpcRequestError = (error: unknown): TrpcRequestError => {
         return new TrpcRequestError({
             code,
             httpStatus: typeof httpStatus === 'number' ? httpStatus : 500,
-            message: error.message || 'tRPC request failed.'
+            message: error.message || 'tRPC request failed.',
         });
     }
 
     if (error instanceof Error) {
         return new TrpcRequestError({
             httpStatus: 500,
-            message: error.message || 'Unexpected request failure.'
+            message: error.message || 'Unexpected request failure.',
         });
     }
 
     return new TrpcRequestError({
         httpStatus: 500,
-        message: 'Unexpected request failure.'
+        message: 'Unexpected request failure.',
     });
 };

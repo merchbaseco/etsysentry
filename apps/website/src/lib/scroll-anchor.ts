@@ -1,7 +1,7 @@
-export type ScrollAnchor = {
+export interface ScrollAnchor {
     offsetTop: number;
     rowId: string;
-};
+}
 
 const getRows = (container: HTMLElement): HTMLElement[] => {
     return Array.from(container.querySelectorAll<HTMLElement>('[data-row-id]'));
@@ -25,7 +25,7 @@ export const captureScrollAnchor = (container: HTMLElement): ScrollAnchor | null
 
         return {
             offsetTop: rowRect.top - containerRect.top,
-            rowId
+            rowId,
         };
     }
 

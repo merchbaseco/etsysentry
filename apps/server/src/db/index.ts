@@ -1,7 +1,6 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { env } from '../config/env';
-import * as schema from './schema';
 
 const queryClient = postgres({
     database: env.databaseName,
@@ -11,12 +10,11 @@ const queryClient = postgres({
     max_lifetime: 30,
     password: env.databasePassword,
     port: env.databasePort,
-    user: env.databaseUser
+    user: env.databaseUser,
 });
 
 export const db = drizzle(queryClient, {
     logger: env.NODE_ENV === 'development',
-    schema
 });
 
 export const closeDbConnection = async (): Promise<void> => {

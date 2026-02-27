@@ -1,6 +1,6 @@
 export function timeAgo(dateStr: string): string {
     const diff = Date.now() - new Date(dateStr).getTime();
-    const mins = Math.floor(diff / 60000);
+    const mins = Math.floor(diff / 60_000);
 
     if (mins < 1) {
         return 'just now';
@@ -24,11 +24,11 @@ export function timeAgo(dateStr: string): string {
 export function timeUntil(dateStr: string): string {
     const diff = new Date(dateStr).getTime() - Date.now();
 
-    if (diff <= 60000) {
+    if (diff <= 60_000) {
         return 'Now';
     }
 
-    const mins = Math.floor(diff / 60000);
+    const mins = Math.floor(diff / 60_000);
 
     if (mins < 60) {
         return `in ${mins}m`;
@@ -46,8 +46,8 @@ export function timeUntil(dateStr: string): string {
 }
 
 export function formatNumber(value: number): string {
-    if (value >= 1000000) {
-        return `${(value / 1000000).toFixed(1)}M`;
+    if (value >= 1_000_000) {
+        return `${(value / 1_000_000).toFixed(1)}M`;
     }
 
     if (value >= 1000) {

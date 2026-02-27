@@ -5,12 +5,12 @@ import { resolveAccountIdFromClerk } from '../services/auth/resolve-account-id-f
 
 type AuthType = 'clerk' | 'none';
 
-export type ClerkUser = {
+export interface ClerkUser {
     email?: string;
     issuer: string;
     orgId: string | null;
     sub: string;
-};
+}
 
 const normalizeEmail = (email: string): string => {
     return email.trim().toLowerCase();
@@ -27,7 +27,7 @@ export const isAdminEmail = (email?: string): boolean => {
 };
 
 const getBearerToken = (authorization?: string): string | null => {
-    if (!authorization || !authorization.startsWith('Bearer ')) {
+    if (!authorization?.startsWith('Bearer ')) {
         return null;
     }
 
@@ -46,19 +46,19 @@ export const createTrpcContext = async ({ req, res }: CreateFastifyContextOption
             request: req,
             requestId: String(req.id),
             accountId: null,
-            user: null
+            user: null,
         };
     }
 
     try {
         const payload = await verifyToken(token, {
-            secretKey: env.CLERK_SECRET_KEY
+            secretKey: env.CLERK_SECRET_KEY,
         });
 
         const subject = typeof payload.sub === 'string' ? payload.sub.trim() : '';
         const issuer = typeof payload.iss === 'string' ? payload.iss.trim() : '';
 
-        if (!subject || !issuer) {
+        if (!(subject && issuer)) {
             return {
                 authType: 'none' as AuthType,
                 isAdmin: false,
@@ -66,7 +66,7 @@ export const createTrpcContext = async ({ req, res }: CreateFastifyContextOption
                 request: req,
                 requestId: String(req.id),
                 accountId: null,
-                user: null
+                user: null,
             };
         }
 
@@ -76,7 +76,7 @@ export const createTrpcContext = async ({ req, res }: CreateFastifyContextOption
             clerkIssuer: issuer,
             clerkOrgId: orgId.length > 0 ? orgId : null,
             clerkSubject: subject,
-            email: email ?? null
+            email: email ?? null,
         });
 
         return {
@@ -90,8 +90,8 @@ export const createTrpcContext = async ({ req, res }: CreateFastifyContextOption
                 email,
                 issuer,
                 orgId: orgId.length > 0 ? orgId : null,
-                sub: subject
-            } satisfies ClerkUser
+                sub: subject,
+            } satisfies ClerkUser,
         };
     } catch {
         return {
@@ -101,7 +101,7 @@ export const createTrpcContext = async ({ req, res }: CreateFastifyContextOption
             request: req,
             requestId: String(req.id),
             accountId: null,
-            user: null
+            user: null,
         };
     }
 };

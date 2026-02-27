@@ -1,8 +1,8 @@
-import { trackedShopSnapshots, trackedShops } from '../../db/schema';
+import type { trackedShopSnapshots, trackedShops } from '../../db/schema';
 
 export const DAILY_SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
-export type TrackedShopLatestSnapshot = {
+export interface TrackedShopLatestSnapshot {
     activeListingCount: number;
     favoritesDelta: number | null;
     favoritesTotal: number | null;
@@ -12,23 +12,23 @@ export type TrackedShopLatestSnapshot = {
     reviewTotal: number | null;
     soldDelta: number | null;
     soldTotal: number | null;
-};
+}
 
-export type TrackedShopRecord = {
-    id: string;
+export interface TrackedShopRecord {
     accountId: string;
     etsyShopId: string;
+    id: string;
+    lastRefreshError: string | null;
+    lastRefreshedAt: string;
+    lastSyncedListingUpdatedTimestamp: number | null;
+    latestSnapshot: TrackedShopLatestSnapshot | null;
+    nextSyncAt: string;
     shopName: string;
     shopUrl: string | null;
-    trackingState: (typeof trackedShops.$inferSelect)['trackingState'];
     syncState: (typeof trackedShops.$inferSelect)['syncState'];
-    lastRefreshedAt: string;
-    nextSyncAt: string;
-    lastRefreshError: string | null;
-    lastSyncedListingUpdatedTimestamp: number | null;
+    trackingState: (typeof trackedShops.$inferSelect)['trackingState'];
     updatedAt: string;
-    latestSnapshot: TrackedShopLatestSnapshot | null;
-};
+}
 
 const toLatestSnapshot = (
     row: typeof trackedShopSnapshots.$inferSelect
@@ -42,7 +42,7 @@ const toLatestSnapshot = (
         reviewDelta: row.reviewDelta,
         reviewTotal: row.reviewTotal,
         soldDelta: row.soldDelta,
-        soldTotal: row.soldTotal
+        soldTotal: row.soldTotal,
     };
 };
 
@@ -63,6 +63,6 @@ export const toTrackedShopRecord = (params: {
         lastRefreshError: params.row.lastRefreshError,
         lastSyncedListingUpdatedTimestamp: params.row.lastSyncedListingUpdatedTimestamp,
         updatedAt: params.row.updatedAt.toISOString(),
-        latestSnapshot: params.latestSnapshot ? toLatestSnapshot(params.latestSnapshot) : null
+        latestSnapshot: params.latestSnapshot ? toLatestSnapshot(params.latestSnapshot) : null,
     };
 };

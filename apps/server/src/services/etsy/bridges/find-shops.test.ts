@@ -14,25 +14,25 @@ afterEach(() => {
 
 describe('find-shops bridge', () => {
     test('maps Etsy findShops response into normalized output', async () => {
-        globalThis.fetch = mock(async () => {
+        globalThis.fetch = mock(() => {
             return new Response(
                 JSON.stringify({
                     count: 2,
                     results: [
                         {
-                            shop_id: 99887766,
+                            shop_id: 99_887_766,
                             shop_name: 'Needle and Oak',
-                            url: 'https://www.etsy.com/shop/needleandoak'
+                            url: 'https://www.etsy.com/shop/needleandoak',
                         },
                         {
-                            shop_id: 77665544,
+                            shop_id: 77_665_544,
                             shop_name: 'Needle and Oak Supply',
-                            url: null
-                        }
-                    ]
+                            url: null,
+                        },
+                    ],
                 }),
                 {
-                    status: 200
+                    status: 200,
                 }
             );
         }) as unknown as typeof fetch;
@@ -40,7 +40,7 @@ describe('find-shops bridge', () => {
         const response = await findShops({
             limit: 25,
             offset: 0,
-            shopName: 'needleandoak'
+            shopName: 'needleandoak',
         });
 
         expect(response).toEqual({
@@ -49,30 +49,30 @@ describe('find-shops bridge', () => {
                 {
                     shopId: '99887766',
                     shopName: 'Needle and Oak',
-                    url: 'https://www.etsy.com/shop/needleandoak'
+                    url: 'https://www.etsy.com/shop/needleandoak',
                 },
                 {
                     shopId: '77665544',
                     shopName: 'Needle and Oak Supply',
-                    url: null
-                }
-            ]
+                    url: null,
+                },
+            ],
         });
     });
 
     test('passes documented OpenAPI query params to findShops', async () => {
         let requestedUrl = '';
 
-        globalThis.fetch = mock(async (input: RequestInfo | URL) => {
+        globalThis.fetch = mock((input: RequestInfo | URL) => {
             requestedUrl = String(input);
 
             return new Response(
                 JSON.stringify({
                     count: 0,
-                    results: []
+                    results: [],
                 }),
                 {
-                    status: 200
+                    status: 200,
                 }
             );
         }) as unknown as typeof fetch;
@@ -80,7 +80,7 @@ describe('find-shops bridge', () => {
         await findShops({
             limit: 30,
             offset: 20,
-            shopName: 'needleandoak'
+            shopName: 'needleandoak',
         });
 
         const url = new URL(requestedUrl);
@@ -96,22 +96,22 @@ describe('find-shops bridge', () => {
 
         let xApiKeyHeader: string | null = null;
 
-        globalThis.fetch = mock(async (_input, init) => {
+        globalThis.fetch = mock((_input, init) => {
             xApiKeyHeader = new Headers(init?.headers).get('x-api-key');
 
             return new Response(
                 JSON.stringify({
                     count: 0,
-                    results: []
+                    results: [],
                 }),
                 {
-                    status: 200
+                    status: 200,
                 }
             );
         }) as unknown as typeof fetch;
 
         await findShops({
-            shopName: 'needleandoak'
+            shopName: 'needleandoak',
         });
 
         if (typeof xApiKeyHeader !== 'string') {
@@ -122,21 +122,21 @@ describe('find-shops bridge', () => {
     });
 
     test('throws EtsyFindShopsBridgeError for non-2xx responses', async () => {
-        globalThis.fetch = mock(async () => {
+        globalThis.fetch = mock(() => {
             return new Response(
                 JSON.stringify({
                     error: 'Not Found',
-                    message: 'No shops found'
+                    message: 'No shops found',
                 }),
                 {
-                    status: 404
+                    status: 404,
                 }
             );
         }) as unknown as typeof fetch;
 
         await expect(
             findShops({
-                shopName: 'needleandoak'
+                shopName: 'needleandoak',
             })
         ).rejects.toBeInstanceOf(EtsyFindShopsBridgeError);
     });
@@ -144,7 +144,7 @@ describe('find-shops bridge', () => {
     test('rejects invalid input before calling Etsy', async () => {
         await expect(
             findShops({
-                shopName: ''
+                shopName: '',
             })
         ).rejects.toBeInstanceOf(EtsyFindShopsBridgeError);
     });

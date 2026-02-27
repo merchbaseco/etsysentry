@@ -1,41 +1,34 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { EmptyState } from '@/components/ui/dashboard';
+import { listingsInvalidatedEventName } from '@/hooks/use-realtime-query-invalidations';
 import {
     type ListTrackedListingsOutput,
     listTrackedListings,
     refreshTrackedListing,
+    type TrackedListingItem,
     trackListing,
-    type TrackedListingItem
 } from '@/lib/listings-api';
-import { listingsInvalidatedEventName } from '@/hooks/use-realtime-query-invalidations';
+import { captureScrollAnchor, restoreScrollAnchor } from '@/lib/scroll-anchor';
 import { queryClient, trpc } from '@/lib/trpc-client';
-import {
-    captureScrollAnchor,
-    restoreScrollAnchor
-} from '@/lib/scroll-anchor';
-import { EmptyState } from '@/components/ui/dashboard';
+import { ListingHistoryDrawer } from './listing-history-drawer';
 import { ListingsControls } from './listings-controls';
-import { ListingsTable } from './listings-table';
 import {
     filterTrackedListings,
+    isListingSyncInFlight,
     mergeTrackedListings,
     toListingsErrorMessage,
     toListingsInfiniteResetKey,
     upsertListingById,
-    isListingSyncInFlight
 } from './listings-tab-utils';
-import {
-    MouseThumbnailTooltipPortal,
-    useMouseThumbnailTooltip
-} from './mouse-thumbnail-tooltip';
-import { ListingHistoryDrawer } from './listing-history-drawer';
+import { ListingsTable } from './listings-table';
+import { MouseThumbnailTooltipPortal, useMouseThumbnailTooltip } from './mouse-thumbnail-tooltip';
 
 const trackedListingsQueryKey = trpc.app.listings.list.queryOptions({}).queryKey;
 const REALTIME_REFRESH_DEBOUNCE_MS = 200;
 
 export function ListingsTab() {
-    const cachedTrackedListings = queryClient.getQueryData<ListTrackedListingsOutput>(
-        trackedListingsQueryKey
-    );
+    const cachedTrackedListings =
+        queryClient.getQueryData<ListTrackedListingsOutput>(trackedListingsQueryKey);
     const initialItems = cachedTrackedListings?.items ?? [];
     const [search, setSearch] = useState('');
     const [showPhysicalListings, setShowPhysicalListings] = useState(true);
@@ -62,7 +55,7 @@ export function ListingsTab() {
             itemsRef.current = nextItems;
             setItems(nextItems);
             queryClient.setQueryData<ListTrackedListingsOutput>(trackedListingsQueryKey, {
-                items: nextItems
+                items: nextItems,
             });
 
             if (!container) {
@@ -76,33 +69,33 @@ export function ListingsTab() {
         []
     );
 
-    const loadListings = useCallback(async (options?: { preserveScroll?: boolean }) => {
-        try {
-            const response = await listTrackedListings({});
-            const mergedItems = mergeTrackedListings(itemsRef.current, response.items);
+    const loadListings = useCallback(
+        async (options?: { preserveScroll?: boolean }) => {
+            try {
+                const response = await listTrackedListings({});
+                const mergedItems = mergeTrackedListings(itemsRef.current, response.items);
 
-            applyListings(mergedItems, options);
-            setErrorMessage(null);
-        } catch (error) {
-            setErrorMessage(toListingsErrorMessage(error));
-        } finally {
-            setIsLoading(false);
-        }
-    }, [applyListings]);
+                applyListings(mergedItems, options);
+                setErrorMessage(null);
+            } catch (error) {
+                setErrorMessage(toListingsErrorMessage(error));
+            } finally {
+                setIsLoading(false);
+            }
+        },
+        [applyListings]
+    );
 
     useEffect(() => {
-        void loadListings();
+        loadListings();
     }, [loadListings]);
     useEffect(() => {
-        const onListingsInvalidated = (
-            event: Event
-        ) => {
+        const onListingsInvalidated = (event: Event) => {
             const detail = (event as CustomEvent<{ reason?: string }>).detail;
 
             if (detail?.reason === 'sync-state.push') {
-                const cachedData = queryClient.getQueryData<ListTrackedListingsOutput>(
-                    trackedListingsQueryKey
-                );
+                const cachedData =
+                    queryClient.getQueryData<ListTrackedListingsOutput>(trackedListingsQueryKey);
 
                 if (!cachedData) {
                     return;
@@ -110,7 +103,7 @@ export function ListingsTab() {
 
                 const mergedItems = mergeTrackedListings(itemsRef.current, cachedData.items);
                 applyListings(mergedItems, {
-                    preserveScroll: true
+                    preserveScroll: true,
                 });
                 return;
             }
@@ -121,8 +114,8 @@ export function ListingsTab() {
 
             realtimeRefreshTimeoutRef.current = window.setTimeout(() => {
                 realtimeRefreshTimeoutRef.current = null;
-                void loadListings({
-                    preserveScroll: true
+                loadListings({
+                    preserveScroll: true,
                 });
             }, REALTIME_REFRESH_DEBOUNCE_MS);
         };
@@ -162,7 +155,7 @@ export function ListingsTab() {
             showPhysicalListings,
             showDigitalListings,
             priceRange,
-            favsRange
+            favsRange,
         });
     }, [favsRange, items, priceRange, search, showDigitalListings, showPhysicalListings]);
     const tableResetKey = toListingsInfiniteResetKey({
@@ -170,14 +163,14 @@ export function ListingsTab() {
         priceRange,
         favsRange,
         showDigitalListings,
-        showPhysicalListings
+        showPhysicalListings,
     });
 
     useEffect(() => {
         scrollViewportRef.current?.scrollTo({
-            top: 0
+            top: 0,
         });
-    }, [tableResetKey]);
+    }, []);
 
     const handleTrack = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -190,7 +183,7 @@ export function ListingsTab() {
 
         try {
             const response = await trackListing({
-                listing: listingInput
+                listing: listingInput,
             });
 
             const nextItems = upsertListingById(itemsRef.current, response.item);
@@ -211,12 +204,12 @@ export function ListingsTab() {
 
         setRefreshingById((current) => ({
             ...current,
-            [item.id]: true
+            [item.id]: true,
         }));
 
         try {
             const refreshed = await refreshTrackedListing({
-                trackedListingId: item.id
+                trackedListingId: item.id,
             });
 
             const nextItems = upsertListingById(itemsRef.current, refreshed);
@@ -224,14 +217,57 @@ export function ListingsTab() {
             setErrorMessage(null);
         } catch (error) {
             setErrorMessage(toListingsErrorMessage(error));
-            void loadListings();
+            loadListings();
         } finally {
             setRefreshingById((current) => ({
                 ...current,
-                [item.id]: false
+                [item.id]: false,
             }));
         }
     };
+
+    let listingsContent: ReactNode;
+    if (isLoading) {
+        listingsContent = (
+            <div className="px-3 py-6 text-muted-foreground text-xs">
+                Loading tracked listings...
+            </div>
+        );
+    } else if (filtered.length === 0) {
+        listingsContent = (
+            <EmptyState message="No tracked listings yet. Add one with an Etsy URL above." />
+        );
+    } else {
+        listingsContent = (
+            <ListingsTable
+                items={filtered}
+                onRefresh={(item) => handleRefreshRow(item)}
+                onRowMouseEnter={(event, item) => {
+                    showTooltip({
+                        cursorX: event.clientX,
+                        cursorY: event.clientY,
+                        imageAlt: item.title,
+                        imageUrl: item.thumbnailUrl,
+                    });
+                }}
+                onRowMouseLeave={hideTooltip}
+                onRowMouseMove={(event, item) => {
+                    if (!item.thumbnailUrl) {
+                        return;
+                    }
+
+                    queueTooltipPositionUpdate(event.clientX, event.clientY);
+                }}
+                onSelectListing={(item) => {
+                    hideTooltip();
+                    setHistoryListing(item);
+                }}
+                refreshingById={refreshingById}
+                resetKey={tableResetKey}
+                scrollContainerRef={scrollViewportRef}
+            />
+        );
+    }
 
     return (
         <div className="flex h-full flex-col">
@@ -252,47 +288,17 @@ export function ListingsTab() {
                 showPhysicalListings={showPhysicalListings}
             />
             {errorMessage ? (
-                <div className="border-b border-terminal-red/20 bg-terminal-red/10 px-3 py-2 text-xs text-terminal-red">
+                <div className="border-terminal-red/20 border-b bg-terminal-red/10 px-3 py-2 text-terminal-red text-xs">
                     {errorMessage}
                 </div>
             ) : null}
-            <div ref={scrollViewportRef} className="min-h-0 flex-1 overflow-auto">
-                {!isLoading && filtered.length === 0 ? (
-                    <EmptyState message="No tracked listings yet. Add one with an Etsy URL above." />
-                ) : (
-                    <ListingsTable
-                        items={filtered}
-                        resetKey={tableResetKey}
-                        scrollContainerRef={scrollViewportRef}
-                        refreshingById={refreshingById}
-                        onRefresh={(item) => void handleRefreshRow(item)}
-                        onSelectListing={(item) => {
-                            hideTooltip();
-                            setHistoryListing(item);
-                        }}
-                        onRowMouseEnter={(event, item) => {
-                            showTooltip({
-                                cursorX: event.clientX,
-                                cursorY: event.clientY,
-                                imageAlt: item.title,
-                                imageUrl: item.thumbnailUrl
-                            });
-                        }}
-                        onRowMouseMove={(event, item) => {
-                            if (!item.thumbnailUrl) {
-                                return;
-                            }
-
-                            queueTooltipPositionUpdate(event.clientX, event.clientY);
-                        }}
-                        onRowMouseLeave={hideTooltip}
-                    />
-                )}
+            <div className="min-h-0 flex-1 overflow-auto" ref={scrollViewportRef}>
+                {listingsContent}
             </div>
             <MouseThumbnailTooltipPortal tooltip={tooltip} tooltipRef={tooltipRef} />
             <ListingHistoryDrawer
-                selectedListing={historyListing}
                 onClose={() => setHistoryListing(null)}
+                selectedListing={historyListing}
             />
         </div>
     );

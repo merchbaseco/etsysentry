@@ -7,7 +7,7 @@ export const findLatestClerkUserIdByAccountId = async (params: {
 }): Promise<string | null> => {
     const [row] = await db
         .select({
-            clerkUserId: clerkIdentities.clerkSubject
+            clerkUserId: clerkIdentities.clerkSubject,
         })
         .from(clerkIdentities)
         .where(eq(clerkIdentities.accountId, params.accountId))

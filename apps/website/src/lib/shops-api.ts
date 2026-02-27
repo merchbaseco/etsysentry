@@ -1,9 +1,6 @@
 import { queryClient, trpc, trpcClient } from './trpc-client';
-import {
-    type InferProcedureInput,
-    type InferProcedureOutput
-} from './trpc-inference';
 import { toTrpcRequestError } from './trpc-http';
+import type { InferProcedureInput, InferProcedureOutput } from './trpc-inference';
 
 export type ListTrackedShopsInput = InferProcedureInput<typeof trpcClient.app.shops.list.query>;
 
@@ -15,7 +12,9 @@ export type TrackShopInput = InferProcedureInput<typeof trpcClient.app.shops.tra
 
 export type TrackShopOutput = InferProcedureOutput<typeof trpcClient.app.shops.track.mutate>;
 
-export type RefreshTrackedShopInput = InferProcedureInput<typeof trpcClient.app.shops.refresh.mutate>;
+export type RefreshTrackedShopInput = InferProcedureInput<
+    typeof trpcClient.app.shops.refresh.mutate
+>;
 
 export const listTrackedShops = async (
     params: ListTrackedShopsInput = {}

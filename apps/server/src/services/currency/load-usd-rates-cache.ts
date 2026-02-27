@@ -23,7 +23,7 @@ const parseRatesJson = (rawValue: string | null): Record<string, number> | null 
     }
 };
 
-export type UsdRatesStatus = {
+export interface UsdRatesStatus {
     baseCurrency: string;
     fetchedAt: string | null;
     hasRates: boolean;
@@ -32,7 +32,7 @@ export type UsdRatesStatus = {
     nextRefreshAt: string | null;
     provider: string;
     rateCount: number;
-};
+}
 
 const defaultStatus: UsdRatesStatus = {
     baseCurrency: USD_BASE_CURRENCY,
@@ -42,12 +42,10 @@ const defaultStatus: UsdRatesStatus = {
     lastRefreshError: null,
     nextRefreshAt: null,
     provider: 'open.er-api.com',
-    rateCount: 0
+    rateCount: 0,
 };
 
-export const loadUsdRatesStatus = async (params?: {
-    now?: Date;
-}): Promise<UsdRatesStatus> => {
+export const loadUsdRatesStatus = async (params?: { now?: Date }): Promise<UsdRatesStatus> => {
     const now = params?.now ?? new Date();
     const [row] = await db
         .select()
@@ -72,14 +70,14 @@ export const loadUsdRatesStatus = async (params?: {
         lastRefreshError: row.lastRefreshError ?? null,
         nextRefreshAt: row.nextRefreshAt ? row.nextRefreshAt.toISOString() : null,
         provider: row.provider,
-        rateCount: parsedRates ? Object.keys(parsedRates).length : 0
+        rateCount: parsedRates ? Object.keys(parsedRates).length : 0,
     };
 };
 
 export const loadUsdRatesMap = async (): Promise<Record<string, number> | null> => {
     const [row] = await db
         .select({
-            ratesJson: currencyRates.ratesJson
+            ratesJson: currencyRates.ratesJson,
         })
         .from(currencyRates)
         .where(eq(currencyRates.baseCurrency, USD_BASE_CURRENCY))

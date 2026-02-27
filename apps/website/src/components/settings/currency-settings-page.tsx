@@ -1,28 +1,28 @@
 import { RefreshCw } from 'lucide-react';
-import type { CurrencyStatus } from '@/lib/currency-api';
-import { cn } from '@/lib/utils';
 import {
     dataRowClassName,
     formatTimestamp,
     sectionBarClassName,
     sectionBarLabelClassName,
-    wideButtonClassName
+    wideButtonClassName,
 } from '@/components/settings/shared';
+import type { CurrencyStatus } from '@/lib/currency-api';
+import { cn } from '@/lib/utils';
 
-type CurrencySettingsPageProps = {
+interface CurrencySettingsPageProps {
     errorMessage: string | null;
     isLoadingStatus: boolean;
     isRefreshingRates: boolean;
     onRefreshRates: () => Promise<void>;
     status: CurrencyStatus | null;
-};
+}
 
 export const CurrencySettingsPage = ({
     errorMessage,
     isLoadingStatus,
     isRefreshingRates,
     onRefreshRates,
-    status
+    status,
 }: CurrencySettingsPageProps) => {
     const syncErrorMessage = status?.lastRefreshError ?? null;
     const visibleErrorMessage = errorMessage ?? syncErrorMessage;
@@ -34,46 +34,41 @@ export const CurrencySettingsPage = ({
             </div>
 
             <div className={dataRowClassName}>
-                <span className="text-xs text-muted-foreground">Last sync</span>
-                <span className="text-xs font-medium text-foreground">
+                <span className="text-muted-foreground text-xs">Last sync</span>
+                <span className="font-medium text-foreground text-xs">
                     {formatTimestamp(status?.fetchedAt ?? null)}
                 </span>
             </div>
             <div className={cn(dataRowClassName, 'border-b-0')}>
-                <span className="text-xs text-muted-foreground">Next refresh</span>
-                <span className="text-xs font-medium text-foreground">
+                <span className="text-muted-foreground text-xs">Next refresh</span>
+                <span className="font-medium text-foreground text-xs">
                     {formatTimestamp(status?.nextRefreshAt ?? null)}
                 </span>
             </div>
 
             <button
-                type="button"
                 className={cn(wideButtonClassName, 'border-t')}
                 disabled={isRefreshingRates || isLoadingStatus}
                 onClick={() => {
-                    void onRefreshRates();
+                    onRefreshRates();
                 }}
+                type="button"
             >
                 <RefreshCw
-                    className={cn(
-                        'size-3',
-                        isRefreshingRates ? 'animate-spin' : undefined
-                    )}
+                    className={cn('size-3', isRefreshingRates ? 'animate-spin' : undefined)}
                 />
                 Refresh Rates
             </button>
 
             {isLoadingStatus ? (
                 <div className="px-4 py-1.5">
-                    <p className="text-xs text-muted-foreground">
-                        Loading current rate status...
-                    </p>
+                    <p className="text-muted-foreground text-xs">Loading current rate status...</p>
                 </div>
             ) : null}
 
             {visibleErrorMessage ? (
                 <div className="px-4 py-1.5">
-                    <p className="text-xs text-terminal-red">{visibleErrorMessage}</p>
+                    <p className="text-terminal-red text-xs">{visibleErrorMessage}</p>
                 </div>
             ) : null}
         </div>

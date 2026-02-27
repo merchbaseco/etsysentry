@@ -1,16 +1,16 @@
 import { CheckCircle2, KeyRound, Link2, RefreshCw, Unplug, Wifi, WifiOff } from 'lucide-react';
-import type { EtsyOAuthConnectionState } from '@/hooks/use-etsy-oauth-connection';
-import type { RealtimeWebsocketState } from '@/hooks/use-realtime-query-invalidations';
 import type { GetListingRefreshPolicyOutput } from '@/lib/listings-api';
-import { cn } from '@/lib/utils';
 import {
     dataRowClassName,
     formatTimestamp,
     sectionBarClassName,
     sectionBarLabelClassName,
     wideButtonClassName,
-    wideDangerButtonClassName
+    wideDangerButtonClassName,
 } from '@/components/settings/shared';
+import type { EtsyOAuthConnectionState } from '@/hooks/use-etsy-oauth-connection';
+import type { RealtimeWebsocketState } from '@/hooks/use-realtime-query-invalidations';
+import { cn } from '@/lib/utils';
 
 const getConnectionStatusLabel = (connection: EtsyOAuthConnectionState): string => {
     if (connection.connected && connection.needsRefresh) {
@@ -71,14 +71,14 @@ const getRealtimeStatusClassName = (realtime: RealtimeWebsocketState): string =>
 const refreshPolicyTableRowClassName =
     'grid grid-cols-[1.4fr_2fr_auto] gap-2 border-b border-border/50 px-4 py-1.5';
 
-type EtsyApiSettingsPageProps = {
+interface EtsyApiSettingsPageProps {
     connection: EtsyOAuthConnectionState;
     isLoadingListingRefreshPolicy: boolean;
     listingRefreshPolicy: GetListingRefreshPolicyOutput | null;
     listingRefreshPolicyErrorMessage: string | null;
     onRefreshListingRefreshPolicy: () => Promise<void>;
     realtime: RealtimeWebsocketState;
-};
+}
 
 export const EtsyApiSettingsPage = ({
     connection,
@@ -103,7 +103,7 @@ export const EtsyApiSettingsPage = ({
                 </div>
                 <span
                     className={cn(
-                        'rounded px-1.5 py-0.5 text-xs font-medium',
+                        'rounded px-1.5 py-0.5 font-medium text-xs',
                         'uppercase tracking-wider',
                         connection.connected
                             ? 'bg-terminal-green/10 text-terminal-green'
@@ -115,43 +115,43 @@ export const EtsyApiSettingsPage = ({
             </div>
 
             <div className={dataRowClassName}>
-                <span className="text-xs text-muted-foreground">Session</span>
-                <span className="text-xs font-medium text-foreground">
+                <span className="text-muted-foreground text-xs">Session</span>
+                <span className="font-medium text-foreground text-xs">
                     {connection.sessionLabel ?? 'N/A'}
                 </span>
             </div>
             <div className={dataRowClassName}>
-                <span className="text-xs text-muted-foreground">Expires</span>
-                <span className="text-xs font-medium text-foreground">
+                <span className="text-muted-foreground text-xs">Expires</span>
+                <span className="font-medium text-foreground text-xs">
                     {formatTimestamp(connection.expiresAt)}
                 </span>
             </div>
             <div className={cn(dataRowClassName, 'border-b-0')}>
-                <span className="text-xs text-muted-foreground">Scopes</span>
-                <span className="text-xs font-medium text-foreground">
+                <span className="text-muted-foreground text-xs">Scopes</span>
+                <span className="font-medium text-foreground text-xs">
                     {connection.scopes.length}
                 </span>
             </div>
 
-            <div className="grid grid-cols-2 border-t border-border">
+            <div className="grid grid-cols-2 border-border border-t">
                 <button
-                    type="button"
                     className={cn(wideButtonClassName, 'border-r')}
                     disabled={isActionBusy}
                     onClick={() => {
-                        void connection.connect();
+                        connection.connect();
                     }}
+                    type="button"
                 >
                     <Link2 className="size-3" />
                     {connection.hasSession ? 'Reconnect' : 'Connect'}
                 </button>
                 <button
-                    type="button"
                     className={wideButtonClassName}
                     disabled={isActionBusy || !connection.connected}
                     onClick={() => {
-                        void connection.refreshConnection();
+                        connection.refreshConnection();
                     }}
+                    type="button"
                 >
                     <RefreshCw
                         className={cn(
@@ -164,23 +164,23 @@ export const EtsyApiSettingsPage = ({
             </div>
             <div className="grid grid-cols-2">
                 <button
-                    type="button"
                     className={cn(wideButtonClassName, 'border-r')}
                     disabled={isActionBusy}
                     onClick={() => {
-                        void connection.checkStatus();
+                        connection.checkStatus();
                     }}
+                    type="button"
                 >
                     <CheckCircle2 className="size-3" />
                     Check Status
                 </button>
                 <button
-                    type="button"
                     className={wideDangerButtonClassName}
                     disabled={isActionBusy || !connection.connected}
                     onClick={() => {
-                        void connection.forgetSession();
+                        connection.forgetSession();
                     }}
+                    type="button"
                 >
                     <Unplug className="size-3" />
                     Forget Session
@@ -189,9 +189,7 @@ export const EtsyApiSettingsPage = ({
 
             {connection.errorMessage ? (
                 <div className="px-4 py-1.5">
-                    <p className="text-xs text-terminal-red">
-                        {connection.errorMessage}
-                    </p>
+                    <p className="text-terminal-red text-xs">{connection.errorMessage}</p>
                 </div>
             ) : null}
 
@@ -206,7 +204,7 @@ export const EtsyApiSettingsPage = ({
                 </div>
                 <span
                     className={cn(
-                        'rounded px-1.5 py-0.5 text-xs font-medium',
+                        'rounded px-1.5 py-0.5 font-medium text-xs',
                         'uppercase tracking-wider',
                         getRealtimeStatusClassName(realtime)
                     )}
@@ -217,16 +215,16 @@ export const EtsyApiSettingsPage = ({
 
             {realtime.lastConnectedAt ? (
                 <div className={dataRowClassName}>
-                    <span className="text-xs text-muted-foreground">Last connected</span>
-                    <span className="text-xs font-medium text-foreground">
+                    <span className="text-muted-foreground text-xs">Last connected</span>
+                    <span className="font-medium text-foreground text-xs">
                         {formatTimestamp(realtime.lastConnectedAt)}
                     </span>
                 </div>
             ) : null}
             {realtime.lastErrorAt ? (
                 <div className={dataRowClassName}>
-                    <span className="text-xs text-muted-foreground">Last error</span>
-                    <span className="text-xs font-medium text-terminal-red">
+                    <span className="text-muted-foreground text-xs">Last error</span>
+                    <span className="font-medium text-terminal-red text-xs">
                         {formatTimestamp(realtime.lastErrorAt)}
                     </span>
                 </div>

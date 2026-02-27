@@ -1,22 +1,22 @@
-import { useEffect, useMemo, useState, type RefObject } from 'react';
+import { type RefObject, useEffect, useMemo, useState } from 'react';
 
-type UseTableBodyHeightInput = {
+interface UseTableBodyHeightInput {
     contentHeight: number;
-    headerRef: RefObject<HTMLElement | null>;
     footerRef: RefObject<HTMLElement | null>;
+    headerRef: RefObject<HTMLElement | null>;
     scrollContainerRef: RefObject<HTMLDivElement | null>;
-};
+}
 
-type HeightSnapshot = {
+interface HeightSnapshot {
     containerHeight: number;
     footerHeight: number;
     headerHeight: number;
-};
+}
 
 const DEFAULT_HEIGHTS: HeightSnapshot = {
     containerHeight: 0,
     footerHeight: 0,
-    headerHeight: 0
+    headerHeight: 0,
 };
 
 export const useTableBodyHeight = (params: UseTableBodyHeightInput): number => {
@@ -34,7 +34,7 @@ export const useTableBodyHeight = (params: UseTableBodyHeightInput): number => {
             setHeights({
                 containerHeight: container.clientHeight,
                 footerHeight: footer?.offsetHeight ?? 0,
-                headerHeight: header?.offsetHeight ?? 0
+                headerHeight: header?.offsetHeight ?? 0,
             });
         };
 

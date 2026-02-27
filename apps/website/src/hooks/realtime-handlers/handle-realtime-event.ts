@@ -1,18 +1,12 @@
-import { type RealtimeMessage } from '@/lib/realtime-message-types';
-import {
-    createQueryInvalidateEventHandler
-} from '@/hooks/realtime-handlers/handle-query-invalidate-event';
-import {
-    handleSyncStatePushEvent
-} from '@/hooks/realtime-handlers/handle-sync-state-push-event';
-import {
-    handleDashboardSummaryPushEvent
-} from '@/hooks/realtime-handlers/handle-dashboard-summary-push-event';
+import { handleDashboardSummaryPushEvent } from '@/hooks/realtime-handlers/handle-dashboard-summary-push-event';
+import { createQueryInvalidateEventHandler } from '@/hooks/realtime-handlers/handle-query-invalidate-event';
+import { handleSyncStatePushEvent } from '@/hooks/realtime-handlers/handle-sync-state-push-event';
+import type { RealtimeMessage } from '@/lib/realtime-message-types';
 
-export type RealtimeEventHandler = {
+export interface RealtimeEventHandler {
     cleanup: () => void;
     handleRealtimeEvent: (message: RealtimeMessage) => void;
-};
+}
 
 export const createRealtimeEventHandler = (): RealtimeEventHandler => {
     const queryInvalidateEventHandler = createQueryInvalidateEventHandler();
@@ -28,6 +22,8 @@ export const createRealtimeEventHandler = (): RealtimeEventHandler => {
             case 'dashboard-summary.push':
                 handleDashboardSummaryPushEvent(message);
                 return;
+            default:
+                return;
         }
     };
 
@@ -37,6 +33,6 @@ export const createRealtimeEventHandler = (): RealtimeEventHandler => {
 
     return {
         cleanup,
-        handleRealtimeEvent
+        handleRealtimeEvent,
     };
 };

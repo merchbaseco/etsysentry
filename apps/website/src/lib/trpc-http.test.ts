@@ -7,7 +7,7 @@ describe('toTrpcRequestError', () => {
         const original = new TrpcRequestError({
             code: 'BAD_REQUEST',
             httpStatus: 400,
-            message: 'Request was invalid.'
+            message: 'Request was invalid.',
         });
 
         const next = toTrpcRequestError(original);
@@ -37,10 +37,10 @@ describe('toTrpcRequestError', () => {
                 error: {
                     data: {
                         code: 'BAD_REQUEST',
-                        httpStatus: 400
-                    }
-                }
-            }
+                        httpStatus: 400,
+                    },
+                },
+            },
         });
 
         const mapped = toTrpcRequestError(trpcError);

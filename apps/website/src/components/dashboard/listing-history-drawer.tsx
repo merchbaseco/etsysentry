@@ -1,12 +1,12 @@
-import { useCallback, useEffect, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { DetailPanel, formatNumber } from '@/components/ui/dashboard';
 import {
     type GetTrackedListingMetricHistoryOutput,
     getTrackedListingMetricHistory,
-    type TrackedListingItem
+    type TrackedListingItem,
 } from '@/lib/listings-api';
 import { TrpcRequestError } from '@/lib/trpc-http';
-import { Button } from '@/components/ui/button';
-import { DetailPanel, formatNumber } from '@/components/ui/dashboard';
 import { ListingDetailsSection } from './listing-details-section';
 
 const HISTORY_WINDOW_DAYS = 90;
@@ -51,13 +51,13 @@ const formatObservedDate = (observedDate: string): string => {
         month: 'short',
         day: 'numeric',
         year: 'numeric',
-        timeZone: 'UTC'
+        timeZone: 'UTC',
     });
 };
 
 export function ListingHistoryDrawer({
     selectedListing,
-    onClose
+    onClose,
 }: {
     selectedListing: TrackedListingItem | null;
     onClose: () => void;
@@ -72,7 +72,7 @@ export function ListingHistoryDrawer({
         try {
             const response = await getTrackedListingMetricHistory({
                 trackedListingId,
-                days: HISTORY_WINDOW_DAYS
+                days: HISTORY_WINDOW_DAYS,
             });
 
             setHistory(response);
@@ -96,9 +96,9 @@ export function ListingHistoryDrawer({
 
         setIsLoading(true);
 
-        void getTrackedListingMetricHistory({
+        getTrackedListingMetricHistory({
             trackedListingId: selectedListing.id,
-            days: HISTORY_WINDOW_DAYS
+            days: HISTORY_WINDOW_DAYS,
         })
             .then((response) => {
                 if (!isCurrent) {
@@ -129,96 +129,89 @@ export function ListingHistoryDrawer({
     }, [selectedListing]);
 
     const historyItems = history?.items ?? [];
+    let historySectionContent: ReactNode;
+
+    if (isLoading) {
+        historySectionContent = (
+            <div className="px-4 py-4 text-muted-foreground text-xs">Loading daily history...</div>
+        );
+    } else if (errorMessage) {
+        historySectionContent = (
+            <div className="space-y-3 px-4 py-3">
+                <p className="text-terminal-red text-xs">{errorMessage}</p>
+                <Button
+                    onClick={() => selectedListing && loadHistory(selectedListing.id)}
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                >
+                    Retry
+                </Button>
+            </div>
+        );
+    } else if (historyItems.length === 0) {
+        historySectionContent = (
+            <div className="px-4 py-4 text-muted-foreground text-xs">No history captured yet.</div>
+        );
+    } else {
+        historySectionContent = (
+            <>
+                <div className={sectionBarClassName}>
+                    <span className={sectionBarLabelClassName}>Daily History</span>
+                </div>
+                <table className="w-full text-xs">
+                    <thead>
+                        <tr className="border-border/70 border-b">
+                            <th className={tableHeaderLeftCellClassName}>Day (UTC)</th>
+                            <th className={tableHeaderCellClassName}>Views</th>
+                            <th className={tableHeaderCellClassName}>Favs</th>
+                            <th className={tableHeaderCellClassName}>Qty</th>
+                            <th className={tableHeaderCellClassName}>Price</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {historyItems.map((item) => (
+                            <tr
+                                className="border-border/50 border-b last:border-b-0"
+                                key={item.observedDate}
+                            >
+                                <td className="px-3 py-2 font-mono text-[11px]">
+                                    {formatObservedDate(item.observedDate)}
+                                </td>
+                                <td className="px-3 py-2 text-right text-terminal-dim">
+                                    {item.views === null ? '--' : formatNumber(item.views)}
+                                </td>
+                                <td className="px-3 py-2 text-right text-terminal-dim">
+                                    {item.favorerCount === null
+                                        ? '--'
+                                        : formatNumber(item.favorerCount)}
+                                </td>
+                                <td className="px-3 py-2 text-right text-terminal-dim">
+                                    {item.quantity ?? '--'}
+                                </td>
+                                <td className="px-3 py-2 text-right text-terminal-green">
+                                    {formatPrice(item.price)}
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </>
+        );
+    }
 
     return (
         <DetailPanel
-            open={Boolean(selectedListing)}
             onClose={onClose}
-            title={selectedListing?.title ?? ''}
+            open={Boolean(selectedListing)}
             size="wide"
+            title={selectedListing?.title ?? ''}
         >
             {selectedListing ? (
                 <>
                     <ListingDetailsSection item={selectedListing} />
 
-                    {isLoading ? (
-                        <div className="px-4 py-4 text-xs text-muted-foreground">
-                            Loading daily history...
-                        </div>
-                    ) : errorMessage ? (
-                        <div className="space-y-3 px-4 py-3">
-                            <p className="text-xs text-terminal-red">{errorMessage}</p>
-                            <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => void loadHistory(selectedListing.id)}
-                            >
-                                Retry
-                            </Button>
-                        </div>
-                    ) : historyItems.length === 0 ? (
-                        <div className="px-4 py-4 text-xs text-muted-foreground">
-                            No history captured yet.
-                        </div>
-                    ) : (
-                        <>
-                            <div className={sectionBarClassName}>
-                                <span className={sectionBarLabelClassName}>
-                                    Daily History
-                                </span>
-                            </div>
-                            <table className="w-full text-xs">
-                                <thead>
-                                    <tr className="border-b border-border/70">
-                                        <th className={tableHeaderLeftCellClassName}>
-                                            Day (UTC)
-                                        </th>
-                                        <th className={tableHeaderCellClassName}>Views</th>
-                                        <th className={tableHeaderCellClassName}>Favs</th>
-                                        <th className={tableHeaderCellClassName}>Qty</th>
-                                        <th className={tableHeaderCellClassName}>Price</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {historyItems.map((item) => (
-                                        <tr
-                                            key={item.observedDate}
-                                            className='border-b border-border/50 last:border-b-0'
-                                        >
-                                            <td className="px-3 py-2 font-mono text-[11px]">
-                                                {formatObservedDate(item.observedDate)}
-                                            </td>
-                                            <td
-                                                className='px-3 py-2 text-right text-terminal-dim'
-                                            >
-                                                {item.views === null
-                                                    ? '--'
-                                                    : formatNumber(item.views)}
-                                            </td>
-                                            <td
-                                                className='px-3 py-2 text-right text-terminal-dim'
-                                            >
-                                                {item.favorerCount === null
-                                                    ? '--'
-                                                    : formatNumber(item.favorerCount)}
-                                            </td>
-                                            <td
-                                                className='px-3 py-2 text-right text-terminal-dim'
-                                            >
-                                                {item.quantity ?? '--'}
-                                            </td>
-                                            <td
-                                                className='px-3 py-2 text-right text-terminal-green'
-                                            >
-                                                {formatPrice(item.price)}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </>
-                    )}
+                    {historySectionContent}
                 </>
             ) : null}
         </DetailPanel>

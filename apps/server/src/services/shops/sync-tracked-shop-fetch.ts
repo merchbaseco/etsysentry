@@ -1,13 +1,13 @@
 import { TRPCError } from '@trpc/server';
 import {
     EtsyFindAllActiveListingsByShopBridgeError,
+    type FindAllActiveListingsByShopBridgeResponse,
     findAllActiveListingsByShop,
-    type FindAllActiveListingsByShopBridgeResponse
 } from '../etsy/bridges/find-all-active-listings-by-shop';
 import {
     EtsyGetShopBridgeError,
+    type GetShopBridgeResponse,
     getShop,
-    type GetShopBridgeResponse
 } from '../etsy/bridges/get-shop';
 import { recordEtsyApiCallBestEffort } from '../etsy/record-etsy-api-call';
 
@@ -21,20 +21,20 @@ const mapBridgeErrorToTrpcError = (
     if (error.statusCode === 404) {
         return new TRPCError({
             code: 'NOT_FOUND',
-            message: 'Etsy shop was not found.'
+            message: 'Etsy shop was not found.',
         });
     }
 
     if (error.statusCode === 400) {
         return new TRPCError({
             code: 'BAD_REQUEST',
-            message: error.message
+            message: error.message,
         });
     }
 
     return new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
-        message: error.message
+        message: error.message,
     });
 };
 
@@ -47,11 +47,11 @@ export const fetchShopFromEtsy = async (params: {
         await recordEtsyApiCallBestEffort({
             clerkUserId: params.clerkUserId,
             endpoint: 'getShop',
-            accountId: params.accountId
+            accountId: params.accountId,
         });
 
         return await getShop({
-            shopId: params.etsyShopId
+            shopId: params.etsyShopId,
         });
     } catch (error) {
         if (error instanceof EtsyGetShopBridgeError) {
@@ -76,7 +76,7 @@ export const fetchChangedActiveListings = async (params: {
             await recordEtsyApiCallBestEffort({
                 clerkUserId: params.clerkUserId,
                 endpoint: 'findAllActiveListingsByShop',
-                accountId: params.accountId
+                accountId: params.accountId,
             });
 
             const response = await findAllActiveListingsByShop({
@@ -84,7 +84,7 @@ export const fetchChangedActiveListings = async (params: {
                 offset,
                 shopId: params.etsyShopId,
                 sortOn: 'updated',
-                sortOrder: 'desc'
+                sortOrder: 'desc',
             });
 
             if (response.results.length === 0) {

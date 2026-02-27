@@ -3,8 +3,8 @@ import { db } from '../../db';
 import { trackedKeywords } from '../../db/schema';
 import {
     SYNC_STALE_KEYWORDS_BATCH_SIZE,
+    type SyncKeywordJobInput,
     syncKeywordJobInputSchema,
-    type SyncKeywordJobInput
 } from '../../jobs/sync-keyword-shared';
 
 export const findStaleKeywords = async (params?: {
@@ -16,7 +16,7 @@ export const findStaleKeywords = async (params?: {
         .select({
             clerkUserId: trackedKeywords.trackerClerkUserId,
             accountId: trackedKeywords.accountId,
-            trackedKeywordId: trackedKeywords.id
+            trackedKeywordId: trackedKeywords.id,
         })
         .from(trackedKeywords)
         .where(

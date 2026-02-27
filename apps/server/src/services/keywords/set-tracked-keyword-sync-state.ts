@@ -21,21 +21,19 @@ const emitTrackedKeywordsSyncStatePush = (params: {
         ids: Object.fromEntries(
             params.keywordIds.map((keywordId) => [keywordId, params.syncState] as const)
         ),
-        accountId: params.accountId
+        accountId: params.accountId,
     });
 };
 
-const emitDashboardSummaryPushBestEffort = (params: {
-    accountId: string;
-}): void => {
-    void getDashboardJobCounts({
-        accountId: params.accountId
+const emitDashboardSummaryPushBestEffort = (params: { accountId: string }): void => {
+    getDashboardJobCounts({
+        accountId: params.accountId,
     })
         .then((jobCounts) => {
             sendRealtimeEvent({
                 type: 'dashboard-summary.push',
                 accountId: params.accountId,
-                jobCounts
+                jobCounts,
             });
         })
         .catch(() => {
@@ -45,7 +43,7 @@ const emitDashboardSummaryPushBestEffort = (params: {
 
 const buildSyncStateUpdate = (syncState: TrackedKeywordSyncState) => {
     return {
-        syncState
+        syncState,
     };
 };
 
@@ -64,7 +62,7 @@ export const setTrackedKeywordSyncStateByKeywordId = async (params: {
             )
         )
         .returning({
-            id: trackedKeywords.id
+            id: trackedKeywords.id,
         });
 
     if (rows.length === 0) {
@@ -74,10 +72,10 @@ export const setTrackedKeywordSyncStateByKeywordId = async (params: {
     emitTrackedKeywordsSyncStatePush({
         accountId: params.accountId,
         keywordIds: rows.map((row) => row.id),
-        syncState: params.syncState
+        syncState: params.syncState,
     });
     emitDashboardSummaryPushBestEffort({
-        accountId: params.accountId
+        accountId: params.accountId,
     });
 
     return true;
@@ -104,7 +102,7 @@ export const setTrackedKeywordsSyncStateByKeywordIds = async (params: {
             )
         )
         .returning({
-            id: trackedKeywords.id
+            id: trackedKeywords.id,
         });
 
     if (rows.length === 0) {
@@ -114,10 +112,10 @@ export const setTrackedKeywordsSyncStateByKeywordIds = async (params: {
     emitTrackedKeywordsSyncStatePush({
         accountId: params.accountId,
         keywordIds: rows.map((row) => row.id),
-        syncState: params.syncState
+        syncState: params.syncState,
     });
     emitDashboardSummaryPushBestEffort({
-        accountId: params.accountId
+        accountId: params.accountId,
     });
 
     return rows.length;

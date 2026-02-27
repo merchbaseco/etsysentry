@@ -1,21 +1,21 @@
 import { env } from '../../config/env';
 
-type EtsyRateLimitState = {
+interface EtsyRateLimitState {
     blockedUntilMs: number;
     perDayLimit: number;
     perSecondLimit: number;
     requestsInCurrentSecond: number;
     secondWindowStartMs: number;
-};
+}
 
 export type EtsyFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
-export type EtsyRateLimitDependencies = {
+export interface EtsyRateLimitDependencies {
     now: () => number;
     sleep: (delayMs: number) => Promise<void>;
-};
+}
 
-export type EtsyRateLimitRuntimeSnapshot = {
+export interface EtsyRateLimitRuntimeSnapshot {
     blockedForMs: number;
     blockedUntil: string | null;
     perDayLimit: number;
@@ -23,7 +23,7 @@ export type EtsyRateLimitRuntimeSnapshot = {
     requestsInCurrentSecond: number;
     secondWindowResetsInMs: number;
     secondWindowStartedAt: string | null;
-};
+}
 
 const createInitialRateLimitState = (): EtsyRateLimitState => {
     return {
@@ -31,14 +31,14 @@ const createInitialRateLimitState = (): EtsyRateLimitState => {
         perDayLimit: Math.max(1, env.ETSY_RATE_LIMIT_DEFAULT_PER_DAY),
         perSecondLimit: Math.max(1, env.ETSY_RATE_LIMIT_DEFAULT_PER_SECOND),
         requestsInCurrentSecond: 0,
-        secondWindowStartMs: -1
+        secondWindowStartMs: -1,
     };
 };
 
 let rateLimitState = createInitialRateLimitState();
 let stateLock: Promise<void> = Promise.resolve();
 
-const withStateLock = async <T>(work: () => Promise<T> | T): Promise<T> => {
+const withStateLock = <T>(work: () => Promise<T> | T): Promise<T> => {
     const next = stateLock.then(() => work());
     stateLock = next.then(
         () => undefined,
@@ -104,13 +104,13 @@ const getMsUntilNextUtcDay = (nowMs: number): number => {
         0
     );
 
-    return Math.max(1_000, nextUtcMidnight - nowMs);
+    return Math.max(1000, nextUtcMidnight - nowMs);
 };
 
 const refreshSecondWindow = (nowMs: number): void => {
     if (
         rateLimitState.secondWindowStartMs < 0 ||
-        nowMs - rateLimitState.secondWindowStartMs >= 1_000
+        nowMs - rateLimitState.secondWindowStartMs >= 1000
     ) {
         rateLimitState.secondWindowStartMs = nowMs;
         rateLimitState.requestsInCurrentSecond = 0;
@@ -196,7 +196,7 @@ export const observeEtsyRateLimitHeaders = async (params: {
             if (remainingThisSecond <= 0) {
                 rateLimitState.blockedUntilMs = Math.max(
                     rateLimitState.blockedUntilMs,
-                    params.nowMs + 1_000
+                    params.nowMs + 1000
                 );
             } else {
                 const inferredUsedCount = Math.max(
@@ -227,9 +227,7 @@ export const observeEtsyRateLimitHeaders = async (params: {
     });
 };
 
-export const reserveEtsyRequestPermit = async (
-    deps: EtsyRateLimitDependencies
-): Promise<void> => {
+export const reserveEtsyRequestPermit = async (deps: EtsyRateLimitDependencies): Promise<void> => {
     while (true) {
         const waitMs = await withStateLock(() => {
             const nowMs = deps.now();
@@ -247,7 +245,7 @@ export const reserveEtsyRequestPermit = async (
                 return 0;
             }
 
-            return Math.max(1, rateLimitState.secondWindowStartMs + 1_000 - nowMs);
+            return Math.max(1, rateLimitState.secondWindowStartMs + 1000 - nowMs);
         });
 
         if (waitMs <= 0) {
@@ -258,11 +256,9 @@ export const reserveEtsyRequestPermit = async (
     }
 };
 
-export const getEtsyRateLimitRuntimeSnapshot = async (
-    params?: {
-        nowMs?: number;
-    }
-): Promise<EtsyRateLimitRuntimeSnapshot> => {
+export const getEtsyRateLimitRuntimeSnapshot = (params?: {
+    nowMs?: number;
+}): Promise<EtsyRateLimitRuntimeSnapshot> => {
     return withStateLock(() => {
         const nowMs = params?.nowMs ?? Date.now();
         refreshSecondWindow(nowMs);
@@ -272,15 +268,13 @@ export const getEtsyRateLimitRuntimeSnapshot = async (
             0,
             rateLimitState.secondWindowStartMs < 0
                 ? 0
-                : rateLimitState.secondWindowStartMs + 1_000 - nowMs
+                : rateLimitState.secondWindowStartMs + 1000 - nowMs
         );
 
         return {
             blockedForMs,
             blockedUntil:
-                blockedForMs > 0
-                    ? new Date(rateLimitState.blockedUntilMs).toISOString()
-                    : null,
+                blockedForMs > 0 ? new Date(rateLimitState.blockedUntilMs).toISOString() : null,
             perDayLimit: rateLimitState.perDayLimit,
             perSecondLimit: rateLimitState.perSecondLimit,
             requestsInCurrentSecond: rateLimitState.requestsInCurrentSecond,
@@ -288,7 +282,7 @@ export const getEtsyRateLimitRuntimeSnapshot = async (
             secondWindowStartedAt:
                 rateLimitState.secondWindowStartMs < 0
                     ? null
-                    : new Date(rateLimitState.secondWindowStartMs).toISOString()
+                    : new Date(rateLimitState.secondWindowStartMs).toISOString(),
         };
     });
 };

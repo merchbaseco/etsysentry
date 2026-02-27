@@ -4,7 +4,7 @@ export const realtimeInvalidationQuerySchema = z.enum([
     'app.keywords.list',
     'app.listings.list',
     'app.shops.list',
-    'app.logs.list'
+    'app.logs.list',
 ]);
 
 export type RealtimeInvalidationQuery = z.infer<typeof realtimeInvalidationQuerySchema>;
@@ -21,12 +21,11 @@ const syncStatePushEventSchema = z.object({
     type: z.literal('sync-state.push'),
     accountId: z.string().min(1),
     entity: realtimeSyncEntitySchema,
-    ids: z.record(z.string().min(1), realtimeSyncStateSchema).refine(
-        (ids) => Object.keys(ids).length > 0,
-        {
-            message: 'sync-state.push ids cannot be empty.'
-        }
-    )
+    ids: z
+        .record(z.string().min(1), realtimeSyncStateSchema)
+        .refine((ids) => Object.keys(ids).length > 0, {
+            message: 'sync-state.push ids cannot be empty.',
+        }),
 });
 
 const dashboardSummaryPushEventSchema = z.object({
@@ -34,21 +33,20 @@ const dashboardSummaryPushEventSchema = z.object({
     accountId: z.string().min(1),
     jobCounts: z.object({
         inFlightJobs: z.number().int().nonnegative(),
-        queuedJobs: z.number().int().nonnegative()
-    })
+        queuedJobs: z.number().int().nonnegative(),
+    }),
 });
 
 const queryInvalidationEventSchema = z.object({
     type: z.literal('query.invalidate'),
     accountId: z.string().min(1),
-    queries: z.array(realtimeInvalidationQuerySchema).min(1)
+    queries: z.array(realtimeInvalidationQuerySchema).min(1),
 });
 
 export const realtimeEventSchema = z.discriminatedUnion('type', [
     syncStatePushEventSchema,
     dashboardSummaryPushEventSchema,
-    queryInvalidationEventSchema
+    queryInvalidationEventSchema,
 ]);
 
 export type RealtimeEvent = z.infer<typeof realtimeEventSchema>;
-

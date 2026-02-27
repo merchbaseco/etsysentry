@@ -8,7 +8,7 @@ import { appProcedure } from '../../trpc';
 export const keywordsTrackProcedure = appProcedure
     .input(
         z.object({
-            keyword: z.string().min(1)
+            keyword: z.string().min(1),
         })
     )
     .mutation(async ({ ctx, input }) => {
@@ -16,20 +16,20 @@ export const keywordsTrackProcedure = appProcedure
             keywordInput: input.keyword,
             requestId: ctx.requestId,
             accountId: ctx.accountId,
-            trackerClerkUserId: ctx.user.sub
+            trackerClerkUserId: ctx.user.sub,
         });
 
         const monitorRunId = await enqueueKeywordSyncJob({
             clerkUserId: trackedKeyword.item.trackerClerkUserId,
             accountId: trackedKeyword.item.accountId,
-            trackedKeywordId: trackedKeyword.item.id
+            trackedKeywordId: trackedKeyword.item.id,
         });
 
         if (monitorRunId) {
             await setTrackedKeywordSyncStateByKeywordId({
                 accountId: trackedKeyword.item.accountId,
                 trackedKeywordId: trackedKeyword.item.id,
-                syncState: 'queued'
+                syncState: 'queued',
             });
         }
 
@@ -38,7 +38,7 @@ export const keywordsTrackProcedure = appProcedure
             category: 'keyword',
             clerkUserId: ctx.user.sub,
             detailsJson: {
-                keyword: trackedKeyword.item.keyword
+                keyword: trackedKeyword.item.keyword,
             },
             keyword: trackedKeyword.item.keyword,
             level: monitorRunId ? 'info' : 'warn',
@@ -50,14 +50,14 @@ export const keywordsTrackProcedure = appProcedure
             primitiveType: 'keyword',
             requestId: ctx.requestId,
             status: monitorRunId ? 'pending' : 'failed',
-            accountId: trackedKeyword.item.accountId
+            accountId: trackedKeyword.item.accountId,
         });
 
         return {
             ...trackedKeyword,
             item: {
                 ...trackedKeyword.item,
-                syncState: monitorRunId ? 'queued' : trackedKeyword.item.syncState
-            }
+                syncState: monitorRunId ? 'queued' : trackedKeyword.item.syncState,
+            },
         };
     });

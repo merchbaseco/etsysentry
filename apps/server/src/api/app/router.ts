@@ -1,7 +1,7 @@
 import { router } from '../trpc';
 import { adminRouter } from './admin/router';
-import { dashboardRouter } from './dashboard/router';
 import { currencyRouter } from './currency/router';
+import { dashboardRouter } from './dashboard/router';
 import { etsyAuthRouter } from './etsy-auth/router';
 import { keywordsRouter } from './keywords/router';
 import { listingsRouter } from './listings/router';
@@ -16,5 +16,5 @@ export const appRouter = router({
     keywords: keywordsRouter,
     listings: listingsRouter,
     logs: logsRouter,
-    shops: shopsRouter
+    shops: shopsRouter,
 });

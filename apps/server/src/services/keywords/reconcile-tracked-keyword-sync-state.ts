@@ -1,5 +1,5 @@
-import type { PgBoss } from 'pg-boss';
 import { inArray } from 'drizzle-orm';
+import type { PgBoss } from 'pg-boss';
 import { db } from '../../db';
 import { trackedKeywords } from '../../db/schema';
 import { SYNC_KEYWORD_JOB_NAME, type SyncKeywordJobInput } from '../../jobs/sync-keyword-shared';
@@ -34,12 +34,12 @@ const hasLiveSyncKeywordJob = (jobs: Array<{ state: SyncKeywordJobState }>): boo
     return jobs.some((job) => isLiveSyncKeywordJobState(job.state));
 };
 
-export type ReconcileTrackedKeywordSyncStateResult = {
+export interface ReconcileTrackedKeywordSyncStateResult {
     checkedCount: number;
     fixedCount: number;
     liveCount: number;
     summary: string;
-};
+}
 
 export const reconcileTrackedKeywordSyncState = async (params: {
     boss: Pick<PgBoss, 'findJobs'>;
@@ -47,7 +47,7 @@ export const reconcileTrackedKeywordSyncState = async (params: {
     const rows = await db
         .select({
             accountId: trackedKeywords.accountId,
-            trackedKeywordId: trackedKeywords.id
+            trackedKeywordId: trackedKeywords.id,
         })
         .from(trackedKeywords)
         .where(inArray(trackedKeywords.syncState, ['queued', 'syncing']));
@@ -59,8 +59,8 @@ export const reconcileTrackedKeywordSyncState = async (params: {
         const jobs = await params.boss.findJobs<SyncKeywordJobInput>(SYNC_KEYWORD_JOB_NAME, {
             data: {
                 accountId: row.accountId,
-                trackedKeywordId: row.trackedKeywordId
-            }
+                trackedKeywordId: row.trackedKeywordId,
+            },
         });
 
         if (hasLiveSyncKeywordJob(jobs)) {
@@ -78,7 +78,7 @@ export const reconcileTrackedKeywordSyncState = async (params: {
         fixedCount += await setTrackedKeywordsSyncStateByKeywordIds({
             accountId,
             syncState: 'idle',
-            trackedKeywordIds
+            trackedKeywordIds,
         });
     }
 
@@ -92,6 +92,6 @@ export const reconcileTrackedKeywordSyncState = async (params: {
         checkedCount,
         fixedCount,
         liveCount,
-        summary
+        summary,
     };
 };

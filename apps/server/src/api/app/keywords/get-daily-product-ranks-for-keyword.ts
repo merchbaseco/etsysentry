@@ -5,12 +5,12 @@ import { appProcedure } from '../../trpc';
 export const keywordsGetDailyProductRanksForKeywordProcedure = appProcedure
     .input(
         z.object({
-            trackedKeywordId: z.string().uuid()
+            trackedKeywordId: z.string().uuid(),
         })
     )
-    .query(async ({ ctx, input }) => {
+    .query(({ ctx, input }) => {
         return getDailyProductRanksForKeyword({
             accountId: ctx.accountId,
-            trackedKeywordId: input.trackedKeywordId
+            trackedKeywordId: input.trackedKeywordId,
         });
     });

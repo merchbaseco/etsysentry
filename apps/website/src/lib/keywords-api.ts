@@ -1,13 +1,14 @@
 import { queryClient, trpc, trpcClient } from './trpc-client';
-import {
-    type InferProcedureInput,
-    type InferProcedureOutput
-} from './trpc-inference';
 import { toTrpcRequestError } from './trpc-http';
+import type { InferProcedureInput, InferProcedureOutput } from './trpc-inference';
 
-export type ListTrackedKeywordsInput = InferProcedureInput<typeof trpcClient.app.keywords.list.query>;
+export type ListTrackedKeywordsInput = InferProcedureInput<
+    typeof trpcClient.app.keywords.list.query
+>;
 
-export type ListTrackedKeywordsOutput = InferProcedureOutput<typeof trpcClient.app.keywords.list.query>;
+export type ListTrackedKeywordsOutput = InferProcedureOutput<
+    typeof trpcClient.app.keywords.list.query
+>;
 
 export type TrackedKeywordItem = ListTrackedKeywordsOutput['items'][number];
 

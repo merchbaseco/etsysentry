@@ -10,7 +10,7 @@ const getListingIncludeSchema = z.enum([
     'Translations',
     'Inventory',
     'Videos',
-    'Personalization'
+    'Personalization',
 ]);
 
 const etsyListingStateSchema = z.enum([
@@ -19,7 +19,7 @@ const etsyListingStateSchema = z.enum([
     'sold_out',
     'draft',
     'expired',
-    'edit'
+    'edit',
 ]);
 const listingStateSchema = z.enum(['active', 'inactive', 'sold_out', 'draft', 'expired']);
 const listingTypeSchema = z.enum(['physical', 'download', 'both']);
@@ -27,14 +27,14 @@ const listingTypeSchema = z.enum(['physical', 'download', 'both']);
 const moneySchema = z.object({
     amount: z.coerce.number().int(),
     currency_code: z.string().min(1),
-    divisor: z.coerce.number().int().positive()
+    divisor: z.coerce.number().int().positive(),
 });
 
 const shopSchema = z
     .object({
         name: z.string().min(1).nullable().optional(),
         shop_id: z.coerce.number().int().positive().nullable().optional(),
-        shop_name: z.string().min(1).nullable().optional()
+        shop_name: z.string().min(1).nullable().optional(),
     })
     .passthrough();
 
@@ -70,7 +70,7 @@ const listingResponseSchema = z
         user: z.unknown().nullable().optional(),
         user_id: z.coerce.number().int().positive().nullable().optional(),
         videos: z.array(z.unknown()).nullable().optional(),
-        views: z.coerce.number().int().nonnegative().nullable().optional()
+        views: z.coerce.number().int().nonnegative().nullable().optional(),
     })
     .passthrough();
 
@@ -80,14 +80,14 @@ const getListingInputSchema = z.object({
     includes: z.array(getListingIncludeSchema).optional(),
     language: z.string().min(1).optional(),
     legacy: z.boolean().optional(),
-    listingId: z.coerce.number().int().positive()
+    listingId: z.coerce.number().int().positive(),
 });
 
 const etsyErrorSchema = z
     .object({
         error: z.string().optional(),
         error_description: z.string().optional(),
-        message: z.string().optional()
+        message: z.string().optional(),
     })
     .passthrough();
 
@@ -95,16 +95,16 @@ export type EtsyGetListingInclude = z.infer<typeof getListingIncludeSchema>;
 export type EtsyListingState = z.infer<typeof listingStateSchema>;
 export type EtsyListingType = z.infer<typeof listingTypeSchema>;
 
-export type GetListingBridgeInput = {
+export interface GetListingBridgeInput {
     accessToken: string;
     allowSuggestedTitle?: boolean;
     includes?: EtsyGetListingInclude[];
     language?: string;
     legacy?: boolean;
     listingId: string | number;
-};
+}
 
-export type GetListingBridgeResponse = {
+export interface GetListingBridgeResponse {
     createdTimestamp: number | null;
     creationTimestamp: number | null;
     description: string | null;
@@ -142,7 +142,7 @@ export type GetListingBridgeResponse = {
     userId: string | null;
     videos: unknown[];
     views: number | null;
-};
+}
 
 export class EtsyGetListingBridgeError extends Error {
     readonly responseBody: string;
@@ -223,9 +223,7 @@ const extractThumbnailUrl = (images: unknown[] | null | undefined): string | nul
     return typeof url === 'string' ? url : null;
 };
 
-const normalizeListingState = (
-    state: z.infer<typeof etsyListingStateSchema>
-): EtsyListingState => {
+const normalizeListingState = (state: z.infer<typeof etsyListingStateSchema>): EtsyListingState => {
     if (state === 'edit') {
         return 'inactive';
     }
@@ -233,57 +231,83 @@ const normalizeListingState = (
     return state;
 };
 
-const toResponse = (
-    parsed: z.infer<typeof listingResponseSchema>
-): GetListingBridgeResponse => {
-    const normalizedShopId = parsed.shop_id ?? parsed.shop?.shop_id ?? null;
+type ParsedListingResponse = z.infer<typeof listingResponseSchema>;
+
+const toNullable = <T>(value: T | null | undefined): T | null => {
+    return value ?? null;
+};
+
+const toArray = <T>(value: T[] | null | undefined): T[] => {
+    return value ?? [];
+};
+
+const toStringId = (value: string | number | null | undefined): string | null => {
+    if (value === undefined || value === null) {
+        return null;
+    }
+
+    return String(value);
+};
+
+const toPriceResponse = (
+    price: ParsedListingResponse['price']
+): GetListingBridgeResponse['price'] => {
+    if (!price) {
+        return null;
+    }
 
     return {
-        createdTimestamp: parsed.created_timestamp ?? null,
-        creationTimestamp: parsed.creation_timestamp ?? null,
-        description: parsed.description ?? null,
+        amount: price.amount,
+        currencyCode: price.currency_code,
+        divisor: price.divisor,
+    };
+};
+
+const getShopId = (parsed: ParsedListingResponse): string | null => {
+    return toStringId(parsed.shop_id ?? parsed.shop?.shop_id);
+};
+
+const getShopName = (parsed: ParsedListingResponse): string | null => {
+    return toNullable(parsed.shop?.shop_name ?? parsed.shop?.name);
+};
+
+const toResponse = (parsed: ParsedListingResponse): GetListingBridgeResponse => {
+    const shopId = getShopId(parsed);
+
+    return {
+        createdTimestamp: toNullable(parsed.created_timestamp),
+        creationTimestamp: toNullable(parsed.creation_timestamp),
+        description: toNullable(parsed.description),
         etsyState: normalizeListingState(parsed.state),
-        images: parsed.images ?? [],
-        inventory: parsed.inventory ?? null,
-        language: parsed.language ?? null,
-        lastModifiedTimestamp: parsed.last_modified_timestamp ?? null,
+        images: toArray(parsed.images),
+        inventory: toNullable(parsed.inventory),
+        language: toNullable(parsed.language),
+        lastModifiedTimestamp: toNullable(parsed.last_modified_timestamp),
         listingId: String(parsed.listing_id),
-        listingType: parsed.listing_type ?? null,
-        materials: parsed.materials ?? [],
-        numFavorers: parsed.num_favorers ?? null,
-        originalCreationTimestamp: parsed.original_creation_timestamp ?? null,
-        personalization: parsed.personalization ?? null,
-        price: parsed.price
-            ? {
-                  amount: parsed.price.amount,
-                  currencyCode: parsed.price.currency_code,
-                  divisor: parsed.price.divisor
-              }
-            : null,
-        quantity: parsed.quantity ?? null,
-        shippingProfile: parsed.shipping_profile ?? null,
-        shop: parsed.shop ?? null,
-        shopId:
-            normalizedShopId !== undefined && normalizedShopId !== null
-                ? String(normalizedShopId)
-                : null,
-        shopName: parsed.shop?.shop_name ?? parsed.shop?.name ?? null,
-        skus: parsed.skus ?? [],
-        stateTimestamp: parsed.state_timestamp ?? null,
-        suggestedTitle: parsed.suggested_title ?? null,
-        tags: parsed.tags ?? [],
+        listingType: toNullable(parsed.listing_type),
+        materials: toArray(parsed.materials),
+        numFavorers: toNullable(parsed.num_favorers),
+        originalCreationTimestamp: toNullable(parsed.original_creation_timestamp),
+        personalization: toNullable(parsed.personalization),
+        price: toPriceResponse(parsed.price),
+        quantity: toNullable(parsed.quantity),
+        shippingProfile: toNullable(parsed.shipping_profile),
+        shop: toNullable(parsed.shop),
+        shopId,
+        shopName: getShopName(parsed),
+        skus: toArray(parsed.skus),
+        stateTimestamp: toNullable(parsed.state_timestamp),
+        suggestedTitle: toNullable(parsed.suggested_title),
+        tags: toArray(parsed.tags),
         thumbnailUrl: extractThumbnailUrl(parsed.images),
         title: parsed.title,
-        translations: parsed.translations ?? [],
-        updatedTimestamp: parsed.updated_timestamp ?? null,
-        url: parsed.url ?? null,
-        user: parsed.user ?? null,
-        userId:
-            parsed.user_id !== undefined && parsed.user_id !== null
-                ? String(parsed.user_id)
-                : null,
-        videos: parsed.videos ?? [],
-        views: parsed.views ?? null
+        translations: toArray(parsed.translations),
+        updatedTimestamp: toNullable(parsed.updated_timestamp),
+        url: toNullable(parsed.url),
+        user: toNullable(parsed.user),
+        userId: toStringId(parsed.user_id),
+        videos: toArray(parsed.videos),
+        views: toNullable(parsed.views),
     };
 };
 
@@ -301,11 +325,11 @@ export const getListing = async (
             headers: {
                 Accept: 'application/json',
                 Authorization: `Bearer ${parsedInput.data.accessToken}`,
-                'x-api-key': getEtsyApiKeyHeaderValue()
+                'x-api-key': getEtsyApiKeyHeaderValue(),
             },
-            method: 'GET'
+            method: 'GET',
         },
-        url: buildEndpoint(parsedInput.data)
+        url: buildEndpoint(parsedInput.data),
     });
 
     const rawBody = await response.text();

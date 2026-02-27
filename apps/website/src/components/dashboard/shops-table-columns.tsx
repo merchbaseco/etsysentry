@@ -1,15 +1,15 @@
-import { createColumnHelper, type ColumnDef } from '@tanstack/react-table';
+import { type ColumnDef, createColumnHelper } from '@tanstack/react-table';
 import { RefreshCw } from 'lucide-react';
-import type { TrackedShopItem } from '@/lib/shops-api';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 import { StatusBadge, timeAgo, timeUntil } from '@/components/ui/dashboard';
+import type { TrackedShopItem } from '@/lib/shops-api';
+import { cn } from '@/lib/utils';
 
-export type ShopsColumnMeta = {
+export interface ShopsColumnMeta {
     cellClassName: string;
     headClassName: string;
     isGrow?: boolean;
-};
+}
 
 const columnHelper = createColumnHelper<TrackedShopItem>();
 
@@ -63,8 +63,8 @@ export const createShopsColumns = (params: {
             meta: {
                 headClassName: toHeadClassName('px-3 text-left'),
                 cellClassName: 'px-3 py-1.5 text-foreground',
-                isGrow: true
-            } satisfies ShopsColumnMeta
+                isGrow: true,
+            } satisfies ShopsColumnMeta,
         }),
         columnHelper.accessor('syncState', {
             size: 80,
@@ -72,8 +72,8 @@ export const createShopsColumns = (params: {
             cell: (context) => context.getValue(),
             meta: {
                 headClassName: toHeadClassName('px-2 text-center'),
-                cellClassName: 'px-2 py-1.5 text-center text-terminal-dim'
-            } satisfies ShopsColumnMeta
+                cellClassName: 'px-2 py-1.5 text-center text-terminal-dim',
+            } satisfies ShopsColumnMeta,
         }),
         columnHelper.display({
             id: 'active',
@@ -82,8 +82,8 @@ export const createShopsColumns = (params: {
             cell: (context) => context.row.original.latestSnapshot?.activeListingCount ?? 0,
             meta: {
                 headClassName: toHeadClassName('px-2 text-right'),
-                cellClassName: 'px-2 py-1.5 text-right text-terminal-dim'
-            } satisfies ShopsColumnMeta
+                cellClassName: 'px-2 py-1.5 text-right text-terminal-dim',
+            } satisfies ShopsColumnMeta,
         }),
         columnHelper.display({
             id: 'new',
@@ -92,8 +92,8 @@ export const createShopsColumns = (params: {
             cell: (context) => context.row.original.latestSnapshot?.newListingCount ?? 0,
             meta: {
                 headClassName: toHeadClassName('px-2 text-right'),
-                cellClassName: 'px-2 py-1.5 text-right text-terminal-dim'
-            } satisfies ShopsColumnMeta
+                cellClassName: 'px-2 py-1.5 text-right text-terminal-dim',
+            } satisfies ShopsColumnMeta,
         }),
         columnHelper.display({
             id: 'favs',
@@ -106,8 +106,8 @@ export const createShopsColumns = (params: {
                 ),
             meta: {
                 headClassName: toHeadClassName('px-2 text-right'),
-                cellClassName: 'px-2 py-1.5 text-right text-terminal-dim'
-            } satisfies ShopsColumnMeta
+                cellClassName: 'px-2 py-1.5 text-right text-terminal-dim',
+            } satisfies ShopsColumnMeta,
         }),
         columnHelper.display({
             id: 'sold',
@@ -120,8 +120,8 @@ export const createShopsColumns = (params: {
                 ),
             meta: {
                 headClassName: toHeadClassName('px-2 text-right'),
-                cellClassName: 'px-2 py-1.5 text-right text-terminal-dim'
-            } satisfies ShopsColumnMeta
+                cellClassName: 'px-2 py-1.5 text-right text-terminal-dim',
+            } satisfies ShopsColumnMeta,
         }),
         columnHelper.display({
             id: 'reviews',
@@ -134,8 +134,8 @@ export const createShopsColumns = (params: {
                 ),
             meta: {
                 headClassName: toHeadClassName('px-2 text-right'),
-                cellClassName: 'px-2 py-1.5 text-right text-terminal-dim'
-            } satisfies ShopsColumnMeta
+                cellClassName: 'px-2 py-1.5 text-right text-terminal-dim',
+            } satisfies ShopsColumnMeta,
         }),
         columnHelper.accessor('lastRefreshedAt', {
             size: 110,
@@ -143,8 +143,8 @@ export const createShopsColumns = (params: {
             cell: (context) => timeAgo(context.getValue()),
             meta: {
                 headClassName: toHeadClassName('px-2 text-right'),
-                cellClassName: 'px-2 py-1.5 text-right text-terminal-dim'
-            } satisfies ShopsColumnMeta
+                cellClassName: 'px-2 py-1.5 text-right text-terminal-dim',
+            } satisfies ShopsColumnMeta,
         }),
         columnHelper.accessor('nextSyncAt', {
             size: 110,
@@ -152,8 +152,8 @@ export const createShopsColumns = (params: {
             cell: (context) => timeUntil(context.getValue()),
             meta: {
                 headClassName: toHeadClassName('px-2 text-right'),
-                cellClassName: 'px-2 py-1.5 text-right text-terminal-dim'
-            } satisfies ShopsColumnMeta
+                cellClassName: 'px-2 py-1.5 text-right text-terminal-dim',
+            } satisfies ShopsColumnMeta,
         }),
         columnHelper.accessor('trackingState', {
             size: 76,
@@ -161,8 +161,8 @@ export const createShopsColumns = (params: {
             cell: (context) => <StatusBadge status={context.getValue()} />,
             meta: {
                 headClassName: toHeadClassName('px-2 text-center'),
-                cellClassName: 'px-2 py-1.5 text-center'
-            } satisfies ShopsColumnMeta
+                cellClassName: 'px-2 py-1.5 text-center',
+            } satisfies ShopsColumnMeta,
         }),
         columnHelper.display({
             id: 'refresh',
@@ -175,14 +175,14 @@ export const createShopsColumns = (params: {
 
                 return (
                     <Button
+                        aria-label={`Refresh ${item.shopName}`}
+                        className="size-6 text-terminal-dim hover:text-foreground"
+                        disabled={isRefreshing}
+                        onClick={() => params.onRefresh(item)}
+                        size="icon-sm"
+                        title={isQueuedOrSyncing ? 'Shop sync in progress' : 'Refresh shop'}
                         type="button"
                         variant="transparent"
-                        size="icon-sm"
-                        onClick={() => params.onRefresh(item)}
-                        disabled={isRefreshing}
-                        aria-label={`Refresh ${item.shopName}`}
-                        title={isQueuedOrSyncing ? 'Shop sync in progress' : 'Refresh shop'}
-                        className="size-6 text-terminal-dim hover:text-foreground"
                     >
                         <RefreshCw className={cn('size-3.5', isRefreshing && 'animate-spin')} />
                     </Button>
@@ -190,8 +190,8 @@ export const createShopsColumns = (params: {
             },
             meta: {
                 headClassName: toHeadClassName('px-2 text-right'),
-                cellClassName: 'px-2 py-1.5 text-right'
-            } satisfies ShopsColumnMeta
-        })
+                cellClassName: 'px-2 py-1.5 text-right',
+            } satisfies ShopsColumnMeta,
+        }),
     ];
 };

@@ -4,5 +4,5 @@ import { currencyRefreshProcedure } from './refresh';
 
 export const currencyRouter = router({
     getStatus: currencyGetStatusProcedure,
-    refresh: currencyRefreshProcedure
+    refresh: currencyRefreshProcedure,
 });

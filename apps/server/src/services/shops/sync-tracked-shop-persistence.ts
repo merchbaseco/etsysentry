@@ -28,17 +28,20 @@ export const computeNextWatermark = (params: {
     changedListings: ShopListingResult[];
     previousWatermark: number | null;
 }): number | null => {
-    const maxUpdatedTimestamp = params.changedListings.reduce<number | null>((currentMax, listing) => {
-        if (listing.updatedTimestamp === null) {
-            return currentMax;
-        }
+    const maxUpdatedTimestamp = params.changedListings.reduce<number | null>(
+        (currentMax, listing) => {
+            if (listing.updatedTimestamp === null) {
+                return currentMax;
+            }
 
-        if (currentMax === null) {
-            return listing.updatedTimestamp;
-        }
+            if (currentMax === null) {
+                return listing.updatedTimestamp;
+            }
 
-        return Math.max(currentMax, listing.updatedTimestamp);
-    }, null);
+            return Math.max(currentMax, listing.updatedTimestamp);
+        },
+        null
+    );
 
     if (maxUpdatedTimestamp === null) {
         return params.previousWatermark;
@@ -69,7 +72,7 @@ export const upsertTrackedShopListings = async (params: {
     for (const listingIdChunk of chunkArray(encounteredListingIds, DB_BATCH_SIZE)) {
         const rows = await db
             .select({
-                etsyListingId: trackedShopListings.etsyListingId
+                etsyListingId: trackedShopListings.etsyListingId,
             })
             .from(trackedShopListings)
             .where(
@@ -85,7 +88,9 @@ export const upsertTrackedShopListings = async (params: {
         }
     }
 
-    const newListingCount = encounteredListingIds.filter((id) => !existingListingIds.has(id)).length;
+    const newListingCount = encounteredListingIds.filter(
+        (id) => !existingListingIds.has(id)
+    ).length;
 
     for (const listingChunk of chunkArray(params.listings, DB_BATCH_SIZE)) {
         await db
@@ -102,7 +107,7 @@ export const upsertTrackedShopListings = async (params: {
                     lastSeenAt: params.now,
                     lastChangedAt: params.now,
                     createdAt: params.now,
-                    updatedAt: params.now
+                    updatedAt: params.now,
                 }))
             )
             .onConflictDoUpdate({
@@ -116,13 +121,13 @@ export const upsertTrackedShopListings = async (params: {
                         ELSE ${trackedShopListings.lastChangedAt}
                     END`,
                     listingUpdatedTimestamp: sql`excluded.listing_updated_timestamp`,
-                    updatedAt: params.now
+                    updatedAt: params.now,
                 },
                 target: [
                     trackedShopListings.accountId,
                     trackedShopListings.trackedShopId,
-                    trackedShopListings.etsyListingId
-                ]
+                    trackedShopListings.etsyListingId,
+                ],
             });
     }
 
@@ -161,15 +166,15 @@ export const discoverTrackedListings = async (params: {
                     trackingState: 'active' as const,
                     updatedAt: params.now,
                     updatedTimestamp: listing.updatedTimestamp,
-                    url: listing.url
+                    url: listing.url,
                 }))
             )
             .onConflictDoNothing({
-                target: [trackedListings.accountId, trackedListings.etsyListingId]
+                target: [trackedListings.accountId, trackedListings.etsyListingId],
             })
             .returning({
                 etsyListingId: trackedListings.etsyListingId,
-                listingId: trackedListings.listingId
+                listingId: trackedListings.listingId,
             });
 
         for (const row of rows) {

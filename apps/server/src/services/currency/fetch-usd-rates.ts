@@ -5,12 +5,12 @@ const successResponseSchema = z.object({
     rates: z.record(z.string(), z.coerce.number().positive()),
     result: z.literal('success'),
     time_last_update_unix: z.coerce.number().int().positive(),
-    time_next_update_unix: z.coerce.number().int().positive()
+    time_next_update_unix: z.coerce.number().int().positive(),
 });
 
 const errorResponseSchema = z.object({
     'error-type': z.string().min(1).optional(),
-    result: z.string().min(1).optional()
+    result: z.string().min(1).optional(),
 });
 
 const providerEndpoint = 'https://open.er-api.com/v6/latest/USD';
@@ -40,12 +40,12 @@ export class FetchUsdRatesError extends Error {
     }
 }
 
-export type FetchUsdRatesResult = {
+export interface FetchUsdRatesResult {
     fetchedAt: Date;
     nextProviderUpdateAt: Date;
     provider: string;
     rates: Record<string, number>;
-};
+}
 
 const toErrorMessage = (rawBody: string, statusCode: number): string => {
     const parsedBody = tryParseJson(rawBody);
@@ -65,27 +65,35 @@ const toErrorMessage = (rawBody: string, statusCode: number): string => {
 export const fetchUsdRates = async (): Promise<FetchUsdRatesResult> => {
     const response = await fetch(providerEndpoint, {
         headers: {
-            Accept: 'application/json'
+            Accept: 'application/json',
         },
-        method: 'GET'
+        method: 'GET',
     });
 
     const rawBody = await response.text();
 
     if (!response.ok) {
-        throw new FetchUsdRatesError(toErrorMessage(rawBody, response.status), response.status, rawBody);
+        throw new FetchUsdRatesError(
+            toErrorMessage(rawBody, response.status),
+            response.status,
+            rawBody
+        );
     }
 
     const parsedBody = successResponseSchema.safeParse(tryParseJson(rawBody) ?? {});
 
     if (!parsedBody.success) {
-        throw new FetchUsdRatesError('FX provider response was missing required fields.', 200, rawBody);
+        throw new FetchUsdRatesError(
+            'FX provider response was missing required fields.',
+            200,
+            rawBody
+        );
     }
 
     return {
         fetchedAt: new Date(parsedBody.data.time_last_update_unix * 1000),
         nextProviderUpdateAt: new Date(parsedBody.data.time_next_update_unix * 1000),
         provider: providerName,
-        rates: parsedBody.data.rates
+        rates: parsedBody.data.rates,
     };
 };

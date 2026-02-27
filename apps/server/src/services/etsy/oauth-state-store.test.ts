@@ -6,12 +6,12 @@ describe('oauth-state-store', () => {
         const store = new EtsyOAuthStateStore(1000);
         const { state } = store.issue({
             codeVerifier: 'abc123',
-            accountId: 'account-1'
+            accountId: 'account-1',
         });
 
         expect(store.consume(state)).toEqual({
             codeVerifier: 'abc123',
-            accountId: 'account-1'
+            accountId: 'account-1',
         });
         expect(store.consume(state)).toBeNull();
     });
@@ -20,10 +20,12 @@ describe('oauth-state-store', () => {
         const store = new EtsyOAuthStateStore(1);
         const { state } = store.issue({
             codeVerifier: 'abc123',
-            accountId: 'account-1'
+            accountId: 'account-1',
         });
 
-        await Bun.sleep(2);
+        await new Promise((resolve) => {
+            setTimeout(resolve, 2);
+        });
 
         expect(store.consume(state)).toBeNull();
     });

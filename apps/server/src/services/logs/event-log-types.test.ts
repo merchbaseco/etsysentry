@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import {
     eventLogLevelSchema,
     eventLogPrimitiveTypeSchema,
-    eventLogStatusSchema
+    eventLogStatusSchema,
 } from './event-log-types';
 
 describe('event-log-types', () => {

@@ -14,13 +14,13 @@ const addUsdPrice = (
         ? convertPriceToUsd({
               currencyCode: item.price.currencyCode,
               ratesByCurrencyCode,
-              value: item.price.value
+              value: item.price.value,
           })
         : null;
 
     return {
         ...item,
-        priceUsdValue
+        priceUsdValue,
     };
 };
 

@@ -1,25 +1,25 @@
 import { RefreshCw } from 'lucide-react';
-import type { EtsyApiUsage } from '@/lib/admin-api';
-import { cn } from '@/lib/utils';
 import {
     dataRowClassName,
     formatDurationMs,
     formatTimestamp,
     sectionBarClassName,
     sectionBarLabelClassName,
-    wideButtonClassName
+    wideButtonClassName,
 } from '@/components/settings/shared';
+import type { EtsyApiUsage } from '@/lib/admin-api';
+import { cn } from '@/lib/utils';
 
-type AdminSettingsPageProps = {
+interface AdminSettingsPageProps {
     apiUsage: EtsyApiUsage | null;
     apiUsageErrorMessage: string | null;
-    enqueueMessage: string | null;
     enqueueErrorMessage: string | null;
+    enqueueMessage: string | null;
     isEnqueuingListingResync: boolean;
     isLoadingApiUsage: boolean;
     onEnqueueListingResync: () => Promise<void>;
     onRefreshApiUsage: () => Promise<void>;
-};
+}
 
 export const AdminSettingsPage = ({
     apiUsage,
@@ -29,7 +29,7 @@ export const AdminSettingsPage = ({
     isEnqueuingListingResync,
     isLoadingApiUsage,
     onEnqueueListingResync,
-    onRefreshApiUsage
+    onRefreshApiUsage,
 }: AdminSettingsPageProps) => {
     return (
         <div>
@@ -38,37 +38,34 @@ export const AdminSettingsPage = ({
             </div>
 
             <div className="px-4 py-2">
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                     Queue a full resync for all tracked listings in this tenant.
                 </p>
             </div>
 
             <button
-                type="button"
-                className={wideButtonClassName}
+                className={cn(wideButtonClassName, 'border-t')}
                 disabled={isEnqueuingListingResync}
                 onClick={() => {
-                    void onEnqueueListingResync();
+                    onEnqueueListingResync();
                 }}
+                type="button"
             >
                 <RefreshCw
-                    className={cn(
-                        'size-3',
-                        isEnqueuingListingResync ? 'animate-spin' : undefined
-                    )}
+                    className={cn('size-3', isEnqueuingListingResync ? 'animate-spin' : undefined)}
                 />
                 Enqueue Listing Resync
             </button>
 
             {enqueueMessage ? (
                 <div className="px-4 py-1.5">
-                    <p className="text-xs text-terminal-green">{enqueueMessage}</p>
+                    <p className="text-terminal-green text-xs">{enqueueMessage}</p>
                 </div>
             ) : null}
 
             {enqueueErrorMessage ? (
                 <div className="px-4 py-1.5">
-                    <p className="text-xs text-terminal-red">{enqueueErrorMessage}</p>
+                    <p className="text-terminal-red text-xs">{enqueueErrorMessage}</p>
                 </div>
             ) : null}
 
@@ -77,60 +74,53 @@ export const AdminSettingsPage = ({
             </div>
 
             <div className={dataRowClassName}>
-                <span className="text-xs text-muted-foreground">Per-day limit</span>
-                <span className="text-xs font-medium text-foreground">
+                <span className="text-muted-foreground text-xs">Per-day limit</span>
+                <span className="font-medium text-foreground text-xs">
                     {apiUsage?.rateLimit.perDayLimit ?? 'N/A'}
                 </span>
             </div>
             <div className={dataRowClassName}>
-                <span className="text-xs text-muted-foreground">Calls (24h)</span>
-                <span className="text-xs font-medium text-foreground">
+                <span className="text-muted-foreground text-xs">Calls (24h)</span>
+                <span className="font-medium text-foreground text-xs">
                     {apiUsage?.stats.callsPast24Hours ?? 'N/A'}
                 </span>
             </div>
             <div className={dataRowClassName}>
-                <span className="text-xs text-muted-foreground">Calls (1h)</span>
-                <span className="text-xs font-medium text-foreground">
+                <span className="text-muted-foreground text-xs">Calls (1h)</span>
+                <span className="font-medium text-foreground text-xs">
                     {apiUsage?.stats.callsPastHour ?? 'N/A'}
                 </span>
             </div>
             <div className={dataRowClassName}>
-                <span className="text-xs text-muted-foreground">Current cooldown</span>
-                <span className="text-xs font-medium text-foreground">
-                    {apiUsage
-                        ? formatDurationMs(apiUsage.rateLimit.blockedForMs)
-                        : 'N/A'}
+                <span className="text-muted-foreground text-xs">Current cooldown</span>
+                <span className="font-medium text-foreground text-xs">
+                    {apiUsage ? formatDurationMs(apiUsage.rateLimit.blockedForMs) : 'N/A'}
                 </span>
             </div>
             <div className={cn(dataRowClassName, 'border-b-0')}>
-                <span className="text-xs text-muted-foreground">Last call</span>
-                <span className="text-xs font-medium text-foreground">
+                <span className="text-muted-foreground text-xs">Last call</span>
+                <span className="font-medium text-foreground text-xs">
                     {formatTimestamp(apiUsage?.stats.lastCallAt ?? null)}
                 </span>
             </div>
 
             <button
-                type="button"
                 className={cn(wideButtonClassName, 'border-t')}
                 disabled={isLoadingApiUsage}
                 onClick={() => {
-                    void onRefreshApiUsage();
+                    onRefreshApiUsage();
                 }}
+                type="button"
             >
                 <RefreshCw
-                    className={cn(
-                        'size-3',
-                        isLoadingApiUsage ? 'animate-spin' : undefined
-                    )}
+                    className={cn('size-3', isLoadingApiUsage ? 'animate-spin' : undefined)}
                 />
                 Refresh Usage
             </button>
 
             {apiUsageErrorMessage ? (
                 <div className="px-4 py-1.5">
-                    <p className="text-xs text-terminal-red">
-                        {apiUsageErrorMessage}
-                    </p>
+                    <p className="text-terminal-red text-xs">{apiUsageErrorMessage}</p>
                 </div>
             ) : null}
         </div>

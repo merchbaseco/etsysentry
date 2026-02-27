@@ -4,6 +4,7 @@ import { createTRPCOptionsProxy } from '@trpc/tanstack-react-query';
 import type { RootRouter } from '../../../server/src/api/root';
 
 type TrpcAuthTokenGetter = () => Promise<string | null>;
+const TRAILING_SLASHES_REGEX = /\/+$/;
 
 let getAuthToken: TrpcAuthTokenGetter | null = null;
 
@@ -18,7 +19,7 @@ const getApiBaseUrl = (): string => {
         return '/api';
     }
 
-    return `${configuredOrigin.replace(/\/+$/, '')}/api`;
+    return `${configuredOrigin.replace(TRAILING_SLASHES_REGEX, '')}/api`;
 };
 
 const DEFAULT_QUERY_STALE_TIME_MS = 30_000;
@@ -29,9 +30,9 @@ export const queryClient = new QueryClient({
         queries: {
             staleTime: DEFAULT_QUERY_STALE_TIME_MS,
             gcTime: DEFAULT_QUERY_GC_TIME_MS,
-            refetchOnWindowFocus: false
-        }
-    }
+            refetchOnWindowFocus: false,
+        },
+    },
 });
 
 export const trpcClient = createTRPCClient<RootRouter>({
@@ -45,15 +46,15 @@ export const trpcClient = createTRPCClient<RootRouter>({
                 }
 
                 return {
-                    Authorization: `Bearer ${token}`
+                    Authorization: `Bearer ${token}`,
                 };
             },
-            url: getApiBaseUrl()
-        })
-    ]
+            url: getApiBaseUrl(),
+        }),
+    ],
 });
 
 export const trpc = createTRPCOptionsProxy<RootRouter>({
     client: trpcClient,
-    queryClient
+    queryClient,
 });

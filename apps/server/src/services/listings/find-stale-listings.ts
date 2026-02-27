@@ -3,8 +3,8 @@ import { db } from '../../db';
 import { listingMetricSnapshots, trackedListings } from '../../db/schema';
 import {
     SYNC_STALE_LISTINGS_BATCH_SIZE,
+    type SyncListingJobInput,
     syncListingJobInputSchema,
-    type SyncListingJobInput
 } from '../../jobs/sync-listing-shared';
 import {
     computeListingRefreshStaleBefore,
@@ -129,7 +129,7 @@ export const findStaleListings = async (params?: {
 
         items.push({
             trackedListingId: row.trackedListingId,
-            ...parsedInput.data
+            ...parsedInput.data,
         });
 
         if (items.length >= SYNC_STALE_LISTINGS_BATCH_SIZE) {
