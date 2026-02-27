@@ -1,5 +1,6 @@
 import { router } from '../trpc';
 import { adminRouter } from './admin/router';
+import { apiKeysRouter } from './api-keys/router';
 import { currencyRouter } from './currency/router';
 import { dashboardRouter } from './dashboard/router';
 import { etsyAuthRouter } from './etsy-auth/router';
@@ -10,6 +11,7 @@ import { shopsRouter } from './shops/router';
 
 export const appRouter = router({
     admin: adminRouter,
+    apiKeys: apiKeysRouter,
     dashboard: dashboardRouter,
     currency: currencyRouter,
     etsyAuth: etsyAuthRouter,

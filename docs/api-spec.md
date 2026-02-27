@@ -45,9 +45,17 @@ OAuth/session storage boundary:
   - required: `x-api-key: <esk_...>`
   - optional equivalent: `authorization: Bearer <esk_...>`
 - Auth context behavior:
-  - tenant scoping comes from API key context
+  - tenant scoping comes from API key context (`accountId`)
+  - Clerk remains the dashboard auth provider; it is not the public tenant key
 - Current implementation status:
-  - router scaffold exists; detailed v1 contract below remains canonical target surface
+  - implemented for CLI v0.2 surface:
+    - `public.keywords.list`
+    - `public.keywords.track`
+    - `public.listings.list`
+    - `public.listings.track`
+    - `public.listings.getPerformance`
+    - `public.shops.list`
+    - `public.shops.track`
 
 ## Transport Notes
 
@@ -57,8 +65,8 @@ OAuth/session storage boundary:
   - `app.listings.list`
 - Public API contract below uses slash-style keys for the canonical CLI/http surface:
   - `keywords/track`
-  - `listings/get`
-  - `metrics/series/listings`
+  - `listings/get-performance`
+  - `shops/list`
 - HTTP semantics (tRPC):
   - query -> `GET` with URL-encoded `input`
   - mutation -> `POST` with JSON body
@@ -190,6 +198,76 @@ Output:
   };
 }
 ```
+
+### API Keys
+
+`app.apiKeys.list` (query)
+
+Input:
+
+```ts
+{}
+```
+
+Output:
+
+```ts
+{
+  items: Array<{
+    id: string; // uuid
+    accountId: string;
+    ownerClerkUserId: string;
+    name: string;
+    keyPrefix: string;
+    lastUsedAt: string | null; // ISO timestamp
+    revokedAt: string | null; // ISO timestamp
+    createdAt: string; // ISO timestamp
+    updatedAt: string; // ISO timestamp
+  }>;
+}
+```
+
+`app.apiKeys.create` (mutation)
+
+Input:
+
+```ts
+{
+  name?: string; // optional; default "API key"
+}
+```
+
+Output:
+
+```ts
+{
+  item: {
+    id: string; // uuid
+    accountId: string;
+    ownerClerkUserId: string;
+    name: string;
+    keyPrefix: string;
+    lastUsedAt: string | null; // ISO timestamp
+    revokedAt: string | null; // ISO timestamp
+    createdAt: string; // ISO timestamp
+    updatedAt: string; // ISO timestamp
+  };
+  rawApiKey: string; // returned only on create
+}
+```
+
+`app.apiKeys.revoke` (mutation)
+
+Input:
+
+```ts
+{
+  apiKeyId: string; // uuid
+}
+```
+
+Output:
+- same item shape as entries in `app.apiKeys.list` output
 
 ### Dashboard
 
@@ -503,27 +581,11 @@ Input:
 Output:
 - same item shape as entries in `app.shops.list` output
 
-## Public API (`api.public.*`) Canonical Contract (v1 Target)
+## Public API (`api.public.*`) Current Contract (v0.2)
 
-This section defines the canonical CLI/http contract shape used by:
+This section documents the procedures currently implemented for CLI/http consumers.
 
-- CLI
-- `@etsysentry/http-client`
-- direct HTTP/tRPC clients
-
-Primitives:
-- `keyword`
-- `listing` (CLI alias: `product`)
-- `shop`
-
-### Public API Design Rules
-
-- Slash-style procedure keys (for example `keywords/track`).
-- One CLI command maps to one public procedure.
-- Query/mutation boundaries are explicit.
-- Tenant scoping comes from API key context.
-
-### Public API Authentication
+### Authentication
 
 Required on all `api.public.*` procedures:
 - `x-api-key: <esk_...>` header
@@ -531,131 +593,36 @@ Required on all `api.public.*` procedures:
 Optional equivalent:
 - `authorization: Bearer <esk_...>`
 
-API key requirements:
-- key is active and not revoked
-- key resolves to one tenant context
-- all data access is tenant-scoped
+Auth notes:
+- API key resolves the tenant `accountId`; all access is account-scoped.
+- Public procedures do not accept tenant identity input fields.
+- For tracking mutations, server resolves an actor Clerk identity from the account mapping.
 
-### Public API Response Envelope
+### Procedure Keys
 
-Success:
+tRPC dotted keys:
+- `public.keywords.list`
+- `public.keywords.track`
+- `public.listings.list`
+- `public.listings.track`
+- `public.listings.getPerformance`
+- `public.shops.list`
+- `public.shops.track`
 
-```json
-{
-  "ok": true,
-  "data": {}
-}
-```
+Canonical slash mapping (CLI/http naming):
+- `keywords/list` -> `public.keywords.list`
+- `keywords/track` -> `public.keywords.track`
+- `listings/list` -> `public.listings.list`
+- `listings/track` -> `public.listings.track`
+- `listings/get-performance` -> `public.listings.getPerformance`
+- `shops/list` -> `public.shops.list`
+- `shops/track` -> `public.shops.track`
 
-Error:
+### Implemented Procedures
 
-```json
-{
-  "ok": false,
-  "error": {
-    "code": "VALIDATION_ERROR",
-    "message": "listingId is required",
-    "details": {
-      "field": "listingId"
-    }
-  }
-}
-```
-
-Standard error codes:
-- `UNAUTHORIZED`
-- `FORBIDDEN`
-- `NOT_FOUND`
-- `CONFLICT`
-- `VALIDATION_ERROR`
-- `RATE_LIMITED`
-- `INTERNAL_ERROR`
-
-## Shared Types
-
-Primitive status:
-- `active`
-- `paused`
-- `archived`
-
-Primitive source:
-- `manual`
-- `discovered-from-keyword`
-- `discovered-from-shop`
-
-Date range:
-- `today`
-- `yesterday`
-- `7d`
-- `30d`
-- `YYYY-MM-DD..YYYY-MM-DD`
-
-Series bucket:
-- `auto`
-- `day`
-- `week`
-- `month`
-
-Pagination input:
-
-```ts
-{
-  limit?: number; // default 20, max 200
-  offset?: number; // default 0
-}
-```
-
-## Primitive Resource Shapes
-
-Keyword (output shape):
-
-```ts
-{
-  id: string;
-  type: 'keyword';
-  value: string;
-  status: 'active' | 'paused' | 'archived';
-  source: 'manual' | 'discovered-from-keyword' | 'discovered-from-shop';
-  createdAt: string;
-  updatedAt: string;
-  lastTrackedAt: string | null;
-}
-```
-
-Listing (output shape):
-
-```ts
-{
-  id: string; // internal primitive id
-  type: 'listing';
-  listingId: string; // Etsy listing id
-  status: 'active' | 'paused' | 'archived';
-  source: 'manual' | 'discovered-from-keyword' | 'discovered-from-shop';
-  createdAt: string;
-  updatedAt: string;
-  lastTrackedAt: string | null;
-}
-```
-
-Shop (output shape):
-
-```ts
-{
-  id: string; // internal primitive id
-  type: 'shop';
-  shopId: string; // Etsy shop id
-  shopName: string | null;
-  status: 'active' | 'paused' | 'archived';
-  source: 'manual' | 'discovered-from-keyword' | 'discovered-from-shop';
-  createdAt: string;
-  updatedAt: string;
-  lastTrackedAt: string | null;
-}
-```
-
-## Procedures
-
-### Keywords
+`keywords/list` (query)
+- Input: `{}`
+- Output: same shape as `app.keywords.list`
 
 `keywords/track` (mutation)
 
@@ -663,85 +630,16 @@ Input:
 
 ```ts
 {
-  query: string;
+  keyword: string;
 }
 ```
 
 Output:
-- tracked keyword resource
-- `created: boolean` (false when idempotent hit)
+- same shape/behavior as `app.keywords.track`
 
-`keywords/list` (query)
-
-Input:
-
-```ts
-{
-  status?: 'active' | 'paused' | 'archived' | 'all';
-  search?: string;
-  limit?: number;
-  offset?: number;
-}
-```
-
-Output:
-
-```ts
-{
-  items: Array<Keyword>;
-  total: number;
-  limit: number;
-  offset: number;
-}
-```
-
-`keywords/get` (query)
-
-Input:
-
-```ts
-{
-  keywordId: string;
-}
-```
-
-Output:
-- keyword resource
-
-`keywords/pause` (mutation)
-
-Input:
-
-```ts
-{ keywordId: string }
-```
-
-Output:
-- keyword resource with `status: 'paused'`
-
-`keywords/resume` (mutation)
-
-Input:
-
-```ts
-{ keywordId: string }
-```
-
-Output:
-- keyword resource with `status: 'active'`
-
-`keywords/archive` (mutation)
-
-Input:
-
-```ts
-{ keywordId: string }
-```
-
-Output:
-- keyword resource with `status: 'archived'`
-
-### Listings
+`listings/list` (query)
+- Input: `{}`
+- Output: same shape as `app.listings.list` (includes USD decoration fields)
 
 `listings/track` (mutation)
 
@@ -749,25 +647,22 @@ Input:
 
 ```ts
 {
-  listing: string; // Etsy listing id or listing URL
+  listing: string; // Etsy listing id or Etsy listing URL
 }
 ```
 
 Output:
-- tracked listing resource
-- `created: boolean`
+- same shape as `app.listings.track`
 
-`listings/list` (query)
+`listings/get-performance` (query)
 
 Input:
 
 ```ts
 {
-  status?: 'active' | 'paused' | 'archived' | 'all';
-  shopId?: string;
-  source?: 'manual' | 'discovered-from-keyword' | 'discovered-from-shop';
-  limit?: number;
-  offset?: number;
+  trackedListingId: string; // uuid
+  range?: '7d' | '30d' | '90d' | string; // absolute format: YYYY-MM-DD..YYYY-MM-DD
+  metrics?: Array<'views' | 'favorites' | 'quantity' | 'price'>;
 }
 ```
 
@@ -775,60 +670,42 @@ Output:
 
 ```ts
 {
-  items: Array<Listing>;
-  total: number;
-  limit: number;
-  offset: number;
+  listing: {
+    id: string;
+    etsyListingId: string;
+    title: string;
+  };
+  range: {
+    label: string;
+    from: string; // YYYY-MM-DD
+    to: string; // YYYY-MM-DD
+  };
+  views?: {
+    latest: number | null;
+    points: Array<{ ts: string; value: number | null }>;
+  };
+  favorites?: {
+    latest: number | null;
+    points: Array<{ ts: string; value: number | null }>;
+  };
+  quantity?: {
+    latest: number | null;
+    points: Array<{ ts: string; value: number | null }>;
+  };
+  price?: {
+    latest: { value: number; currencyCode: string } | null;
+    points: Array<{
+      ts: string;
+      value: number | null;
+      currencyCode: string | null;
+    }>;
+  };
 }
 ```
 
-`listings/get` (query)
-
-Input:
-
-```ts
-{
-  listingId: string;
-}
-```
-
-Output:
-- listing resource
-
-`listings/pause` (mutation)
-
-Input:
-
-```ts
-{ listingId: string }
-```
-
-Output:
-- listing resource with `status: 'paused'`
-
-`listings/resume` (mutation)
-
-Input:
-
-```ts
-{ listingId: string }
-```
-
-Output:
-- listing resource with `status: 'active'`
-
-`listings/archive` (mutation)
-
-Input:
-
-```ts
-{ listingId: string }
-```
-
-Output:
-- listing resource with `status: 'archived'`
-
-### Shops
+`shops/list` (query)
+- Input: `{}`
+- Output: same shape as `app.shops.list`
 
 `shops/track` (mutation)
 
@@ -836,180 +713,29 @@ Input:
 
 ```ts
 {
-  shop: string; // Etsy shop id, shop URL, or shop name
+  shop: string; // Etsy shop id, Etsy shop URL, or shop name
 }
 ```
 
 Output:
-- tracked shop resource
-- `created: boolean`
+- same shape as `app.shops.track`
 
-`shops/list` (query)
+### Error Behavior
 
-Input:
+Common tRPC error codes returned by public procedures:
+- `UNAUTHORIZED`
+- `BAD_REQUEST`
+- `NOT_FOUND`
+- `PRECONDITION_FAILED`
+- `INTERNAL_SERVER_ERROR`
 
-```ts
-{
-  status?: 'active' | 'paused' | 'archived' | 'all';
-  search?: string;
-  limit?: number;
-  offset?: number;
-}
-```
+Notes:
+- `PRECONDITION_FAILED` is returned for tracking mutations when account-to-Clerk mapping is missing.
+- CLI envelope mapping (`ok/data/error`) is a CLI concern, not the raw tRPC response format.
 
-Output:
+### Deferred Public Surface
 
-```ts
-{
-  items: Array<Shop>;
-  total: number;
-  limit: number;
-  offset: number;
-}
-```
-
-`shops/get` (query)
-
-Input:
-
-```ts
-{
-  shopId: string;
-}
-```
-
-Output:
-- shop resource
-
-`shops/pause` (mutation)
-
-Input:
-
-```ts
-{ shopId: string }
-```
-
-Output:
-- shop resource with `status: 'paused'`
-
-`shops/resume` (mutation)
-
-Input:
-
-```ts
-{ shopId: string }
-```
-
-Output:
-- shop resource with `status: 'active'`
-
-`shops/archive` (mutation)
-
-Input:
-
-```ts
-{ shopId: string }
-```
-
-Output:
-- shop resource with `status: 'archived'`
-
-### Metrics Series
-
-`metrics/series/keywords` (query)
-
-Input:
-
-```ts
-{
-  ids?: string[]; // keyword primitive ids
-  range?: string;
-  bucket?: 'auto' | 'day' | 'week' | 'month';
-  metrics?: Array<'bestRank' | 'avgRank' | 'visibilityScore' | 'resultCount'>;
-}
-```
-
-`metrics/series/listings` (query)
-
-Input:
-
-```ts
-{
-  ids?: string[]; // Etsy listing ids or listing primitive ids
-  range?: string;
-  bucket?: 'auto' | 'day' | 'week' | 'month';
-  metrics?: Array<'reviewCount' | 'reviewAverage' | 'favorerCount' | 'price' | 'views' | 'quantity' | 'estimatedSales'>;
-}
-```
-
-`metrics/series/shops` (query)
-
-Input:
-
-```ts
-{
-  ids?: string[]; // Etsy shop ids or shop primitive ids
-  range?: string;
-  bucket?: 'auto' | 'day' | 'week' | 'month';
-  metrics?: Array<
-    | 'activeListings'
-    | 'newListings'
-    | 'favoritesTotal'
-    | 'favoritesDelta'
-    | 'soldTotal'
-    | 'soldDelta'
-    | 'reviewTotal'
-    | 'reviewDelta'
-  >;
-}
-```
-
-Series output (all three procedures):
-
-```ts
-{
-  range: {
-    from: string;
-    to: string;
-  };
-  bucket: 'day' | 'week' | 'month';
-  metrics: string[];
-  series: Array<{
-    id: string;
-    points: Array<{
-      ts: string;
-      values: Record<string, number | null>;
-    }>;
-  }>;
-}
-```
-
-## CLI Mapping
-
-Canonical mapping (`es`):
-- `es keywords track` -> `keywords/track`
-- `es keywords list` -> `keywords/list`
-- `es keywords get` -> `keywords/get`
-- `es listings track` -> `listings/track`
-- `es listings list` -> `listings/list`
-- `es listings get` -> `listings/get`
-- `es shops track` -> `shops/track`
-- `es shops list` -> `shops/list`
-- `es shops get` -> `shops/get`
-- `es metrics series keywords` -> `metrics/series/keywords`
-- `es metrics series listings` -> `metrics/series/listings`
-- `es metrics series shops` -> `metrics/series/shops`
-
-Alias mapping:
-- `es track keyword` -> `keywords/track`
-- `es track listing` -> `listings/track`
-- `es track product` -> `listings/track`
-- `es track shop` -> `shops/track`
-- `es products ...` -> `listings/...`
-
-## Implementation Notes
-
-- Procedure files should follow repository convention:
-  - `apps/server/src/api/public/<resource>-<verb>.ts`
-- Shared business logic should live in services/utilities, not routers.
-- `@etsysentry/http-client` should expose this exact slash-style public surface.
+The following remain deferred and are not implemented in `api.public.*` yet:
+- `get/pause/resume/archive` verbs across primitives
+- metrics series endpoints (`metrics/series/*`)
+- dedicated refresh endpoints

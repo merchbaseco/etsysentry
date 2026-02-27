@@ -2,39 +2,30 @@
 
 Typed tRPC client for EtsySentry public APIs.
 
-## Purpose
-
-Provide a stable client for agents/CLI without exposing tRPC internals to consumers.
-
-## Usage (Planned)
+## Usage
 
 ```ts
 import { createEtsySentryClient } from '@etsysentry/http-client';
 
 const client = createEtsySentryClient({
-    baseUrl: 'https://api.etsysentry.com',
-    apiKey: 'esk_...'
+    apiKey: 'esk_live_...',
+    baseUrl: 'http://localhost:8080',
 });
 
-await client.primitive.create.mutate({
-    type: 'keyword',
-    value: 'wedding invitation template'
-});
+const listings = await client.queryClient.fetchQuery(
+    client.trpc.public.listings.list.queryOptions({})
+);
 
-const series = await client.series.keywordRank.query({
-    keyword: 'wedding invitation template',
-    listingId: 1234567890,
-    from: '2026-01-01',
-    to: '2026-02-01'
+const tracked = await client.trpcClient.public.listings.track.mutate({
+    listing: '1234567890',
 });
 ```
 
-## Types (Planned)
+## Notes
 
-```ts
-import type { PublicRouterInputs, PublicRouterOutputs } from '@etsysentry/http-client';
-```
-
-## Maintenance
-
-When public router shape changes, regenerate bundled router types and rebuild package.
+- Auth is sent via `x-api-key`.
+- Base URL is normalized and `/api` is appended internally.
+- The client is aligned to the currently implemented `public.*` surface:
+  - `keywords.list`, `keywords.track`
+  - `listings.list`, `listings.track`, `listings.getPerformance`
+  - `shops.list`, `shops.track`

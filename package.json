@@ -18,6 +18,9 @@
     "website:dev": "bun run --cwd apps/website dev",
     "website:build": "bun run --cwd apps/website build",
     "website:start": "bun run --cwd apps/website start",
+    "http-client:build": "bun run --cwd packages/http-client build",
+    "cli:build": "bun run http-client:build && bun run --cwd packages/cli build",
+    "cli:test": "bun run --cwd packages/cli test",
     "lint": "ultracite check .",
     "lint:fix": "ultracite fix --unsafe ."
   },

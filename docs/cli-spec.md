@@ -1,8 +1,13 @@
-# EtsySentry CLI Spec (Draft v0.1)
+# EtsySentry CLI Spec (Draft v0.2)
 
 ## Scope
 
-This spec defines the public CLI shape for EtsySentry v1.
+This spec defines the CLI contract to build now for EtsySentry.
+
+Goals:
+- match implemented EtsySentry behavior as of February 24, 2026
+- keep CLI and public API aligned (`api.public.*`)
+- prioritize commands that map to existing tracking/sync/rank/history capabilities
 
 Covered primitives:
 - `keyword`
@@ -10,66 +15,89 @@ Covered primitives:
 - `shop`
 
 Covered operations:
-- local config for API-key auth
-- tracking primitives
-- getting/listing tracked primitives
-- series metrics for all three primitives
+- local config for API key auth and base URL
+- local default time-range config
+- track/list for all primitives
+- listing performance retrieval
+
+## Current Backend Alignment
+
+Current server status:
+- `api.public.*` now implements CLI v0.2 primitives:
+  - `public.keywords.list`
+  - `public.keywords.track`
+  - `public.listings.list`
+  - `public.listings.track`
+  - `public.listings.getPerformance`
+  - `public.shops.list`
+  - `public.shops.track`
+- dashboard website remains on `api.app.*` (Clerk auth)
+
+Current CLI package status:
+- implemented in `packages/cli`
+- uses `packages/http-client` (`createEtsySentryClient`) with tRPC QueryClient + options proxy
+
+This CLI spec is the canonical target for `api.public.*` implementation and should mirror the
+current app capability set first, before adding broader v1 features.
 
 ## Principles
 
 - Config-only state. No interactive prompts.
 - Resource-first, verb-second command shape.
-- JSON-only output.
+- JSON-first output, with command-scoped table rendering where explicitly supported.
 - One CLI command maps to one API capability.
-- Flat command structure. Flags handle filtering.
 - CLI maps to `api.public.*` only (not `api.app.*`).
-- CLI and HTTP API share one canonical public contract (`api.public.*`).
+- Prefer explicit tracked IDs for deterministic retrieval commands.
+- Commands that support one-or-many targets must use one command shape.
+- Do not create parallel `*-many` commands; accept a single id or multiple ids in one command.
+- CLI must use the tRPC React Query client pattern (same stack as dashboard).
 
-## Authentication
+## Authentication and Preconditions
 
-- All non-config CLI commands require an API key.
+- All non-config commands require an API key.
 - CLI authenticates against `api.public.*` using API key auth:
   - primary header: `x-api-key: <esk_...>`
   - optional equivalent: `authorization: Bearer <esk_...>`
-- API key lookup precedence:
-  - `--api-key` flag
-  - `ETSYSENTRY_API_KEY` env var
-  - `~/.etsysentry/config.json` (`apiKey`)
-- If no API key is available, command should fail with `MISSING_CONFIG`.
+
+API key lookup precedence:
+- `--api-key` flag
+- `ETSYSENTRY_API_KEY` env var
+- `~/.etsysentry/config.json` (`apiKey`)
+
+Base URL precedence:
+- `--base-url` flag
+- `ETSYSENTRY_API_BASE_URL` env var
+- `~/.etsysentry/config.json` (`baseUrl`, default `http://localhost:8080`)
+
+Etsy precondition:
+- Etsy-backed commands require the API key tenant to have an active Etsy OAuth connection.
+- If Etsy is not connected, command fails with a precondition error.
 
 ## Binary and Output
 
-- Proposed binary: `es`
-- Output is always JSON.
-- Success envelope:
+- Binary: `es`
+- Default output is JSON success/error envelopes.
+- `es listings performance` additionally supports `--mode table` for human-readable terminal output.
+- Graph-ready output is provided by `es listings performance --mode metrics`.
+
+Success envelope:
 
 ```json
 {"ok": true, "data": {}}
 ```
 
-- Error envelope:
+Error envelope:
 
 ```json
-{"ok": false, "error": {"code": "MISSING_CONFIG", "message": "config.apiKey is required", "details": {}}}
+{
+  "ok": false,
+  "error": {
+    "code": "MISSING_CONFIG",
+    "message": "config.apiKey is required",
+    "details": {}
+  }
+}
 ```
-
-## tRPC HTTP Path Shape
-
-CLI command segments map to slash-style tRPC procedure paths.
-
-Pattern:
-- `/api/<resource>/<verb>`
-- `/api/<resource>/<verb>/<subresource>` when needed
-
-Examples:
-- `es keywords track "wedding invite"` -> `POST /api/keywords/track`
-- `es listings get 1234567890` -> `GET /api/listings/get`
-- `es shops list --status active` -> `GET /api/shops/list`
-- `es metrics series listings --ids 123,456` -> `GET /api/metrics/series/listings`
-
-Transport behavior stays tRPC-native:
-- query procedures use `GET` with URL-encoded `input`
-- mutation procedures use `POST` with JSON body
 
 ## Config
 
@@ -81,108 +109,221 @@ Commands:
 - `es config clear`
 - `es config set api-key <value>`
 - `es config set base-url <value>`
-- `es config set range <today|yesterday|7d|30d|YYYY-MM-DD..YYYY-MM-DD>`
+- `es config set range <7d|30d|90d|YYYY-MM-DD..YYYY-MM-DD>`
 
-Config precedence:
-- `--api-key` flag
-- `ETSYSENTRY_API_KEY` env var
-- `~/.etsysentry/config.json` (`apiKey`)
+## Shared Concepts
 
-Base URL precedence:
-- `--base-url` flag
-- `ETSYSENTRY_API_BASE_URL` env var
-- `~/.etsysentry/config.json` (`baseUrl`, default `http://localhost:8080`)
-
-Range precedence:
-- `--range` flag
-- `ETSYSENTRY_DEFAULT_RANGE` env var
-- `~/.etsysentry/config.json` (`range`, default `30d`)
-
-## Common Concepts
-
-Primitive status values:
+Tracking states:
 - `active`
 - `paused`
-- `archived`
-- `all` (list-only)
+- `error`
 
-Pagination:
-- `--limit <n>`
-- `--offset <n>`
+Sync states:
+- `idle`
+- `queued`
+- `syncing`
 
-Range:
-- `today`
-- `yesterday`
-- `7d`
-- `30d`
-- `YYYY-MM-DD..YYYY-MM-DD`
+Listing Etsy states:
+- `active`
+- `inactive`
+- `sold_out`
+- `draft`
+- `expired`
 
-## Track Commands
+Identifier semantics:
+- `trackedKeywordId`: UUID
+- `trackedListingId`: UUID
+- `trackedShopId`: UUID
+- `etsyListingId`: numeric string
+- `etsyShopId`: numeric string
 
-Canonical resource-first commands:
-- `es keywords track <query>`
+Time-range syntax:
+- relative: `7d`, `30d`, `90d`
+- absolute: `YYYY-MM-DD..YYYY-MM-DD` (UTC day boundaries)
+
+Range precedence (for commands that support `--range`):
+- `--range` flag
+- `ETSYSENTRY_DEFAULT_RANGE` env var
+- `~/.etsysentry/config.json` (`range`)
+- default: `30d`
+
+Target cardinality convention:
+- Commands that can operate on multiple targets must still use one command name.
+- Accept either one target or many targets in a single argument shape.
+- Preferred many-target shape is comma-separated ids (for example `--ids id1,id2,id3`).
+
+Digital listings:
+- listing rows include `isDigital`
+- CLI listing commands should support an opt-in `--show-digital` view toggle
+- default list view hides digital listings for parity with dashboard behavior
+
+## Commands
+
+### Track Commands
+
+Canonical:
+- `es keywords track <keyword>`
 - `es listings track <listing_id|listing_url>`
 - `es shops track <shop_id|shop_url|shop_name>`
 
 Convenience aliases:
-- `es track keyword <query>` -> `es keywords track <query>`
+- `es track keyword <keyword>` -> `es keywords track <keyword>`
 - `es track listing <listing_id|listing_url>` -> `es listings track <listing_id|listing_url>`
 - `es track product <listing_id|listing_url>` -> `es listings track <listing_id|listing_url>`
 - `es track shop <shop_id|shop_url|shop_name>` -> `es shops track <shop_id|shop_url|shop_name>`
 
-Tracking behavior:
-- idempotent for existing active records
-- returns tracked primitive plus status/source metadata
-
-## Primitive Commands
-
 ### Keywords
 
-- `es keywords track <query>`
-- `es keywords list [--status active|paused|archived|all] [--search <text>] [--limit <n>] [--offset <n>]`
-- `es keywords get <keyword_id>`
-- `es keywords pause <keyword_id>`
-- `es keywords resume <keyword_id>`
-- `es keywords archive <keyword_id>`
+- `es keywords list [--search <text>] [--tracking-state <active|paused|error>]`
+  `[--sync-state <idle|queued|syncing>]`
+- `es keywords track <keyword>`
+
+Notes:
+- `keywords list` filters are client-side in CLI for initial build.
 
 ### Listings (Products)
 
+- `es listings list [--search <text>] [--tracking-state <active|paused|error>]`
+  `[--sync-state <idle|queued|syncing>] [--show-digital]`
 - `es listings track <listing_id|listing_url>`
-- `es listings list [--status active|paused|archived|all] [--shop-id <shop_id>] [--source manual|discovered-from-keyword|discovered-from-shop] [--limit <n>] [--offset <n>]`
-- `es listings get <listing_id>`
-- `es listings pause <listing_id>`
-- `es listings resume <listing_id>`
-- `es listings archive <listing_id>`
+- `es listings performance <tracked_listing_id> [--range <7d|30d|90d|YYYY-MM-DD..YYYY-MM-DD>]`
+  `[--metrics <views,favorites,quantity,price>] [--mode <table|metrics>]`
 
 Alias group:
 - `es products ...` maps 1:1 to `es listings ...`
 
+Notes:
+- listing responses include `priceUsdValue` when USD conversion rates are available.
+
+Performance command behavior:
+- `--mode table` prints a compact table for terminal inspection.
+- `--mode metrics` returns graph-ready metric series JSON.
+- default mode is `metrics`.
+- `--range` uses the shared range precedence and resolves to a bounded window for output.
+
+Graph-ready performance shape (`--mode metrics`):
+
+```json
+{
+  "ok": true,
+  "data": {
+    "listing": {
+      "id": "tracked_listing_uuid",
+      "etsyListingId": "1234567890",
+      "title": "Example listing"
+    },
+    "range": {
+      "label": "30d",
+      "from": "2026-01-29",
+      "to": "2026-02-27"
+    },
+    "views": {
+      "latest": 1542,
+      "points": [{ "ts": "2026-02-27", "value": 1542 }]
+    },
+    "favorites": {
+      "latest": 219,
+      "points": [{ "ts": "2026-02-27", "value": 219 }]
+    },
+    "quantity": {
+      "latest": 8,
+      "points": [{ "ts": "2026-02-27", "value": 8 }]
+    },
+    "price": {
+      "latest": {
+        "value": 24.99,
+        "currencyCode": "USD"
+      },
+      "points": [{ "ts": "2026-02-27", "value": 24.99, "currencyCode": "USD" }]
+    }
+  }
+}
+```
+
 ### Shops
 
+- `es shops list [--search <text>] [--tracking-state <active|paused|error>]`
+  `[--sync-state <idle|queued|syncing>]`
 - `es shops track <shop_id|shop_url|shop_name>`
-- `es shops list [--status active|paused|archived|all] [--search <text>] [--limit <n>] [--offset <n>]`
-- `es shops get <shop_id>`
-- `es shops pause <shop_id>`
-- `es shops resume <shop_id>`
-- `es shops archive <shop_id>`
 
-## Metrics Series
+Notes:
+- shop list items include `latestSnapshot` fields:
+  - `activeListingCount`, `newListingCount`
+  - `favoritesTotal`, `favoritesDelta`
+  - `soldTotal`, `soldDelta`
+  - `reviewTotal`, `reviewDelta`
 
-Series commands are chart-focused and return time buckets.
+## Public Procedure Mapping
 
-Common flags:
-- `--ids <id1,id2,...>`
-- `--range <today|yesterday|7d|30d|YYYY-MM-DD..YYYY-MM-DD>`
-- `--bucket <auto|day|week|month>`
-- `--metrics <key1,key2,...>`
+Canonical slash-style public procedures for CLI:
+- `es keywords list` -> `keywords/list`
+- `es keywords track` -> `keywords/track`
+- `es listings list` -> `listings/list`
+- `es listings track` -> `listings/track`
+- `es listings performance` -> `listings/get-performance` (with CLI shaping)
+- `es shops list` -> `shops/list`
+- `es shops track` -> `shops/track`
+
+Transport behavior remains tRPC-native:
+- query procedures use `GET` with URL-encoded `input`
+- mutation procedures use `POST` with JSON body
+
+## Client Implementation Requirement
+
+- CLI must use a tRPC React Query client with TanStack Query `QueryClient` orchestration.
+- CLI commands should call procedure wrappers via `queryClient.fetchQuery(...)` and
+  `client.<path>.mutate(...)`, consistent with dashboard usage.
+- Do not add direct `fetch('/api/...')` CLI call sites for public procedures.
+
+## Error Behavior
+
+CLI-normalized error codes:
+- `MISSING_CONFIG`
+- `UNAUTHORIZED`
+- `FORBIDDEN`
+- `PRECONDITION_FAILED`
+- `BAD_REQUEST`
+- `NOT_FOUND`
+- `CONFLICT`
+- `RATE_LIMITED`
+- `INTERNAL_ERROR`
+
+Notes:
+- map tRPC `INTERNAL_SERVER_ERROR` to CLI `INTERNAL_ERROR`
+- preserve server message text for actionable Etsy/auth/validation failures
+
+## Help Snapshot
+
+Expected top-level help shape:
+
+```txt
+es <command> [options]
 
 Commands:
-- `es metrics series keywords [--ids <id1,id2,...>] [--range <range>] [--bucket <auto|day|week|month>] [--metrics <bestRank,avgRank,visibilityScore,resultCount>]`
-- `es metrics series listings [--ids <id1,id2,...>] [--range <range>] [--bucket <auto|day|week|month>] [--metrics <reviewCount,reviewAverage,favorerCount,price,views,quantity,estimatedSales>]`
-- `es metrics series shops [--ids <id1,id2,...>] [--range <range>] [--bucket <auto|day|week|month>] [--metrics <activeListings,newListings,favoritesTotal,favoritesDelta,soldTotal,soldDelta,reviewTotal,reviewDelta>]`
+  config show
+  config clear
+  config set api-key <value>
+  config set base-url <value>
+  config set range <7d|30d|90d|YYYY-MM-DD..YYYY-MM-DD>
 
-Bucket behavior:
-- `auto` resolves to `day` for `today/7d/30d`, and `week` for longer custom ranges
+  keywords list [--search <text>] [--tracking-state <state>] [--sync-state <state>]
+  keywords track <keyword>
+
+  listings list [--search <text>] [--tracking-state <state>] [--sync-state <state>] [--show-digital]
+  listings track <listing_id|listing_url>
+  listings performance <tracked_listing_id> [--range <7d|30d|90d|YYYY-MM-DD..YYYY-MM-DD>]
+    [--metrics <views,favorites,quantity,price>] [--mode <table|metrics>]
+
+  shops list [--search <text>] [--tracking-state <state>] [--sync-state <state>]
+  shops track <shop_id|shop_url|shop_name>
+
+Aliases:
+  track keyword -> keywords track
+  track listing -> listings track
+  track product -> listings track
+  track shop -> shops track
+  products ... -> listings ...
+```
 
 ## Command Examples
 
@@ -195,17 +336,21 @@ es track keyword "mid century wall art"
 es track product https://www.etsy.com/listing/1234567890/example
 es track shop la-paz-studio
 
-es keywords get kw_01JABCDEF
-es listings get 1234567890
-es shops get 99887766
+es keywords list --sync-state queued
 
-es metrics series keywords --ids kw_01JABCDEF --range 30d --metrics bestRank,avgRank
-es metrics series listings --ids 1234567890 --range 30d --metrics reviewCount,estimatedSales
-es metrics series shops --ids 99887766 --range 30d --metrics activeListings,newListings
+es listings list --search "gallery wall" --show-digital
+es listings performance 0fdd5a64-24f5-4e75-9326-63c201f7f489 --range 30d --mode table
+es listings performance 0fdd5a64-24f5-4e75-9326-63c201f7f489 --range 2026-01-01..2026-02-01 --mode metrics
+
+es shops list --tracking-state active
 ```
 
-## Out of Scope (v1)
+## Deferred (Post Initial CLI Build)
 
-- interactive terminal UI
-- non-JSON output modes
-- admin-only logs and operational endpoints
+Not part of the first CLI implementation pass:
+- keyword rank read commands (`keywords daily-ranks`, `listings keyword-ranks`)
+- manual refresh commands
+- `pause/resume/archive` primitive commands
+- generic `metrics series` command family
+- admin/log/currency/ops commands
+- additional non-JSON output modes beyond `listings performance --mode table`
