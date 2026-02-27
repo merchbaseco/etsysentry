@@ -69,7 +69,7 @@ API key lookup precedence:
 Base URL precedence:
 - `--base-url` flag
 - `ETSYSENTRY_API_BASE_URL` env var
-- `~/.etsysentry/config.json` (`baseUrl`, default `http://localhost:8080`)
+- `~/.etsysentry/config.json` (`baseUrl`, default `https://etsysentry.merchbase.co`)
 
 Etsy precondition:
 - Etsy-backed commands require the API key tenant to have an active Etsy OAuth connection.
@@ -331,7 +331,7 @@ Aliases:
 
 ```bash
 es config set api-key esk_live_xxx
-es config set base-url http://localhost:8080
+es config set base-url https://etsysentry.merchbase.co
 es config set range 30d
 
 es track keyword "mid century wall art"

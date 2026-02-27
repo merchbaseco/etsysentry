@@ -1,4 +1,5 @@
-import { CONFIG_PATH, clearConfig, saveConfig, updateConfigFromSet } from './config.js';
+import { clearConfig, saveConfig, updateConfigFromSet } from './config.js';
+import { CONFIG_PATH } from './constants.js';
 import { failWith } from './errors.js';
 import type { CliCommand, CliConfig, CommandRunResult } from './types.js';
 

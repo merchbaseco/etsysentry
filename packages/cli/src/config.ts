@@ -1,7 +1,8 @@
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import {
+    CONFIG_PATH as CLI_CONFIG_PATH,
     CONFIG_DIR,
-    CONFIG_PATH,
+    DEFAULT_BASE_URL,
     RANGE_ABSOLUTE_REGEX,
     RANGE_VALUES,
     TRAILING_SLASHES_REGEX,
@@ -50,7 +51,7 @@ export const normalizeBaseUrl = (value: string): string => {
 
 export const loadConfig = async (): Promise<CliConfig> => {
     try {
-        const raw = await readFile(CONFIG_PATH, 'utf8');
+        const raw = await readFile(CLI_CONFIG_PATH, 'utf8');
         const parsed = JSON.parse(raw) as Record<string, unknown>;
 
         return {
@@ -78,7 +79,7 @@ export const loadConfig = async (): Promise<CliConfig> => {
         failWith({
             code: 'INTERNAL_ERROR',
             message: 'Failed to read CLI config.',
-            details: { path: CONFIG_PATH },
+            details: { path: CLI_CONFIG_PATH },
         });
 
         throw new Error('Unreachable');
@@ -87,11 +88,11 @@ export const loadConfig = async (): Promise<CliConfig> => {
 
 export const saveConfig = async (config: CliConfig): Promise<void> => {
     await mkdir(CONFIG_DIR, { recursive: true });
-    await writeFile(CONFIG_PATH, `${JSON.stringify(config, null, 2)}\n`, 'utf8');
+    await writeFile(CLI_CONFIG_PATH, `${JSON.stringify(config, null, 2)}\n`, 'utf8');
 };
 
 export const clearConfig = async (): Promise<void> => {
-    await rm(CONFIG_PATH, { force: true });
+    await rm(CLI_CONFIG_PATH, { force: true });
 };
 
 export const resolveApiKey = (params: { config: CliConfig; flags: CliFlags }): string | null => {
@@ -107,7 +108,7 @@ export const resolveBaseUrl = (params: { config: CliConfig; flags: CliFlags }): 
     const fromEnv = toOptionalTrimmed(process.env.ETSYSENTRY_API_BASE_URL);
     const fromConfig = toOptionalTrimmed(params.config.baseUrl);
 
-    return normalizeBaseUrl(fromFlag ?? fromEnv ?? fromConfig ?? 'http://localhost:8080');
+    return normalizeBaseUrl(fromFlag ?? fromEnv ?? fromConfig ?? DEFAULT_BASE_URL);
 };
 
 export const resolveRange = (params: { config: CliConfig; flags: CliFlags }): string => {
@@ -153,5 +154,3 @@ export const updateConfigFromSet = (params: {
 
     throw new Error('Unreachable');
 };
-
-export { CONFIG_PATH };
