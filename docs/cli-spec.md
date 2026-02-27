@@ -159,6 +159,10 @@ Digital listings:
 - CLI listing commands should support an opt-in `--show-digital` view toggle
 - default list view hides digital listings for parity with dashboard behavior
 
+List pagination:
+- list commands support `--limit <n>` and `--offset <n>`
+- pagination is applied after CLI-side list filters
+
 ## Commands
 
 ### Track Commands
@@ -177,7 +181,7 @@ Convenience aliases:
 ### Keywords
 
 - `es keywords list [--search <text>] [--tracking-state <active|paused|error>]`
-  `[--sync-state <idle|queued|syncing>]`
+  `[--sync-state <idle|queued|syncing>] [--limit <n>] [--offset <n>]`
 - `es keywords track <keyword>`
 
 Notes:
@@ -186,7 +190,7 @@ Notes:
 ### Listings (Products)
 
 - `es listings list [--search <text>] [--tracking-state <active|paused|error>]`
-  `[--sync-state <idle|queued|syncing>] [--show-digital]`
+  `[--sync-state <idle|queued|syncing>] [--show-digital] [--limit <n>] [--offset <n>]`
 - `es listings track <listing_id|listing_url>`
 - `es listings performance <tracked_listing_id> [--range <7d|30d|90d|YYYY-MM-DD..YYYY-MM-DD>]`
   `[--metrics <views,favorites,quantity,price>] [--mode <table|metrics>]`
@@ -245,7 +249,7 @@ Graph-ready performance shape (`--mode metrics`):
 ### Shops
 
 - `es shops list [--search <text>] [--tracking-state <active|paused|error>]`
-  `[--sync-state <idle|queued|syncing>]`
+  `[--sync-state <idle|queued|syncing>] [--limit <n>] [--offset <n>]`
 - `es shops track <shop_id|shop_url|shop_name>`
 
 Notes:
@@ -309,14 +313,17 @@ Commands:
   config set range <7d|30d|90d|YYYY-MM-DD..YYYY-MM-DD>
 
   keywords list [--search <text>] [--tracking-state <state>] [--sync-state <state>]
+    [--limit <n>] [--offset <n>]
   keywords track <keyword>
 
   listings list [--search <text>] [--tracking-state <state>] [--sync-state <state>] [--show-digital]
+    [--limit <n>] [--offset <n>]
   listings track <listing_id|listing_url>
   listings performance <tracked_listing_id> [--range <7d|30d|90d|YYYY-MM-DD..YYYY-MM-DD>]
     [--metrics <views,favorites,quantity,price>] [--mode <table|metrics>]
 
   shops list [--search <text>] [--tracking-state <state>] [--sync-state <state>]
+    [--limit <n>] [--offset <n>]
   shops track <shop_id|shop_url|shop_name>
 
 Aliases:
@@ -340,11 +347,11 @@ es track shop la-paz-studio
 
 es keywords list --sync-state queued
 
-es listings list --search "gallery wall" --show-digital
+es listings list --search "gallery wall" --show-digital --limit 20 --offset 0
 es listings performance 0fdd5a64-24f5-4e75-9326-63c201f7f489 --range 30d --mode table
 es listings performance 0fdd5a64-24f5-4e75-9326-63c201f7f489 --range 2026-01-01..2026-02-01 --mode metrics
 
-es shops list --tracking-state active
+es shops list --tracking-state active --limit 10
 ```
 
 ## Build + Publish

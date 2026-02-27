@@ -8,8 +8,10 @@ export interface CliFlags {
     apiKey?: string;
     baseUrl?: string;
     help: boolean;
+    limit?: string;
     metrics?: string;
     mode?: string;
+    offset?: string;
     range?: string;
     search?: string;
     showDigital: boolean;
