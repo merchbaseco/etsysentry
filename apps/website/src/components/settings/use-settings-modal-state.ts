@@ -6,10 +6,15 @@ import {
     type EtsyApiUsage
 } from '@/lib/admin-api';
 import { getCurrencyStatus, refreshCurrencyRates, type CurrencyStatus } from '@/lib/currency-api';
+import {
+    getListingRefreshPolicy,
+    type GetListingRefreshPolicyOutput
+} from '@/lib/listings-api';
 import { toTrpcRequestError } from '@/lib/trpc-http';
 import {
     formatCurrencyErrorMessage,
     formatEtsyApiUsageErrorMessage,
+    formatListingRefreshPolicyErrorMessage,
     formatListingResyncErrorMessage,
     type SettingsPage
 } from './shared';
@@ -33,8 +38,12 @@ type UseSettingsModalStateOutput = {
     isEnqueuingListingResync: boolean;
     isLoadingApiUsage: boolean;
     isLoadingCurrencyStatus: boolean;
+    isLoadingListingRefreshPolicy: boolean;
     isRefreshingCurrencyRates: boolean;
+    listingRefreshPolicy: GetListingRefreshPolicyOutput | null;
+    listingRefreshPolicyErrorMessage: string | null;
     loadApiUsage: () => Promise<void>;
+    loadListingRefreshPolicy: () => Promise<void>;
 };
 
 export const useSettingsModalState = ({
@@ -46,6 +55,11 @@ export const useSettingsModalState = ({
     const [isLoadingCurrencyStatus, setIsLoadingCurrencyStatus] = useState(false);
     const [isRefreshingCurrencyRates, setIsRefreshingCurrencyRates] = useState(false);
     const [currencyErrorMessage, setCurrencyErrorMessage] = useState<string | null>(null);
+    const [listingRefreshPolicy, setListingRefreshPolicy] =
+        useState<GetListingRefreshPolicyOutput | null>(null);
+    const [isLoadingListingRefreshPolicy, setIsLoadingListingRefreshPolicy] = useState(false);
+    const [listingRefreshPolicyErrorMessage, setListingRefreshPolicyErrorMessage] =
+        useState<string | null>(null);
 
     const [isAdmin, setIsAdmin] = useState(false);
     const [isLoadingAdminStatus, setIsLoadingAdminStatus] = useState(false);
@@ -124,6 +138,20 @@ export const useSettingsModalState = ({
         }
     }, [hasAdminAccess]);
 
+    const loadListingRefreshPolicy = useCallback(async () => {
+        setIsLoadingListingRefreshPolicy(true);
+
+        try {
+            const refreshPolicy = await getListingRefreshPolicy();
+            setListingRefreshPolicy(refreshPolicy);
+            setListingRefreshPolicyErrorMessage(null);
+        } catch (error) {
+            setListingRefreshPolicyErrorMessage(formatListingRefreshPolicyErrorMessage(error));
+        } finally {
+            setIsLoadingListingRefreshPolicy(false);
+        }
+    }, []);
+
     const handleEnqueueListingResync = useCallback(async () => {
         if (!hasAdminAccess || isEnqueuingListingResync) {
             return;
@@ -185,6 +213,14 @@ export const useSettingsModalState = ({
     }, [activePage, hasAdminAccess, loadApiUsage, open]);
 
     useEffect(() => {
+        if (!open || activePage !== 'etsy-api') {
+            return;
+        }
+
+        void loadListingRefreshPolicy();
+    }, [activePage, loadListingRefreshPolicy, open]);
+
+    useEffect(() => {
         if (activePage !== 'admin' || hasAdminAccess || isLoadingAdminStatus) {
             return;
         }
@@ -201,6 +237,8 @@ export const useSettingsModalState = ({
         setApiUsageErrorMessage(null);
         setAdminEnqueueMessage(null);
         setAdminErrorMessage(null);
+        setListingRefreshPolicy(null);
+        setListingRefreshPolicyErrorMessage(null);
     }, [open]);
 
     return {
@@ -216,7 +254,11 @@ export const useSettingsModalState = ({
         isEnqueuingListingResync,
         isLoadingApiUsage,
         isLoadingCurrencyStatus,
+        isLoadingListingRefreshPolicy,
         isRefreshingCurrencyRates,
+        listingRefreshPolicy,
+        listingRefreshPolicyErrorMessage,
+        loadListingRefreshPolicy,
         loadApiUsage
     };
 };

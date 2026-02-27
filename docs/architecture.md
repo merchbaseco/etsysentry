@@ -232,23 +232,25 @@ Scheduling strategy:
 
 Primitive cadence policy (v1):
 
-- `listing`: adaptive cadence from `updated_timestamp` rules.
+- `listing`: adaptive cadence from momentum signals (`quantity` drop and `favorers` growth; views
+  still captured but not used for tier promotion).
 - `keyword`: fixed daily cadence.
 - `shop`: fixed daily cadence.
 - `currency rates`: fixed 24-hour refresh cadence.
 
 Current listing sync dispatch implementation:
 
-- `sync-stale-listings` runs every minute and enqueues due tracked listings in daily batches.
+- `sync-stale-listings` runs every minute and enqueues due tracked listings in tier-aware batches
+  (`1d`, `3d`, `7d`) derived from recent listing momentum.
 - stale listing selection includes digital rows and only excludes explicitly paused listings.
+- listings with insufficient momentum history default to `1d` cadence.
 
-Cadence policy (listing `updated_timestamp` aware):
+Cadence policy (listing momentum-aware):
 
-- Tier 1: every 1 day (default).
-- Tier 2: every 3 days after 3 no-change days.
-- Tier 3: every 7 days after 7 no-change days.
-- Reset to Tier 1 immediately when Etsy `updated_timestamp` changes.
-- Persist cadence decisions to `listing_monitor_metadata` on every listing monitor run.
+- Tier `1d` (highest): every 24 hours when recent favorites or quantity drops are detected.
+- Tier `3d`: every 72 hours after 5 days without favorites/quantity-drop signals.
+- Tier `7d`: every 168 hours after 14 days without favorites/quantity-drop signals.
+- Tier is recalculated from recent snapshot history after each listing sync.
 
 ### `monitor-keywords`
 
@@ -264,9 +266,8 @@ Cadence policy (listing `updated_timestamp` aware):
 2. Fetch listing detail via listing bridges.
 3. Upsert profile changes (`listing_profiles`).
 4. Upsert daily metric snapshot (`listing_metric_snapshots`, keyed by UTC calendar day).
-5. Compare `updated_timestamp` against last known value and recalculate cadence tier.
-6. Update `listing_monitor_metadata` intended cadence and reason.
-7. Emit event logs (updated/no-change/profile-changed/metrics-changed/cadence-changed).
+5. Recalculate cadence tier from recent momentum signals.
+6. Emit event logs (updated/no-change/profile-changed/metrics-changed/cadence-changed).
 
 ### Listing Ownership Boundary
 

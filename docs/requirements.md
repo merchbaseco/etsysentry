@@ -54,13 +54,13 @@ Each primitive must be creatable, listable, retrievable, and monitorable.
 ### 2) Daily Monitoring
 
 - Monitoring starts at daily cadence for active primitives.
-- Listing cadence policy uses Etsy `updated_timestamp` from `getListing`:
-  - if no listing change for 3 days, move listing to 3-day cadence
-  - if no listing change for 7 days, move listing to 7-day cadence
-  - once a listing changes, reset back to 1-day cadence
+- Listing cadence policy uses listing momentum from captured snapshots:
+  - `1d` tier when favorites increase or quantity drops (sales proxy)
+  - `3d` tier after 5 days without favorites/quantity-drop signals
+  - `7d` tier after 14 days without favorites/quantity-drop signals
 - Listing cadence must be persisted as explicit metadata per listing for auditability:
   - intended cadence (`1d`, `3d`, `7d`)
-  - cadence reason (`updated_timestamp_changed`, `3_day_no_change`, `7_day_no_change`)
+  - cadence reason (`favorer_growth`, `quantity_drop`, `no_signal_3d`, `no_signal_7d`)
   - last evaluated timestamp
 - Keyword monitoring:
   - Query Etsy search for the keyword.
@@ -107,7 +107,7 @@ Each primitive must be creatable, listable, retrievable, and monitorable.
   - Enqueue listing sync jobs for newly inserted listing rows.
   - Removals are eventual state transitions (`isActive = false`), not exact daily counts.
 - v1 cadence policy for primitives:
-  - listing: adaptive (`1d -> 3d -> 7d -> 1d on change`)
+  - listing: adaptive (`1d -> 3d -> 7d -> 1d on favorite/sale signal`)
   - keyword: fixed daily
   - shop: fixed daily
 

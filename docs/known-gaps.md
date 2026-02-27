@@ -11,7 +11,7 @@ Status: accepted for now (deferred)
 - Shop sync (`sync-shop`) runs in incremental mode and upserts listings returned by
   `findAllActiveListingsByShop` ordered by `updated_timestamp`.
 - Listing sync (`sync-listing`) updates `tracked_shop_listings.isActive` by `etsyListingId`.
-- Digital listings are now included in daily listing sync and are hidden in dashboard listings by
+- Digital listings are now included in tiered listing sync and are hidden in dashboard listings by
   default unless `Show digital` is enabled.
 
 ### Gap
@@ -57,5 +57,5 @@ row-level self-heal if rows are missing or drifted outside normal job flow.
 ### Decision Notes
 
 - Deferred to avoid immediate Etsy API/runtime expansion.
-- Current behavior is acceptable given daily sync cadence and expected data quality, with known
+- Current behavior is acceptable given tiered sync cadence and expected data quality, with known
   caveats above.

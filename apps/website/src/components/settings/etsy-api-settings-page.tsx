@@ -1,6 +1,7 @@
 import { CheckCircle2, KeyRound, Link2, RefreshCw, Unplug, Wifi, WifiOff } from 'lucide-react';
 import type { EtsyOAuthConnectionState } from '@/hooks/use-etsy-oauth-connection';
 import type { RealtimeWebsocketState } from '@/hooks/use-realtime-query-invalidations';
+import type { GetListingRefreshPolicyOutput } from '@/lib/listings-api';
 import { cn } from '@/lib/utils';
 import {
     dataRowClassName,
@@ -67,12 +68,26 @@ const getRealtimeStatusClassName = (realtime: RealtimeWebsocketState): string =>
     return 'bg-terminal-yellow/10 text-terminal-yellow';
 };
 
+const refreshPolicyTableRowClassName =
+    'grid grid-cols-[1.4fr_2fr_auto] gap-2 border-b border-border/50 px-4 py-1.5';
+
 type EtsyApiSettingsPageProps = {
     connection: EtsyOAuthConnectionState;
+    isLoadingListingRefreshPolicy: boolean;
+    listingRefreshPolicy: GetListingRefreshPolicyOutput | null;
+    listingRefreshPolicyErrorMessage: string | null;
+    onRefreshListingRefreshPolicy: () => Promise<void>;
     realtime: RealtimeWebsocketState;
 };
 
-export const EtsyApiSettingsPage = ({ connection, realtime }: EtsyApiSettingsPageProps) => {
+export const EtsyApiSettingsPage = ({
+    connection,
+    isLoadingListingRefreshPolicy,
+    listingRefreshPolicy,
+    listingRefreshPolicyErrorMessage,
+    onRefreshListingRefreshPolicy,
+    realtime
+}: EtsyApiSettingsPageProps) => {
     const isActionBusy =
         connection.isCheckingStatus ||
         connection.isConnecting ||
@@ -214,6 +229,79 @@ export const EtsyApiSettingsPage = ({ connection, realtime }: EtsyApiSettingsPag
                     <span className="text-xs font-medium text-terminal-red">
                         {formatTimestamp(realtime.lastErrorAt)}
                     </span>
+                </div>
+            ) : null}
+
+            <div className={sectionBarClassName}>
+                <span className={sectionBarLabelClassName}>Listing Refresh</span>
+                <span className="font-mono text-xs text-muted-foreground">
+                    {listingRefreshPolicy
+                        ? `${listingRefreshPolicy.queuedCount} queued  ` +
+                          `${listingRefreshPolicy.autoEnqueueCount} auto`
+                        : 'N/A'}
+                </span>
+            </div>
+
+            <div className={refreshPolicyTableRowClassName}>
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Bucket
+                </span>
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Policy
+                </span>
+                <span
+                    className={cn(
+                        'text-[10px] text-right uppercase tracking-wider',
+                        'text-muted-foreground'
+                    )}
+                >
+                    Count
+                </span>
+            </div>
+
+            {listingRefreshPolicy?.buckets.length ? (
+                listingRefreshPolicy.buckets.map((bucket) => (
+                    <div
+                        key={bucket.bucketId}
+                        className={refreshPolicyTableRowClassName}
+                    >
+                        <span className="text-xs text-foreground">{bucket.bucket}</span>
+                        <span className="text-xs text-muted-foreground">{bucket.policy}</span>
+                        <span className="font-mono text-xs text-right text-terminal-green">
+                            {bucket.count.toLocaleString()}
+                        </span>
+                    </div>
+                ))
+            ) : (
+                <div className="border-b border-border/50 px-4 py-1.5">
+                    <span className="text-xs text-muted-foreground">
+                        {isLoadingListingRefreshPolicy
+                            ? 'Loading listing refresh policy...'
+                            : 'No listing refresh policy data yet.'}
+                    </span>
+                </div>
+            )}
+
+            <button
+                type="button"
+                className={wideButtonClassName}
+                disabled={isLoadingListingRefreshPolicy}
+                onClick={() => {
+                    void onRefreshListingRefreshPolicy();
+                }}
+            >
+                <RefreshCw
+                    className={cn(
+                        'size-3',
+                        isLoadingListingRefreshPolicy ? 'animate-spin' : undefined
+                    )}
+                />
+                Refresh Policy
+            </button>
+
+            {listingRefreshPolicyErrorMessage ? (
+                <div className="px-4 py-1.5">
+                    <p className="text-xs text-terminal-red">{listingRefreshPolicyErrorMessage}</p>
                 </div>
             ) : null}
         </div>

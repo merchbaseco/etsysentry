@@ -310,6 +310,30 @@ Output:
 }
 ```
 
+`app.listings.getRefreshPolicy` (query)
+
+Input:
+
+```ts
+{}
+```
+
+Output:
+
+```ts
+{
+  queuedCount: number;
+  autoEnqueueCount: number;
+  buckets: Array<{
+    bucketId: 'daily_signal' | 'cooldown_3d' | 'cooldown_7d';
+    bucket: string;
+    cadence: '1d' | '3d' | '7d';
+    policy: string;
+    count: number;
+  }>;
+}
+```
+
 `app.listings.track` (mutation)
 
 Input:

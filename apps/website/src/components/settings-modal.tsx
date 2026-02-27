@@ -48,7 +48,11 @@ export const SettingsModal = ({ connection, realtime }: SettingsModalProps) => {
         isEnqueuingListingResync,
         isLoadingApiUsage,
         isLoadingCurrencyStatus,
+        isLoadingListingRefreshPolicy,
         isRefreshingCurrencyRates,
+        listingRefreshPolicy,
+        listingRefreshPolicyErrorMessage,
+        loadListingRefreshPolicy,
         loadApiUsage
     } = useSettingsModalState({
         activePage,
@@ -177,6 +181,12 @@ export const SettingsModal = ({ connection, realtime }: SettingsModalProps) => {
                             {activePage === 'etsy-api' ? (
                                 <EtsyApiSettingsPage
                                     connection={connection}
+                                    isLoadingListingRefreshPolicy={isLoadingListingRefreshPolicy}
+                                    listingRefreshPolicy={listingRefreshPolicy}
+                                    listingRefreshPolicyErrorMessage={
+                                        listingRefreshPolicyErrorMessage
+                                    }
+                                    onRefreshListingRefreshPolicy={loadListingRefreshPolicy}
                                     realtime={realtime}
                                 />
                             ) : null}

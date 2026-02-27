@@ -78,3 +78,7 @@ export const formatListingResyncErrorMessage = (error: unknown): string => {
 export const formatEtsyApiUsageErrorMessage = (error: unknown): string => {
     return formatTrpcErrorMessage(error, 'Unexpected Etsy API usage request failure.');
 };
+
+export const formatListingRefreshPolicyErrorMessage = (error: unknown): string => {
+    return formatTrpcErrorMessage(error, 'Unexpected listing refresh policy request failure.');
+};
