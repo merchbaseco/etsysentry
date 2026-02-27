@@ -19,7 +19,7 @@ export const findTrackedListingSyncTargets = (params: {
         : null;
 
     if (uniqueTrackedListingIds && uniqueTrackedListingIds.length === 0) {
-        return [];
+        return Promise.resolve([]);
     }
 
     const whereClause = uniqueTrackedListingIds

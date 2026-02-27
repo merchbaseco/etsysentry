@@ -120,6 +120,13 @@
       "when": 1772055502758,
       "tag": "0016_thin_abomination",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1772225202153,
+      "tag": "0017_secret_big_bertha",
+      "breakpoints": true
     }
   ]
 }

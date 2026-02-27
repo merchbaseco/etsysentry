@@ -1,0 +1,12 @@
+import type { PublicRouterOutputs } from '@etsysentry/http-client';
+import { METRIC_VALUES } from './constants.js';
+import type { CliFlags } from './types.js';
+type KeywordItem = PublicRouterOutputs['keywords']['list']['items'][number];
+type ListingItem = PublicRouterOutputs['listings']['list']['items'][number];
+type ShopItem = PublicRouterOutputs['shops']['list']['items'][number];
+export declare const parsePerformanceMode: (value: string | undefined) => "metrics" | "table";
+export declare const parsePerformanceMetrics: (value: string | undefined) => (typeof METRIC_VALUES)[number][] | undefined;
+export declare const filterKeywordItems: (items: KeywordItem[], flags: CliFlags) => KeywordItem[];
+export declare const filterListingItems: (items: ListingItem[], flags: CliFlags) => ListingItem[];
+export declare const filterShopItems: (items: ShopItem[], flags: CliFlags) => ShopItem[];
+export {};

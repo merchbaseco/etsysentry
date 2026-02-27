@@ -105,6 +105,35 @@ export const clerkIdentities = pgTable(
     })
 );
 
+export const apiKeys = pgTable(
+    'api_keys',
+    {
+        id: uuid('id').primaryKey().defaultRandom(),
+        accountId: text('account_id')
+            .notNull()
+            .references(() => accounts.id),
+        ownerClerkUserId: text('owner_clerk_user_id').notNull(),
+        name: text('name').notNull(),
+        keyPrefix: text('key_prefix').notNull(),
+        keyHash: text('key_hash').notNull(),
+        lastUsedAt: timestamp('last_used_at', { mode: 'date' }),
+        revokedAt: timestamp('revoked_at', { mode: 'date' }),
+        createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+        updatedAt: timestamp('updated_at', { mode: 'date' }).notNull().defaultNow(),
+    },
+    (table) => ({
+        keyPrefixIdx: index('api_keys_key_prefix_idx').on(table.keyPrefix),
+        accountRevokedIdx: index('api_keys_account_revoked_idx').on(
+            table.accountId,
+            table.revokedAt
+        ),
+        accountCreatedAtIdx: index('api_keys_account_created_at_idx').on(
+            table.accountId,
+            table.createdAt
+        ),
+    })
+);
+
 export const trackedListings = pgTable(
     'tracked_listings',
     {

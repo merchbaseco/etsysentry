@@ -10,6 +10,8 @@ const createContext = (params: { email?: string; isAdmin: boolean }): TrpcContex
         request: {} as never,
         requestId: 'request-1',
         accountId: 'tenant-1',
+        apiKey: null,
+        apiKeyError: undefined,
         user: {
             email: params.email,
             issuer: 'https://clerk.example',

@@ -1,35 +1,41 @@
 import { describe, expect, test } from 'bun:test';
-import { normalizeHistoryDays, toEarliestObservedDate } from './get-listing-metric-history';
+import { TRPCError } from '@trpc/server';
+import { resolveHistoryWindow } from './get-listing-metric-history';
 
-describe('normalizeHistoryDays', () => {
-    test('uses the default window for missing or invalid input', () => {
-        expect(normalizeHistoryDays(undefined)).toBe(30);
-        expect(normalizeHistoryDays(0)).toBe(30);
-        expect(normalizeHistoryDays(-4)).toBe(30);
+describe('resolveHistoryWindow', () => {
+    test('uses default 30-day window when no input is provided', () => {
+        const result = resolveHistoryWindow({});
+
+        expect(result.days).toBe(30);
+        expect(result.fromObservedDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+        expect(result.toObservedDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     });
 
-    test('normalizes valid input to an integer', () => {
-        expect(normalizeHistoryDays(7)).toBe(7);
-        expect(normalizeHistoryDays(7.9)).toBe(7);
-    });
-});
-
-describe('toEarliestObservedDate', () => {
-    test('builds an inclusive UTC boundary date key', () => {
-        const boundary = toEarliestObservedDate({
-            now: new Date('2026-03-03T23:15:00.000Z'),
-            days: 7,
+    test('uses inclusive day count for absolute date ranges', () => {
+        const result = resolveHistoryWindow({
+            fromObservedDate: '2026-01-01',
+            toObservedDate: '2026-01-31',
         });
 
-        expect(boundary).toBe('2026-02-25');
+        expect(result.days).toBe(31);
+        expect(result.fromObservedDate).toBe('2026-01-01');
+        expect(result.toObservedDate).toBe('2026-01-31');
     });
 
-    test('uses UTC day boundaries regardless of local timezone input', () => {
-        const boundary = toEarliestObservedDate({
-            now: new Date('2026-03-03T00:30:00.000-08:00'),
-            days: 2,
-        });
+    test('throws BAD_REQUEST when only one range boundary is provided', () => {
+        expect(() =>
+            resolveHistoryWindow({
+                fromObservedDate: '2026-01-01',
+            })
+        ).toThrow(TRPCError);
+    });
 
-        expect(boundary).toBe('2026-03-02');
+    test('throws BAD_REQUEST when range start is after range end', () => {
+        expect(() =>
+            resolveHistoryWindow({
+                fromObservedDate: '2026-02-01',
+                toObservedDate: '2026-01-01',
+            })
+        ).toThrow(TRPCError);
     });
 });

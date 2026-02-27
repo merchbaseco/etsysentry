@@ -1,9 +1,10 @@
 import { TRPCError } from '@trpc/server';
-import { and, desc, eq, gte } from 'drizzle-orm';
+import { and, desc, eq, gte, lte } from 'drizzle-orm';
 import { db } from '../../db';
 import { listingMetricSnapshots, trackedListings } from '../../db/schema';
 
 const DEFAULT_HISTORY_DAYS = 30;
+const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
 export interface ListingMetricHistoryPrice {
     amount: number;
@@ -24,9 +25,11 @@ export interface ListingMetricHistoryItem {
 export interface ListingMetricHistory {
     days: number;
     etsyListingId: string;
+    fromObservedDate: string;
     items: ListingMetricHistoryItem[];
     listingId: string;
     title: string;
+    toObservedDate: string;
 }
 
 export const normalizeHistoryDays = (days: number | undefined): number => {
@@ -44,6 +47,109 @@ export const toEarliestObservedDate = (params: { now: Date; days: number }): str
     boundary.setUTCDate(boundary.getUTCDate() - (normalized - 1));
 
     return boundary.toISOString().slice(0, 10);
+};
+
+const toUtcDayString = (value: Date): string => {
+    return value.toISOString().slice(0, 10);
+};
+
+const parseIsoDate = (value: string): Date | null => {
+    if (!ISO_DATE_REGEX.test(value)) {
+        return null;
+    }
+
+    const parsed = new Date(`${value}T00:00:00.000Z`);
+
+    if (Number.isNaN(parsed.getTime())) {
+        return null;
+    }
+
+    return parsed;
+};
+
+const toHistoryWindowFromDays = (
+    days: number
+): {
+    days: number;
+    fromObservedDate: string;
+    toObservedDate: string;
+} => {
+    const now = new Date();
+    const toObservedDate = toUtcDayString(now);
+    const fromObservedDate = toEarliestObservedDate({
+        now,
+        days,
+    });
+
+    return {
+        days,
+        fromObservedDate,
+        toObservedDate,
+    };
+};
+
+const toHistoryWindowFromDateRange = (params: {
+    fromObservedDate: string;
+    toObservedDate: string;
+}): {
+    days: number;
+    fromObservedDate: string;
+    toObservedDate: string;
+} => {
+    const fromDate = parseIsoDate(params.fromObservedDate);
+    const toDate = parseIsoDate(params.toObservedDate);
+
+    if (!(fromDate && toDate)) {
+        throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Range dates must use YYYY-MM-DD format.',
+        });
+    }
+
+    if (fromDate > toDate) {
+        throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Range start must be on or before range end.',
+        });
+    }
+
+    const msPerDay = 24 * 60 * 60 * 1000;
+    const days = Math.floor((toDate.getTime() - fromDate.getTime()) / msPerDay) + 1;
+
+    return {
+        days,
+        fromObservedDate: params.fromObservedDate,
+        toObservedDate: params.toObservedDate,
+    };
+};
+
+export const resolveHistoryWindow = (params: {
+    days?: number;
+    fromObservedDate?: string;
+    toObservedDate?: string;
+}): {
+    days: number;
+    fromObservedDate: string;
+    toObservedDate: string;
+} => {
+    const hasFrom = typeof params.fromObservedDate === 'string';
+    const hasTo = typeof params.toObservedDate === 'string';
+
+    if (hasFrom || hasTo) {
+        if (!(hasFrom && hasTo)) {
+            throw new TRPCError({
+                code: 'BAD_REQUEST',
+                message: 'Both range start and end are required when using date range input.',
+            });
+        }
+
+        return toHistoryWindowFromDateRange({
+            fromObservedDate: params.fromObservedDate!,
+            toObservedDate: params.toObservedDate!,
+        });
+    }
+
+    return toHistoryWindowFromDays(normalizeHistoryDays(params.days));
 };
 
 const toHistoryItem = (
@@ -79,11 +185,13 @@ export const getListingMetricHistory = async (params: {
     accountId: string;
     trackedListingId: string;
     days?: number;
+    fromObservedDate?: string;
+    toObservedDate?: string;
 }): Promise<ListingMetricHistory> => {
-    const days = normalizeHistoryDays(params.days);
-    const earliestObservedDate = toEarliestObservedDate({
-        now: new Date(),
-        days,
+    const historyWindow = resolveHistoryWindow({
+        days: params.days,
+        fromObservedDate: params.fromObservedDate,
+        toObservedDate: params.toObservedDate,
     });
 
     const [listing] = await db
@@ -115,7 +223,8 @@ export const getListingMetricHistory = async (params: {
             and(
                 eq(listingMetricSnapshots.accountId, params.accountId),
                 eq(listingMetricSnapshots.listingId, params.trackedListingId),
-                gte(listingMetricSnapshots.observedDate, earliestObservedDate)
+                gte(listingMetricSnapshots.observedDate, historyWindow.fromObservedDate),
+                lte(listingMetricSnapshots.observedDate, historyWindow.toObservedDate)
             )
         )
         .orderBy(desc(listingMetricSnapshots.observedDate));
@@ -124,7 +233,9 @@ export const getListingMetricHistory = async (params: {
         listingId: listing.listingId,
         etsyListingId: listing.etsyListingId,
         title: listing.title,
-        days,
+        days: historyWindow.days,
+        fromObservedDate: historyWindow.fromObservedDate,
+        toObservedDate: historyWindow.toObservedDate,
         items: rows.map(toHistoryItem),
     };
 };

@@ -47,7 +47,7 @@ const getBoss = () => {
 
 const sendKeywordSyncJob = (payload: SyncKeywordJobInput): Promise<string | null> => {
     if (!boss) {
-        return null;
+        return Promise.resolve(null);
     }
 
     return enqueueSyncKeywordJob({
@@ -58,7 +58,7 @@ const sendKeywordSyncJob = (payload: SyncKeywordJobInput): Promise<string | null
 
 const sendListingSyncJob = (payload: SyncListingJobInput): Promise<string | null> => {
     if (!boss) {
-        return null;
+        return Promise.resolve(null);
     }
 
     return enqueueSyncListingJob({
@@ -69,7 +69,7 @@ const sendListingSyncJob = (payload: SyncListingJobInput): Promise<string | null
 
 const sendShopSyncJob = (payload: SyncShopJobInput): Promise<string | null> => {
     if (!boss) {
-        return null;
+        return Promise.resolve(null);
     }
 
     return enqueueSyncShopJob({
