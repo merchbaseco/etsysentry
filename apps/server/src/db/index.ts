@@ -14,7 +14,7 @@ const queryClient = postgres({
 });
 
 export const db = drizzle(queryClient, {
-    logger: env.NODE_ENV === 'development',
+    logger: false,
 });
 
 export const closeDbConnection = async (): Promise<void> => {

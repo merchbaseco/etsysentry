@@ -1,6 +1,6 @@
 import { TrpcRequestError } from '@/lib/trpc-http';
 
-export type SettingsPage = 'general' | 'etsy-api' | 'currency' | 'admin';
+export type SettingsPage = 'general' | 'etsy-api' | 'api-keys' | 'currency' | 'admin';
 
 export const sectionBarClassName =
     'flex items-center justify-between -mt-px border-y border-border bg-secondary px-4 py-1.5';
@@ -111,4 +111,8 @@ export const formatEtsyApiUsageErrorMessage = (error: unknown): string => {
 
 export const formatListingRefreshPolicyErrorMessage = (error: unknown): string => {
     return formatTrpcErrorMessage(error, 'Unexpected listing refresh policy request failure.');
+};
+
+export const formatApiKeyErrorMessage = (error: unknown): string => {
+    return formatTrpcErrorMessage(error, 'Unexpected API key request failure.');
 };

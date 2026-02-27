@@ -67,7 +67,7 @@ function DashboardShell() {
     const getAuthToken = useCallback(async () => {
         return (await getToken()) ?? null;
     }, [getToken]);
-    const realtime = useRealtimeQueryInvalidations(getAuthToken);
+    useRealtimeQueryInvalidations(getAuthToken);
 
     return (
         <div className="flex h-screen flex-col overflow-hidden bg-background">
@@ -96,7 +96,7 @@ function DashboardShell() {
                     <StatusIndicator connection={connection} />
                     <span className="mx-0.5 text-border">|</span>
                     <ThemeToggle />
-                    <SettingsModal connection={connection} realtime={realtime} />
+                    <SettingsModal connection={connection} />
                 </div>
             </header>
 
