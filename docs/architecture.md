@@ -271,6 +271,9 @@ Cadence policy (listing momentum-aware):
 
 ### Listing Ownership Boundary
 
+- Queue/sync-state lifecycle semantics are defined in `docs/refresh-strategy.md`
+  (`Queue State Management` section). This architecture doc only identifies field ownership.
+
 - `sync-keyword` owns:
   - rank observations in `product_keyword_ranks`
   - discovery-time insert into `tracked_listings` for missing rows

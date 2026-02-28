@@ -48,11 +48,13 @@ export const reconcileTrackedKeywordSyncState = async (params: {
         .select({
             accountId: trackedKeywords.accountId,
             trackedKeywordId: trackedKeywords.id,
+            syncState: trackedKeywords.syncState,
         })
         .from(trackedKeywords)
         .where(inArray(trackedKeywords.syncState, ['queued', 'syncing']));
 
-    const keywordRowsWithLiveJobs: typeof rows = [];
+    const syncingKeywordRowsWithLiveJobs: typeof rows = [];
+    const queuedKeywordRowsWithLiveJobs: typeof rows = [];
     const staleKeywordRows: typeof rows = [];
 
     for (const row of rows) {
@@ -64,29 +66,46 @@ export const reconcileTrackedKeywordSyncState = async (params: {
         });
 
         if (hasLiveSyncKeywordJob(jobs)) {
-            keywordRowsWithLiveJobs.push(row);
+            if (row.syncState === 'syncing') {
+                syncingKeywordRowsWithLiveJobs.push(row);
+            } else {
+                queuedKeywordRowsWithLiveJobs.push(row);
+            }
             continue;
         }
 
         staleKeywordRows.push(row);
     }
 
-    let fixedCount = 0;
+    let queuedCount = 0;
+    const syncingKeywordIdsByAccountId = groupKeywordIdsByAccountId(syncingKeywordRowsWithLiveJobs);
+
+    for (const [accountId, trackedKeywordIds] of syncingKeywordIdsByAccountId.entries()) {
+        queuedCount += await setTrackedKeywordsSyncStateByKeywordIds({
+            accountId,
+            syncState: 'queued',
+            trackedKeywordIds,
+        });
+    }
+
+    let resetCount = 0;
     const staleKeywordIdsByAccountId = groupKeywordIdsByAccountId(staleKeywordRows);
 
     for (const [accountId, trackedKeywordIds] of staleKeywordIdsByAccountId.entries()) {
-        fixedCount += await setTrackedKeywordsSyncStateByKeywordIds({
+        resetCount += await setTrackedKeywordsSyncStateByKeywordIds({
             accountId,
             syncState: 'idle',
             trackedKeywordIds,
         });
     }
 
+    const fixedCount = queuedCount + resetCount;
     const checkedCount = rows.length;
-    const liveCount = keywordRowsWithLiveJobs.length;
+    const liveCount = syncingKeywordRowsWithLiveJobs.length + queuedKeywordRowsWithLiveJobs.length;
     const summary =
         `checked ${checkedCount} queued/syncing tracked keywords; ` +
-        `kept ${liveCount} with live jobs; reset ${fixedCount} to idle`;
+        `kept ${queuedKeywordRowsWithLiveJobs.length} queued with live jobs; ` +
+        `moved ${queuedCount} syncing to queued; reset ${resetCount} to idle`;
 
     return {
         checkedCount,

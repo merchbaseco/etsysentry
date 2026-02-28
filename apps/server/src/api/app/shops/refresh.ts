@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { enqueueShopSyncJob } from '../../../jobs/sync-keyword-jobs';
 import {
     isTrackedShopSyncInFlight,
+    queueTrackedShopSyncIfIdleByTrackedShopId,
     setTrackedShopSyncStateByTrackedShopId,
 } from '../../../services/shops/set-tracked-shop-sync-state';
 import { getTrackedShop } from '../../../services/shops/tracked-shops-service';
@@ -34,24 +35,47 @@ export const shopsRefreshProcedure = appProcedure
             });
         }
 
-        const jobId = await enqueueShopSyncJob({
+        const claimed = await queueTrackedShopSyncIfIdleByTrackedShopId({
             accountId: ctx.accountId,
-            clerkUserId: ctx.user.sub,
             trackedShopId: input.trackedShopId,
         });
 
+        if (!claimed) {
+            throw new TRPCError({
+                code: 'CONFLICT',
+                message: 'Tracked shop sync is already queued or in progress.',
+            });
+        }
+
+        let jobId: string | null;
+
+        try {
+            jobId = await enqueueShopSyncJob({
+                accountId: ctx.accountId,
+                clerkUserId: ctx.user.sub,
+                trackedShopId: input.trackedShopId,
+            });
+        } catch (error) {
+            await setTrackedShopSyncStateByTrackedShopId({
+                accountId: ctx.accountId,
+                syncState: 'idle',
+                trackedShopId: input.trackedShopId,
+            });
+            throw error;
+        }
+
         if (!jobId) {
+            await setTrackedShopSyncStateByTrackedShopId({
+                accountId: ctx.accountId,
+                syncState: 'idle',
+                trackedShopId: input.trackedShopId,
+            });
+
             throw new TRPCError({
                 code: 'INTERNAL_SERVER_ERROR',
                 message: 'Unable to queue tracked shop sync job.',
             });
         }
-
-        await setTrackedShopSyncStateByTrackedShopId({
-            accountId: ctx.accountId,
-            syncState: 'queued',
-            trackedShopId: input.trackedShopId,
-        });
 
         const updated = await getTrackedShop({
             accountId: ctx.accountId,

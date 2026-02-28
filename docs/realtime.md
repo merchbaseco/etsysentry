@@ -43,6 +43,8 @@ Use when a list/detail shape may have changed and client should refetch.
 ### `sync-state.push`
 
 Use for frequent sync state transitions where only `syncState` is changing.
+Lifecycle semantics for `idle|queued|syncing` are defined in `docs/refresh-strategy.md`
+(`Queue State Management` section).
 
 ```json
 {
