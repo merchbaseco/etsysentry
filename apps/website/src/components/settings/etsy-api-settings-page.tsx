@@ -73,9 +73,7 @@ export const EtsyApiSettingsPage = ({
                 <button
                     className={cn(wideButtonClassName, 'border-r')}
                     disabled={isActionBusy}
-                    onClick={() => {
-                        void connection.checkStatus();
-                    }}
+                    onClick={connection.checkStatus}
                     type="button"
                 >
                     <CheckCircle2 className="size-3" />
@@ -84,9 +82,7 @@ export const EtsyApiSettingsPage = ({
                 <button
                     className={wideDangerButtonClassName}
                     disabled={isActionBusy || !connection.connected}
-                    onClick={() => {
-                        void connection.forgetSession();
-                    }}
+                    onClick={connection.forgetSession}
                     type="button"
                 >
                     <Unplug className="size-3" />
@@ -141,9 +137,7 @@ export const EtsyApiSettingsPage = ({
             <button
                 className={cn(wideButtonClassName, 'border-t')}
                 disabled={isLoadingListingRefreshPolicy}
-                onClick={() => {
-                    void onRefreshListingRefreshPolicy();
-                }}
+                onClick={onRefreshListingRefreshPolicy}
                 type="button"
             >
                 <RefreshCw

@@ -118,9 +118,7 @@ export const EtsyApiAdminSection = ({
             <button
                 className={wideButtonClassName}
                 disabled={isLoadingApiUsage}
-                onClick={() => {
-                    void onRefreshApiUsage();
-                }}
+                onClick={onRefreshApiUsage}
                 type="button"
             >
                 <RefreshCw

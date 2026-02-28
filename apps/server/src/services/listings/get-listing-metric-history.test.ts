@@ -2,13 +2,15 @@ import { describe, expect, test } from 'bun:test';
 import { TRPCError } from '@trpc/server';
 import { resolveHistoryWindow } from './get-listing-metric-history';
 
+const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+
 describe('resolveHistoryWindow', () => {
     test('uses default 30-day window when no input is provided', () => {
         const result = resolveHistoryWindow({});
 
         expect(result.days).toBe(30);
-        expect(result.fromObservedDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-        expect(result.toObservedDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+        expect(result.fromObservedDate).toMatch(ISO_DATE_REGEX);
+        expect(result.toObservedDate).toMatch(ISO_DATE_REGEX);
     });
 
     test('uses inclusive day count for absolute date ranges', () => {
