@@ -2,7 +2,10 @@ import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { enqueueShopSyncJob } from '../../../jobs/sync-keyword-jobs';
 import { findLatestClerkUserIdByAccountId } from '../../../services/auth/find-latest-clerk-user-id-by-account-id';
-import { setTrackedShopSyncStateByTrackedShopId } from '../../../services/shops/set-tracked-shop-sync-state';
+import {
+    queueTrackedShopSyncIfIdleByTrackedShopId,
+    setTrackedShopSyncStateByTrackedShopId,
+} from '../../../services/shops/set-tracked-shop-sync-state';
 import { getTrackedShop, trackShop } from '../../../services/shops/tracked-shops-service';
 import { publicProcedure } from '../../trpc';
 
@@ -31,18 +34,34 @@ export const publicShopsTrackProcedure = publicProcedure
             clerkUserId,
         });
 
-        const queuedJobId = await enqueueShopSyncJob({
+        const claimed = await queueTrackedShopSyncIfIdleByTrackedShopId({
             accountId: ctx.accountId,
-            clerkUserId,
             trackedShopId: response.item.id,
         });
 
-        if (queuedJobId) {
-            await setTrackedShopSyncStateByTrackedShopId({
-                accountId: ctx.accountId,
-                syncState: 'queued',
-                trackedShopId: response.item.id,
-            });
+        if (claimed) {
+            try {
+                const queuedJobId = await enqueueShopSyncJob({
+                    accountId: ctx.accountId,
+                    clerkUserId,
+                    trackedShopId: response.item.id,
+                });
+
+                if (!queuedJobId) {
+                    await setTrackedShopSyncStateByTrackedShopId({
+                        accountId: ctx.accountId,
+                        syncState: 'idle',
+                        trackedShopId: response.item.id,
+                    });
+                }
+            } catch (error) {
+                await setTrackedShopSyncStateByTrackedShopId({
+                    accountId: ctx.accountId,
+                    syncState: 'idle',
+                    trackedShopId: response.item.id,
+                });
+                throw error;
+            }
         }
 
         const latest = await getTrackedShop({

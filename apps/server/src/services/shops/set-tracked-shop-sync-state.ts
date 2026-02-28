@@ -81,6 +81,40 @@ export const setTrackedShopSyncStateByTrackedShopId = async (params: {
     return true;
 };
 
+export const queueTrackedShopSyncIfIdleByTrackedShopId = async (params: {
+    accountId: string;
+    trackedShopId: string;
+}): Promise<boolean> => {
+    const rows = await db
+        .update(trackedShops)
+        .set(buildSyncStateUpdate('queued'))
+        .where(
+            and(
+                eq(trackedShops.accountId, params.accountId),
+                eq(trackedShops.trackedShopId, params.trackedShopId),
+                eq(trackedShops.syncState, 'idle')
+            )
+        )
+        .returning({
+            trackedShopId: trackedShops.trackedShopId,
+        });
+
+    if (rows.length === 0) {
+        return false;
+    }
+
+    emitTrackedShopsSyncStatePush({
+        accountId: params.accountId,
+        trackedShopIds: rows.map((row) => row.trackedShopId),
+        syncState: 'queued',
+    });
+    emitDashboardSummaryPushBestEffort({
+        accountId: params.accountId,
+    });
+
+    return true;
+};
+
 export const setTrackedShopsSyncStateByTrackedShopIds = async (params: {
     accountId: string;
     syncState: TrackedShopSyncState;

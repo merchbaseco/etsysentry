@@ -49,11 +49,13 @@ export const reconcileTrackedListingSyncState = async (params: {
             accountId: trackedListings.accountId,
             etsyListingId: trackedListings.etsyListingId,
             listingId: trackedListings.listingId,
+            syncState: trackedListings.syncState,
         })
         .from(trackedListings)
         .where(inArray(trackedListings.syncState, ['queued', 'syncing']));
 
-    const listingRowsWithLiveJobs: typeof rows = [];
+    const syncingListingRowsWithLiveJobs: typeof rows = [];
+    const queuedListingRowsWithLiveJobs: typeof rows = [];
     const staleListingRows: typeof rows = [];
 
     for (const row of rows) {
@@ -65,29 +67,46 @@ export const reconcileTrackedListingSyncState = async (params: {
         });
 
         if (hasLiveSyncListingJob(jobs)) {
-            listingRowsWithLiveJobs.push(row);
+            if (row.syncState === 'syncing') {
+                syncingListingRowsWithLiveJobs.push(row);
+            } else {
+                queuedListingRowsWithLiveJobs.push(row);
+            }
             continue;
         }
 
         staleListingRows.push(row);
     }
 
-    let fixedCount = 0;
+    let queuedCount = 0;
+    const syncingListingIdsByAccountId = groupListingIdsByAccountId(syncingListingRowsWithLiveJobs);
+
+    for (const [accountId, trackedListingIds] of syncingListingIdsByAccountId.entries()) {
+        queuedCount += await setTrackedListingsSyncStateByListingIds({
+            accountId,
+            syncState: 'queued',
+            trackedListingIds,
+        });
+    }
+
+    let resetCount = 0;
     const staleListingIdsByAccountId = groupListingIdsByAccountId(staleListingRows);
 
     for (const [accountId, trackedListingIds] of staleListingIdsByAccountId.entries()) {
-        fixedCount += await setTrackedListingsSyncStateByListingIds({
+        resetCount += await setTrackedListingsSyncStateByListingIds({
             accountId,
             syncState: 'idle',
             trackedListingIds,
         });
     }
 
+    const fixedCount = queuedCount + resetCount;
     const checkedCount = rows.length;
-    const liveCount = listingRowsWithLiveJobs.length;
+    const liveCount = syncingListingRowsWithLiveJobs.length + queuedListingRowsWithLiveJobs.length;
     const summary =
         `checked ${checkedCount} queued/syncing tracked listings; ` +
-        `kept ${liveCount} with live jobs; reset ${fixedCount} to idle`;
+        `kept ${queuedListingRowsWithLiveJobs.length} queued with live jobs; ` +
+        `moved ${queuedCount} syncing to queued; reset ${resetCount} to idle`;
 
     return {
         checkedCount,

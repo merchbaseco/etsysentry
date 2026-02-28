@@ -18,6 +18,63 @@ persisted.
 - Each stale-dispatch job finds due primitives and enqueues the corresponding worker job.
 - Batch size is currently `100` per stale-dispatch run for each primitive type.
 
+## Queue State Management (Canonical)
+
+This section is the source of truth for queue/sync state lifecycle across listings, keywords, and
+shops.
+
+### Sync State Contract
+
+Tracked primitives persist `syncState` as:
+
+- `idle`: no work is currently queued or running
+- `queued`: work has been accepted and is waiting to run
+- `syncing`: work is actively running in a worker or inline refresh path
+
+### Queue-Backed Lifecycle
+
+For queue-backed flows (stale-dispatch, discovery enqueue, track/refresh enqueue):
+
+1. Claim work by transitioning `idle -> queued`.
+2. Worker start transitions `queued -> syncing`.
+3. Worker finish transitions `syncing -> idle` on both success and failure.
+
+If enqueue fails after a claim, the claim is rolled back to `idle`.
+
+### Inline Refresh Lifecycle
+
+Some endpoints run sync immediately instead of queueing. Current listing row refresh is inline:
+
+1. Transition `idle -> syncing`.
+2. Run refresh work inline.
+3. Transition `syncing -> idle`.
+
+### Startup Reconciliation Rules
+
+During startup reconciliation, rows currently in `queued|syncing` are checked for a live job
+(`created|retry|active`) in pg-boss:
+
+- live job exists:
+  - keep `queued` rows as `queued`
+  - normalize `syncing` rows to `queued`
+- no live job exists: reset row to `idle`
+
+This keeps UI behavior honest after restarts: work that is still pending is visibly `queued`, and
+sync actions remain disabled while pending.
+
+### Implementation Map
+
+- startup reconciliation:
+  - `apps/server/src/jobs/startup-reconciliation*.ts`
+- primitive reconciliation tasks:
+  - `apps/server/src/services/listings/reconcile-tracked-listing-sync-state.ts`
+  - `apps/server/src/services/keywords/reconcile-tracked-keyword-sync-state.ts`
+  - `apps/server/src/services/shops/reconcile-tracked-shop-sync-state.ts`
+- stale dispatch:
+  - `apps/server/src/services/listings/sync-stale-listings.ts`
+  - `apps/server/src/services/keywords/sync-stale-keywords.ts`
+  - `apps/server/src/services/shops/sync-stale-shops.ts`
+
 ## Listings Refresh Strategy
 
 ### Cadence Tiers

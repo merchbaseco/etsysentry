@@ -48,11 +48,13 @@ export const reconcileTrackedShopSyncState = async (params: {
         .select({
             accountId: trackedShops.accountId,
             trackedShopId: trackedShops.trackedShopId,
+            syncState: trackedShops.syncState,
         })
         .from(trackedShops)
         .where(inArray(trackedShops.syncState, ['queued', 'syncing']));
 
-    const shopRowsWithLiveJobs: typeof rows = [];
+    const syncingShopRowsWithLiveJobs: typeof rows = [];
+    const queuedShopRowsWithLiveJobs: typeof rows = [];
     const staleShopRows: typeof rows = [];
 
     for (const row of rows) {
@@ -64,29 +66,48 @@ export const reconcileTrackedShopSyncState = async (params: {
         });
 
         if (hasLiveSyncShopJob(jobs)) {
-            shopRowsWithLiveJobs.push(row);
+            if (row.syncState === 'syncing') {
+                syncingShopRowsWithLiveJobs.push(row);
+            } else {
+                queuedShopRowsWithLiveJobs.push(row);
+            }
             continue;
         }
 
         staleShopRows.push(row);
     }
 
-    let fixedCount = 0;
+    let queuedCount = 0;
+    const syncingTrackedShopIdsByAccountId = groupTrackedShopIdsByAccountId(
+        syncingShopRowsWithLiveJobs
+    );
+
+    for (const [accountId, trackedShopIds] of syncingTrackedShopIdsByAccountId.entries()) {
+        queuedCount += await setTrackedShopsSyncStateByTrackedShopIds({
+            accountId,
+            syncState: 'queued',
+            trackedShopIds,
+        });
+    }
+
+    let resetCount = 0;
     const staleTrackedShopIdsByAccountId = groupTrackedShopIdsByAccountId(staleShopRows);
 
     for (const [accountId, trackedShopIds] of staleTrackedShopIdsByAccountId.entries()) {
-        fixedCount += await setTrackedShopsSyncStateByTrackedShopIds({
+        resetCount += await setTrackedShopsSyncStateByTrackedShopIds({
             accountId,
             syncState: 'idle',
             trackedShopIds,
         });
     }
 
+    const fixedCount = queuedCount + resetCount;
     const checkedCount = rows.length;
-    const liveCount = shopRowsWithLiveJobs.length;
+    const liveCount = syncingShopRowsWithLiveJobs.length + queuedShopRowsWithLiveJobs.length;
     const summary =
         `checked ${checkedCount} queued/syncing tracked shops; ` +
-        `kept ${liveCount} with live jobs; reset ${fixedCount} to idle`;
+        `kept ${queuedShopRowsWithLiveJobs.length} queued with live jobs; ` +
+        `moved ${queuedCount} syncing to queued; reset ${resetCount} to idle`;
 
     return {
         checkedCount,

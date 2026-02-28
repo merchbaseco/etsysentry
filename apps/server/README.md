@@ -32,6 +32,8 @@ Implemented scaffold:
   so dashboard refresh actions can reflect in-progress work across page reloads
 - Tracked keywords persist sync queue state in `tracked_keywords.syncState` (`idle|queued|syncing`)
   so dashboard "next sync" labels can reflect queued/in-progress syncs across page reloads
+- Canonical queue/sync-state lifecycle is documented in `docs/refresh-strategy.md`
+  (`Queue State Management` section)
 - User-facing event logs persisted in `event_logs` with admin listing API
 - Event log action catalog documented in `docs/event-log-actions.md`
 - Listing responses include derived `priceUsdValue` computed from cached conversion rates at
@@ -161,6 +163,8 @@ Current app surface:
   before workers start; tasks are extensible and currently include resetting stale
   `tracked_keywords.syncState` / `tracked_listings.syncState` / `tracked_shops.syncState` rows
   that have no live `sync-keyword` / `sync-listing` / `sync-shop` pg-boss job.
+- Startup queue-state lifecycle semantics are defined in `docs/refresh-strategy.md`
+  (`Queue State Management` section).
 - Keyword ranks are auto-synced by `pg-boss` workers:
   - immediate enqueue when a keyword is tracked
   - daily scheduled dispatch for due tracked keywords
