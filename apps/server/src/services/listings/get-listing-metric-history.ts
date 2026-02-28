@@ -132,8 +132,9 @@ export const resolveHistoryWindow = (params: {
     fromObservedDate: string;
     toObservedDate: string;
 } => {
-    const hasFrom = typeof params.fromObservedDate === 'string';
-    const hasTo = typeof params.toObservedDate === 'string';
+    const { fromObservedDate, toObservedDate } = params;
+    const hasFrom = typeof fromObservedDate === 'string';
+    const hasTo = typeof toObservedDate === 'string';
 
     if (hasFrom || hasTo) {
         if (!(hasFrom && hasTo)) {
@@ -144,8 +145,8 @@ export const resolveHistoryWindow = (params: {
         }
 
         return toHistoryWindowFromDateRange({
-            fromObservedDate: params.fromObservedDate!,
-            toObservedDate: params.toObservedDate!,
+            fromObservedDate,
+            toObservedDate,
         });
     }
 

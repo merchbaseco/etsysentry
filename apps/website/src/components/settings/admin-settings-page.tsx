@@ -34,9 +34,7 @@ export const AdminSettingsPage = ({
             <button
                 className={cn(wideButtonClassName, 'border-t')}
                 disabled={isEnqueuingListingResync}
-                onClick={() => {
-                    void onEnqueueListingResync();
-                }}
+                onClick={onEnqueueListingResync}
                 type="button"
             >
                 <RefreshCw

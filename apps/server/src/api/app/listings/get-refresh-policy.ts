@@ -4,7 +4,7 @@ import { appProcedure } from '../../trpc';
 
 export const listingsGetRefreshPolicyProcedure = appProcedure
     .input(z.object({}))
-    .query(async ({ ctx }) => {
+    .query(({ ctx }) => {
         return getListingRefreshPolicySummary({
             accountId: ctx.accountId,
         });

@@ -105,9 +105,11 @@ export interface ListingPerformanceData {
     };
 }
 
+type EmptyInput = Record<string, never>;
+
 export interface PublicRouterInputs {
     keywords: {
-        list: {};
+        list: EmptyInput;
         track: { keyword: string };
     };
     listings: {
@@ -116,11 +118,11 @@ export interface PublicRouterInputs {
             range?: string;
             metrics?: Array<'views' | 'favorites' | 'quantity' | 'price'>;
         };
-        list: {};
+        list: EmptyInput;
         track: { listing: string };
     };
     shops: {
-        list: {};
+        list: EmptyInput;
         track: { shop: string };
     };
 }
@@ -260,17 +262,18 @@ export const createEtsySentryClient = (options: EtsySentryClientOptions): EtsySe
     const url = toApiUrl(options.baseUrl ?? DEFAULT_API_BASE_URL);
     const linkFactory = options.batch ? httpBatchLink : httpLink;
 
-    const trpcClient = createTRPCClient<any>({
+    const untypedTrpcClient = createTRPCClient({
         links: [
             linkFactory({
                 headers: () => createRequestHeaders(options),
                 url,
             }),
         ],
-    }) as unknown as EtsySentryTrpcClient;
+    });
+    const trpcClient = untypedTrpcClient as unknown as EtsySentryTrpcClient;
 
-    const trpc = createTRPCOptionsProxy<any>({
-        client: trpcClient as any,
+    const trpc = createTRPCOptionsProxy({
+        client: untypedTrpcClient,
         queryClient,
     }) as unknown as EtsySentryTrpcOptionsProxy;
 

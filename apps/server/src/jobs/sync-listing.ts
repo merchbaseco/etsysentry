@@ -23,9 +23,7 @@ export const syncListingJob = defineJob(SYNC_LISTING_JOB_NAME, {
     .workOptions({
         localConcurrency: SYNC_LISTING_WORKER_LOCAL_CONCURRENCY,
     })
-    .work(async (job, signal, log) => {
-        void signal;
-
+    .work(async (job, _signal, log) => {
         const [current] = await db
             .select({
                 trackingState: trackedListings.trackingState,
