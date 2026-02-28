@@ -1,0 +1,6 @@
+# linear cli
+# https://github.com/schpet/linear-cli
+
+workspace = "knickerbocker-ventures"
+team_id = "MB"
+issue_sort = "manual"
