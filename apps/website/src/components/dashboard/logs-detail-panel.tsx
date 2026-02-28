@@ -51,7 +51,7 @@ export function LogsDetailPanel({
                         <h4 className="mb-2 text-[10px] text-muted-foreground uppercase tracking-wider">
                             Message
                         </h4>
-                        <div className="rounded border border-border bg-secondary p-3 text-[11px] text-foreground leading-relaxed">
+                        <div className="rounded border border-border bg-secondary p-3 text-foreground text-sm leading-relaxed">
                             {selectedLog.message}
                         </div>
                     </div>
@@ -64,10 +64,10 @@ export function LogsDetailPanel({
                                 {detailEntries.map(([key, value]) => {
                                     const displayValue = toDetailValue(value);
                                     return (
-                                        <div className="min-w-0 text-[10px]" key={key}>
+                                        <div className="min-w-0 text-xs" key={key}>
                                             <span className="text-muted-foreground">{key}</span>
                                             <p
-                                                className="mt-0.5 truncate font-mono text-foreground"
+                                                className="mt-0.5 truncate font-mono text-foreground leading-relaxed"
                                                 title={displayValue}
                                             >
                                                 {displayValue}
