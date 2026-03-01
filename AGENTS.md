@@ -22,6 +22,11 @@ This file is the always-on guide for AI coding assistants in EtsySentry.
 7. Handle edge cases and external API failures explicitly; do not swallow errors.
 8. Add or update focused tests when behavior changes.
 9. Enforce a `300` LoC maximum per file (excluding generated files).
+10. In frontend React code, all API access must go through custom hooks (`use*`) built with
+    `useQuery`, `useMutation`, or `useInfiniteQuery`; use `refetch`/invalidation for refresh
+    flows instead of direct client calls.
+11. Each frontend hook must live in its own file under `apps/website/src/hooks` using
+    `use-*.ts` naming (for example `use-tracked-shops.ts` exports `useTrackedShops`).
 
 ## Naming Rules
 

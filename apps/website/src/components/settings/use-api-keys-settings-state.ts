@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { type ApiKeyRecord, createApiKey, listApiKeys, revokeApiKey } from '@/lib/api-keys-api';
+import { useApiKeys } from '@/hooks/use-api-keys';
+import { useCreateApiKey } from '@/hooks/use-create-api-key';
+import { useRevokeApiKey } from '@/hooks/use-revoke-api-key';
+import type { ApiKeyRecord } from '@/lib/api-keys-api';
 import { pickNewestActiveApiKey } from './api-key-utils';
 import { formatApiKeyErrorMessage, type SettingsPage } from './shared';
 
@@ -24,17 +27,29 @@ export const useApiKeysSettingsState = ({
     activePage,
     open,
 }: UseApiKeysSettingsStateParams): UseApiKeysSettingsStateOutput => {
+    const apiKeysQuery = useApiKeys({
+        enabled: false,
+    });
+    const createApiKeyMutation = useCreateApiKey();
+    const revokeApiKeyMutation = useRevokeApiKey();
+    const refetchApiKeys = apiKeysQuery.refetch;
+    const createApiKey = createApiKeyMutation.mutateAsync;
+    const revokeApiKey = revokeApiKeyMutation.mutateAsync;
     const [activeApiKey, setActiveApiKey] = useState<ApiKeyRecord | null>(null);
-    const [isLoadingApiKey, setIsLoadingApiKey] = useState(false);
-    const [isRotatingApiKey, setIsRotatingApiKey] = useState(false);
     const [apiKeyErrorMessage, setApiKeyErrorMessage] = useState<string | null>(null);
     const [rawApiKey, setRawApiKey] = useState<string | null>(null);
+    const isLoadingApiKey = apiKeysQuery.isFetching;
+    const isRotatingApiKey = createApiKeyMutation.isPending || revokeApiKeyMutation.isPending;
 
     const loadApiKey = useCallback(async () => {
-        setIsLoadingApiKey(true);
-
         try {
-            const response = await listApiKeys();
+            const result = await refetchApiKeys();
+            const response = result.data;
+
+            if (!response) {
+                throw result.error ?? new Error('Failed to fetch API keys.');
+            }
+
             const nextActiveApiKey = pickNewestActiveApiKey(response.items);
 
             setActiveApiKey(nextActiveApiKey);
@@ -50,17 +65,13 @@ export const useApiKeysSettingsState = ({
             setApiKeyErrorMessage(null);
         } catch (error) {
             setApiKeyErrorMessage(formatApiKeyErrorMessage(error));
-        } finally {
-            setIsLoadingApiKey(false);
         }
-    }, []);
+    }, [refetchApiKeys]);
 
     const rotateApiKey = useCallback(async () => {
         if (isRotatingApiKey) {
             return;
         }
-
-        setIsRotatingApiKey(true);
 
         try {
             const currentActiveApiKey = activeApiKey;
@@ -81,10 +92,8 @@ export const useApiKeysSettingsState = ({
         } catch (error) {
             setApiKeyErrorMessage(formatApiKeyErrorMessage(error));
             await loadApiKey();
-        } finally {
-            setIsRotatingApiKey(false);
         }
-    }, [activeApiKey, isRotatingApiKey, loadApiKey]);
+    }, [activeApiKey, createApiKey, isRotatingApiKey, loadApiKey, revokeApiKey]);
 
     useEffect(() => {
         if (!open || activePage !== API_KEYS_PAGE) {

@@ -1,11 +1,8 @@
-import { type ReactNode, useCallback, useEffect, useState } from 'react';
+import { type ReactNode, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { DetailPanel, formatNumber } from '@/components/ui/dashboard';
-import {
-    type GetTrackedListingMetricHistoryOutput,
-    getTrackedListingMetricHistory,
-    type TrackedListingItem,
-} from '@/lib/listings-api';
+import { useTrackedListingMetricHistory } from '@/hooks/use-tracked-listing-metric-history';
+import type { GetTrackedListingMetricHistoryOutput, TrackedListingItem } from '@/lib/listings-api';
 import { TrpcRequestError } from '@/lib/trpc-http';
 import { ListingDetailsSection } from './listing-details-section';
 
@@ -62,72 +59,26 @@ export function ListingHistoryDrawer({
     selectedListing: TrackedListingItem | null;
     onClose: () => void;
 }) {
-    const [history, setHistory] = useState<GetTrackedListingMetricHistoryOutput | null>(null);
-    const [isLoading, setIsLoading] = useState(false);
-    const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-    const loadHistory = useCallback(async (trackedListingId: string) => {
-        setIsLoading(true);
-
-        try {
-            const response = await getTrackedListingMetricHistory({
-                trackedListingId,
-                days: HISTORY_WINDOW_DAYS,
-            });
-
-            setHistory(response);
-            setErrorMessage(null);
-        } catch (error) {
-            setErrorMessage(toErrorMessage(error));
-        } finally {
-            setIsLoading(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        if (!selectedListing) {
-            setHistory(null);
-            setErrorMessage(null);
-            setIsLoading(false);
-            return;
-        }
-
-        let isCurrent = true;
-
-        setIsLoading(true);
-
-        getTrackedListingMetricHistory({
-            trackedListingId: selectedListing.id,
+    const selectedListingId = selectedListing?.id ?? '';
+    const trackedListingMetricHistoryQuery = useTrackedListingMetricHistory(
+        {
+            trackedListingId: selectedListingId,
             days: HISTORY_WINDOW_DAYS,
-        })
-            .then((response) => {
-                if (!isCurrent) {
-                    return;
-                }
-
-                setHistory(response);
-                setErrorMessage(null);
-            })
-            .catch((error) => {
-                if (!isCurrent) {
-                    return;
-                }
-
-                setErrorMessage(toErrorMessage(error));
-            })
-            .finally(() => {
-                if (!isCurrent) {
-                    return;
-                }
-
-                setIsLoading(false);
-            });
-
-        return () => {
-            isCurrent = false;
-        };
-    }, [selectedListing]);
-
+        },
+        {
+            enabled: Boolean(selectedListing),
+        }
+    );
+    const history: GetTrackedListingMetricHistoryOutput | null =
+        trackedListingMetricHistoryQuery.data ?? null;
+    const isLoading = trackedListingMetricHistoryQuery.isFetching;
+    const errorMessage = trackedListingMetricHistoryQuery.error
+        ? toErrorMessage(trackedListingMetricHistoryQuery.error)
+        : null;
+    const refetchTrackedListingMetricHistory = trackedListingMetricHistoryQuery.refetch;
+    const loadHistory = useCallback(async () => {
+        await refetchTrackedListingMetricHistory();
+    }, [refetchTrackedListingMetricHistory]);
     const historyItems = history?.items ?? [];
     let historySectionContent: ReactNode;
 
@@ -140,7 +91,13 @@ export function ListingHistoryDrawer({
             <div className="space-y-3 px-4 py-3">
                 <p className="text-terminal-red text-xs">{errorMessage}</p>
                 <Button
-                    onClick={() => selectedListing && loadHistory(selectedListing.id)}
+                    onClick={() => {
+                        if (!selectedListing) {
+                            return;
+                        }
+
+                        loadHistory();
+                    }}
                     size="sm"
                     type="button"
                     variant="outline"

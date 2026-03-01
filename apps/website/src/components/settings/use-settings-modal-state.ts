@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
-import {
-    type EtsyApiUsage,
-    enqueueSyncAllListings,
-    getAdminStatus,
-    getEtsyApiUsage,
-} from '@/lib/admin-api';
-import { type CurrencyStatus, getCurrencyStatus, refreshCurrencyRates } from '@/lib/currency-api';
-import { type GetListingRefreshPolicyOutput, getListingRefreshPolicy } from '@/lib/listings-api';
+import { useAdminStatus } from '@/hooks/use-admin-status';
+import { useCurrencyStatus } from '@/hooks/use-currency-status';
+import { useEnqueueSyncAllListings } from '@/hooks/use-enqueue-sync-all-listings';
+import { useEtsyApiUsage } from '@/hooks/use-etsy-api-usage';
+import { useListingRefreshPolicy } from '@/hooks/use-listing-refresh-policy';
+import { useRefreshCurrencyRates } from '@/hooks/use-refresh-currency-rates';
+import type { EtsyApiUsage } from '@/lib/admin-api';
+import type { CurrencyStatus } from '@/lib/currency-api';
+import type { GetListingRefreshPolicyOutput } from '@/lib/listings-api';
 import { toTrpcRequestError } from '@/lib/trpc-http';
 import {
     formatCurrencyErrorMessage,
@@ -56,23 +57,37 @@ export const useSettingsModalState = ({
     open,
     setActivePage,
 }: UseSettingsModalStateParams): UseSettingsModalStateOutput => {
+    const currencyStatusQuery = useCurrencyStatus({
+        enabled: false,
+    });
+    const refreshCurrencyRatesMutation = useRefreshCurrencyRates();
+    const adminStatusQuery = useAdminStatus({
+        enabled: false,
+    });
+    const etsyApiUsageQuery = useEtsyApiUsage({
+        enabled: false,
+    });
+    const listingRefreshPolicyQuery = useListingRefreshPolicy({
+        enabled: false,
+    });
+    const enqueueSyncAllListingsMutation = useEnqueueSyncAllListings();
+    const refetchCurrencyStatus = currencyStatusQuery.refetch;
+    const refreshCurrencyRates = refreshCurrencyRatesMutation.mutateAsync;
+    const refetchAdminStatus = adminStatusQuery.refetch;
+    const refetchEtsyApiUsage = etsyApiUsageQuery.refetch;
+    const refetchListingRefreshPolicy = listingRefreshPolicyQuery.refetch;
+    const enqueueSyncAllListings = enqueueSyncAllListingsMutation.mutateAsync;
     const [currencyStatus, setCurrencyStatus] = useState<CurrencyStatus | null>(null);
-    const [isLoadingCurrencyStatus, setIsLoadingCurrencyStatus] = useState(false);
-    const [isRefreshingCurrencyRates, setIsRefreshingCurrencyRates] = useState(false);
     const [currencyErrorMessage, setCurrencyErrorMessage] = useState<string | null>(null);
     const [listingRefreshPolicy, setListingRefreshPolicy] =
         useState<GetListingRefreshPolicyOutput | null>(null);
-    const [isLoadingListingRefreshPolicy, setIsLoadingListingRefreshPolicy] = useState(false);
     const [listingRefreshPolicyErrorMessage, setListingRefreshPolicyErrorMessage] = useState<
         string | null
     >(null);
 
     const [isAdmin, setIsAdmin] = useState(false);
-    const [isLoadingAdminStatus, setIsLoadingAdminStatus] = useState(false);
     const [apiUsage, setApiUsage] = useState<EtsyApiUsage | null>(null);
-    const [isLoadingApiUsage, setIsLoadingApiUsage] = useState(false);
     const [apiUsageErrorMessage, setApiUsageErrorMessage] = useState<string | null>(null);
-    const [isEnqueuingListingResync, setIsEnqueuingListingResync] = useState(false);
     const [adminEnqueueMessage, setAdminEnqueueMessage] = useState<string | null>(null);
     const [adminErrorMessage, setAdminErrorMessage] = useState<string | null>(null);
 
@@ -89,42 +104,50 @@ export const useSettingsModalState = ({
         open,
     });
 
+    const isLoadingCurrencyStatus = currencyStatusQuery.isFetching;
+    const isRefreshingCurrencyRates = refreshCurrencyRatesMutation.isPending;
+    const isLoadingAdminStatus = adminStatusQuery.isFetching;
+    const isLoadingApiUsage = etsyApiUsageQuery.isFetching;
+    const isLoadingListingRefreshPolicy = listingRefreshPolicyQuery.isFetching;
+    const isEnqueuingListingResync = enqueueSyncAllListingsMutation.isPending;
     const hasAdminAccess = isAdmin && !isLoadingAdminStatus;
 
     const loadCurrencyStatus = useCallback(async () => {
-        setIsLoadingCurrencyStatus(true);
-
         try {
-            const status = await getCurrencyStatus();
+            const result = await refetchCurrencyStatus();
+            const status = result.data;
+
+            if (!status) {
+                throw result.error ?? new Error('Failed to load currency status.');
+            }
+
             setCurrencyStatus(status);
             setCurrencyErrorMessage(null);
         } catch (error) {
             setCurrencyErrorMessage(formatCurrencyErrorMessage(error));
-        } finally {
-            setIsLoadingCurrencyStatus(false);
         }
-    }, []);
+    }, [refetchCurrencyStatus]);
 
     const handleRefreshCurrencyRates = useCallback(async () => {
-        setIsRefreshingCurrencyRates(true);
-
         try {
             const status = await refreshCurrencyRates();
             setCurrencyStatus(status);
             setCurrencyErrorMessage(null);
         } catch (error) {
             setCurrencyErrorMessage(formatCurrencyErrorMessage(error));
-        } finally {
-            setIsRefreshingCurrencyRates(false);
         }
-    }, []);
+    }, [refreshCurrencyRates]);
 
     const loadAdminPrivileges = useCallback(async () => {
-        setIsLoadingAdminStatus(true);
-
         try {
-            await getAdminStatus();
-            setIsAdmin(true);
+            const result = await refetchAdminStatus();
+
+            if (result.data) {
+                setIsAdmin(true);
+                return;
+            }
+
+            throw result.error ?? new Error('Failed to load admin status.');
         } catch (error) {
             const requestError = toTrpcRequestError(error);
 
@@ -134,49 +157,49 @@ export const useSettingsModalState = ({
             }
 
             setIsAdmin(false);
-        } finally {
-            setIsLoadingAdminStatus(false);
         }
-    }, []);
+    }, [refetchAdminStatus]);
 
     const loadApiUsage = useCallback(async () => {
         if (!hasAdminAccess) {
             return;
         }
 
-        setIsLoadingApiUsage(true);
-
         try {
-            const usage = await getEtsyApiUsage();
+            const result = await refetchEtsyApiUsage();
+            const usage = result.data;
+
+            if (!usage) {
+                throw result.error ?? new Error('Failed to load Etsy API usage.');
+            }
+
             setApiUsage(usage);
             setApiUsageErrorMessage(null);
         } catch (error) {
             setApiUsageErrorMessage(formatEtsyApiUsageErrorMessage(error));
-        } finally {
-            setIsLoadingApiUsage(false);
         }
-    }, [hasAdminAccess]);
+    }, [hasAdminAccess, refetchEtsyApiUsage]);
 
     const loadListingRefreshPolicy = useCallback(async () => {
-        setIsLoadingListingRefreshPolicy(true);
-
         try {
-            const refreshPolicy = await getListingRefreshPolicy();
+            const result = await refetchListingRefreshPolicy();
+            const refreshPolicy = result.data;
+
+            if (!refreshPolicy) {
+                throw result.error ?? new Error('Failed to load listing refresh policy.');
+            }
+
             setListingRefreshPolicy(refreshPolicy);
             setListingRefreshPolicyErrorMessage(null);
         } catch (error) {
             setListingRefreshPolicyErrorMessage(formatListingRefreshPolicyErrorMessage(error));
-        } finally {
-            setIsLoadingListingRefreshPolicy(false);
         }
-    }, []);
+    }, [refetchListingRefreshPolicy]);
 
     const handleEnqueueListingResync = useCallback(async () => {
         if (!hasAdminAccess || isEnqueuingListingResync) {
             return;
         }
-
-        setIsEnqueuingListingResync(true);
 
         try {
             const response = await enqueueSyncAllListings();
@@ -197,10 +220,8 @@ export const useSettingsModalState = ({
         } catch (error) {
             setAdminEnqueueMessage(null);
             setAdminErrorMessage(formatListingResyncErrorMessage(error));
-        } finally {
-            setIsEnqueuingListingResync(false);
         }
-    }, [hasAdminAccess, isEnqueuingListingResync]);
+    }, [enqueueSyncAllListings, hasAdminAccess, isEnqueuingListingResync]);
 
     useEffect(() => {
         if (!open || activePage !== 'currency') {

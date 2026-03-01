@@ -2,14 +2,13 @@
 
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { EmptyState } from '@/components/ui/dashboard';
+import { useEventLogs } from '@/hooks/use-event-logs';
 import { logsInvalidatedEventName } from '@/hooks/use-realtime-query-invalidations';
-import {
-    type EventLogCursor,
-    type EventLogItem,
-    type EventLogLevel,
-    type EventLogPrimitiveType,
-    type EventLogStatus,
-    listEventLogs,
+import type {
+    EventLogItem,
+    EventLogLevel,
+    EventLogPrimitiveType,
+    EventLogStatus,
 } from '@/lib/logs-api';
 import { captureScrollAnchor, isScrollNearTop, restoreScrollAnchor } from '@/lib/scroll-anchor';
 import { TrpcRequestError } from '@/lib/trpc-http';
@@ -49,7 +48,6 @@ const mergeHeadLogs = (existing: EventLogItem[], incoming: EventLogItem[]): Even
 export function LogsTab() {
     const [search, setSearch] = useState('');
     const [logs, setLogs] = useState<EventLogItem[]>([]);
-    const [nextCursor, setNextCursor] = useState<EventLogCursor | null>(null);
     const [pendingHeadLogs, setPendingHeadLogs] = useState<EventLogItem[]>([]);
     const [filterLevel, setFilterLevel] = useState<EventLogLevel | null>(null);
     const [filterStatus, setFilterStatus] = useState<EventLogStatus | null>(null);
@@ -62,9 +60,8 @@ export function LogsTab() {
     const scrollViewportRef = useRef<HTMLDivElement | null>(null);
     const loadMoreTriggerRef = useRef<HTMLDivElement | null>(null);
 
-    const getQueryInput = useCallback(
-        (cursor?: EventLogCursor | null) => ({
-            cursor: cursor ?? undefined,
+    const getBaseQueryInput = useCallback(
+        () => ({
             levels: filterLevel ? [filterLevel] : undefined,
             limit: PAGE_SIZE,
             primitiveTypes: filterType ? [filterType] : undefined,
@@ -73,6 +70,12 @@ export function LogsTab() {
         }),
         [filterLevel, filterStatus, filterType, search]
     );
+    const eventLogsQuery = useEventLogs(getBaseQueryInput(), {
+        enabled: false,
+    });
+    const fetchNextEventLogsPage = eventLogsQuery.fetchNextPage;
+    const hasNextEventLogsPage = eventLogsQuery.hasNextPage;
+    const refetchEventLogs = eventLogsQuery.refetch;
 
     const loadFirstPage = useCallback(async () => {
         setIsLoading(true);
@@ -80,24 +83,33 @@ export function LogsTab() {
         setPendingHeadLogs([]);
 
         try {
-            const response = await listEventLogs(getQueryInput());
+            const result = await refetchEventLogs();
+            const firstPage = result.data?.pages[0];
 
-            setLogs(response.items);
-            setNextCursor(response.nextCursor);
+            if (!firstPage) {
+                throw result.error ?? new Error('Failed to load event logs.');
+            }
+
+            setLogs(firstPage.items);
             setErrorMessage(null);
         } catch (error) {
             setErrorMessage(toErrorMessage(error));
             setLogs([]);
-            setNextCursor(null);
             setPendingHeadLogs([]);
         } finally {
             setIsLoading(false);
         }
-    }, [getQueryInput]);
+    }, [refetchEventLogs]);
 
     const refreshHeadPage = useCallback(async () => {
         try {
-            const response = await listEventLogs(getQueryInput());
+            const result = await refetchEventLogs();
+            const firstPage = result.data?.pages[0];
+
+            if (!firstPage) {
+                throw result.error ?? new Error('Failed to refresh event logs.');
+            }
+
             const container = scrollViewportRef.current;
             const nearTop = container ? isScrollNearTop(container, 48) : true;
 
@@ -108,18 +120,18 @@ export function LogsTab() {
                             ? mergeHeadLogs(current, pendingHeadLogs)
                             : current;
 
-                    return mergeHeadLogs(withPending, response.items);
+                    return mergeHeadLogs(withPending, firstPage.items);
                 });
                 setPendingHeadLogs([]);
             } else {
-                setPendingHeadLogs((current) => mergeHeadLogs(current, response.items));
+                setPendingHeadLogs((current) => mergeHeadLogs(current, firstPage.items));
             }
 
             setErrorMessage(null);
         } catch (error) {
             setErrorMessage(toErrorMessage(error));
         }
-    }, [getQueryInput, pendingHeadLogs]);
+    }, [pendingHeadLogs, refetchEventLogs]);
 
     useEffect(() => {
         loadFirstPage();
@@ -172,24 +184,29 @@ export function LogsTab() {
     }, [pendingHeadLogs]);
 
     const handleLoadMore = useCallback(async () => {
-        if (isLoading || isLoadingMore || !nextCursor) {
+        if (isLoading || isLoadingMore || !hasNextEventLogsPage) {
             return;
         }
 
         setIsLoadingMore(true);
 
         try {
-            const response = await listEventLogs(getQueryInput(nextCursor));
+            const result = await fetchNextEventLogsPage();
+            const pages = result.data?.pages ?? [];
+            const nextPage = pages.at(-1);
 
-            setLogs((existing) => [...existing, ...response.items]);
-            setNextCursor(response.nextCursor);
+            if (!nextPage) {
+                throw new Error('Failed to load more event logs.');
+            }
+
+            setLogs((existing) => [...existing, ...nextPage.items]);
             setErrorMessage(null);
         } catch (error) {
             setErrorMessage(toErrorMessage(error));
         } finally {
             setIsLoadingMore(false);
         }
-    }, [getQueryInput, isLoading, isLoadingMore, nextCursor]);
+    }, [fetchNextEventLogsPage, hasNextEventLogsPage, isLoading, isLoadingMore]);
 
     useEffect(() => {
         const observerRoot = scrollViewportRef.current;
@@ -227,7 +244,7 @@ export function LogsTab() {
     } else {
         logsContent = (
             <LogsTable
-                hasMore={Boolean(nextCursor)}
+                hasMore={Boolean(hasNextEventLogsPage)}
                 isLoadingMore={isLoadingMore}
                 items={logs}
                 loadMoreTriggerRef={loadMoreTriggerRef}

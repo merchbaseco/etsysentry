@@ -1,5 +1,4 @@
-import { queryClient, trpc, trpcClient } from './trpc-client';
-import { toTrpcRequestError } from './trpc-http';
+import type { trpcClient } from './trpc-client';
 import type { InferProcedureInput, InferProcedureOutput } from './trpc-inference';
 
 export type ListTrackedKeywordsInput = InferProcedureInput<
@@ -29,49 +28,3 @@ export type DailyProductRanksForKeyword = InferProcedureOutput<
 >;
 
 export type KeywordRankResultItem = DailyProductRanksForKeyword['items'][number];
-
-export const listTrackedKeywords = async (
-    params: ListTrackedKeywordsInput = {}
-): Promise<ListTrackedKeywordsOutput> => {
-    try {
-        const response = await queryClient.fetchQuery(trpc.app.keywords.list.queryOptions(params));
-        return response;
-    } catch (error) {
-        throw toTrpcRequestError(error);
-    }
-};
-
-export const trackKeyword = async (params: TrackKeywordInput): Promise<TrackKeywordOutput> => {
-    try {
-        const response = await trpcClient.app.keywords.track.mutate(params);
-
-        return response;
-    } catch (error) {
-        throw toTrpcRequestError(error);
-    }
-};
-
-export const refreshTrackedKeyword = async (
-    params: RefreshTrackedKeywordInput
-): Promise<TrackedKeywordItem> => {
-    try {
-        const response = await trpcClient.app.keywords.refresh.mutate(params);
-
-        return response;
-    } catch (error) {
-        throw toTrpcRequestError(error);
-    }
-};
-
-export const getDailyProductRanksForKeyword = async (
-    params: GetDailyProductRanksForKeywordInput
-): Promise<DailyProductRanksForKeyword> => {
-    try {
-        const response = await queryClient.fetchQuery(
-            trpc.app.keywords.getDailyProductRanksForKeyword.queryOptions(params)
-        );
-        return response;
-    } catch (error) {
-        throw toTrpcRequestError(error);
-    }
-};

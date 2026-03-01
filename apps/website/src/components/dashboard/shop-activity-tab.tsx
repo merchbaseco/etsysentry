@@ -1,4 +1,3 @@
-import { useQuery } from '@tanstack/react-query';
 import { ArrowDownUp } from 'lucide-react';
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
@@ -21,12 +20,11 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { refreshTrackedListing, type TrackedListingItem } from '@/lib/listings-api';
-import {
-    getShopActivityOverview,
-    listShopActivityListings,
-    type ShopActivitySortOrder,
-} from '@/lib/shops-api';
+import { useRefreshTrackedListing } from '@/hooks/use-refresh-tracked-listing';
+import { useShopActivityListings } from '@/hooks/use-shop-activity-listings';
+import { useShopActivityOverview } from '@/hooks/use-shop-activity-overview';
+import type { TrackedListingItem } from '@/lib/listings-api';
+import type { ShopActivitySortOrder } from '@/lib/shops-api';
 import { queryClient } from '@/lib/trpc-client';
 
 const SORT_ORDER_OPTIONS = [
@@ -60,37 +58,28 @@ export function ShopActivityTab() {
     const [historyListing, setHistoryListing] = useState<TrackedListingItem | null>(null);
     const [refreshingById, setRefreshingById] = useState<Record<string, boolean>>({});
     const scrollViewportRef = useRef<HTMLDivElement | null>(null);
+    const refreshTrackedListing = useRefreshTrackedListing();
 
     const normalizedShopId = etsyShopId?.trim() ?? '';
     const hasShopId = normalizedShopId.length > 0;
 
-    const overviewQuery = useQuery({
-        enabled: hasShopId,
-        queryFn: () => {
-            return getShopActivityOverview({
-                etsyShopId: normalizedShopId,
-            });
+    const overviewQuery = useShopActivityOverview(
+        {
+            etsyShopId: normalizedShopId,
         },
-        queryKey: shopOverviewQueryKey(normalizedShopId),
-    });
-
-    const listingsQuery = useQuery({
-        enabled: hasShopId,
-        placeholderData: (previousData) => {
-            if (previousData?.etsyShopId !== normalizedShopId) {
-                return undefined;
-            }
-
-            return previousData;
+        {
+            enabled: hasShopId,
+        }
+    );
+    const listingsQuery = useShopActivityListings(
+        {
+            etsyShopId: normalizedShopId,
+            sortOrder,
         },
-        queryFn: () => {
-            return listShopActivityListings({
-                etsyShopId: normalizedShopId,
-                sortOrder,
-            });
-        },
-        queryKey: shopListingsQueryKey(normalizedShopId, sortOrder),
-    });
+        {
+            enabled: hasShopId,
+        }
+    );
 
     const items = listingsQuery.data?.items ?? [];
     const overview = overviewQuery.data?.overview ?? null;
@@ -132,7 +121,7 @@ export function ShopActivityTab() {
             }));
 
             try {
-                await refreshTrackedListing({
+                await refreshTrackedListing.mutateAsync({
                     trackedListingId: item.id,
                 });
 
@@ -151,7 +140,7 @@ export function ShopActivityTab() {
                 }));
             }
         },
-        [hasShopId, normalizedShopId, refreshingById, sortOrder]
+        [hasShopId, normalizedShopId, refreshTrackedListing, refreshingById, sortOrder]
     );
 
     let overviewErrorMessage: string | null = null;

@@ -1,9 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
-import { dashboardSummaryQueryOptions } from '@/lib/dashboard-summary-query';
+import { useDashboardSummary } from '@/hooks/use-dashboard-summary';
 
 export const useDashboardSummaryQuery = () => {
-    return useQuery({
-        ...dashboardSummaryQueryOptions,
+    return useDashboardSummary({
         refetchInterval: 60_000,
     });
 };
