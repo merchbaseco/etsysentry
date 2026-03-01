@@ -34,6 +34,7 @@ const toColumnLayout = (params: { size: number; grow?: boolean }) => {
     if (params.grow) {
         return {
             display: 'flex',
+            alignItems: 'center',
             flex: '1 1 0',
             minWidth: params.size,
             overflow: 'hidden',
@@ -42,6 +43,7 @@ const toColumnLayout = (params: { size: number; grow?: boolean }) => {
 
     return {
         display: 'flex',
+        alignItems: 'center',
         flex: '0 0 auto',
         width: params.size,
         overflow: 'hidden',
