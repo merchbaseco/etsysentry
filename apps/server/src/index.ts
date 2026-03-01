@@ -8,7 +8,7 @@ import { rootRouter } from './api/root';
 import { env } from './config/env';
 import { testDbConnection } from './db';
 import { runMigrations } from './db/migrate';
-import { startKeywordSyncJobs, stopKeywordSyncJobs } from './jobs/sync-keyword-jobs';
+import { startServerJobs, stopServerJobs } from './jobs/run-server-jobs';
 import { renderOAuthErrorHtml, renderOAuthSuccessHtml } from './services/etsy/oauth-html';
 import { completeEtsyOAuthFlow } from './services/etsy/oauth-service';
 import { startWebsocketRuntime } from './services/realtime/start-websocket-runtime';
@@ -143,12 +143,12 @@ if (import.meta.main) {
 
     const server = await buildServer();
     if (env.enableServerJobs) {
-        await startKeywordSyncJobs({
+        await startServerJobs({
             logger: server.log,
         });
 
         server.addHook('onClose', async () => {
-            await stopKeywordSyncJobs();
+            await stopServerJobs();
         });
     } else {
         server.log.info(

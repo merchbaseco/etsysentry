@@ -1,6 +1,6 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
-import { enqueueKeywordSyncJob } from '../../../jobs/sync-keyword-jobs';
+import { enqueueKeywordSyncJob } from '../../../jobs/run-server-jobs';
 import {
     isTrackedKeywordSyncInFlight,
     setTrackedKeywordSyncStateByKeywordId,

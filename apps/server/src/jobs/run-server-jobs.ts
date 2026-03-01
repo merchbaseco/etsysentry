@@ -19,7 +19,7 @@ import './sync-stale-keywords';
 import './sync-stale-shops';
 
 const defaultLogger = createJobsLogger({
-    scope: 'jobs.sync-keyword',
+    scope: 'jobs.runtime',
 });
 
 let boss: PgBoss | null = null;
@@ -78,7 +78,7 @@ const sendShopSyncJob = (payload: SyncShopJobInput): Promise<string | null> => {
     });
 };
 
-export const startKeywordSyncJobs = async (params?: { logger?: JobsLogger }): Promise<void> => {
+export const startServerJobs = async (params?: { logger?: JobsLogger }): Promise<void> => {
     if (startPromise) {
         await startPromise;
         return;
@@ -86,7 +86,7 @@ export const startKeywordSyncJobs = async (params?: { logger?: JobsLogger }): Pr
 
     logger = createJobsLogger({
         baseLogger: params?.logger,
-        scope: 'jobs.sync-keyword',
+        scope: 'jobs.runtime',
     });
 
     startPromise = (async () => {
@@ -108,14 +108,14 @@ export const startKeywordSyncJobs = async (params?: { logger?: JobsLogger }): Pr
                 startupReconciliation: startupReconciliationSummary,
                 startupSummary: jobsRuntime.startupSummary,
             },
-            'Keyword sync automation jobs started.'
+            'Server jobs runtime started.'
         );
     })();
 
     await startPromise;
 };
 
-export const stopKeywordSyncJobs = async (): Promise<void> => {
+export const stopServerJobs = async (): Promise<void> => {
     if (!boss) {
         return;
     }
