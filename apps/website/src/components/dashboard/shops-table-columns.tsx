@@ -161,7 +161,7 @@ export const createShopsColumns = (params: {
             cell: (context) => <StatusBadge status={context.getValue()} />,
             meta: {
                 headClassName: toHeadClassName('px-2 text-center'),
-                cellClassName: 'px-2 py-1.5 text-center',
+                cellClassName: 'px-2 py-1.5 items-center justify-center',
             } satisfies ShopsColumnMeta,
         }),
         columnHelper.display({
