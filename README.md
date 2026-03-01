@@ -57,7 +57,9 @@ bun run dev
 `bun run dev` starts both the website and server in watch mode. In this mode, the server is pinned
 to `DATABASE_HOST=zachs-mac-mini.taila0b849.ts.net` and `DATABASE_PORT=5435`, and the website uses
 the local server via Vite proxy (`/api` -> `http://localhost:8080`). The server loads OAuth/env
-secrets from root `.env`. The dashboard is locked to port `3100` in this mode.
+secrets from root `.env`. Background jobs are disabled in this mode
+(`DISABLE_SERVER_JOB_RUNNER=true`).
+The dashboard is locked to port `3100` in this mode.
 
 ### Server (OAuth + Listings Scaffold)
 

@@ -34,9 +34,14 @@ const envSchema = z.object({
     ETSYSENTRY_DATABASE_NAME: z.string().min(1).optional(),
     ETSYSENTRY_DATABASE_USER: z.string().min(1).optional(),
     ETSYSENTRY_DATABASE_PASSWORD: z.string().min(1).optional(),
+    DISABLE_SERVER_JOB_RUNNER: z.enum(['true', 'false']).optional(),
 });
 
 const rawEnv = envSchema.parse(process.env);
+
+export const resolveDisableServerJobRunner = (value: 'true' | 'false' | undefined): boolean => {
+    return value === 'true';
+};
 
 const REQUIRED_ETSY_OAUTH_SCOPES = ['listings_r'] as const;
 const OAUTH_SCOPE_DELIMITER_REGEX = /[\s,]+/;
@@ -82,6 +87,8 @@ if (etsyOAuthScopes.length === 0) {
     throw new Error('ETSY_OAUTH_SCOPES must contain at least one OAuth scope.');
 }
 
+const disableServerJobRunner = resolveDisableServerJobRunner(rawEnv.DISABLE_SERVER_JOB_RUNNER);
+
 export const env = {
     ...rawEnv,
     databaseHost: rawEnv.DATABASE_HOST ?? 'localhost',
@@ -92,5 +99,7 @@ export const env = {
         'etsysentry_local_dev_password',
     databasePort: rawEnv.DATABASE_PORT ?? 5435,
     databaseUser: rawEnv.DATABASE_USER ?? rawEnv.ETSYSENTRY_DATABASE_USER ?? 'etsysentry',
+    disableServerJobRunner,
+    enableServerJobs: !disableServerJobRunner,
     etsyOAuthScopes,
 };

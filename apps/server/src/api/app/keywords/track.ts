@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { enqueueKeywordSyncJob } from '../../../jobs/sync-keyword-jobs';
+import { enqueueKeywordSyncJob } from '../../../jobs/run-server-jobs';
 import { setTrackedKeywordSyncStateByKeywordId } from '../../../services/keywords/set-tracked-keyword-sync-state';
 import { trackKeyword } from '../../../services/keywords/tracked-keywords-service';
 import { createEventLog } from '../../../services/logs/create-event-log';

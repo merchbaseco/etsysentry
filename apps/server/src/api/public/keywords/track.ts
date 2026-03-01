@@ -1,6 +1,6 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
-import { enqueueKeywordSyncJob } from '../../../jobs/sync-keyword-jobs';
+import { enqueueKeywordSyncJob } from '../../../jobs/run-server-jobs';
 import { findLatestClerkUserIdByAccountId } from '../../../services/auth/find-latest-clerk-user-id-by-account-id';
 import { setTrackedKeywordSyncStateByKeywordId } from '../../../services/keywords/set-tracked-keyword-sync-state';
 import { trackKeyword } from '../../../services/keywords/tracked-keywords-service';

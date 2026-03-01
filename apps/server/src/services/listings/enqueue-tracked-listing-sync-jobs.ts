@@ -1,4 +1,4 @@
-import { enqueueListingSyncJob } from '../../jobs/sync-keyword-jobs';
+import { enqueueListingSyncJob } from '../../jobs/run-server-jobs';
 import { findTrackedListingSyncTargets } from './find-tracked-listing-sync-targets';
 import { isTrackedListingSyncEnqueueEligible } from './is-tracked-listing-sync-enqueue-eligible';
 import { setTrackedListingsSyncStateByListingIds } from './set-tracked-listing-sync-state';

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { enqueueShopSyncJob } from '../../../jobs/sync-keyword-jobs';
+import { enqueueShopSyncJob } from '../../../jobs/run-server-jobs';
 import {
     queueTrackedShopSyncIfIdleByTrackedShopId,
     setTrackedShopSyncStateByTrackedShopId,

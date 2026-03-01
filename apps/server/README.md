@@ -64,9 +64,9 @@ bun run server:dev
 
 Useful scripts:
 
-- `bun run server:dev` - run with watch mode
+- `bun run server:dev` - run with watch mode (jobs disabled for local development)
 - `bun run server:build` - bundle to `apps/server/dist`
-- `bun run server:start` - run bundled server
+- `bun run server:start` - run bundled server (jobs enabled)
 - `bun run server:typecheck` - TypeScript checks
 - `bun run server:test` - focused unit tests
 - `bun run --cwd apps/server db:generate` - generate Drizzle migrations from schema
@@ -101,6 +101,8 @@ Optional:
 - `DATABASE_NAME` (default `etsysentry`)
 - `DATABASE_USER` (default `etsysentry`)
 - `DATABASE_PASSWORD` (default `etsysentry_local_dev_password`)
+- `DISABLE_SERVER_JOB_RUNNER` (default `false`; set `true` to disable pg-boss workers in this
+  process)
 
 ## OAuth Flow (Etsy v3)
 
