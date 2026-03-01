@@ -7,7 +7,7 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "sh -c 'APP_ORIGIN=http://localhost:3100 DATABASE_HOST=zachs-mac-mini.taila0b849.ts.net DATABASE_PORT=5435 bun --cwd apps/server --env-file=\"$PWD/.env\" --watch src/index.ts & server_pid=$!; VITE_SERVER_ORIGIN= bun run --cwd apps/website dev --strictPort --port 3100 & website_pid=$!; trap \"kill $server_pid $website_pid 2>/dev/null\" INT TERM EXIT; while kill -0 $server_pid 2>/dev/null && kill -0 $website_pid 2>/dev/null; do sleep 1; done; kill $server_pid $website_pid 2>/dev/null; wait $server_pid $website_pid 2>/dev/null'",
+    "dev": "sh -c 'APP_ORIGIN=http://localhost:3100 DATABASE_HOST=zachs-mac-mini.taila0b849.ts.net DATABASE_PORT=5435 DISABLE_SERVER_JOB_RUNNER=true bun --cwd apps/server --env-file=\"$PWD/.env\" --watch src/index.ts & server_pid=$!; VITE_SERVER_ORIGIN= bun run --cwd apps/website dev --strictPort --port 3100 & website_pid=$!; trap \"kill $server_pid $website_pid 2>/dev/null\" INT TERM EXIT; while kill -0 $server_pid 2>/dev/null && kill -0 $website_pid 2>/dev/null; do sleep 1; done; kill $server_pid $website_pid 2>/dev/null; wait $server_pid $website_pid 2>/dev/null'",
     "build": "bun run website:build",
     "start": "bun run website:start",
     "server:dev": "bun run --cwd apps/server dev",

@@ -142,13 +142,23 @@ if (import.meta.main) {
     await testDbConnection();
 
     const server = await buildServer();
-    await startKeywordSyncJobs({
-        logger: server.log,
-    });
+    if (env.enableServerJobs) {
+        await startKeywordSyncJobs({
+            logger: server.log,
+        });
 
-    server.addHook('onClose', async () => {
-        await stopKeywordSyncJobs();
-    });
+        server.addHook('onClose', async () => {
+            await stopKeywordSyncJobs();
+        });
+    } else {
+        server.log.info(
+            {
+                disableServerJobRunner: env.disableServerJobRunner,
+                enableServerJobs: env.enableServerJobs,
+            },
+            'Background jobs are disabled for this server process.'
+        );
+    }
 
     server.log.info(
         {
@@ -160,6 +170,8 @@ if (import.meta.main) {
             databaseHost: env.databaseHost,
             databaseName: env.databaseName,
             databasePort: env.databasePort,
+            disableServerJobRunner: env.disableServerJobRunner,
+            enableServerJobs: env.enableServerJobs,
             oauthScopes: env.etsyOAuthScopes,
             etsyRateLimitDefaults: {
                 backoffInitialMs: env.ETSY_RATE_LIMIT_BACKOFF_INITIAL_MS,
