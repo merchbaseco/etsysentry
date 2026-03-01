@@ -2,6 +2,8 @@ import { flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-tabl
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { MouseEvent, RefObject } from 'react';
 import { useMemo, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toShopActivityPath } from '@/components/dashboard/shop-activity-tabs-state';
 import type { TrackedListingItem } from '@/lib/listings-api';
 import { cn } from '@/lib/utils';
 import { createListingsColumns, getListingsColumnMeta } from './listings-table-columns';
@@ -22,15 +24,6 @@ interface ListingsTableProps {
 
 const ROW_ESTIMATED_HEIGHT_PX = 62;
 const VIRTUAL_OVERSCAN_ROWS = 8;
-const interactiveElementSelector = 'a,button,input,select,textarea,[role="button"],[role="link"]';
-
-const isInteractiveElementClick = (event: MouseEvent<HTMLTableRowElement>): boolean => {
-    if (!(event.target instanceof Element)) {
-        return false;
-    }
-
-    return event.target.closest(interactiveElementSelector) !== null;
-};
 
 const toColumnLayout = (params: { size: number; grow?: boolean }) => {
     if (params.grow) {
@@ -53,6 +46,7 @@ const toColumnLayout = (params: { size: number; grow?: boolean }) => {
 };
 
 export function ListingsTable(props: ListingsTableProps) {
+    const navigate = useNavigate();
     const { hasMore, renderCount } = useInfiniteTableWindow({
         itemsLength: props.items.length,
         resetKey: props.resetKey,
@@ -63,10 +57,23 @@ export function ListingsTable(props: ListingsTableProps) {
     }, [props.items, renderCount]);
     const columns = useMemo(() => {
         return createListingsColumns({
+            onOpenListing: props.onSelectListing,
+            onOpenShopActivity: (item) => {
+                if (!item.shopId) {
+                    return;
+                }
+
+                navigate(toShopActivityPath(item.shopId), {
+                    state: {
+                        etsyShopId: item.shopId,
+                        shopName: item.shopName ?? item.shopId,
+                    },
+                });
+            },
             onRefresh: props.onRefresh,
             refreshingById: props.refreshingById,
         });
-    }, [props.onRefresh, props.refreshingById]);
+    }, [navigate, props.onRefresh, props.onSelectListing, props.refreshingById]);
     const table = useReactTable({
         columns,
         data: tableItems,
@@ -164,18 +171,11 @@ export function ListingsTable(props: ListingsTableProps) {
                         return (
                             <tr
                                 className={cn(
-                                    'absolute left-0 cursor-pointer border-border/50 border-b',
+                                    'absolute left-0 border-border/50 border-b',
                                     'transition-colors hover:bg-accent/50'
                                 )}
                                 data-row-id={item.id}
                                 key={row.id}
-                                onClick={(event) => {
-                                    if (isInteractiveElementClick(event)) {
-                                        return;
-                                    }
-
-                                    props.onSelectListing(item);
-                                }}
                                 onMouseEnter={(event) => props.onRowMouseEnter(event, item)}
                                 onMouseLeave={props.onRowMouseLeave}
                                 onMouseMove={(event) => props.onRowMouseMove(event, item)}

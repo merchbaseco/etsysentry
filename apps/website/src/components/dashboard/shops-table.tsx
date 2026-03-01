@@ -10,13 +10,14 @@ import { useTableBodyHeight } from './use-table-body-height';
 
 interface ShopsTableProps {
     items: TrackedShopItem[];
+    onOpenActivity: (item: TrackedShopItem) => void;
     onRefresh: (item: TrackedShopItem) => void;
     refreshingById: Record<string, boolean>;
     resetKey: string;
     scrollContainerRef: RefObject<HTMLDivElement | null>;
 }
 
-const ROW_ESTIMATED_HEIGHT_PX = 34;
+const ROW_ESTIMATED_HEIGHT_PX = 46;
 const VIRTUAL_OVERSCAN_ROWS = 8;
 
 const toColumnLayout = (params: { size: number; grow?: boolean }) => {
@@ -27,6 +28,7 @@ const toColumnLayout = (params: { size: number; grow?: boolean }) => {
             flex: '1 1 0',
             minWidth: params.size,
             overflow: 'hidden',
+            alignItems: 'center',
         } as const;
     }
 
@@ -36,6 +38,7 @@ const toColumnLayout = (params: { size: number; grow?: boolean }) => {
         flex: '0 0 auto',
         width: params.size,
         overflow: 'hidden',
+        alignItems: 'center',
     } as const;
 };
 
@@ -50,10 +53,11 @@ export const ShopsTable = (props: ShopsTableProps) => {
     }, [props.items, renderCount]);
     const columns = useMemo(() => {
         return createShopsColumns({
+            onOpenActivity: props.onOpenActivity,
             onRefresh: props.onRefresh,
             refreshingById: props.refreshingById,
         });
-    }, [props.onRefresh, props.refreshingById]);
+    }, [props.onOpenActivity, props.onRefresh, props.refreshingById]);
     const table = useReactTable({
         columns,
         data: tableItems,
@@ -137,7 +141,7 @@ export const ShopsTable = (props: ShopsTableProps) => {
 
                         return (
                             <tr
-                                className="absolute left-0 border-border/50 border-b"
+                                className="absolute left-0 border-border/50 border-b transition-colors hover:bg-accent/50"
                                 key={row.id}
                                 ref={(node) => {
                                     if (node) {

@@ -15,6 +15,20 @@ export type TrackShopOutput = InferProcedureOutput<typeof trpcClient.app.shops.t
 export type RefreshTrackedShopInput = InferProcedureInput<
     typeof trpcClient.app.shops.refresh.mutate
 >;
+export type GetShopActivityOverviewInput = InferProcedureInput<
+    typeof trpcClient.app.shops.getOverview.query
+>;
+export type GetShopActivityOverviewOutput = InferProcedureOutput<
+    typeof trpcClient.app.shops.getOverview.query
+>;
+export type ListShopActivityListingsInput = InferProcedureInput<
+    typeof trpcClient.app.shops.listListings.query
+>;
+export type ListShopActivityListingsOutput = InferProcedureOutput<
+    typeof trpcClient.app.shops.listListings.query
+>;
+export type ShopActivitySortOrder = ListShopActivityListingsInput['sortOrder'];
+export type ShopActivityOverview = GetShopActivityOverviewOutput['overview'];
 
 export const listTrackedShops = async (
     params: ListTrackedShopsInput = {}
@@ -43,6 +57,32 @@ export const refreshTrackedShop = async (
     try {
         const response = await trpcClient.app.shops.refresh.mutate(params);
 
+        return response;
+    } catch (error) {
+        throw toTrpcRequestError(error);
+    }
+};
+
+export const getShopActivityOverview = async (
+    params: GetShopActivityOverviewInput
+): Promise<GetShopActivityOverviewOutput> => {
+    try {
+        const response = await queryClient.fetchQuery(
+            trpc.app.shops.getOverview.queryOptions(params)
+        );
+        return response;
+    } catch (error) {
+        throw toTrpcRequestError(error);
+    }
+};
+
+export const listShopActivityListings = async (
+    params: ListShopActivityListingsInput
+): Promise<ListShopActivityListingsOutput> => {
+    try {
+        const response = await queryClient.fetchQuery(
+            trpc.app.shops.listListings.queryOptions(params)
+        );
         return response;
     } catch (error) {
         throw toTrpcRequestError(error);

@@ -568,6 +568,75 @@ Output:
 }
 ```
 
+`app.shops.listListings` (query)
+
+Input:
+
+```ts
+{
+  etsyShopId: string;
+  sortOrder?: 'most_recently_sold' | 'most_recently_favorited' | 'newest_listings';
+}
+```
+
+Output:
+
+```ts
+{
+  etsyShopId: string;
+  shopName: string | null;
+  isTrackedShop: boolean;
+  sortOrder: 'most_recently_sold' | 'most_recently_favorited' | 'newest_listings';
+  items: Array<{
+    // same item shape as entries in app.listings.list output
+  }>;
+}
+```
+
+`app.shops.getOverview` (query)
+
+Input:
+
+```ts
+{
+  etsyShopId: string;
+}
+```
+
+Output:
+
+```ts
+{
+  isTrackedShop: boolean;
+  shopName: string | null;
+  overview: {
+    avatarUrl: string | null;
+    locationLabel: string | null;
+    shopUrl: string | null;
+    openedAt: string | null; // ISO timestamp
+    soldCount: number | null;
+    reviewCount: number | null;
+    reviewAverage: number | null;
+    metadataError: string | null;
+    trackingState: 'active' | 'paused' | 'error' | null;
+    syncState: 'idle' | 'queued' | 'syncing' | null;
+    lastRefreshedAt: string | null; // ISO timestamp
+    nextSyncAt: string | null; // ISO timestamp
+    latestSnapshot: {
+      observedAt: string; // ISO timestamp
+      activeListingCount: number;
+      newListingCount: number;
+      favoritesTotal: number | null;
+      favoritesDelta: number | null;
+      soldTotal: number | null;
+      soldDelta: number | null;
+      reviewTotal: number | null;
+      reviewDelta: number | null;
+    } | null;
+  };
+}
+```
+
 `app.shops.refresh` (mutation)
 
 Input:
