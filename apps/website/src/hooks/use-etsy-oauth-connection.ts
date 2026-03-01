@@ -1,11 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-    disconnectEtsyAuth,
-    type EtsyAuthStatus,
-    getEtsyAuthStatus,
-    refreshEtsyAuth,
-    startEtsyAuth,
-} from '@/lib/etsy-auth-api';
+import { useDisconnectEtsyAuth } from '@/hooks/use-disconnect-etsy-auth';
+import { useEtsyAuthStatus } from '@/hooks/use-etsy-auth-status';
+import { useRefreshEtsyAuth } from '@/hooks/use-refresh-etsy-auth';
+import { useStartEtsyAuth } from '@/hooks/use-start-etsy-auth';
+import type { EtsyAuthStatus } from '@/lib/etsy-auth-api';
 import { TrpcRequestError } from '@/lib/trpc-http';
 
 const disconnectedStatus: EtsyAuthStatus = {
@@ -68,6 +66,16 @@ export interface EtsyOAuthConnectionState {
 }
 
 export const useEtsyOAuthConnection = (): EtsyOAuthConnectionState => {
+    const etsyAuthStatusQuery = useEtsyAuthStatus({
+        enabled: false,
+    });
+    const startEtsyAuthMutation = useStartEtsyAuth();
+    const refreshEtsyAuthMutation = useRefreshEtsyAuth();
+    const disconnectEtsyAuthMutation = useDisconnectEtsyAuth();
+    const refetchEtsyAuthStatus = etsyAuthStatusQuery.refetch;
+    const startEtsyAuth = startEtsyAuthMutation.mutateAsync;
+    const refreshEtsyAuth = refreshEtsyAuthMutation.mutateAsync;
+    const disconnectEtsyAuth = disconnectEtsyAuthMutation.mutateAsync;
     const [status, setStatus] = useState<EtsyAuthStatus>(disconnectedStatus);
     const [isCheckingStatus, setIsCheckingStatus] = useState(false);
     const [isConnecting, setIsConnecting] = useState(false);
@@ -86,7 +94,12 @@ export const useEtsyOAuthConnection = (): EtsyOAuthConnectionState => {
             }
 
             try {
-                const nextStatus = await getEtsyAuthStatus();
+                const result = await refetchEtsyAuthStatus();
+                const nextStatus = result.data;
+
+                if (!nextStatus) {
+                    throw result.error ?? new Error('Failed to load Etsy OAuth status.');
+                }
 
                 setStatus(nextStatus);
                 setErrorMessage(null);
@@ -106,7 +119,7 @@ export const useEtsyOAuthConnection = (): EtsyOAuthConnectionState => {
                 }
             }
         },
-        []
+        [refetchEtsyAuthStatus]
     );
 
     const stopPopupWatcher = useCallback(() => {
@@ -185,7 +198,7 @@ export const useEtsyOAuthConnection = (): EtsyOAuthConnectionState => {
         } finally {
             setIsConnecting(false);
         }
-    }, [pollForConnection, startPopupWatcher]);
+    }, [pollForConnection, startEtsyAuth, startPopupWatcher]);
 
     const refreshConnection = useCallback(async () => {
         if (!status.connected) {
@@ -204,7 +217,7 @@ export const useEtsyOAuthConnection = (): EtsyOAuthConnectionState => {
         } finally {
             setIsRefreshing(false);
         }
-    }, [status.connected]);
+    }, [refreshEtsyAuth, status.connected]);
 
     const forgetSession = useCallback(async () => {
         if (popupRef.current && !popupRef.current.closed) {
@@ -228,7 +241,7 @@ export const useEtsyOAuthConnection = (): EtsyOAuthConnectionState => {
             setErrorMessage(disconnectErrorMessage);
             setIsDisconnecting(false);
         }
-    }, [stopPopupWatcher]);
+    }, [disconnectEtsyAuth, stopPopupWatcher]);
 
     useEffect(() => {
         fetchStatus();

@@ -6,19 +6,17 @@ import {
     TopToolbar,
     timeAgo,
 } from '@/components/ui/dashboard';
-import {
-    type DailyProductRanksForKeyword,
-    getDailyProductRanksForKeyword,
-    type ListTrackedKeywordsOutput,
-    listTrackedKeywords,
-    refreshTrackedKeyword,
-    type TrackedKeywordItem,
-    trackKeyword,
+import { useDailyProductRanksForKeyword } from '@/hooks/use-daily-product-ranks-for-keyword';
+import { useKeywordRanksForProduct } from '@/hooks/use-keyword-ranks-for-product';
+import { useRefreshTrackedKeyword } from '@/hooks/use-refresh-tracked-keyword';
+import { useTrackKeyword } from '@/hooks/use-track-keyword';
+import { useTrackedKeywords } from '@/hooks/use-tracked-keywords';
+import type {
+    DailyProductRanksForKeyword,
+    ListTrackedKeywordsOutput,
+    TrackedKeywordItem,
 } from '@/lib/keywords-api';
-import {
-    type GetKeywordRanksForProductOutput,
-    getKeywordRanksForProduct,
-} from '@/lib/listings-api';
+import type { GetKeywordRanksForProductOutput } from '@/lib/listings-api';
 import { queryClient, trpc } from '@/lib/trpc-client';
 import { TrpcRequestError } from '@/lib/trpc-http';
 import { cn } from '@/lib/utils';
@@ -96,7 +94,7 @@ const renderKeywordsContent = (params: {
 
 const renderLatestRanksContent = (params: {
     isLatestLoading: boolean;
-    loadReverseKeywords: (listingId: string) => Promise<void>;
+    loadReverseKeywords: (listingId: string) => void;
     selectedDailyProductRanks: DailyProductRanksForKeyword | undefined;
 }): ReactNode => {
     if (params.isLatestLoading) {
@@ -210,6 +208,15 @@ export function KeywordsTab() {
     const cachedTrackedKeywords =
         queryClient.getQueryData<ListTrackedKeywordsOutput>(trackedKeywordsQueryKey);
     const initialItems = cachedTrackedKeywords?.items ?? [];
+    const trackedKeywordsQuery = useTrackedKeywords(
+        {},
+        {
+            enabled: false,
+        }
+    );
+    const trackKeywordMutation = useTrackKeyword();
+    const refreshTrackedKeywordMutation = useRefreshTrackedKeyword();
+    const refetchTrackedKeywords = trackedKeywordsQuery.refetch;
 
     const [search, setSearch] = useState('');
     const [trackingStateFilter, setTrackingStateFilter] = useState<
@@ -217,25 +224,38 @@ export function KeywordsTab() {
     >(null);
     const [items, setItems] = useState<TrackedKeywordItem[]>(() => initialItems);
     const [isLoading, setIsLoading] = useState(() => initialItems.length === 0);
-    const [isTracking, setIsTracking] = useState(false);
     const [refreshingById, setRefreshingById] = useState<Record<string, boolean>>({});
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [keywordInput, setKeywordInput] = useState('');
     const [selectedKeywordId, setSelectedKeywordId] = useState<string | null>(null);
-    const [isLatestLoading, setIsLatestLoading] = useState(false);
-    const [ranksByKeywordId, setRanksByKeywordId] = useState<
-        Record<string, DailyProductRanksForKeyword>
-    >({});
     const [selectedListingId, setSelectedListingId] = useState<string | null>(null);
-    const [keywordRanksForProduct, setKeywordRanksForProduct] =
-        useState<GetKeywordRanksForProductOutput | null>(null);
-    const [isReverseLoading, setIsReverseLoading] = useState(false);
     const [, setClockTick] = useState(0);
     const scrollViewportRef = useRef<HTMLDivElement | null>(null);
+    const latestKeywordRanksQuery = useDailyProductRanksForKeyword(
+        {
+            trackedKeywordId: selectedKeywordId ?? '',
+        },
+        {
+            enabled: Boolean(selectedKeywordId),
+        }
+    );
+    const reverseKeywordRanksQuery = useKeywordRanksForProduct(
+        {
+            listing: selectedListingId ?? '',
+        },
+        {
+            enabled: Boolean(selectedListingId),
+        }
+    );
 
     const loadKeywords = useCallback(async () => {
         try {
-            const response = await listTrackedKeywords({});
+            const result = await refetchTrackedKeywords();
+            const response = result.data;
+
+            if (!response) {
+                throw result.error ?? new Error('Failed to load tracked keywords.');
+            }
 
             setItems(response.items);
             queryClient.setQueryData(trackedKeywordsQueryKey, response);
@@ -245,7 +265,7 @@ export function KeywordsTab() {
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [refetchTrackedKeywords]);
 
     useEffect(() => {
         loadKeywords();
@@ -320,10 +340,8 @@ export function KeywordsTab() {
             return;
         }
 
-        setIsTracking(true);
-
         try {
-            const response = await trackKeyword({
+            const response = await trackKeywordMutation.mutateAsync({
                 keyword: keywordInput,
             });
 
@@ -340,8 +358,6 @@ export function KeywordsTab() {
             setErrorMessage(null);
         } catch (error) {
             setErrorMessage(toErrorMessage(error));
-        } finally {
-            setIsTracking(false);
         }
     };
 
@@ -353,7 +369,7 @@ export function KeywordsTab() {
         setRefreshingById((current) => ({ ...current, [item.id]: true }));
 
         try {
-            const refreshed = await refreshTrackedKeyword({
+            const refreshed = await refreshTrackedKeywordMutation.mutateAsync({
                 trackedKeywordId: item.id,
             });
 
@@ -372,58 +388,41 @@ export function KeywordsTab() {
             setRefreshingById((current) => ({ ...current, [item.id]: false }));
         }
     };
-
-    const loadLatestForKeyword = useCallback(async (trackedKeywordId: string) => {
-        setIsLatestLoading(true);
-
-        try {
-            const dailyProductRanks = await getDailyProductRanksForKeyword({
-                trackedKeywordId,
-            });
-
-            setRanksByKeywordId((current) => ({
-                ...current,
-                [trackedKeywordId]: dailyProductRanks,
-            }));
-            setErrorMessage(null);
-        } catch (error) {
-            setErrorMessage(toErrorMessage(error));
-        } finally {
-            setIsLatestLoading(false);
-        }
-    }, []);
-
-    const loadReverseKeywords = useCallback(async (listingId: string) => {
-        setIsReverseLoading(true);
+    const loadReverseKeywords = useCallback((listingId: string) => {
         setSelectedListingId(listingId);
-
-        try {
-            const response = await getKeywordRanksForProduct({
-                listing: listingId,
-            });
-            setKeywordRanksForProduct(response);
-            setErrorMessage(null);
-        } catch (error) {
-            setErrorMessage(toErrorMessage(error));
-        } finally {
-            setIsReverseLoading(false);
-        }
     }, []);
 
     const handleSelectKeyword = (item: TrackedKeywordItem) => {
         setSelectedKeywordId(item.id);
         setSelectedListingId(null);
-        setKeywordRanksForProduct(null);
-        loadLatestForKeyword(item.id);
     };
+    const isTracking = trackKeywordMutation.isPending;
+    const isLatestLoading = latestKeywordRanksQuery.isFetching;
+    const isReverseLoading = reverseKeywordRanksQuery.isFetching;
+    const keywordRanksForProduct: GetKeywordRanksForProductOutput | null =
+        reverseKeywordRanksQuery.data ?? null;
+
+    useEffect(() => {
+        if (!latestKeywordRanksQuery.error) {
+            return;
+        }
+
+        setErrorMessage(toErrorMessage(latestKeywordRanksQuery.error));
+    }, [latestKeywordRanksQuery.error]);
+
+    useEffect(() => {
+        if (!reverseKeywordRanksQuery.error) {
+            return;
+        }
+
+        setErrorMessage(toErrorMessage(reverseKeywordRanksQuery.error));
+    }, [reverseKeywordRanksQuery.error]);
 
     const selectedKeyword = useMemo(
         () => items.find((item) => item.id === selectedKeywordId) ?? null,
         [items, selectedKeywordId]
     );
-    const selectedDailyProductRanks = selectedKeywordId
-        ? ranksByKeywordId[selectedKeywordId]
-        : undefined;
+    const selectedDailyProductRanks = latestKeywordRanksQuery.data;
     const keywordsContent = renderKeywordsContent({
         filtered,
         isLoading,

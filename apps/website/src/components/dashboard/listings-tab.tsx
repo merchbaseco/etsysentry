@@ -1,13 +1,10 @@
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { EmptyState } from '@/components/ui/dashboard';
 import { listingsInvalidatedEventName } from '@/hooks/use-realtime-query-invalidations';
-import {
-    type ListTrackedListingsOutput,
-    listTrackedListings,
-    refreshTrackedListing,
-    type TrackedListingItem,
-    trackListing,
-} from '@/lib/listings-api';
+import { useRefreshTrackedListing } from '@/hooks/use-refresh-tracked-listing';
+import { useTrackListing } from '@/hooks/use-track-listing';
+import { useTrackedListings } from '@/hooks/use-tracked-listings';
+import type { ListTrackedListingsOutput, TrackedListingItem } from '@/lib/listings-api';
 import { captureScrollAnchor, restoreScrollAnchor } from '@/lib/scroll-anchor';
 import { queryClient, trpc } from '@/lib/trpc-client';
 import { ListingHistoryDrawer } from './listing-history-drawer';
@@ -30,6 +27,15 @@ export function ListingsTab() {
     const cachedTrackedListings =
         queryClient.getQueryData<ListTrackedListingsOutput>(trackedListingsQueryKey);
     const initialItems = cachedTrackedListings?.items ?? [];
+    const trackedListingsQuery = useTrackedListings(
+        {},
+        {
+            enabled: false,
+        }
+    );
+    const trackListingMutation = useTrackListing();
+    const refreshTrackedListingMutation = useRefreshTrackedListing();
+    const refetchTrackedListings = trackedListingsQuery.refetch;
     const [search, setSearch] = useState('');
     const [showPhysicalListings, setShowPhysicalListings] = useState(true);
     const [showDigitalListings, setShowDigitalListings] = useState(false);
@@ -37,7 +43,6 @@ export function ListingsTab() {
     const [favsRange, setFavsRange] = useState<[number, number]>([0, 5000]);
     const [items, setItems] = useState<TrackedListingItem[]>(() => initialItems);
     const [isLoading, setIsLoading] = useState(() => initialItems.length === 0);
-    const [isTracking, setIsTracking] = useState(false);
     const [refreshingById, setRefreshingById] = useState<Record<string, boolean>>({});
     const [historyListing, setHistoryListing] = useState<TrackedListingItem | null>(null);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -72,7 +77,13 @@ export function ListingsTab() {
     const loadListings = useCallback(
         async (options?: { preserveScroll?: boolean }) => {
             try {
-                const response = await listTrackedListings({});
+                const result = await refetchTrackedListings();
+                const response = result.data;
+
+                if (!response) {
+                    throw result.error ?? new Error('Failed to load tracked listings.');
+                }
+
                 const mergedItems = mergeTrackedListings(itemsRef.current, response.items);
 
                 applyListings(mergedItems, options);
@@ -83,7 +94,7 @@ export function ListingsTab() {
                 setIsLoading(false);
             }
         },
-        [applyListings]
+        [applyListings, refetchTrackedListings]
     );
 
     useEffect(() => {
@@ -179,10 +190,8 @@ export function ListingsTab() {
             return;
         }
 
-        setIsTracking(true);
-
         try {
-            const response = await trackListing({
+            const response = await trackListingMutation.mutateAsync({
                 listing: listingInput,
             });
 
@@ -192,8 +201,6 @@ export function ListingsTab() {
             setErrorMessage(null);
         } catch (error) {
             setErrorMessage(toListingsErrorMessage(error));
-        } finally {
-            setIsTracking(false);
         }
     };
 
@@ -208,7 +215,7 @@ export function ListingsTab() {
         }));
 
         try {
-            const refreshed = await refreshTrackedListing({
+            const refreshed = await refreshTrackedListingMutation.mutateAsync({
                 trackedListingId: item.id,
             });
 
@@ -225,6 +232,7 @@ export function ListingsTab() {
             }));
         }
     };
+    const isTracking = trackListingMutation.isPending;
 
     let listingsContent: ReactNode;
     if (isLoading) {

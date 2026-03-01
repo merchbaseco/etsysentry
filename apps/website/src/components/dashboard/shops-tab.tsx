@@ -2,13 +2,10 @@ import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } fro
 import { useNavigate } from 'react-router-dom';
 import { toShopActivityPath } from '@/components/dashboard/shop-activity-tabs-state';
 import { EmptyState, FilterChip, FilterGroup, TopToolbar } from '@/components/ui/dashboard';
-import {
-    type ListTrackedShopsOutput,
-    listTrackedShops,
-    refreshTrackedShop,
-    type TrackedShopItem,
-    trackShop,
-} from '@/lib/shops-api';
+import { useRefreshTrackedShop } from '@/hooks/use-refresh-tracked-shop';
+import { useTrackShop } from '@/hooks/use-track-shop';
+import { useTrackedShops } from '@/hooks/use-tracked-shops';
+import type { ListTrackedShopsOutput, TrackedShopItem } from '@/lib/shops-api';
 import { queryClient, trpc } from '@/lib/trpc-client';
 import { TrpcRequestError } from '@/lib/trpc-http';
 import { cn } from '@/lib/utils';
@@ -51,6 +48,15 @@ export function ShopsTab() {
     const cachedTrackedShops =
         queryClient.getQueryData<ListTrackedShopsOutput>(trackedShopsQueryKey);
     const initialItems = cachedTrackedShops?.items ?? [];
+    const trackedShopsQuery = useTrackedShops(
+        {},
+        {
+            enabled: false,
+        }
+    );
+    const trackShopMutation = useTrackShop();
+    const refreshTrackedShopMutation = useRefreshTrackedShop();
+    const refetchTrackedShops = trackedShopsQuery.refetch;
 
     const [search, setSearch] = useState('');
     const [trackingStateFilter, setTrackingStateFilter] = useState<
@@ -58,7 +64,6 @@ export function ShopsTab() {
     >(null);
     const [items, setItems] = useState<TrackedShopItem[]>(() => initialItems);
     const [isLoading, setIsLoading] = useState(() => initialItems.length === 0);
-    const [isTracking, setIsTracking] = useState(false);
     const [refreshingById, setRefreshingById] = useState<Record<string, boolean>>({});
     const [shopInput, setShopInput] = useState('');
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -66,7 +71,12 @@ export function ShopsTab() {
 
     const loadShops = useCallback(async () => {
         try {
-            const response = await listTrackedShops({});
+            const result = await refetchTrackedShops();
+            const response = result.data;
+
+            if (!response) {
+                throw result.error ?? new Error('Failed to load tracked shops.');
+            }
 
             setItems(response.items);
             queryClient.setQueryData(trackedShopsQueryKey, response);
@@ -76,7 +86,7 @@ export function ShopsTab() {
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [refetchTrackedShops]);
 
     useEffect(() => {
         loadShops();
@@ -129,10 +139,8 @@ export function ShopsTab() {
             return;
         }
 
-        setIsTracking(true);
-
         try {
-            const response = await trackShop({
+            const response = await trackShopMutation.mutateAsync({
                 shop: shopInput,
             });
 
@@ -149,8 +157,6 @@ export function ShopsTab() {
             setErrorMessage(null);
         } catch (error) {
             setErrorMessage(toErrorMessage(error));
-        } finally {
-            setIsTracking(false);
         }
     };
 
@@ -165,7 +171,7 @@ export function ShopsTab() {
         }));
 
         try {
-            const refreshed = await refreshTrackedShop({
+            const refreshed = await refreshTrackedShopMutation.mutateAsync({
                 trackedShopId: item.id,
             });
 
@@ -189,6 +195,7 @@ export function ShopsTab() {
             }));
         }
     };
+    const isTracking = trackShopMutation.isPending;
 
     const handleOpenActivity = useCallback(
         (item: TrackedShopItem) => {
