@@ -1,4 +1,6 @@
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toShopActivityPath } from '@/components/dashboard/shop-activity-tabs-state';
 import { EmptyState, FilterChip, FilterGroup, TopToolbar } from '@/components/ui/dashboard';
 import {
     type ListTrackedShopsOutput,
@@ -45,6 +47,7 @@ const isShopSyncInFlight = (item: TrackedShopItem): boolean => {
 };
 
 export function ShopsTab() {
+    const navigate = useNavigate();
     const cachedTrackedShops =
         queryClient.getQueryData<ListTrackedShopsOutput>(trackedShopsQueryKey);
     const initialItems = cachedTrackedShops?.items ?? [];
@@ -187,6 +190,18 @@ export function ShopsTab() {
         }
     };
 
+    const handleOpenActivity = useCallback(
+        (item: TrackedShopItem) => {
+            navigate(toShopActivityPath(item.etsyShopId), {
+                state: {
+                    etsyShopId: item.etsyShopId,
+                    shopName: item.shopName,
+                },
+            });
+        },
+        [navigate]
+    );
+
     let shopsContent: ReactNode;
     if (isLoading) {
         shopsContent = (
@@ -198,6 +213,7 @@ export function ShopsTab() {
         shopsContent = (
             <ShopsTable
                 items={filtered}
+                onOpenActivity={handleOpenActivity}
                 onRefresh={(item) => handleRefreshRow(item)}
                 refreshingById={refreshingById}
                 resetKey={tableResetKey}

@@ -17,8 +17,14 @@ describe('get-shop bridge', () => {
         globalThis.fetch = mock(() => {
             return new Response(
                 JSON.stringify({
+                    city: 'Austin',
+                    country_name: 'United States',
+                    create_date: 1_483_228_800,
+                    icon_url_fullxfull: 'https://i.etsystatic.com/site-icon.jpg',
                     listing_active_count: 152,
                     num_favorers: 912,
+                    region: 'Texas',
+                    review_average: 4.8,
                     review_count: 77,
                     shop_id: 99_887_766,
                     shop_name: 'Needle and Oak',
@@ -38,7 +44,13 @@ describe('get-shop bridge', () => {
 
         expect(response).toEqual({
             activeListingCount: 152,
+            avatarUrl: 'https://i.etsystatic.com/site-icon.jpg',
+            city: 'Austin',
+            countryName: 'United States',
+            createdTimestamp: 1_483_228_800,
             numFavorers: 912,
+            region: 'Texas',
+            reviewAverage: 4.8,
             reviewCount: 77,
             shopId: '99887766',
             shopName: 'Needle and Oak',

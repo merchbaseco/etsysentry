@@ -8,8 +8,15 @@ const inputSchema = z.object({
 
 const responseSchema = z
     .object({
+        city: z.string().nullable().optional(),
+        country_name: z.string().nullable().optional(),
+        create_date: z.coerce.number().int().nonnegative().nullable().optional(),
+        create_timestamp: z.coerce.number().int().nonnegative().nullable().optional(),
+        icon_url_fullxfull: z.string().nullable().optional(),
         listing_active_count: z.coerce.number().int().nonnegative().nullable().optional(),
         num_favorers: z.coerce.number().int().nonnegative().nullable().optional(),
+        region: z.string().nullable().optional(),
+        review_average: z.coerce.number().nonnegative().nullable().optional(),
         review_count: z.coerce.number().int().nonnegative().nullable().optional(),
         shop_id: z.coerce.number().int().positive(),
         shop_name: z.string().min(1),
@@ -31,7 +38,13 @@ export type GetShopBridgeInput = z.input<typeof inputSchema>;
 
 export interface GetShopBridgeResponse {
     activeListingCount: number | null;
+    avatarUrl: string | null;
+    city: string | null;
+    countryName: string | null;
+    createdTimestamp: number | null;
     numFavorers: number | null;
+    region: string | null;
+    reviewAverage: number | null;
     reviewCount: number | null;
     shopId: string;
     shopName: string;
@@ -85,9 +98,17 @@ const buildEndpoint = (input: z.infer<typeof inputSchema>): string => {
 };
 
 const toResponse = (parsed: z.infer<typeof responseSchema>): GetShopBridgeResponse => {
+    const createdTimestamp = parsed.create_timestamp ?? parsed.create_date ?? null;
+
     return {
         activeListingCount: parsed.listing_active_count ?? null,
+        avatarUrl: parsed.icon_url_fullxfull ?? null,
+        city: parsed.city ?? null,
+        countryName: parsed.country_name ?? null,
+        createdTimestamp,
         numFavorers: parsed.num_favorers ?? null,
+        region: parsed.region ?? null,
+        reviewAverage: parsed.review_average ?? null,
         reviewCount: parsed.review_count ?? null,
         shopId: String(parsed.shop_id),
         shopName: parsed.shop_name,

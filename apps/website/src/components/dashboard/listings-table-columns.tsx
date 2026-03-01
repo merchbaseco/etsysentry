@@ -26,6 +26,8 @@ export const getListingsColumnMeta = (meta: unknown): ListingsColumnMeta | undef
 };
 
 export const createListingsColumns = (params: {
+    onOpenListing: (item: TrackedListingItem) => void;
+    onOpenShopActivity: (item: TrackedListingItem) => void;
     onRefresh: (item: TrackedListingItem) => void;
     refreshingById: Record<string, boolean>;
 }): ColumnDef<TrackedListingItem>[] => {
@@ -68,17 +70,14 @@ export const createListingsColumns = (params: {
 
                 return (
                     <div className="space-y-0.5">
-                        <a
-                            className="block min-w-0 truncate hover:text-primary"
-                            href={item.url ?? undefined}
-                            rel="noreferrer"
-                            target="_blank"
+                        <button
+                            className="block min-w-0 max-w-full cursor-pointer truncate text-left hover:text-primary"
+                            onClick={() => params.onOpenListing(item)}
+                            title={`Open details for ${item.title}`}
+                            type="button"
                         >
                             {item.title}
-                        </a>
-                        <div className="truncate font-semibold text-foreground">
-                            {item.shopName ?? '--'}
-                        </div>
+                        </button>
                     </div>
                 );
             },
@@ -89,9 +88,27 @@ export const createListingsColumns = (params: {
             } satisfies ListingsColumnMeta,
         }),
         columnHelper.accessor('shopName', {
-            size: 100,
+            size: 140,
             header: () => 'Shop',
-            cell: (context) => context.getValue() ?? '--',
+            cell: (context) => {
+                const item = context.row.original;
+                const shopName = context.getValue();
+
+                if (!(item.shopId && shopName)) {
+                    return '--';
+                }
+
+                return (
+                    <button
+                        className="max-w-full cursor-pointer truncate text-left hover:text-primary"
+                        onClick={() => params.onOpenShopActivity(item)}
+                        title={`Open activity for ${shopName}`}
+                        type="button"
+                    >
+                        {shopName}
+                    </button>
+                );
+            },
             meta: {
                 headClassName: toHeadClassName('px-2 text-left'),
                 cellClassName: 'truncate px-2 py-1.5',

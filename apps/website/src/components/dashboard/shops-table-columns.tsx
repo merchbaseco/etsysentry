@@ -40,6 +40,7 @@ export const getShopsColumnMeta = (meta: unknown): ShopsColumnMeta | undefined =
 };
 
 export const createShopsColumns = (params: {
+    onOpenActivity: (item: TrackedShopItem) => void;
     onRefresh: (item: TrackedShopItem) => void;
     refreshingById: Record<string, boolean>;
 }): ColumnDef<TrackedShopItem>[] => {
@@ -52,17 +53,24 @@ export const createShopsColumns = (params: {
                 const item = context.row.original;
 
                 return (
-                    <div className="min-w-0">
-                        <div className="truncate font-medium">{item.shopName}</div>
+                    <button
+                        className="group w-full min-w-0 cursor-pointer text-left"
+                        onClick={() => params.onOpenActivity(item)}
+                        title={`Open activity for ${item.shopName}`}
+                        type="button"
+                    >
+                        <div className="truncate font-medium text-foreground group-hover:text-primary">
+                            {item.shopName}
+                        </div>
                         <div className="truncate text-[11px] text-terminal-dim">
                             {item.etsyShopId}
                         </div>
-                    </div>
+                    </button>
                 );
             },
             meta: {
                 headClassName: toHeadClassName('px-3 text-left'),
-                cellClassName: 'px-3 py-1.5 text-foreground',
+                cellClassName: 'px-3 py-2.5 text-foreground',
                 isGrow: true,
             } satisfies ShopsColumnMeta,
         }),
@@ -72,7 +80,7 @@ export const createShopsColumns = (params: {
             cell: (context) => context.getValue(),
             meta: {
                 headClassName: toHeadClassName('px-2 text-center'),
-                cellClassName: 'px-2 py-1.5 text-center text-terminal-dim',
+                cellClassName: 'px-2 py-2.5 text-center text-terminal-dim',
             } satisfies ShopsColumnMeta,
         }),
         columnHelper.display({
@@ -82,7 +90,7 @@ export const createShopsColumns = (params: {
             cell: (context) => context.row.original.latestSnapshot?.activeListingCount ?? 0,
             meta: {
                 headClassName: toHeadClassName('px-2 text-right'),
-                cellClassName: 'px-2 py-1.5 text-right text-terminal-dim',
+                cellClassName: 'px-2 py-2.5 text-right text-terminal-dim',
             } satisfies ShopsColumnMeta,
         }),
         columnHelper.display({
@@ -92,7 +100,7 @@ export const createShopsColumns = (params: {
             cell: (context) => context.row.original.latestSnapshot?.newListingCount ?? 0,
             meta: {
                 headClassName: toHeadClassName('px-2 text-right'),
-                cellClassName: 'px-2 py-1.5 text-right text-terminal-dim',
+                cellClassName: 'px-2 py-2.5 text-right text-terminal-dim',
             } satisfies ShopsColumnMeta,
         }),
         columnHelper.display({
@@ -106,7 +114,7 @@ export const createShopsColumns = (params: {
                 ),
             meta: {
                 headClassName: toHeadClassName('px-2 text-right'),
-                cellClassName: 'px-2 py-1.5 text-right text-terminal-dim',
+                cellClassName: 'px-2 py-2.5 text-right text-terminal-dim',
             } satisfies ShopsColumnMeta,
         }),
         columnHelper.display({
@@ -120,7 +128,7 @@ export const createShopsColumns = (params: {
                 ),
             meta: {
                 headClassName: toHeadClassName('px-2 text-right'),
-                cellClassName: 'px-2 py-1.5 text-right text-terminal-dim',
+                cellClassName: 'px-2 py-2.5 text-right text-terminal-dim',
             } satisfies ShopsColumnMeta,
         }),
         columnHelper.display({
@@ -134,7 +142,7 @@ export const createShopsColumns = (params: {
                 ),
             meta: {
                 headClassName: toHeadClassName('px-2 text-right'),
-                cellClassName: 'px-2 py-1.5 text-right text-terminal-dim',
+                cellClassName: 'px-2 py-2.5 text-right text-terminal-dim',
             } satisfies ShopsColumnMeta,
         }),
         columnHelper.accessor('lastRefreshedAt', {
@@ -143,7 +151,7 @@ export const createShopsColumns = (params: {
             cell: (context) => timeAgo(context.getValue()),
             meta: {
                 headClassName: toHeadClassName('px-2 text-right'),
-                cellClassName: 'px-2 py-1.5 text-right text-terminal-dim',
+                cellClassName: 'px-2 py-2.5 text-right text-terminal-dim',
             } satisfies ShopsColumnMeta,
         }),
         columnHelper.accessor('nextSyncAt', {
@@ -152,7 +160,7 @@ export const createShopsColumns = (params: {
             cell: (context) => timeUntil(context.getValue()),
             meta: {
                 headClassName: toHeadClassName('px-2 text-right'),
-                cellClassName: 'px-2 py-1.5 text-right text-terminal-dim',
+                cellClassName: 'px-2 py-2.5 text-right text-terminal-dim',
             } satisfies ShopsColumnMeta,
         }),
         columnHelper.accessor('trackingState', {
@@ -161,7 +169,7 @@ export const createShopsColumns = (params: {
             cell: (context) => <StatusBadge status={context.getValue()} />,
             meta: {
                 headClassName: toHeadClassName('px-2 text-center'),
-                cellClassName: 'px-2 py-1.5 items-center justify-center',
+                cellClassName: 'px-2 py-2.5 items-center justify-center',
             } satisfies ShopsColumnMeta,
         }),
         columnHelper.display({
@@ -190,7 +198,7 @@ export const createShopsColumns = (params: {
             },
             meta: {
                 headClassName: toHeadClassName('px-2 text-right'),
-                cellClassName: 'px-2 py-1.5 text-right',
+                cellClassName: 'px-2 py-2.5 text-right',
             } satisfies ShopsColumnMeta,
         }),
     ];
