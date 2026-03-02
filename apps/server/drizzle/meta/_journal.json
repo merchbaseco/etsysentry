@@ -127,6 +127,13 @@
       "when": 1772225202153,
       "tag": "0017_secret_big_bertha",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1772483587192,
+      "tag": "0018_mute_proudstar",
+      "breakpoints": true
     }
   ]
 }

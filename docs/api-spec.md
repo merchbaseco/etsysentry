@@ -375,6 +375,7 @@ Output:
     etsyState: 'active' | 'inactive' | 'sold_out' | 'draft' | 'expired';
     shopId: string | null;
     shopName: string | null;
+    tags: string[]; // normalized (lowercase) Etsy tags currently attached to the listing
     price: {
       amount: number;
       divisor: number;

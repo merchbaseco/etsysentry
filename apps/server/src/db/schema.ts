@@ -180,6 +180,36 @@ export const trackedListings = pgTable(
     })
 );
 
+export const tags = pgTable(
+    'tags',
+    {
+        id: uuid('id').primaryKey().defaultRandom(),
+        normalizedTag: text('normalized_tag').notNull(),
+    },
+    (table) => ({
+        normalizedTagUnique: uniqueIndex('tags_normalized_tag_unique').on(table.normalizedTag),
+    })
+);
+
+export const listingTags = pgTable(
+    'listing_tags',
+    {
+        listingId: uuid('listing_id')
+            .notNull()
+            .references(() => trackedListings.listingId, { onDelete: 'cascade' }),
+        tagId: uuid('tag_id')
+            .notNull()
+            .references(() => tags.id, { onDelete: 'cascade' }),
+    },
+    (table) => ({
+        listingTagPk: primaryKey({
+            columns: [table.listingId, table.tagId],
+            name: 'listing_tags_listing_tag_pk',
+        }),
+        tagIdx: index('listing_tags_tag_idx').on(table.tagId),
+    })
+);
+
 export const trackedKeywords = pgTable(
     'tracked_keywords',
     {
