@@ -1,10 +1,19 @@
 import { ExternalLink } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { formatNumber, StatusBadge, timeAgo, timeUntil } from '@/components/ui/dashboard';
+import { formatNumber, timeAgo, timeUntil } from '@/components/ui/dashboard';
 import type { ShopActivityOverview } from '@/lib/shops-api';
+import { cn } from '@/lib/utils';
+import { type MetricTrendData, toMetricTrendData } from './shop-activity-trend-data';
+import { ShopMetricSparkline, type ShopMetricSparklineTone } from './shop-metric-sparkline';
 
 const WHITESPACE_SPLIT_REGEX = /\s+/;
+
+const toneTextClassByTone: Record<ShopMetricSparklineTone, string> = {
+    down: 'text-terminal-red',
+    neutral: 'text-muted-foreground',
+    up: 'text-terminal-green',
+};
 
 const toInitials = (value: string): string => {
     const letters = value
@@ -26,6 +35,10 @@ const toCompactNumberLabel = (value: number): string => {
     return formatNumber(value);
 };
 
+const toMetricLabel = (value: number | null): string => {
+    return value === null ? '--' : toCompactNumberLabel(value);
+};
+
 const toReviewLabel = (overview: ShopActivityOverview | null): string | null => {
     const reviewCount = overview?.reviewCount ?? overview?.latestSnapshot?.reviewTotal ?? null;
     const reviewAverage = overview?.reviewAverage ?? null;
@@ -41,13 +54,24 @@ const toReviewLabel = (overview: ShopActivityOverview | null): string | null => 
     return `${reviewAverage.toFixed(1)} (${toCompactNumberLabel(reviewCount)})`;
 };
 
-const toSalesLabel = (overview: ShopActivityOverview | null): string => {
-    const soldCount = overview?.soldCount ?? overview?.latestSnapshot?.soldTotal ?? null;
-    return soldCount === null ? '--' : toCompactNumberLabel(soldCount);
+const toSalesPerDayValueLabel = (overview: ShopActivityOverview | null): string => {
+    const derivedSalesPerDay = overview?.derivedSalesPerDay;
+
+    if (!derivedSalesPerDay || derivedSalesPerDay.value === null) {
+        return '--';
+    }
+
+    return `${derivedSalesPerDay.value.toFixed(2)}/d`;
 };
 
-const toMetricLabel = (value: number | null): string => {
-    return value === null ? '--' : toCompactNumberLabel(value);
+const toFavoritesPerDayValueLabel = (overview: ShopActivityOverview | null): string => {
+    const derivedFavoritesPerDay = overview?.derivedFavoritesPerDay;
+
+    if (!derivedFavoritesPerDay || derivedFavoritesPerDay.value === null) {
+        return '--';
+    }
+
+    return `${derivedFavoritesPerDay.value.toFixed(2)}/d`;
 };
 
 const toStatusLabel = (isTrackedShop: boolean | null, isOverviewLoading: boolean): ReactNode => {
@@ -70,16 +94,42 @@ const toStatusLabel = (isTrackedShop: boolean | null, isOverviewLoading: boolean
     );
 };
 
-interface OverviewMetricCardProps {
-    label: string;
-    value: string;
+function OverviewMetaBadge(props: { label: string; meta?: string | null; value: string }) {
+    return (
+        <div className="rounded border border-border/70 bg-background/60 px-2 py-1">
+            <p className="text-[9px] text-muted-foreground uppercase tracking-[0.16em]">
+                {props.label}
+            </p>
+            <p className="mt-0.5 font-medium text-[11px] text-foreground">{props.value}</p>
+            {props.meta ? (
+                <p className="mt-0.5 text-[9px] text-muted-foreground uppercase tracking-[0.08em]">
+                    {props.meta}
+                </p>
+            ) : null}
+        </div>
+    );
 }
 
-function OverviewMetricCard({ label, value }: OverviewMetricCardProps) {
+function PrimaryMetricCard(props: { currentValue: string; label: string; trend: MetricTrendData }) {
     return (
-        <div className="rounded border border-border/70 bg-background/70 px-2 py-1.5">
-            <p className="text-[9px] text-muted-foreground uppercase tracking-[0.18em]">{label}</p>
-            <p className="mt-0.5 truncate font-medium text-[12px] text-foreground">{value}</p>
+        <div className="rounded border border-border/80 bg-background/70 px-2.5 py-2">
+            <div className="flex items-start justify-between gap-2">
+                <p className="text-[9px] text-muted-foreground uppercase tracking-[0.18em]">
+                    {props.label}
+                </p>
+                <p className={cn('font-medium text-[10px]', toneTextClassByTone[props.trend.tone])}>
+                    {props.trend.deltaLabel}
+                </p>
+            </div>
+            <p className="mt-0.5 truncate font-semibold text-[16px] text-foreground">
+                {props.currentValue}
+            </p>
+            <ShopMetricSparkline
+                ariaLabel={`${props.label} trend sparkline`}
+                points={props.trend.points}
+                summaryLabel={props.trend.summaryLabel}
+                tone={props.trend.tone}
+            />
         </div>
     );
 }
@@ -95,6 +145,22 @@ export function ShopActivityOverviewHeader(props: {
     const reviewLabel = toReviewLabel(props.overview);
     const trackingStatus = toStatusLabel(props.isTrackedShop, props.isOverviewLoading);
     const snapshot = props.overview?.latestSnapshot ?? null;
+    const metricHistory = props.overview?.metricHistory ?? [];
+    const activeListingsTrend = toMetricTrendData({
+        metricHistory,
+        metricLabel: 'Active Listings',
+        metricSelector: (point) => point.activeListingCount,
+    });
+    const salesPerDayTrend = toMetricTrendData({
+        metricHistory,
+        metricLabel: 'Sales / Day',
+        metricSelector: (point) => point.soldDelta,
+    });
+    const favoritesPerDayTrend = toMetricTrendData({
+        metricHistory,
+        metricLabel: 'Favorites / Day',
+        metricSelector: (point) => point.favoritesDelta,
+    });
 
     return (
         <div className="border-border border-b bg-secondary/20 px-3 py-2">
@@ -114,13 +180,7 @@ export function ShopActivityOverviewHeader(props: {
                             <h2 className="truncate font-semibold text-sm tracking-wide">
                                 {props.shopTitle}
                             </h2>
-                            {props.isTrackedShop === true ? (
-                                <StatusBadge status={props.overview?.trackingState ?? 'active'} />
-                            ) : null}
                             {trackingStatus}
-                            {props.overview?.syncState ? (
-                                <StatusBadge status={props.overview.syncState} />
-                            ) : null}
                         </div>
                         <p className="font-mono text-[11px] text-muted-foreground">
                             {props.etsyShopId ?? '--'}
@@ -148,46 +208,51 @@ export function ShopActivityOverviewHeader(props: {
                         ) : null}
                     </div>
                 </div>
+
+                <div className="flex max-w-full flex-wrap content-start items-start justify-end gap-1.5 self-start">
+                    <OverviewMetaBadge
+                        label="Next Sync"
+                        value={
+                            props.overview?.nextSyncAt ? timeUntil(props.overview.nextSyncAt) : '--'
+                        }
+                    />
+                    <OverviewMetaBadge
+                        label="Last Refresh"
+                        value={
+                            props.overview?.lastRefreshedAt
+                                ? timeAgo(props.overview.lastRefreshedAt)
+                                : '--'
+                        }
+                    />
+                    <OverviewMetaBadge
+                        label="Sold Total"
+                        value={toMetricLabel(props.overview?.soldCount ?? null)}
+                    />
+                    <OverviewMetaBadge
+                        label="Favorites Total"
+                        value={toMetricLabel(snapshot?.favoritesTotal ?? null)}
+                    />
+                    <OverviewMetaBadge label="Reviews" value={reviewLabel ?? '--'} />
+                </div>
             </div>
 
-            <div className="mt-2 grid grid-cols-2 gap-1.5 md:grid-cols-4 xl:grid-cols-8">
-                <OverviewMetricCard
+            <div className="mt-2 grid grid-cols-1 gap-1.5 md:grid-cols-3">
+                <PrimaryMetricCard
+                    currentValue={toMetricLabel(snapshot?.activeListingCount ?? null)}
                     label="Active Listings"
-                    value={toMetricLabel(snapshot?.activeListingCount ?? null)}
+                    trend={activeListingsTrend}
                 />
-                <OverviewMetricCard
-                    label="New Listings"
-                    value={toMetricLabel(snapshot?.newListingCount ?? null)}
+                <PrimaryMetricCard
+                    currentValue={toSalesPerDayValueLabel(props.overview)}
+                    label="Sales / Day"
+                    trend={salesPerDayTrend}
                 />
-                <OverviewMetricCard
-                    label="Favorites Total"
-                    value={toMetricLabel(snapshot?.favoritesTotal ?? null)}
-                />
-                <OverviewMetricCard label="Sold Total" value={toSalesLabel(props.overview)} />
-                <OverviewMetricCard label="Reviews" value={reviewLabel ?? '--'} />
-                <OverviewMetricCard
-                    label="Next Sync"
-                    value={props.overview?.nextSyncAt ? timeUntil(props.overview.nextSyncAt) : '--'}
-                />
-                <OverviewMetricCard
-                    label="Last Refresh"
-                    value={
-                        props.overview?.lastRefreshedAt
-                            ? timeAgo(props.overview.lastRefreshedAt)
-                            : '--'
-                    }
-                />
-                <OverviewMetricCard
-                    label="Shop State"
-                    value={props.overview?.trackingState ?? '--'}
+                <PrimaryMetricCard
+                    currentValue={toFavoritesPerDayValueLabel(props.overview)}
+                    label="Favorites / Day"
+                    trend={favoritesPerDayTrend}
                 />
             </div>
-
-            {props.overview?.lastRefreshedAt ? (
-                <p className="mt-2 text-[10px] text-muted-foreground">
-                    Last refreshed {timeAgo(props.overview.lastRefreshedAt)}
-                </p>
-            ) : null}
         </div>
     );
 }
