@@ -92,6 +92,25 @@ export function ListingDetailsSection({ item }: { item: TrackedListingItem }) {
                 <span className={rowLabelClassName}>Quantity</span>
                 <span className={rowValueClassName}>{item.quantity?.toString() ?? '--'}</span>
             </div>
+            <div className={sectionBarClassName}>
+                <span className={sectionBarLabelClassName}>Tags</span>
+            </div>
+            <div className="border-border/50 border-b px-4 py-2">
+                {item.tags.length === 0 ? (
+                    <span className={rowValueClassName}>--</span>
+                ) : (
+                    <div className="flex flex-wrap gap-1.5">
+                        {item.tags.map((tag) => (
+                            <span
+                                className="rounded-full border border-border/70 bg-secondary px-2 py-0.5 font-mono text-[11px] text-foreground"
+                                key={`${item.id}:${tag}`}
+                            >
+                                {tag}
+                            </span>
+                        ))}
+                    </div>
+                )}
+            </div>
 
             <div className={sectionBarClassName}>
                 <span className={sectionBarLabelClassName}>Status</span>

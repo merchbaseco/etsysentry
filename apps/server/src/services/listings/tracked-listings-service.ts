@@ -22,6 +22,7 @@ import {
     setTrackedListingSyncStateByListingId,
 } from './set-tracked-listing-sync-state';
 import { sortTrackedListingRowsByCreatedAtDesc } from './sort-tracked-listing-rows';
+import { listNormalizedTagsByListingIds, syncListingTags } from './sync-listing-tags';
 import { upsertListingMetricSnapshot } from './upsert-listing-metric-snapshot';
 
 const DIGITS_ONLY_REGEX = /^\d+$/;
@@ -46,6 +47,7 @@ export interface TrackedListingRecord {
     shopId: string | null;
     shopName: string | null;
     syncState: (typeof trackedListings.$inferSelect)['syncState'];
+    tags: string[];
     thumbnailUrl: string | null;
     title: string;
     trackerClerkUserId: string;
@@ -121,7 +123,11 @@ const parseListingIdentifier = (rawInput: string): string | null => {
     }
 };
 
-const toRecord = (row: typeof trackedListings.$inferSelect): TrackedListingRecord => {
+const toRecord = (params: {
+    row: typeof trackedListings.$inferSelect;
+    tags: string[];
+}): TrackedListingRecord => {
+    const row = params.row;
     let price: TrackedListingRecord['price'] = null;
 
     if (
@@ -151,6 +157,7 @@ const toRecord = (row: typeof trackedListings.$inferSelect): TrackedListingRecor
         shopId: row.shopId,
         shopName: row.shopName,
         accountId: row.accountId,
+        tags: params.tags,
         thumbnailUrl: row.thumbnailUrl ?? null,
         title: row.title,
         trackerClerkUserId: row.trackerClerkUserId,
@@ -277,6 +284,11 @@ export const syncTrackedListingFromEtsy = async (params: {
         trackerClerkUserId: params.trackerClerkUserId,
     });
 
+    await syncListingTags({
+        listingId: row.listingId,
+        rawTags: listingFromEtsy.tags,
+    });
+
     await upsertListingMetricSnapshot({
         accountId: row.accountId,
         listingId: row.listingId,
@@ -310,9 +322,17 @@ export const listTrackedListings = async (params: {
         : eq(trackedListings.accountId, params.accountId);
 
     const rows = await db.select().from(trackedListings).where(whereClause);
+    const tagsByListingId = await listNormalizedTagsByListingIds({
+        listingIds: rows.map((row) => row.listingId),
+    });
 
     return {
-        items: sortTrackedListingRowsByCreatedAtDesc(rows).map(toRecord),
+        items: sortTrackedListingRowsByCreatedAtDesc(rows).map((row) =>
+            toRecord({
+                row,
+                tags: tagsByListingId[row.listingId] ?? [],
+            })
+        ),
     };
 };
 
@@ -355,7 +375,13 @@ export const trackListing = async (params: {
     });
 
     const created = existing.length === 0;
-    const item = toRecord(row);
+    const tagsByListingId = await listNormalizedTagsByListingIds({
+        listingIds: [row.listingId],
+    });
+    const item = toRecord({
+        row,
+        tags: tagsByListingId[row.listingId] ?? [],
+    });
 
     await createEventLog({
         action: created ? 'listing.tracked' : 'listing.updated',
@@ -460,7 +486,14 @@ export const refreshTrackedListing = async (params: {
             title: updated.title,
         });
 
-        return toRecord(updated);
+        const tagsByListingId = await listNormalizedTagsByListingIds({
+            listingIds: [updated.listingId],
+        });
+
+        return toRecord({
+            row: updated,
+            tags: tagsByListingId[updated.listingId] ?? [],
+        });
     } catch (error) {
         const failureMessage =
             error instanceof TRPCError ? error.message : 'Unexpected listing refresh error.';

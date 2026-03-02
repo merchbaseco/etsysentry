@@ -172,6 +172,12 @@ docs/
   - static/slow-changing listing data
   - `accountId`, `listingId`, `shopId`, `title`, `description`, `tags`, `shopOwner`,
     `url`, `imageUrl`, `createdAt`, `updatedAt`, `firstSeenAt`, `lastSeenAt`
+- `tags`
+  - global normalized tag dictionary
+  - `id`, `normalizedTag`
+- `listing_tags`
+  - current many-to-many mapping between tracked listings and normalized tags
+  - `listingId`, `tagId`
 - `listings`
   - thin canonical listing identity row
   - `accountId`, `listingId`, `shopId`, `firstSeenAt`, `lastSeenAt`
