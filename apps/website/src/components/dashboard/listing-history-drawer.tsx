@@ -123,6 +123,7 @@ export function ListingHistoryDrawer({
                             <th className={tableHeaderCellClassName}>Views</th>
                             <th className={tableHeaderCellClassName}>Favs</th>
                             <th className={tableHeaderCellClassName}>Qty</th>
+                            <th className={tableHeaderCellClassName}>Sold Est.</th>
                             <th className={tableHeaderCellClassName}>Price</th>
                         </tr>
                     </thead>
@@ -145,6 +146,9 @@ export function ListingHistoryDrawer({
                                 </td>
                                 <td className="px-3 py-2 text-right text-terminal-dim">
                                     {item.quantity ?? '--'}
+                                </td>
+                                <td className="px-3 py-2 text-right text-terminal-dim">
+                                    {formatNumber(item.estimatedSoldCount)}
                                 </td>
                                 <td className="px-3 py-2 text-right text-terminal-green">
                                     {formatPrice(item.price)}

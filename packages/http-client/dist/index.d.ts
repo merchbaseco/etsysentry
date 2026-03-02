@@ -22,6 +22,7 @@ export interface ListingItem {
     lastRefreshError: string | null;
     lastRefreshedAt: string;
     numFavorers: number | null;
+    endingTimestamp: number | null;
     price: {
         amount: number;
         currencyCode: string;
@@ -30,6 +31,7 @@ export interface ListingItem {
     } | null;
     priceUsdValue: number | null;
     quantity: number | null;
+    shouldAutoRenew: boolean | null;
     shopId: string | null;
     shopName: string | null;
     syncState: 'idle' | 'queued' | 'syncing';
@@ -111,9 +113,10 @@ export interface ListingPerformanceData {
         }>;
     };
 }
+type EmptyInput = Record<string, never>;
 export interface PublicRouterInputs {
     keywords: {
-        list: {};
+        list: EmptyInput;
         track: {
             keyword: string;
         };
@@ -124,13 +127,13 @@ export interface PublicRouterInputs {
             range?: string;
             metrics?: Array<'views' | 'favorites' | 'quantity' | 'price'>;
         };
-        list: {};
+        list: EmptyInput;
         track: {
             listing: string;
         };
     };
     shops: {
-        list: {};
+        list: EmptyInput;
         track: {
             shop: string;
         };

@@ -18,6 +18,7 @@ describe('toListingMetricSnapshotInsert', () => {
             views: 1500,
             favorerCount: 120,
             quantity: 8,
+            endingTimestamp: 1_741_000_000,
             priceAmount: 2499,
             priceDivisor: 100,
             priceCurrencyCode: 'EUR',
@@ -28,6 +29,7 @@ describe('toListingMetricSnapshotInsert', () => {
         expect(values.views).toBe(1500);
         expect(values.favorerCount).toBe(120);
         expect(values.quantity).toBe(8);
+        expect(values.endingTimestamp).toBe(1_741_000_000);
         expect(values.priceAmount).toBe(2499);
         expect(values.priceDivisor).toBe(100);
         expect(values.priceCurrencyCode).toBe('EUR');

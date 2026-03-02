@@ -192,7 +192,8 @@ docs/
 - `listing_metric_snapshots`
   - one row per UTC day for each tracked listing (latest sync wins within day)
   - `accountId`, `listingId`, `observedDate`, `observedAt`, `favorerCount`,
-    `priceAmount`, `priceDivisor`, `priceCurrencyCode`, `views`, `quantity`
+    `priceAmount`, `priceDivisor`, `priceCurrencyCode`, `views`, `quantity`,
+    `endingTimestamp`
 - `tracked_shop_snapshots`
   - append-only daily shop metrics
   - `id`, `accountId`, `trackedShopId`, `etsyShopId`, `observedAt`,
@@ -291,7 +292,7 @@ Cadence policy (listing momentum-aware):
   - `etsyState`
   - `isDigital`
   - `priceAmount`, `priceCurrencyCode`, `priceDivisor`
-  - `quantity`, `views`, `numFavorers`
+  - `quantity`, `endingTimestamp`, `shouldAutoRenew`, `views`, `numFavorers`
   - `shopName`, `updatedTimestamp`
   - `lastRefreshedAt`, `lastRefreshError`, `syncState` (`idle|queued|syncing`)
 - keyword sync must not update existing `tracked_listings` rows.

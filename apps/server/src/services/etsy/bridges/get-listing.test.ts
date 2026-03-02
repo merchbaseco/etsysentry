@@ -18,6 +18,7 @@ describe('get-listing bridge', () => {
             return new Response(
                 JSON.stringify({
                     description: 'Sample description',
+                    ending_timestamp: 1_741_000_000,
                     images: [
                         {
                             url_170x135:
@@ -33,6 +34,7 @@ describe('get-listing bridge', () => {
                         divisor: 100,
                     },
                     quantity: 7,
+                    should_auto_renew: true,
                     shop: {
                         shop_name: 'Needle & Oak',
                     },
@@ -58,6 +60,7 @@ describe('get-listing bridge', () => {
         expect(response).toMatchObject({
             description: 'Sample description',
             etsyState: 'active',
+            endingTimestamp: 1_741_000_000,
             listingId: '1234567890',
             listingType: 'download',
             numFavorers: 22,
@@ -67,6 +70,7 @@ describe('get-listing bridge', () => {
                 divisor: 100,
             },
             quantity: 7,
+            shouldAutoRenew: true,
             shopId: '987654321',
             shopName: 'Needle & Oak',
             tags: ['tag-a'],

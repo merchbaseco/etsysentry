@@ -30,6 +30,7 @@ const ETSY_LISTING_PATH_REGEX = /\/listing\/(\d+)(?:\/|$)/i;
 
 export interface TrackedListingRecord {
     accountId: string;
+    endingTimestamp: number | null;
     etsyListingId: string;
     etsyState: (typeof trackedListings.$inferSelect)['etsyState'];
     id: string;
@@ -46,6 +47,7 @@ export interface TrackedListingRecord {
     quantity: number | null;
     shopId: string | null;
     shopName: string | null;
+    shouldAutoRenew: boolean | null;
     syncState: (typeof trackedListings.$inferSelect)['syncState'];
     tags: string[];
     thumbnailUrl: string | null;
@@ -152,8 +154,10 @@ const toRecord = (params: {
         lastRefreshError: row.lastRefreshError,
         lastRefreshedAt: row.lastRefreshedAt.toISOString(),
         numFavorers: row.numFavorers,
+        endingTimestamp: row.endingTimestamp,
         price,
         quantity: row.quantity,
+        shouldAutoRenew: row.shouldAutoRenew,
         shopId: row.shopId,
         shopName: row.shopName,
         accountId: row.accountId,
@@ -187,6 +191,8 @@ const bridgeToUpsertValues = (params: {
         priceCurrencyCode: params.bridgeResponse.price?.currencyCode ?? null,
         priceDivisor: params.bridgeResponse.price?.divisor ?? null,
         quantity: params.bridgeResponse.quantity,
+        endingTimestamp: params.bridgeResponse.endingTimestamp,
+        shouldAutoRenew: params.bridgeResponse.shouldAutoRenew,
         shopId: params.bridgeResponse.shopId,
         shopName: params.bridgeResponse.shopName,
         accountId: params.accountId,
@@ -296,6 +302,7 @@ export const syncTrackedListingFromEtsy = async (params: {
         views: row.views,
         favorerCount: row.numFavorers,
         quantity: row.quantity,
+        endingTimestamp: row.endingTimestamp,
         priceAmount: row.priceAmount,
         priceDivisor: row.priceDivisor,
         priceCurrencyCode: row.priceCurrencyCode,
