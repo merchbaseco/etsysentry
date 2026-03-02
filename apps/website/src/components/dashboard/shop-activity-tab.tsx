@@ -199,7 +199,7 @@ export function ShopActivityTab() {
                 shopTitle={shopTitle}
             />
 
-            <div className="flex items-center justify-end gap-1.5 border-border border-b px-3 py-1.5">
+            <div className="flex items-center justify-end gap-1.5 border-border border-b px-3 py-1">
                 <div className="flex items-center gap-1.5">
                     <span className="text-[9px] text-terminal-dim uppercase tracking-widest">
                         Sort
@@ -209,7 +209,7 @@ export function ShopActivityTab() {
                         value={sortOrder}
                     >
                         <SelectTrigger
-                            className="gap-1 rounded border-none bg-secondary px-2 py-0 text-[11px] shadow-none"
+                            className="h-7 gap-1 rounded border-none bg-secondary px-1.5 py-0 text-[11px] shadow-none"
                             size="sm"
                         >
                             <ArrowDownUp className="size-3 shrink-0 text-terminal-dim" />

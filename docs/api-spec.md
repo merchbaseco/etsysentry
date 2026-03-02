@@ -623,6 +623,24 @@ Output:
     syncState: 'idle' | 'queued' | 'syncing' | null;
     lastRefreshedAt: string | null; // ISO timestamp
     nextSyncAt: string | null; // ISO timestamp
+    derivedSalesPerDay: {
+      value: number | null; // average soldDelta/day across available daily shop snapshots
+      coverageDays: number; // number of daily shop snapshots used in the estimate
+      windowDays: 30;
+    } | null;
+    derivedFavoritesPerDay: {
+      value: number | null; // average favoritesDelta/day across available daily shop snapshots
+      coverageDays: number; // number of daily shop snapshots used in the estimate
+      windowDays: 30;
+    } | null;
+    metricHistory: Array<{
+      observedAt: string; // ISO timestamp
+      activeListingCount: number;
+      favoritesDelta: number; // padded to 0 for days without a snapshot
+      favoritesTotal: number | null;
+      soldDelta: number; // padded to 0 for days without a snapshot
+      soldTotal: number | null;
+    }>; // 30 points; missing days are padded
     latestSnapshot: {
       observedAt: string; // ISO timestamp
       activeListingCount: number;
