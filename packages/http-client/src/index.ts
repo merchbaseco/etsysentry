@@ -22,6 +22,7 @@ export interface KeywordItem {
 
 export interface ListingItem {
     accountId: string;
+    endingTimestamp: number | null;
     etsyListingId: string;
     etsyState: 'active' | 'inactive' | 'sold_out' | 'draft' | 'expired';
     id: string;
@@ -39,6 +40,7 @@ export interface ListingItem {
     quantity: number | null;
     shopId: string | null;
     shopName: string | null;
+    shouldAutoRenew: boolean | null;
     syncState: 'idle' | 'queued' | 'syncing';
     thumbnailUrl: string | null;
     title: string;

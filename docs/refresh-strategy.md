@@ -123,7 +123,7 @@ Listings are considered by stale-dispatch only when:
 - Tier value itself is not persisted as a dedicated column.
 - Inputs used for tiering are persisted:
   - `tracked_listings.lastRefreshedAt`
-  - `listing_metric_snapshots` rows (`observedAt`, `favorerCount`, `quantity`, `views`)
+  - `listing_metric_snapshots` rows (`observedAt`, `favorerCount`, `quantity`, `endingTimestamp`, `views`)
 - Tier is recalculated on demand during stale selection and settings summary generation.
 
 ## Keywords Refresh Strategy

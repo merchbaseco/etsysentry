@@ -4,6 +4,7 @@ import { listingMetricSnapshots } from '../../db/schema';
 
 export interface UpsertListingMetricSnapshotInput {
     accountId: string;
+    endingTimestamp: number | null;
     favorerCount: number | null;
     listingId: string;
     observedAt: Date;
@@ -22,6 +23,7 @@ type ListingMetricSnapshotInsert = Pick<
     | 'views'
     | 'favorerCount'
     | 'quantity'
+    | 'endingTimestamp'
     | 'priceAmount'
     | 'priceDivisor'
     | 'priceCurrencyCode'
@@ -46,6 +48,7 @@ export const toListingMetricSnapshotInsert = (
         views: params.views,
         favorerCount: params.favorerCount,
         quantity: params.quantity,
+        endingTimestamp: params.endingTimestamp,
         priceAmount: params.priceAmount,
         priceDivisor: params.priceDivisor,
         priceCurrencyCode: params.priceCurrencyCode,
@@ -87,6 +90,11 @@ export const upsertListingMetricSnapshot = async (
                     WHEN excluded.observed_at >= ${listingMetricSnapshots.observedAt}
                         THEN excluded.quantity
                     ELSE ${listingMetricSnapshots.quantity}
+                END`,
+                endingTimestamp: sql`CASE
+                    WHEN excluded.observed_at >= ${listingMetricSnapshots.observedAt}
+                        THEN excluded.ending_timestamp
+                    ELSE ${listingMetricSnapshots.endingTimestamp}
                 END`,
                 priceAmount: sql`CASE
                     WHEN excluded.observed_at >= ${listingMetricSnapshots.observedAt}

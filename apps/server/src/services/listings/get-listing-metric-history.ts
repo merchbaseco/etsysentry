@@ -2,6 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { and, desc, eq, gte, lte } from 'drizzle-orm';
 import { db } from '../../db';
 import { listingMetricSnapshots, trackedListings } from '../../db/schema';
+import { deriveListingHistorySales } from './derive-listing-history-sales';
 
 const DEFAULT_HISTORY_DAYS = 30;
 const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
@@ -14,6 +15,9 @@ export interface ListingMetricHistoryPrice {
 }
 
 export interface ListingMetricHistoryItem {
+    endingTimestamp: number | null;
+    estimatedSoldCount: number;
+    estimatedSoldDelta: number;
     favorerCount: number | null;
     observedAt: string;
     observedDate: string;
@@ -153,9 +157,12 @@ export const resolveHistoryWindow = (params: {
     return toHistoryWindowFromDays(normalizeHistoryDays(params.days));
 };
 
-const toHistoryItem = (
-    row: typeof listingMetricSnapshots.$inferSelect
-): ListingMetricHistoryItem => {
+const toHistoryItem = (params: {
+    row: typeof listingMetricSnapshots.$inferSelect;
+    estimatedSoldCount: number;
+    estimatedSoldDelta: number;
+}): ListingMetricHistoryItem => {
+    const row = params.row;
     let price: ListingMetricHistoryPrice | null = null;
 
     if (
@@ -173,6 +180,9 @@ const toHistoryItem = (
     }
 
     return {
+        endingTimestamp: row.endingTimestamp,
+        estimatedSoldCount: params.estimatedSoldCount,
+        estimatedSoldDelta: params.estimatedSoldDelta,
         observedDate: row.observedDate,
         observedAt: row.observedAt.toISOString(),
         views: row.views,
@@ -180,6 +190,29 @@ const toHistoryItem = (
         quantity: row.quantity,
         price,
     };
+};
+
+const toHistoryItems = (
+    rows: (typeof listingMetricSnapshots.$inferSelect)[]
+): ListingMetricHistoryItem[] => {
+    const ascendingRows = [...rows].sort((left, right) =>
+        left.observedDate.localeCompare(right.observedDate)
+    );
+    const salesMetrics = deriveListingHistorySales(
+        ascendingRows.map((row) => ({
+            endingTimestamp: row.endingTimestamp,
+            quantity: row.quantity,
+        }))
+    );
+    const ascendingItems = ascendingRows.map((row, index) =>
+        toHistoryItem({
+            row,
+            estimatedSoldCount: salesMetrics[index]?.estimatedSoldCount ?? 0,
+            estimatedSoldDelta: salesMetrics[index]?.estimatedSoldDelta ?? 0,
+        })
+    );
+
+    return ascendingItems.reverse();
 };
 
 export const getListingMetricHistory = async (params: {
@@ -237,6 +270,6 @@ export const getListingMetricHistory = async (params: {
         days: historyWindow.days,
         fromObservedDate: historyWindow.fromObservedDate,
         toObservedDate: historyWindow.toObservedDate,
-        items: rows.map(toHistoryItem),
+        items: toHistoryItems(rows),
     };
 };

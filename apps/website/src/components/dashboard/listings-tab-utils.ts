@@ -195,9 +195,11 @@ const areTrackedListingsEqual = (left: TrackedListingItem, right: TrackedListing
         left.lastRefreshError === right.lastRefreshError &&
         left.lastRefreshedAt === right.lastRefreshedAt &&
         left.numFavorers === right.numFavorers &&
+        left.endingTimestamp === right.endingTimestamp &&
         arePricesEqual(left.price, right.price) &&
         left.priceUsdValue === right.priceUsdValue &&
         left.quantity === right.quantity &&
+        left.shouldAutoRenew === right.shouldAutoRenew &&
         left.shopId === right.shopId &&
         left.shopName === right.shopName &&
         left.thumbnailUrl === right.thumbnailUrl &&

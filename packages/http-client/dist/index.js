@@ -20,7 +20,7 @@ export const createEtsySentryClient = (options) => {
     const queryClient = new QueryClient();
     const url = toApiUrl(options.baseUrl ?? DEFAULT_API_BASE_URL);
     const linkFactory = options.batch ? httpBatchLink : httpLink;
-    const trpcClient = createTRPCClient({
+    const untypedTrpcClient = createTRPCClient({
         links: [
             linkFactory({
                 headers: () => createRequestHeaders(options),
@@ -28,8 +28,9 @@ export const createEtsySentryClient = (options) => {
             }),
         ],
     });
+    const trpcClient = untypedTrpcClient;
     const trpc = createTRPCOptionsProxy({
-        client: trpcClient,
+        client: untypedTrpcClient,
         queryClient,
     });
     return {

@@ -383,6 +383,8 @@ Output:
       value: number;
     } | null;
     quantity: number | null;
+    endingTimestamp: number | null;
+    shouldAutoRenew: boolean | null;
     views: number | null;
     numFavorers: number | null;
     updatedTimestamp: number | null;
@@ -490,12 +492,17 @@ Output:
   etsyListingId: string;
   title: string;
   days: number;
+  fromObservedDate: string; // YYYY-MM-DD (UTC day key)
+  toObservedDate: string; // YYYY-MM-DD (UTC day key)
   items: Array<{
     observedDate: string; // YYYY-MM-DD (UTC day key)
     observedAt: string; // ISO timestamp for most recent run captured that day
     views: number | null;
     favorerCount: number | null;
     quantity: number | null;
+    endingTimestamp: number | null;
+    estimatedSoldDelta: number; // inferred from quantity drop + renewal signals
+    estimatedSoldCount: number; // running cumulative inferred sold count in range
     price: {
       amount: number;
       divisor: number;

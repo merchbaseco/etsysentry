@@ -24,9 +24,9 @@ Implemented scaffold:
   listing snapshot fields
 - Scheduled currency rates sync job (`sync-currency-rates`) refreshes USD conversion rates cache
   from `open.er-api.com`
-- Canonical listing snapshot fields (`price*`, `quantity`, `views`, `numFavorers`, `shopName`,
-  `etsyState`, `updatedTimestamp`, `lastRefreshedAt`, `lastRefreshError`) are owned by listing
-  sync (`track|refresh`) paths
+- Canonical listing snapshot fields (`price*`, `quantity`, `endingTimestamp`, `shouldAutoRenew`,
+  `views`, `numFavorers`, `shopName`, `etsyState`, `updatedTimestamp`, `lastRefreshedAt`,
+  `lastRefreshError`) are owned by listing sync (`track|refresh`) paths
 - Tracked listings persist `isDigital` based on Etsy `listing_type`
 - Tracked listings persist sync queue state in `tracked_listings.syncState` (`idle|queued|syncing`)
   so dashboard refresh actions can reflect in-progress work across page reloads

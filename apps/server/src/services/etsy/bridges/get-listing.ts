@@ -43,6 +43,7 @@ const listingResponseSchema = z
         created_timestamp: z.coerce.number().int().nullable().optional(),
         creation_timestamp: z.coerce.number().int().nullable().optional(),
         description: z.string().nullable().optional(),
+        ending_timestamp: z.coerce.number().int().nullable().optional(),
         images: z.array(z.unknown()).nullable().optional(),
         inventory: z.unknown().nullable().optional(),
         language: z.string().nullable().optional(),
@@ -55,6 +56,7 @@ const listingResponseSchema = z
         personalization: z.unknown().nullable().optional(),
         price: moneySchema.nullable().optional(),
         quantity: z.coerce.number().int().nonnegative().nullable().optional(),
+        should_auto_renew: z.boolean().nullable().optional(),
         shipping_profile: z.unknown().nullable().optional(),
         shop: shopSchema.nullable().optional(),
         shop_id: z.coerce.number().int().positive().nullable().optional(),
@@ -108,6 +110,7 @@ export interface GetListingBridgeResponse {
     createdTimestamp: number | null;
     creationTimestamp: number | null;
     description: string | null;
+    endingTimestamp: number | null;
     etsyState: EtsyListingState;
     images: unknown[];
     inventory: unknown | null;
@@ -129,6 +132,7 @@ export interface GetListingBridgeResponse {
     shop: unknown | null;
     shopId: string | null;
     shopName: string | null;
+    shouldAutoRenew: boolean | null;
     skus: string[];
     stateTimestamp: number | null;
     suggestedTitle: string | null;
@@ -278,6 +282,7 @@ const toResponse = (parsed: ParsedListingResponse): GetListingBridgeResponse => 
         createdTimestamp: toNullable(parsed.created_timestamp),
         creationTimestamp: toNullable(parsed.creation_timestamp),
         description: toNullable(parsed.description),
+        endingTimestamp: toNullable(parsed.ending_timestamp),
         etsyState: normalizeListingState(parsed.state),
         images: toArray(parsed.images),
         inventory: toNullable(parsed.inventory),
@@ -291,6 +296,7 @@ const toResponse = (parsed: ParsedListingResponse): GetListingBridgeResponse => 
         personalization: toNullable(parsed.personalization),
         price: toPriceResponse(parsed.price),
         quantity: toNullable(parsed.quantity),
+        shouldAutoRenew: toNullable(parsed.should_auto_renew),
         shippingProfile: toNullable(parsed.shipping_profile),
         shop: toNullable(parsed.shop),
         shopId,
