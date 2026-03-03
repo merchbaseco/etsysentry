@@ -12,7 +12,6 @@ export interface MetricTrendData {
         observedAt: string;
         value: number | null;
     }>;
-    summaryLabel: string;
     tone: ShopMetricSparklineTone;
 }
 
@@ -37,7 +36,6 @@ export const toMetricTrendData = (params: {
         return {
             deltaLabel: 'Not enough history',
             points,
-            summaryLabel: `${params.metricLabel}: trend unavailable`,
             tone: 'neutral',
         };
     }
@@ -49,7 +47,6 @@ export const toMetricTrendData = (params: {
         return {
             deltaLabel: 'Not enough history',
             points,
-            summaryLabel: `${params.metricLabel}: trend unavailable`,
             tone: 'neutral',
         };
     }
@@ -66,7 +63,6 @@ export const toMetricTrendData = (params: {
         return {
             deltaLabel: `Flat • ${rangeDays}d`,
             points,
-            summaryLabel: `${params.metricLabel} is flat over ${rangeDays} days`,
             tone: 'neutral',
         };
     }
@@ -78,7 +74,6 @@ export const toMetricTrendData = (params: {
     return {
         deltaLabel: `${signedDeltaLabel} • ${rangeDays}d`,
         points,
-        summaryLabel: `${params.metricLabel} changed ${signedDeltaLabel} over ${rangeDays} days`,
         tone,
     };
 };
