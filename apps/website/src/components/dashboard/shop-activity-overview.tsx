@@ -5,7 +5,11 @@ import { formatNumber, timeAgo, timeUntil } from '@/components/ui/dashboard';
 import type { ShopActivityOverview } from '@/lib/shops-api';
 import { cn } from '@/lib/utils';
 import { type MetricTrendData, toMetricTrendData } from './shop-activity-trend-data';
-import { ShopMetricSparkline, type ShopMetricSparklineTone } from './shop-metric-sparkline';
+import {
+    ShopMetricSparkline,
+    type ShopMetricSparklineTone,
+    type ShopMetricSparklineValueFormatter,
+} from './shop-metric-sparkline';
 
 const WHITESPACE_SPLIT_REGEX = /\s+/;
 
@@ -110,26 +114,42 @@ function OverviewMetaBadge(props: { label: string; meta?: string | null; value: 
     );
 }
 
-function PrimaryMetricCard(props: { currentValue: string; label: string; trend: MetricTrendData }) {
+function PrimaryMetricCard(props: {
+    currentValue: string;
+    label: string;
+    trend: MetricTrendData;
+    trendValueFormatter?: ShopMetricSparklineValueFormatter;
+}) {
     return (
-        <div className="rounded border border-border/80 bg-background/70 px-2.5 py-2">
-            <div className="flex items-start justify-between gap-2">
-                <p className="text-[9px] text-muted-foreground uppercase tracking-[0.18em]">
-                    {props.label}
-                </p>
-                <p className={cn('font-medium text-[10px]', toneTextClassByTone[props.trend.tone])}>
-                    {props.trend.deltaLabel}
+        <div className="relative h-[88px] overflow-hidden rounded border border-border/80 bg-background/70">
+            <div className="absolute inset-0">
+                <ShopMetricSparkline
+                    ariaLabel={`${props.label} trend sparkline`}
+                    chartTopMargin={46}
+                    metricLabel={props.label}
+                    points={props.trend.points}
+                    tone={props.trend.tone}
+                    valueFormatter={props.trendValueFormatter}
+                />
+            </div>
+            <div className="pointer-events-none relative z-10 px-2.5 pt-2">
+                <div className="flex items-start justify-between gap-2">
+                    <p className="text-[9px] text-muted-foreground uppercase tracking-[0.18em]">
+                        {props.label}
+                    </p>
+                    <p
+                        className={cn(
+                            'font-medium text-[10px]',
+                            toneTextClassByTone[props.trend.tone]
+                        )}
+                    >
+                        {props.trend.deltaLabel}
+                    </p>
+                </div>
+                <p className="mt-0.5 truncate font-semibold text-[16px] text-foreground">
+                    {props.currentValue}
                 </p>
             </div>
-            <p className="mt-0.5 truncate font-semibold text-[16px] text-foreground">
-                {props.currentValue}
-            </p>
-            <ShopMetricSparkline
-                ariaLabel={`${props.label} trend sparkline`}
-                points={props.trend.points}
-                summaryLabel={props.trend.summaryLabel}
-                tone={props.trend.tone}
-            />
         </div>
     );
 }
@@ -241,16 +261,19 @@ export function ShopActivityOverviewHeader(props: {
                     currentValue={toMetricLabel(snapshot?.activeListingCount ?? null)}
                     label="Active Listings"
                     trend={activeListingsTrend}
+                    trendValueFormatter={toMetricLabel}
                 />
                 <PrimaryMetricCard
                     currentValue={toSalesPerDayValueLabel(props.overview)}
                     label="Sales / Day"
                     trend={salesPerDayTrend}
+                    trendValueFormatter={toMetricLabel}
                 />
                 <PrimaryMetricCard
                     currentValue={toFavoritesPerDayValueLabel(props.overview)}
                     label="Favorites / Day"
                     trend={favoritesPerDayTrend}
+                    trendValueFormatter={toMetricLabel}
                 />
             </div>
         </div>
