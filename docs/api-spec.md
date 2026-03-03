@@ -631,13 +631,13 @@ Output:
     lastRefreshedAt: string | null; // ISO timestamp
     nextSyncAt: string | null; // ISO timestamp
     derivedSalesPerDay: {
-      value: number | null; // average soldDelta/day across available daily shop snapshots
-      coverageDays: number; // number of daily shop snapshots used in the estimate
+      value: number | null; // average soldDelta/day across positive soldDelta days in window
+      coverageDays: number; // number of days with a positive soldDelta used in the estimate
       windowDays: 30;
     } | null;
     derivedFavoritesPerDay: {
-      value: number | null; // average favoritesDelta/day across available daily shop snapshots
-      coverageDays: number; // number of daily shop snapshots used in the estimate
+      value: number | null; // average favoritesDelta/day across positive favoritesDelta days
+      coverageDays: number; // number of days with a positive favoritesDelta in the estimate
       windowDays: 30;
     } | null;
     metricHistory: Array<{

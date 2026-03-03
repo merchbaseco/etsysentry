@@ -26,23 +26,30 @@ const toPositiveSoldDelta = (value: number | null): number => {
 export const deriveShopSalesPerDay = (params: {
     snapshots: DerivedSalesPerDaySnapshot[];
 }): DerivedSalesPerDayEstimate => {
-    const soldDeltaByDay = new Map<string, number>();
+    const observedDays = new Set<string>();
+    let soldUnits = 0;
+    let coverageDays = 0;
 
     for (const snapshot of params.snapshots) {
         const dayKey = toUtcDayKey(snapshot.observedAt);
 
-        if (soldDeltaByDay.has(dayKey)) {
+        if (observedDays.has(dayKey)) {
             continue;
         }
 
-        soldDeltaByDay.set(dayKey, toPositiveSoldDelta(snapshot.soldDelta));
+        observedDays.add(dayKey);
 
-        if (soldDeltaByDay.size >= derivedSalesPerDayWindowDays) {
+        const soldDelta = toPositiveSoldDelta(snapshot.soldDelta);
+
+        if (soldDelta > 0) {
+            soldUnits += soldDelta;
+            coverageDays += 1;
+        }
+
+        if (observedDays.size >= derivedSalesPerDayWindowDays) {
             break;
         }
     }
-
-    const coverageDays = soldDeltaByDay.size;
 
     if (coverageDays === 0) {
         return {
@@ -50,12 +57,6 @@ export const deriveShopSalesPerDay = (params: {
             value: null,
             windowDays: derivedSalesPerDayWindowDays,
         };
-    }
-
-    let soldUnits = 0;
-
-    for (const value of soldDeltaByDay.values()) {
-        soldUnits += value;
     }
 
     return {

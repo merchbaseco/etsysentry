@@ -25,8 +25,8 @@ describe('deriveShopSalesPerDay', () => {
         });
 
         expect(result).toEqual({
-            coverageDays: 4,
-            value: 1.5,
+            coverageDays: 2,
+            value: 3,
             windowDays: 30,
         });
     });
@@ -50,8 +50,29 @@ describe('deriveShopSalesPerDay', () => {
         });
 
         expect(result).toEqual({
-            coverageDays: 2,
-            value: 1,
+            coverageDays: 1,
+            value: 2,
+            windowDays: 30,
+        });
+    });
+
+    test('returns a null estimate when no positive sold deltas are available', () => {
+        const result = deriveShopSalesPerDay({
+            snapshots: [
+                {
+                    observedAt: new Date('2026-03-05T10:00:00.000Z'),
+                    soldDelta: 0,
+                },
+                {
+                    observedAt: new Date('2026-03-04T10:00:00.000Z'),
+                    soldDelta: null,
+                },
+            ],
+        });
+
+        expect(result).toEqual({
+            coverageDays: 0,
+            value: null,
             windowDays: 30,
         });
     });

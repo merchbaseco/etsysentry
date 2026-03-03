@@ -26,23 +26,30 @@ const toPositiveFavoritesDelta = (value: number | null): number => {
 export const deriveShopFavoritesPerDay = (params: {
     snapshots: DerivedFavoritesPerDaySnapshot[];
 }): DerivedFavoritesPerDayEstimate => {
-    const favoritesDeltaByDay = new Map<string, number>();
+    const observedDays = new Set<string>();
+    let favorites = 0;
+    let coverageDays = 0;
 
     for (const snapshot of params.snapshots) {
         const dayKey = toUtcDayKey(snapshot.observedAt);
 
-        if (favoritesDeltaByDay.has(dayKey)) {
+        if (observedDays.has(dayKey)) {
             continue;
         }
 
-        favoritesDeltaByDay.set(dayKey, toPositiveFavoritesDelta(snapshot.favoritesDelta));
+        observedDays.add(dayKey);
 
-        if (favoritesDeltaByDay.size >= derivedFavoritesPerDayWindowDays) {
+        const favoritesDelta = toPositiveFavoritesDelta(snapshot.favoritesDelta);
+
+        if (favoritesDelta > 0) {
+            favorites += favoritesDelta;
+            coverageDays += 1;
+        }
+
+        if (observedDays.size >= derivedFavoritesPerDayWindowDays) {
             break;
         }
     }
-
-    const coverageDays = favoritesDeltaByDay.size;
 
     if (coverageDays === 0) {
         return {
@@ -50,12 +57,6 @@ export const deriveShopFavoritesPerDay = (params: {
             value: null,
             windowDays: derivedFavoritesPerDayWindowDays,
         };
-    }
-
-    let favorites = 0;
-
-    for (const value of favoritesDeltaByDay.values()) {
-        favorites += value;
     }
 
     return {
