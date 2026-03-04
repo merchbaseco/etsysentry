@@ -104,26 +104,27 @@ function SparklineCursor(props: {
 }
 
 function SparklineTooltipContent(props: SparklineTooltipContentProps) {
-    const firstPayload = props.payload?.[0];
-    const point = firstPayload?.payload;
+    const point = props.payload?.[0]?.payload;
 
     if (!(props.active && point)) {
         return null;
     }
 
     return (
-        <div
-            className={cn(
-                'pointer-events-none border border-border border-l-2 bg-background px-2 py-1.5 text-left shadow-sm',
-                toneClassByTone[props.tone].accentBorder
-            )}
-        >
-            <p className="whitespace-nowrap font-mono font-semibold text-foreground text-sm tabular-nums">
-                {props.metricLabel}: {props.valueFormatter(point.value)}
-            </p>
-            <p className="whitespace-nowrap font-mono text-[11px] text-muted-foreground">
-                {formatSparklineObservedDate(point.observedAt)}
-            </p>
+        <div style={{ transform: 'translateY(calc(-100% - 24px))' }}>
+            <div
+                className={cn(
+                    'pointer-events-none border border-border border-l-2 bg-background px-2 py-1.5 text-left shadow-sm',
+                    toneClassByTone[props.tone].accentBorder
+                )}
+            >
+                <p className="whitespace-nowrap font-mono font-semibold text-foreground text-sm tabular-nums">
+                    {props.metricLabel}: {props.valueFormatter(point.value)}
+                </p>
+                <p className="whitespace-nowrap font-mono text-[11px] text-muted-foreground">
+                    {formatSparklineObservedDate(point.observedAt)}
+                </p>
+            </div>
         </div>
     );
 }
@@ -189,7 +190,7 @@ export function ShopMetricSparkline(props: {
                         isAnimationActive={false}
                         offset={12}
                         portal={tooltipPortal}
-                        wrapperStyle={{ outline: 'none', pointerEvents: 'none', zIndex: 20 }}
+                        wrapperStyle={{ outline: 'none', pointerEvents: 'none', zIndex: 50 }}
                     />
                     <Area
                         activeDot={{
