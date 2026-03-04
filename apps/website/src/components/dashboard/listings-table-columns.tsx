@@ -82,8 +82,8 @@ export const createListingsColumns = (params: {
                 );
             },
             meta: {
-                headClassName: toHeadClassName('pl-2 pr-2 text-left'),
-                cellClassName: 'pl-2 pr-2 py-1.5 text-foreground',
+                headClassName: toHeadClassName('pl-2 pr-6 text-left'),
+                cellClassName: 'pl-2 pr-6 py-1.5 text-foreground',
                 isGrow: true,
             } satisfies ListingsColumnMeta,
         }),
@@ -110,8 +110,8 @@ export const createListingsColumns = (params: {
                 );
             },
             meta: {
-                headClassName: toHeadClassName('px-2 text-left'),
-                cellClassName: 'truncate px-2 py-1.5',
+                headClassName: toHeadClassName('pl-4 pr-2 text-left'),
+                cellClassName: 'truncate pl-4 pr-2 py-1.5',
             } satisfies ListingsColumnMeta,
         }),
         columnHelper.display({
