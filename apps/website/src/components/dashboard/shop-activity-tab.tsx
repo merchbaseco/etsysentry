@@ -199,7 +199,7 @@ export function ShopActivityTab() {
                 shopTitle={shopTitle}
             />
 
-            <div className="flex items-center justify-end gap-1.5 border-border border-b px-3 py-1.5">
+            <div className="flex items-center justify-end gap-1.5 border-border border-b px-3 py-0.5">
                 <div className="flex items-center gap-1.5">
                     <span className="text-[9px] text-terminal-dim uppercase tracking-widest">
                         Sort
