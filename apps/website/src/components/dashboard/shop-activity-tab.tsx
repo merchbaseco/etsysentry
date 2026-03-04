@@ -231,7 +231,7 @@ export function ShopActivityTab() {
             </div>
 
             {isTrackedBannerVisible ? (
-                <div className="border-terminal-yellow/30 border-b bg-terminal-yellow/10 px-3 py-2">
+                <div className="border-terminal-yellow/30 border-y bg-terminal-yellow/10 px-3 py-2">
                     <p className="text-terminal-yellow text-xs">
                         This shop is not tracked. Showing tracked listings currently associated with
                         this shop only.
@@ -240,13 +240,13 @@ export function ShopActivityTab() {
             ) : null}
 
             {overviewErrorMessage ? (
-                <div className="border-terminal-red/20 border-b bg-terminal-red/10 px-3 py-2 text-terminal-red text-xs">
+                <div className="border-terminal-red/20 border-y bg-terminal-red/10 px-3 py-2 text-terminal-red text-xs">
                     {overviewErrorMessage}
                 </div>
             ) : null}
 
             {listingsErrorMessage ? (
-                <div className="border-terminal-red/20 border-b bg-terminal-red/10 px-3 py-2 text-terminal-red text-xs">
+                <div className="border-terminal-red/20 border-y bg-terminal-red/10 px-3 py-2 text-terminal-red text-xs">
                     {listingsErrorMessage}
                 </div>
             ) : null}

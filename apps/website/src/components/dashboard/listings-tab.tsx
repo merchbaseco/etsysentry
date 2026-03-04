@@ -296,7 +296,7 @@ export function ListingsTab() {
                 showPhysicalListings={showPhysicalListings}
             />
             {errorMessage ? (
-                <div className="border-terminal-red/20 border-b bg-terminal-red/10 px-3 py-2 text-terminal-red text-xs">
+                <div className="border-terminal-red/20 border-y bg-terminal-red/10 px-3 py-2 text-terminal-red text-xs">
                     {errorMessage}
                 </div>
             ) : null}
