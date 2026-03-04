@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Area, AreaChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { formatNumber } from '@/components/ui/dashboard';
 import { cn } from '@/lib/utils';
@@ -135,11 +136,16 @@ export function ShopMetricSparkline(props: {
     tone: ShopMetricSparklineTone;
     valueFormatter?: ShopMetricSparklineValueFormatter;
 }) {
+    const [tooltipPortal, setTooltipPortal] = useState<HTMLElement | null>(null);
     const toneClasses = toneClassByTone[props.tone];
     const resolvedValueFormatter = props.valueFormatter ?? defaultValueFormatter;
     const chartData = toSparklineChartData(props.points);
     const hasUsableData = hasUsableSparklineData(chartData);
     const topMargin = props.chartTopMargin ?? 2;
+
+    useEffect(() => {
+        setTooltipPortal(document.body);
+    }, []);
 
     if (!hasUsableData) {
         return (
@@ -171,6 +177,7 @@ export function ShopMetricSparkline(props: {
                     margin={{ bottom: 4, left: 0, right: 0, top: topMargin }}
                 >
                     <Tooltip
+                        allowEscapeViewBox={{ x: true, y: true }}
                         content={
                             <SparklineTooltipContent
                                 metricLabel={props.metricLabel}
@@ -181,8 +188,8 @@ export function ShopMetricSparkline(props: {
                         cursor={<SparklineCursor />}
                         isAnimationActive={false}
                         offset={12}
-                        position={{ y: 4 }}
-                        wrapperStyle={{ outline: 'none', zIndex: 20 }}
+                        portal={tooltipPortal}
+                        wrapperStyle={{ outline: 'none', pointerEvents: 'none', zIndex: 20 }}
                     />
                     <Area
                         activeDot={{
