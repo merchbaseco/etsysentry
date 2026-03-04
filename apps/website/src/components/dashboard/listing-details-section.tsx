@@ -1,6 +1,7 @@
 import { ExternalLink, Store } from 'lucide-react';
-import { formatNumber, StatusBadge, timeAgo } from '@/components/ui/dashboard';
-import type { TrackedListingItem } from '@/lib/listings-api';
+import { formatNumber, timeAgo, timeUntil } from '@/components/ui/dashboard';
+import type { GetTrackedListingMetricHistoryOutput, TrackedListingItem } from '@/lib/listings-api';
+import { type ListingNextRefresh, resolveListingNextRefresh } from './listing-refresh-schedule';
 import { formatListingPrice } from './listings-tab-utils';
 
 const sectionBarClassName =
@@ -8,6 +9,8 @@ const sectionBarClassName =
 const sectionBarLabelClassName =
     'text-[11px] font-medium uppercase tracking-widest text-muted-foreground';
 const rowClassName = 'flex items-center justify-between gap-4 border-b border-border/50 px-4 py-2';
+const compactRowClassName =
+    'flex items-center justify-between gap-4 border-b border-border/50 px-4 py-1.5';
 const rowLabelClassName = 'shrink-0 text-[10px] uppercase tracking-wider text-muted-foreground';
 const rowValueClassName = 'truncate text-right font-mono text-xs text-foreground';
 
@@ -28,7 +31,52 @@ const formatIsoDateTime = (value: string): string => {
     });
 };
 
-export function ListingDetailsSection({ item }: { item: TrackedListingItem }) {
+export function ListingDetailsSection({
+    item,
+    historyItems,
+}: {
+    item: TrackedListingItem;
+    historyItems: GetTrackedListingMetricHistoryOutput['items'];
+}) {
+    const nextRefresh = resolveListingNextRefresh({
+        item: {
+            isDigital: item.isDigital,
+            lastRefreshedAt: item.lastRefreshedAt,
+            syncState: item.syncState,
+            trackingState: item.trackingState,
+        },
+        historyItems,
+    });
+    const formatNextRefreshValue = (value: ListingNextRefresh): string => {
+        if (value.kind === 'in_progress') {
+            return 'Running now';
+        }
+
+        if (value.kind === 'paused') {
+            return 'Paused';
+        }
+
+        if (value.kind === 'disabled') {
+            return 'Disabled';
+        }
+
+        if (value.kind === 'unknown') {
+            return '--';
+        }
+
+        const nextRefreshAtMs = new Date(value.at).getTime();
+
+        if (Number.isNaN(nextRefreshAtMs)) {
+            return '--';
+        }
+
+        if (nextRefreshAtMs <= Date.now()) {
+            return `Due now \u00b7 ${formatIsoDateTime(value.at)}`;
+        }
+
+        return `${timeUntil(value.at)} \u00b7 ${formatIsoDateTime(value.at)}`;
+    };
+
     return (
         <>
             {item.thumbnailUrl ? (
@@ -113,24 +161,19 @@ export function ListingDetailsSection({ item }: { item: TrackedListingItem }) {
             </div>
 
             <div className={sectionBarClassName}>
-                <span className={sectionBarLabelClassName}>Status</span>
-                <span className="text-[10px] text-muted-foreground">
+                <span className={sectionBarLabelClassName}>Refresh</span>
+            </div>
+            <div className={compactRowClassName}>
+                <span className={rowLabelClassName}>Last</span>
+                <span className={rowValueClassName}>
                     {timeAgo(item.lastRefreshedAt)}
                     {' \u00b7 '}
                     {formatIsoDateTime(item.lastRefreshedAt)}
                 </span>
             </div>
-            <div className={rowClassName}>
-                <span className={rowLabelClassName}>Etsy</span>
-                <StatusBadge status={item.etsyState} />
-            </div>
-            <div className={rowClassName}>
-                <span className={rowLabelClassName}>Tracking</span>
-                <StatusBadge status={item.trackingState} />
-            </div>
-            <div className={rowClassName}>
-                <span className={rowLabelClassName}>Sync</span>
-                <StatusBadge status={item.syncState} />
+            <div className={compactRowClassName}>
+                <span className={rowLabelClassName}>Next</span>
+                <span className={rowValueClassName}>{formatNextRefreshValue(nextRefresh)}</span>
             </div>
 
             {item.lastRefreshError ? (

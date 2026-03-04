@@ -170,7 +170,7 @@ export function ListingHistoryDrawer({
         >
             {selectedListing ? (
                 <>
-                    <ListingDetailsSection item={selectedListing} />
+                    <ListingDetailsSection historyItems={historyItems} item={selectedListing} />
 
                     {historySectionContent}
                 </>
