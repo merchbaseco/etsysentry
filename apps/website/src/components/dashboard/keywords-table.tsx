@@ -10,12 +10,11 @@ import { useTableBodyHeight } from './use-table-body-height';
 
 interface KeywordsTableProps {
     items: TrackedKeywordItem[];
+    onOpenActivity: (item: TrackedKeywordItem) => void;
     onRefresh: (item: TrackedKeywordItem) => void;
-    onSelectKeyword: (item: TrackedKeywordItem) => void;
     refreshingById: Record<string, boolean>;
     resetKey: string;
     scrollContainerRef: RefObject<HTMLDivElement | null>;
-    selectedKeywordId: string | null;
 }
 
 const ROW_ESTIMATED_HEIGHT_PX = 38;
@@ -153,9 +152,7 @@ export function KeywordsTable(props: KeywordsTableProps) {
                             <tr
                                 className={cn(
                                     'absolute left-0 cursor-pointer border-border/50 border-b',
-                                    props.selectedKeywordId === item.id
-                                        ? 'bg-accent/30'
-                                        : 'hover:bg-accent/20'
+                                    'hover:bg-accent/20'
                                 )}
                                 key={row.id}
                                 onClick={(event) => {
@@ -163,7 +160,7 @@ export function KeywordsTable(props: KeywordsTableProps) {
                                         return;
                                     }
 
-                                    props.onSelectKeyword(item);
+                                    props.onOpenActivity(item);
                                 }}
                                 ref={(node) => {
                                     if (node) {

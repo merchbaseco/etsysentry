@@ -28,3 +28,11 @@ export type DailyProductRanksForKeyword = InferProcedureOutput<
 >;
 
 export type KeywordRankResultItem = DailyProductRanksForKeyword['items'][number];
+
+export type GetKeywordActivityInput = InferProcedureInput<
+    typeof trpcClient.app.keywords.getActivity.query
+>;
+
+export type GetKeywordActivityOutput = InferProcedureOutput<
+    typeof trpcClient.app.keywords.getActivity.query
+>;
