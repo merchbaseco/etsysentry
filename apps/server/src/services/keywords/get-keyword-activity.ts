@@ -18,7 +18,7 @@ import type { KeywordActivityResult } from './keyword-activity-types';
 import { toKeywordRankChanges } from './keyword-rank-changes';
 import { getTrackedKeyword } from './tracked-keywords-service';
 
-const DEFAULT_HISTORY_WINDOW_DAYS = 14;
+const DEFAULT_HISTORY_WINDOW_DAYS = 30;
 const TREND_CHANGE_WINDOW_DAYS = 30;
 
 const toHistoryWindowDays = (days: number | undefined): number => {

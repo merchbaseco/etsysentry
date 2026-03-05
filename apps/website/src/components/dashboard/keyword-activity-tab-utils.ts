@@ -3,6 +3,7 @@ import { TrpcRequestError } from '@/lib/trpc-http';
 
 export const DAYS_OPTIONS = [7, 14, 30] as const;
 export type KeywordActivityDaysOption = (typeof DAYS_OPTIONS)[number];
+export const DEFAULT_KEYWORD_ACTIVITY_DAYS: KeywordActivityDaysOption = 30;
 
 const isOptionalString = (value: unknown): value is string | undefined => {
     return value === undefined || typeof value === 'string';
