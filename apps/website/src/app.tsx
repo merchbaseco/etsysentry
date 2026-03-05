@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom';
 import { DashboardShell } from '@/components/dashboard/dashboard-shell';
+import { KeywordActivityTab } from '@/components/dashboard/keyword-activity-tab';
 import { KeywordsTab } from '@/components/dashboard/keywords-tab';
 import { ListingsTab } from '@/components/dashboard/listings-tab';
 import { LogsTab } from '@/components/dashboard/logs-tab';
@@ -24,6 +25,14 @@ const router = createBrowserRouter([
                 element: (
                     <div className="h-full">
                         <KeywordsTab />
+                    </div>
+                ),
+            },
+            {
+                path: 'keywords/activity/:trackedKeywordId',
+                element: (
+                    <div className="h-full">
+                        <KeywordActivityTab />
                     </div>
                 ),
             },

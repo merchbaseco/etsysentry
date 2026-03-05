@@ -1,8 +1,20 @@
 import { useAuth } from '@clerk/clerk-react';
-import { Activity, Briefcase, Clock, Eye, ShoppingCart, Store, X } from 'lucide-react';
+import { Activity, Clock, Eye, ShoppingCart, Store } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { DashboardActivityTabLink } from '@/components/dashboard/dashboard-activity-tab-link';
+import { DashboardJobsSummary } from '@/components/dashboard/dashboard-jobs-summary';
 import { DashboardTabLink } from '@/components/dashboard/dashboard-tab-link';
+import {
+    type KeywordActivityTab as KeywordActivityTabState,
+    loadKeywordActivityTabs,
+    normalizeKeywordTabLabel,
+    parseKeywordActivityPath,
+    removeKeywordActivityTab,
+    saveKeywordActivityTabs,
+    toKeywordActivityPath,
+    upsertKeywordActivityTab,
+} from '@/components/dashboard/keyword-activity-tabs-state';
 import {
     loadShopActivityTabs,
     normalizeShopTabLabel,
@@ -14,17 +26,18 @@ import {
     upsertShopActivityTab,
 } from '@/components/dashboard/shop-activity-tabs-state';
 import { StatusIndicator } from '@/components/dashboard/status-indicator';
-import { SummaryCount } from '@/components/dashboard/summary-count';
 import { SettingsModal } from '@/components/settings-modal';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { useDashboardSummaryQuery } from '@/hooks/use-dashboard-summary-query';
 import { useEtsyOAuthConnection } from '@/hooks/use-etsy-oauth-connection';
 import { useRealtimeQueryInvalidations } from '@/hooks/use-realtime-query-invalidations';
 import { cn } from '@/lib/utils';
 
-const tabsBeforeShop = [
+const tabsBeforeKeyword = [
     { id: 'listings', label: 'Listings', icon: ShoppingCart, to: '/' },
     { id: 'keywords', label: 'Keywords', icon: Eye, to: '/keywords' },
+] as const;
+
+const tabsBetweenKeywordAndShop = [
     { id: 'shops', label: 'Shops', icon: Activity, to: '/shops' },
 ] as const;
 
@@ -34,50 +47,13 @@ const isLocationStateRecord = (value: unknown): value is Record<string, unknown>
     return value !== null && typeof value === 'object';
 };
 
-const DashboardJobsSummary = () => {
-    const { data, isPending } = useDashboardSummaryQuery();
-    const queuedJobs = data?.queuedJobs;
-    const inFlightJobs = data?.inFlightJobs;
-    const hasActive =
-        (typeof inFlightJobs === 'number' && inFlightJobs > 0) ||
-        (typeof queuedJobs === 'number' && queuedJobs > 0);
-
-    return (
-        <span
-            className={cn(
-                'inline-flex items-center gap-1.5 rounded px-1.5 py-0.5',
-                hasActive
-                    ? 'bg-terminal-blue/10 text-terminal-blue'
-                    : 'bg-secondary text-muted-foreground'
-            )}
-        >
-            <Briefcase className="size-2.5 text-terminal-dim" />
-            <span className="text-terminal-dim uppercase tracking-wider">jobs</span>
-            <SummaryCount
-                isLoading={isPending}
-                minWidthClassName="min-w-[3ch]"
-                skeletonWidthClassName="w-[3ch]"
-                value={queuedJobs}
-                valueClassName={hasActive ? 'text-terminal-blue' : 'text-foreground'}
-            />
-            <span className="text-terminal-dim uppercase tracking-wider">queued</span>
-            <span className="text-terminal-dim">/</span>
-            <SummaryCount
-                isLoading={isPending}
-                minWidthClassName="min-w-[3ch]"
-                skeletonWidthClassName="w-[3ch]"
-                value={inFlightJobs}
-                valueClassName={hasActive ? 'text-terminal-blue' : 'text-foreground'}
-            />
-            <span className="text-terminal-dim uppercase tracking-wider">in-flight</span>
-        </span>
-    );
-};
-
 export function DashboardShell() {
     const connection = useEtsyOAuthConnection();
     const location = useLocation();
     const navigate = useNavigate();
+    const [keywordTabs, setKeywordTabs] = useState<KeywordActivityTabState[]>(() =>
+        loadKeywordActivityTabs()
+    );
     const [shopTabs, setShopTabs] = useState<ShopActivityTabState[]>(() => loadShopActivityTabs());
     const { getToken } = useAuth();
     const getAuthToken = useCallback(async () => {
@@ -85,27 +61,74 @@ export function DashboardShell() {
     }, [getToken]);
     useRealtimeQueryInvalidations(getAuthToken);
 
+    const activeKeywordActivity = useMemo(() => {
+        return parseKeywordActivityPath(location.pathname);
+    }, [location.pathname]);
     const activeShopActivity = useMemo(() => {
         return parseShopActivityPath(location.pathname);
     }, [location.pathname]);
 
-    const stateShopName = useMemo(() => {
-        if (!isLocationStateRecord(location.state)) {
-            return null;
-        }
+    const locationState = useMemo(() => {
+        return isLocationStateRecord(location.state) ? location.state : null;
+    }, [location.state]);
 
-        const value = location.state.shopName;
+    const stateKeyword = useMemo(() => {
+        const value = locationState?.keyword;
 
         if (typeof value !== 'string' || value.trim().length === 0) {
             return null;
         }
 
         return value.trim();
-    }, [location.state]);
+    }, [locationState]);
+
+    const stateShopName = useMemo(() => {
+        const value = locationState?.shopName;
+
+        if (typeof value !== 'string' || value.trim().length === 0) {
+            return null;
+        }
+
+        return value.trim();
+    }, [locationState]);
+
+    useEffect(() => {
+        saveKeywordActivityTabs(keywordTabs);
+    }, [keywordTabs]);
 
     useEffect(() => {
         saveShopActivityTabs(shopTabs);
     }, [shopTabs]);
+
+    useEffect(() => {
+        if (!activeKeywordActivity) {
+            return;
+        }
+
+        const trackedKeywordId = activeKeywordActivity.trackedKeywordId;
+
+        setKeywordTabs((current) => {
+            const existing = current.find((item) => item.trackedKeywordId === trackedKeywordId);
+
+            if (existing) {
+                if (!stateKeyword) {
+                    return current;
+                }
+
+                return upsertKeywordActivityTab(current, {
+                    keyword: stateKeyword,
+                    trackedKeywordId,
+                });
+            }
+
+            const fallbackLabel = `Keyword ${trackedKeywordId.slice(0, 8)}`;
+
+            return upsertKeywordActivityTab(current, {
+                keyword: normalizeKeywordTabLabel(stateKeyword ?? fallbackLabel),
+                trackedKeywordId,
+            });
+        });
+    }, [activeKeywordActivity, stateKeyword]);
 
     useEffect(() => {
         if (!activeShopActivity) {
@@ -136,6 +159,19 @@ export function DashboardShell() {
             });
         });
     }, [activeShopActivity, stateShopName]);
+
+    const closeKeywordTab = useCallback(
+        (trackedKeywordId: string) => {
+            setKeywordTabs((current) => removeKeywordActivityTab(current, trackedKeywordId));
+
+            if (activeKeywordActivity?.trackedKeywordId === trackedKeywordId) {
+                navigate('/keywords', {
+                    replace: true,
+                });
+            }
+        },
+        [activeKeywordActivity, navigate]
+    );
 
     const closeShopTab = useCallback(
         (etsyShopId: string) => {
@@ -183,7 +219,29 @@ export function DashboardShell() {
 
             <nav className="flex min-w-0 items-center border-border border-b bg-card px-2">
                 <div className="flex min-w-0 flex-1 items-center overflow-x-auto">
-                    {tabsBeforeShop.map((tab) => (
+                    {tabsBeforeKeyword.map((tab) => (
+                        <DashboardTabLink
+                            icon={tab.icon}
+                            key={tab.id}
+                            label={tab.label}
+                            to={tab.to}
+                        />
+                    ))}
+
+                    {keywordTabs.length > 0 ? <span className="mx-2 h-4 w-px bg-border" /> : null}
+
+                    {keywordTabs.map((tab) => (
+                        <DashboardActivityTabLink
+                            icon={Eye}
+                            id={tab.trackedKeywordId}
+                            key={tab.trackedKeywordId}
+                            label={tab.keyword}
+                            onClose={() => closeKeywordTab(tab.trackedKeywordId)}
+                            to={toKeywordActivityPath(tab.trackedKeywordId)}
+                        />
+                    ))}
+
+                    {tabsBetweenKeywordAndShop.map((tab) => (
                         <DashboardTabLink
                             icon={tab.icon}
                             key={tab.id}
@@ -195,47 +253,17 @@ export function DashboardShell() {
                     {shopTabs.length > 0 ? <span className="mx-2 h-4 w-px bg-border" /> : null}
 
                     {shopTabs.map((tab) => (
-                        <div className="relative mr-1 shrink-0" key={tab.etsyShopId}>
-                            <NavLink
-                                className={({ isActive }) =>
-                                    cn(
-                                        'relative flex cursor-pointer items-center gap-1.5 px-3 py-2 pr-7 text-xs transition-colors',
-                                        isActive
-                                            ? 'text-primary'
-                                            : 'text-muted-foreground hover:text-foreground'
-                                    )
-                                }
-                                to={toShopActivityPath(tab.etsyShopId)}
-                            >
-                                {({ isActive }) => (
-                                    <>
-                                        <Store className="size-3.5" />
-                                        <span className="max-w-48 truncate font-medium">
-                                            {tab.shopName}
-                                        </span>
-                                        {isActive ? (
-                                            <span className="absolute inset-x-2 bottom-0 h-px bg-primary" />
-                                        ) : null}
-                                    </>
-                                )}
-                            </NavLink>
-                            <button
-                                aria-label={`Close ${tab.shopName}`}
-                                className="absolute top-1/2 right-1 inline-flex size-4 -translate-y-1/2 items-center justify-center rounded text-terminal-dim transition-colors hover:bg-secondary hover:text-foreground"
-                                onClick={(event) => {
-                                    event.preventDefault();
-                                    closeShopTab(tab.etsyShopId);
-                                }}
-                                type="button"
-                            >
-                                <X className="size-3" />
-                            </button>
-                        </div>
+                        <DashboardActivityTabLink
+                            icon={Store}
+                            id={tab.etsyShopId}
+                            key={tab.etsyShopId}
+                            label={tab.shopName}
+                            onClose={() => closeShopTab(tab.etsyShopId)}
+                            to={toShopActivityPath(tab.etsyShopId)}
+                        />
                     ))}
 
-                    {shopTabs.length > 0 && tabsAfterShop.length > 0 ? (
-                        <span className="mx-2 h-4 w-px bg-border" />
-                    ) : null}
+                    {tabsAfterShop.length > 0 ? <span className="mx-2 h-4 w-px bg-border" /> : null}
 
                     {tabsAfterShop.map((tab) => (
                         <DashboardTabLink

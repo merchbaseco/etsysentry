@@ -351,6 +351,144 @@ Input:
 Output:
 - same shape as `app.etsyAuth.status`
 
+### Keywords
+
+`app.keywords.list` (query)
+
+Input:
+
+```ts
+{}
+```
+
+Output:
+
+```ts
+{
+  items: Array<{
+    id: string; // tracked keyword id (uuid)
+    accountId: string;
+    keyword: string;
+    normalizedKeyword: string;
+    trackingState: 'active' | 'paused' | 'error';
+    syncState: 'idle' | 'queued' | 'syncing';
+    lastRefreshedAt: string; // ISO timestamp
+    nextSyncAt: string; // ISO timestamp
+    lastRefreshError: string | null;
+    trackerClerkUserId: string;
+    updatedAt: string; // ISO timestamp
+  }>;
+}
+```
+
+`app.keywords.track` (mutation)
+
+Input:
+
+```ts
+{
+  keyword: string;
+}
+```
+
+Output:
+
+```ts
+{
+  created: boolean;
+  item: {
+    // same item shape as entries in app.keywords.list output
+  };
+}
+```
+
+`app.keywords.refresh` (mutation)
+
+Input:
+
+```ts
+{
+  trackedKeywordId: string; // uuid
+}
+```
+
+Output:
+- same item shape as entries in `app.keywords.list` output
+
+`app.keywords.getDailyProductRanksForKeyword` (query)
+
+Input:
+
+```ts
+{
+  trackedKeywordId: string; // uuid
+}
+```
+
+Output:
+
+```ts
+{
+  trackedKeywordId: string; // uuid
+  keyword: string;
+  normalizedKeyword: string;
+  observedAt: string | null; // ISO timestamp for latest capture
+  items: Array<{
+    trackedKeywordId: string; // uuid
+    listingId: string; // tracked listing id (uuid)
+    etsyListingId: string;
+    observedAt: string; // ISO timestamp
+    rank: number;
+  }>;
+}
+```
+
+`app.keywords.getActivity` (query)
+
+Input:
+
+```ts
+{
+  trackedKeywordId: string; // uuid
+  days?: number; // optional, 1..30 lookback days from latest capture (default 14)
+}
+```
+
+Output:
+
+```ts
+{
+  keyword: {
+    id: string; // tracked keyword id (uuid)
+    keyword: string;
+    normalizedKeyword: string;
+    trackingState: 'active' | 'paused' | 'error';
+    syncState: 'idle' | 'queued' | 'syncing';
+    lastRefreshedAt: string; // ISO timestamp
+    nextSyncAt: string; // ISO timestamp
+  };
+  capturedAt: string | null; // ISO timestamp for latest capture
+  previousCapturedAt: string | null; // ISO timestamp for previous capture in lookback window
+  historyWindowDays: number;
+  items: Array<{
+    currentRank: number;
+    rankChanges: {
+      change1d: number; // 0 when no baseline capture exists
+      change7d: number; // 0 when no baseline capture exists
+      change30d: number; // 0 when no baseline capture exists
+      bestRank: number | null;
+    };
+    listing: {
+      // same shape as entries in app.listings.list output
+    };
+    history: Array<{
+      observedAt: string; // ISO timestamp
+      rank: number;
+    }>;
+  }>;
+}
+```
+
 ### Listings
 
 `app.listings.list` (query)

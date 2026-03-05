@@ -27,6 +27,8 @@ This file is the always-on guide for AI coding assistants in EtsySentry.
     flows instead of direct client calls.
 11. Each frontend hook must live in its own file under `apps/website/src/hooks` using
     `use-*.ts` naming (for example `use-tracked-shops.ts` exports `useTrackedShops`).
+12. Keep business logic and data reconciliation on the server; frontend components should render
+    server-shaped view models rather than joining or reconciling domain datasets client-side.
 
 ## Naming Rules
 
