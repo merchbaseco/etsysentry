@@ -21,6 +21,7 @@ import { useKeywordActivity } from '@/hooks/use-keyword-activity';
 import { useRefreshTrackedListing } from '@/hooks/use-refresh-tracked-listing';
 import {
     DAYS_OPTIONS,
+    DEFAULT_KEYWORD_ACTIVITY_DAYS,
     isKeywordActivityTabState,
     type KeywordActivityDaysOption,
     toKeywordActivityPrimaryErrorMessage,
@@ -32,7 +33,7 @@ export function KeywordActivityTab() {
     const { trackedKeywordId } = useParams<{ trackedKeywordId: string }>();
     const location = useLocation();
     const locationState = isKeywordActivityTabState(location.state) ? location.state : undefined;
-    const [days, setDays] = useState<KeywordActivityDaysOption>(14);
+    const [days, setDays] = useState<KeywordActivityDaysOption>(DEFAULT_KEYWORD_ACTIVITY_DAYS);
     const [refreshingById, setRefreshingById] = useState<Record<string, boolean>>({});
     const [historyListing, setHistoryListing] = useState<
         KeywordActivityListingRow['listing'] | null

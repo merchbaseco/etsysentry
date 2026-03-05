@@ -450,7 +450,7 @@ Input:
 ```ts
 {
   trackedKeywordId: string; // uuid
-  days?: number; // optional, 1..30 lookback days from latest capture (default 14)
+  days?: number; // optional, 1..30 lookback days from latest capture (default 30)
 }
 ```
 
@@ -835,27 +835,72 @@ Auth notes:
 
 tRPC dotted keys:
 - `public.keywords.list`
+- `public.keywords.listings.list`
+- `public.keywords.getActivity`
 - `public.keywords.track`
 - `public.listings.list`
 - `public.listings.track`
 - `public.listings.getPerformance`
 - `public.shops.list`
+- `public.shops.listings.list`
+- `public.shops.overview.get`
 - `public.shops.track`
 
 Canonical slash mapping (CLI/http naming):
 - `keywords/list` -> `public.keywords.list`
+- `keywords/listings/list` -> `public.keywords.listings.list`
+- `keywords/get-activity` -> `public.keywords.getActivity`
 - `keywords/track` -> `public.keywords.track`
 - `listings/list` -> `public.listings.list`
 - `listings/track` -> `public.listings.track`
 - `listings/get-performance` -> `public.listings.getPerformance`
 - `shops/list` -> `public.shops.list`
+- `shops/listings/list` -> `public.shops.listings.list`
+- `shops/overview/get` -> `public.shops.overview.get`
 - `shops/track` -> `public.shops.track`
 
 ### Implemented Procedures
 
 `keywords/list` (query)
-- Input: `{}`
+- Input:
+
+```ts
+{
+  search?: string;
+  trackingState?: 'active' | 'paused' | 'error';
+  syncState?: 'idle' | 'queued' | 'syncing';
+  limit?: number; // 1..200
+  offset?: number; // >= 0
+}
+```
 - Output: same shape as `app.keywords.list`
+
+`keywords/listings/list` (query)
+
+Input:
+
+```ts
+{
+  trackedKeywordId: string; // uuid
+}
+```
+
+Output:
+- same shape as `app.keywords.getDailyProductRanksForKeyword`
+
+`keywords/get-activity` (query)
+
+Input:
+
+```ts
+{
+  trackedKeywordId: string; // uuid
+  days?: number; // optional, 1..30 lookback days from latest capture (default 30)
+}
+```
+
+Output:
+- same shape as `app.keywords.getActivity`
 
 `keywords/track` (mutation)
 
@@ -871,7 +916,18 @@ Output:
 - same shape/behavior as `app.keywords.track`
 
 `listings/list` (query)
-- Input: `{}`
+- Input:
+
+```ts
+{
+  search?: string;
+  trackingState?: 'active' | 'paused' | 'error' | 'fatal';
+  syncState?: 'idle' | 'queued' | 'syncing';
+  showDigital?: boolean; // default true
+  limit?: number; // 1..200
+  offset?: number; // >= 0
+}
+```
 - Output: same shape as `app.listings.list` (includes USD decoration fields)
 
 `listings/track` (mutation)
@@ -937,8 +993,50 @@ Output:
 ```
 
 `shops/list` (query)
-- Input: `{}`
+- Input:
+
+```ts
+{
+  search?: string;
+  trackingState?: 'active' | 'paused' | 'error';
+  syncState?: 'idle' | 'queued' | 'syncing';
+  limit?: number; // 1..200
+  offset?: number; // >= 0
+}
+```
 - Output: same shape as `app.shops.list`
+
+`shops/listings/list` (query)
+
+Input:
+
+```ts
+{
+  etsyShopId: string;
+  sortOrder?: 'most_recently_sold' | 'most_recently_favorited' | 'newest_listings';
+  search?: string;
+  trackingState?: 'active' | 'paused' | 'error' | 'fatal';
+  syncState?: 'idle' | 'queued' | 'syncing';
+  limit?: number; // 1..200
+  offset?: number; // >= 0
+}
+```
+
+Output:
+- same shape as `app.shops.listListings` (includes USD decoration fields on `items`)
+
+`shops/overview/get` (query)
+
+Input:
+
+```ts
+{
+  etsyShopId: string;
+}
+```
+
+Output:
+- same shape as `app.shops.getOverview`
 
 `shops/track` (mutation)
 

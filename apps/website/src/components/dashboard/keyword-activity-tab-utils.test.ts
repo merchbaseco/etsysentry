@@ -1,5 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import {
+    DAYS_OPTIONS,
+    DEFAULT_KEYWORD_ACTIVITY_DAYS,
     isKeywordActivityTabState,
     toKeywordActivityTitle,
 } from '@/components/dashboard/keyword-activity-tab-utils';
@@ -34,5 +36,12 @@ describe('toKeywordActivityTitle', () => {
                 trackedKeywordId: 'abc123456789',
             })
         ).toBe('Keyword abc12345');
+    });
+});
+
+describe('keyword activity defaults', () => {
+    test('uses 30-day default window present in supported options', () => {
+        expect(DEFAULT_KEYWORD_ACTIVITY_DAYS).toBe(30);
+        expect(DAYS_OPTIONS.includes(DEFAULT_KEYWORD_ACTIVITY_DAYS)).toBe(true);
     });
 });
