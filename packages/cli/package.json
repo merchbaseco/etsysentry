@@ -1,6 +1,6 @@
 {
   "name": "@etsysentry/cli",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Official EtsySentry command line interface",
   "type": "module",
   "bin": {
@@ -21,7 +21,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@etsysentry/http-client": "^0.1.1",
+    "@etsysentry/http-client": "^0.2.0",
     "@trpc/client": "^11.10.0"
   },
   "devDependencies": {

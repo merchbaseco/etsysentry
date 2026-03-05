@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+## v0.2.0 - 2026-03-05
+
+### Added
+
+- Public API now supports canonical filters and nested read routes for keyword, listing, and shop
+  retrieval workflows.
+- Dashboard now includes keyword activity views with day-based rank movement context.
+- Shops now include daily activity trends for sales and favorites with expanded activity tabs.
+- Listing history now tracks ending timestamps and normalized listing tags for richer analysis.
+
+### Changed
+
+- Dashboard listing and shop views received layout, readability, and sparkline tooltip UX
+  improvements.
+- Server Etsy request handling now applies timeout retries to improve sync reliability.
+
 ## v0.1.1 - 2026-02-27
 
 ### Added
