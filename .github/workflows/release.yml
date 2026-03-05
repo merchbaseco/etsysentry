@@ -1,0 +1,109 @@
+name: Release
+
+on:
+    workflow_dispatch:
+        inputs:
+            version:
+                description: 'Release version without v prefix (for example 0.2.1)'
+                required: true
+                type: string
+    push:
+        tags:
+            - 'v*.*.*'
+
+permissions:
+    contents: write
+
+jobs:
+    create-tag:
+        if: github.event_name == 'workflow_dispatch'
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout main
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+                  ref: main
+
+            - name: Validate release metadata
+              env:
+                  VERSION: ${{ inputs.version }}
+              run: |
+                  set -euo pipefail
+
+                  TAG="v${VERSION}"
+                  HTTP_VERSION=$(jq -r '.version' packages/http-client/package.json)
+                  CLI_VERSION=$(jq -r '.version' packages/cli/package.json)
+
+                  if [[ "${HTTP_VERSION}" != "${VERSION}" ]]; then
+                      echo "packages/http-client/package.json version (${HTTP_VERSION}) does not match ${VERSION}." >&2
+                      exit 1
+                  fi
+
+                  if [[ "${CLI_VERSION}" != "${VERSION}" ]]; then
+                      echo "packages/cli/package.json version (${CLI_VERSION}) does not match ${VERSION}." >&2
+                      exit 1
+                  fi
+
+                  if ! grep -q "^## v${VERSION} - " CHANGELOG.md; then
+                      echo "CHANGELOG.md is missing heading for ${TAG}." >&2
+                      exit 1
+                  fi
+
+                  if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+                      echo "Tag ${TAG} already exists." >&2
+                      exit 1
+                  fi
+
+            - name: Create and push tag
+              env:
+                  VERSION: ${{ inputs.version }}
+              run: |
+                  set -euo pipefail
+
+                  TAG="v${VERSION}"
+                  git config user.name 'github-actions[bot]'
+                  git config user.email 'github-actions[bot]@users.noreply.github.com'
+                  git tag -a "${TAG}" -m "release: ${TAG}"
+                  git push origin "${TAG}"
+
+    publish-release:
+        if: github.event_name == 'push'
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout tag commit
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: Build release notes from changelog
+              env:
+                  TAG: ${{ github.ref_name }}
+              run: |
+                  set -euo pipefail
+
+                  VERSION="${TAG#v}"
+                  NOTES_FILE="${RUNNER_TEMP}/release-notes.md"
+
+                  awk "/^## v${VERSION} - /{flag=1; next} /^## v/{if(flag) exit} flag" CHANGELOG.md > "${NOTES_FILE}"
+
+                  if [[ ! -s "${NOTES_FILE}" ]]; then
+                      echo "Missing changelog section for ${TAG}." >&2
+                      exit 1
+                  fi
+
+                  echo "NOTES_FILE=${NOTES_FILE}" >> "${GITHUB_ENV}"
+
+            - name: Create or update GitHub Release
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  TAG: ${{ github.ref_name }}
+                  NOTES_FILE: ${{ env.NOTES_FILE }}
+              run: |
+                  set -euo pipefail
+
+                  if gh release view "${TAG}" >/dev/null 2>&1; then
+                      gh release edit "${TAG}" --title "${TAG}" --notes-file "${NOTES_FILE}"
+                  else
+                      gh release create "${TAG}" --title "${TAG}" --notes-file "${NOTES_FILE}"
+                  fi
