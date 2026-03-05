@@ -1,12 +1,12 @@
 import { router } from '../../trpc';
-import { publicShopsGetOverviewProcedure } from './get-overview';
 import { publicShopsListProcedure } from './list';
-import { publicShopsListListingsProcedure } from './list-listings';
+import { publicShopsListingsRouter } from './listings/router';
+import { publicShopsOverviewRouter } from './overview/router';
 import { publicShopsTrackProcedure } from './track';
 
 export const publicShopsRouter = router({
-    getOverview: publicShopsGetOverviewProcedure,
     list: publicShopsListProcedure,
-    listListings: publicShopsListListingsProcedure,
+    listings: publicShopsListingsRouter,
+    overview: publicShopsOverviewRouter,
     track: publicShopsTrackProcedure,
 });

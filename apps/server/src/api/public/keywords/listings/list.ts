@@ -1,8 +1,8 @@
 import { z } from 'zod';
-import { getDailyProductRanksForKeyword } from '../../../services/keywords/keyword-rankings-service';
-import { publicProcedure } from '../../trpc';
+import { getDailyProductRanksForKeyword } from '../../../../services/keywords/keyword-rankings-service';
+import { publicProcedure } from '../../../trpc';
 
-export const publicKeywordsGetDailyProductRanksForKeywordProcedure = publicProcedure
+export const publicKeywordsListingsListProcedure = publicProcedure
     .input(
         z.object({
             trackedKeywordId: z.string().uuid(),
