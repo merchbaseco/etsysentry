@@ -4,9 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+## v0.4.1 - 2026-03-09
+
 ### Added
 
-- CLI now supports `es changelog` and `--version` for local release/metadata inspection.
+- CLI now supports `es changelog` and `--version` for quick local release inspection.
 
 ## v0.4.0 - 2026-03-09
 
