@@ -1,5 +1,5 @@
 import { createEtsySentryClient } from '@etsysentry/http-client';
-import { assertValidRange, resolveApiKey, resolveBaseUrl, resolveRange } from './config.js';
+import { resolveApiKey, resolveBaseUrl, resolveRange } from './config.js';
 import { failWith } from './errors.js';
 import {
     filterKeywordItems,
@@ -34,7 +34,7 @@ const createApiClient = (params: { config: CliConfig; flags: CliFlags }) => {
     if (!apiKey) {
         failWith({
             code: 'MISSING_CONFIG',
-            message: 'ETSYSENTRY_API_KEY or --api-key is required',
+            message: 'ES_API_KEY or --api-key is required',
         });
     }
 
@@ -134,9 +134,7 @@ const runListingsCommand = async (params: {
         });
 
         const mode = parsePerformanceMode(params.flags.mode);
-        const range = params.flags.range
-            ? assertValidRange(params.flags.range)
-            : resolveRange(params);
+        const range = resolveRange(params.flags.range);
         const metrics = parsePerformanceMetrics(params.flags.metrics);
 
         const response = await client.queryClient.fetchQuery(

@@ -1,5 +1,5 @@
 import { createEtsySentryClient } from '@etsysentry/http-client';
-import { assertValidRange, resolveApiKey, resolveBaseUrl, resolveRange } from './config.js';
+import { resolveApiKey, resolveBaseUrl, resolveRange } from './config.js';
 import { failWith } from './errors.js';
 import { filterKeywordItems, filterListingItems, filterShopItems, parsePerformanceMetrics, parsePerformanceMode, } from './filters.js';
 import { paginateListItems, resolveListPagination } from './list-pagination.js';
@@ -22,7 +22,7 @@ const createApiClient = (params) => {
     if (!apiKey) {
         failWith({
             code: 'MISSING_CONFIG',
-            message: 'ETSYSENTRY_API_KEY or --api-key is required',
+            message: 'ES_API_KEY or --api-key is required',
         });
     }
     return createEtsySentryClient({
@@ -94,9 +94,7 @@ const runListingsCommand = async (params) => {
             message: 'listings performance requires <tracked_listing_id>.',
         });
         const mode = parsePerformanceMode(params.flags.mode);
-        const range = params.flags.range
-            ? assertValidRange(params.flags.range)
-            : resolveRange(params);
+        const range = resolveRange(params.flags.range);
         const metrics = parsePerformanceMetrics(params.flags.metrics);
         const response = await client.queryClient.fetchQuery(client.trpc.public.listings.getPerformance.queryOptions({
             metrics,

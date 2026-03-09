@@ -91,8 +91,11 @@ export const saveStorageDir = async (storageDir: string): Promise<void> => {
 };
 
 export const resolveStoragePaths = async (): Promise<CliStoragePaths> => {
+    const envStorageDir = toOptionalTrimmed(process.env.ES_STORAGE_DIR);
     const globalConfig = await loadGlobalConfig();
-    const storageDir = globalConfig.storageDir ?? DEFAULT_STORAGE_DIR;
+    const storageDir = envStorageDir
+        ? normalizeStorageDir(envStorageDir)
+        : (globalConfig.storageDir ?? DEFAULT_STORAGE_DIR);
 
     return {
         configPath: resolveConfigPath(storageDir),

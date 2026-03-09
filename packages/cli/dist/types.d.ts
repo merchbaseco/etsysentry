@@ -1,6 +1,5 @@
 export interface CliConfig {
     baseUrl?: string;
-    range?: string;
 }
 export interface CliGlobalConfig {
     storageDir?: string;

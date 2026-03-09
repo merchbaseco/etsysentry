@@ -18,7 +18,7 @@ Covered primitives:
 
 Covered operations:
 - env-based API key auth plus local base URL config
-- local default time-range config
+- local storage-dir config with env override support
 - track/list for all primitives
 - listing performance retrieval
 
@@ -63,11 +63,11 @@ current app capability set first, before adding broader v1 features.
 
 API key lookup precedence:
 - `--api-key` flag
-- `ETSYSENTRY_API_KEY` env var
+- `ES_API_KEY` env var
 
 Base URL precedence:
 - `--base-url` flag
-- `ETSYSENTRY_API_BASE_URL` env var
+- `ES_BASE_URL` env var
 - `<active-storage-dir>/config.json` (`baseUrl`, default `https://etsysentry.merchbase.co`)
 
 Etsy precondition:
@@ -94,7 +94,7 @@ Error envelope:
   "ok": false,
   "error": {
     "code": "MISSING_CONFIG",
-    "message": "ETSYSENTRY_API_KEY or --api-key is required",
+    "message": "ES_API_KEY or --api-key is required",
     "details": {}
   }
 }
@@ -110,10 +110,10 @@ Commands:
 - `es config show`
 - `es config clear`
 - `es config set base-url <value>`
-- `es config set range <7d|30d|90d|YYYY-MM-DD..YYYY-MM-DD>`
 - `es config set storage-dir <path>`
 
 Storage-dir behavior:
+- `ES_STORAGE_DIR` overrides the active storage directory for the current process only
 - `storage-dir` is persisted globally in `~/.etsysentry/settings.json`
 - all subsequent CLI commands read and write config/data from that directory
 - switching directories preserves the currently active config by writing it into the next directory
@@ -150,8 +150,6 @@ Time-range syntax:
 
 Range precedence (for commands that support `--range`):
 - `--range` flag
-- `ETSYSENTRY_DEFAULT_RANGE` env var
-- `<active-storage-dir>/config.json` (`range`)
 - default: `30d`
 
 Target cardinality convention:
@@ -314,7 +312,6 @@ Commands:
   config show
   config clear
   config set base-url <value>
-  config set range <7d|30d|90d|YYYY-MM-DD..YYYY-MM-DD>
   config set storage-dir <path>
 
   keywords list [--search <text>] [--tracking-state <state>] [--sync-state <state>]
@@ -342,10 +339,9 @@ Aliases:
 ## Command Examples
 
 ```bash
-export ETSYSENTRY_API_KEY=esk_live_xxx
+export ES_API_KEY=esk_live_xxx
+export ES_STORAGE_DIR=/data/etsysentry
 es config set base-url https://etsysentry.merchbase.co
-es config set range 30d
-es config set storage-dir ~/.config/etsysentry
 
 es track keyword "mid century wall art"
 es track product https://www.etsy.com/listing/1234567890/example

@@ -59,10 +59,6 @@ const loadConfigFile = async (configPath: string): Promise<CliConfig> => {
                 typeof parsed.baseUrl === 'string' && parsed.baseUrl.trim().length > 0
                     ? normalizeBaseUrl(parsed.baseUrl)
                     : undefined,
-            range:
-                typeof parsed.range === 'string' && parsed.range.trim().length > 0
-                    ? assertValidRange(parsed.range)
-                    : undefined,
         };
     } catch (error) {
         if (
@@ -136,25 +132,23 @@ export const switchStorageDir = async (params: {
 
 export const resolveApiKey = (params: { config: CliConfig; flags: CliFlags }): string | null => {
     const fromFlag = toOptionalTrimmed(params.flags.apiKey);
-    const fromEnv = toOptionalTrimmed(process.env.ETSYSENTRY_API_KEY);
+    const fromEnv = toOptionalTrimmed(process.env.ES_API_KEY);
 
     return fromFlag ?? fromEnv ?? null;
 };
 
 export const resolveBaseUrl = (params: { config: CliConfig; flags: CliFlags }): string => {
     const fromFlag = toOptionalTrimmed(params.flags.baseUrl);
-    const fromEnv = toOptionalTrimmed(process.env.ETSYSENTRY_API_BASE_URL);
+    const fromEnv = toOptionalTrimmed(process.env.ES_BASE_URL);
     const fromConfig = toOptionalTrimmed(params.config.baseUrl);
 
     return normalizeBaseUrl(fromFlag ?? fromEnv ?? fromConfig ?? DEFAULT_BASE_URL);
 };
 
-export const resolveRange = (params: { config: CliConfig; flags: CliFlags }): string => {
-    const fromFlag = toOptionalTrimmed(params.flags.range);
-    const fromEnv = toOptionalTrimmed(process.env.ETSYSENTRY_DEFAULT_RANGE);
-    const fromConfig = toOptionalTrimmed(params.config.range);
+export const resolveRange = (rangeFlag: string | undefined): string => {
+    const fromFlag = toOptionalTrimmed(rangeFlag);
 
-    return assertValidRange(fromFlag ?? fromEnv ?? fromConfig ?? '30d');
+    return assertValidRange(fromFlag ?? '30d');
 };
 
 export const updateConfigFromSet = (params: {
@@ -171,17 +165,12 @@ export const updateConfigFromSet = (params: {
         return nextConfig;
     }
 
-    if (params.key === 'range') {
-        nextConfig.range = assertValidRange(params.value);
-        return nextConfig;
-    }
-
     failWith({
         code: 'BAD_REQUEST',
         message: 'Unsupported config key.',
         details: {
             key: params.key,
-            supportedKeys: ['base-url', 'range', 'storage-dir'],
+            supportedKeys: ['base-url', 'storage-dir'],
         },
     });
 

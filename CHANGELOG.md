@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+## v0.4.0 - 2026-03-09
+
+### Changed
+
+- CLI now supports `ES_STORAGE_DIR` as a non-persistent storage override for
+  containerized or ephemeral runtimes.
+- CLI no longer supports a configurable default range; `30d` is the fixed built-in default unless
+  `--range` is passed.
+
 ## v0.3.0 - 2026-03-09
 
 ### Added

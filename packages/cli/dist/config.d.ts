@@ -20,10 +20,7 @@ export declare const resolveBaseUrl: (params: {
     config: CliConfig;
     flags: CliFlags;
 }) => string;
-export declare const resolveRange: (params: {
-    config: CliConfig;
-    flags: CliFlags;
-}) => string;
+export declare const resolveRange: (rangeFlag: string | undefined) => string;
 export declare const updateConfigFromSet: (params: {
     config: CliConfig;
     key: string;

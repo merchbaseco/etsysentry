@@ -10,7 +10,6 @@ export const printUsage = async (): Promise<void> => {
         '  config show',
         '  config clear',
         '  config set base-url <value>',
-        '  config set range <7d|30d|90d|YYYY-MM-DD..YYYY-MM-DD>',
         '  config set storage-dir <path>',
         '',
         '  keywords list [--search <text>] [--tracking-state <state>] [--sync-state <state>] [--limit <n>] [--offset <n>]',
@@ -51,9 +50,9 @@ export const printUsage = async (): Promise<void> => {
         `  bootstrap settings: ${GLOBAL_CONFIG_PATH}`,
         '',
         'Env fallbacks:',
-        '  ETSYSENTRY_API_KEY',
-        '  ETSYSENTRY_API_BASE_URL',
-        '  ETSYSENTRY_DEFAULT_RANGE',
+        '  ES_API_KEY',
+        '  ES_BASE_URL',
+        '  ES_STORAGE_DIR',
     ];
 
     console.log(lines.join('\n'));
