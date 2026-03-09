@@ -1,5 +1,5 @@
 import type { CliCommand, CliFlags } from './types.js';
-export declare const parseCliInput: () => {
+export declare const parseCliInput: (args?: string[]) => {
     flags: CliFlags;
     positionals: string[];
 };
