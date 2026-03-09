@@ -5,25 +5,21 @@ const toCreatedAtMs = (value: string): number => {
     return Number.isNaN(parsed) ? 0 : parsed;
 };
 
-export const pickNewestActiveApiKey = (items: readonly ApiKeyRecord[]): ApiKeyRecord | null => {
-    let newestActiveItem: ApiKeyRecord | null = null;
+export const pickNewestApiKey = (items: readonly ApiKeyRecord[]): ApiKeyRecord | null => {
+    let newestItem: ApiKeyRecord | null = null;
 
     for (const item of items) {
-        if (item.revokedAt) {
+        if (!newestItem) {
+            newestItem = item;
             continue;
         }
 
-        if (!newestActiveItem) {
-            newestActiveItem = item;
-            continue;
-        }
-
-        if (toCreatedAtMs(item.createdAt) > toCreatedAtMs(newestActiveItem.createdAt)) {
-            newestActiveItem = item;
+        if (toCreatedAtMs(item.createdAt) > toCreatedAtMs(newestItem.createdAt)) {
+            newestItem = item;
         }
     }
 
-    return newestActiveItem;
+    return newestItem;
 };
 
 export const maskApiKeyValue = (value: string): string => {

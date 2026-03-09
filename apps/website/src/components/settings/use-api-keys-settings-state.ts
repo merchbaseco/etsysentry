@@ -3,7 +3,7 @@ import { useApiKeys } from '@/hooks/use-api-keys';
 import { useCreateApiKey } from '@/hooks/use-create-api-key';
 import { useRevokeApiKey } from '@/hooks/use-revoke-api-key';
 import type { ApiKeyRecord } from '@/lib/api-keys-api';
-import { pickNewestActiveApiKey } from './api-key-utils';
+import { pickNewestApiKey } from './api-key-utils';
 import { formatApiKeyErrorMessage, type SettingsPage } from './shared';
 
 interface UseApiKeysSettingsStateParams {
@@ -50,7 +50,7 @@ export const useApiKeysSettingsState = ({
                 throw result.error ?? new Error('Failed to fetch API keys.');
             }
 
-            const nextActiveApiKey = pickNewestActiveApiKey(response.items);
+            const nextActiveApiKey = pickNewestApiKey(response.items);
 
             setActiveApiKey(nextActiveApiKey);
             setRawApiKey((currentRawApiKey) => {

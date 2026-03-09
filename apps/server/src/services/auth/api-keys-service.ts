@@ -24,7 +24,6 @@ export interface ApiKeyRecord {
     lastUsedAt: string | null;
     name: string;
     ownerClerkUserId: string;
-    revokedAt: string | null;
     updatedAt: string;
 }
 
@@ -43,7 +42,6 @@ const toRecord = (row: typeof apiKeys.$inferSelect): ApiKeyRecord => {
         name: row.name,
         keyPrefix: row.keyPrefix,
         lastUsedAt: row.lastUsedAt ? row.lastUsedAt.toISOString() : null,
-        revokedAt: row.revokedAt ? row.revokedAt.toISOString() : null,
         createdAt: row.createdAt.toISOString(),
         updatedAt: row.updatedAt.toISOString(),
     };
@@ -121,7 +119,7 @@ export const listApiKeysByAccountId = async (params: {
     const rows = await db
         .select()
         .from(apiKeys)
-        .where(eq(apiKeys.accountId, params.accountId))
+        .where(and(eq(apiKeys.accountId, params.accountId), isNull(apiKeys.revokedAt)))
         .orderBy(desc(apiKeys.createdAt));
 
     return {
@@ -159,25 +157,13 @@ export const createApiKey = async (params: {
     };
 };
 
-export const revokeApiKeyById = async (params: {
+export const deleteApiKeyById = async (params: {
     accountId: string;
     apiKeyId: string;
 }): Promise<ApiKeyRecord | null> => {
-    const now = new Date();
-
     const [row] = await db
-        .update(apiKeys)
-        .set({
-            revokedAt: now,
-            updatedAt: now,
-        })
-        .where(
-            and(
-                eq(apiKeys.accountId, params.accountId),
-                eq(apiKeys.id, params.apiKeyId),
-                isNull(apiKeys.revokedAt)
-            )
-        )
+        .delete(apiKeys)
+        .where(and(eq(apiKeys.accountId, params.accountId), eq(apiKeys.id, params.apiKeyId)))
         .returning();
 
     return row ? toRecord(row) : null;
@@ -201,6 +187,7 @@ export const authenticateApiKey = async (params: {
             keyHash: apiKeys.keyHash,
         })
         .from(apiKeys)
+        // Ignore legacy soft-revoked rows until the storage cleanup lands.
         .where(and(eq(apiKeys.keyPrefix, getApiKeyPrefix(rawApiKey)), isNull(apiKeys.revokedAt)));
 
     for (const row of rows) {
