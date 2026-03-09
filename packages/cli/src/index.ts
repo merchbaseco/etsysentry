@@ -10,7 +10,7 @@ const main = async (): Promise<void> => {
     const { flags, positionals } = parseCliInput();
 
     if (flags.help || positionals.length === 0 || positionals[0] === 'help') {
-        printUsage();
+        await printUsage();
         return;
     }
 

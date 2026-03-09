@@ -15,6 +15,7 @@ export interface KeywordItem {
 }
 export interface ListingItem {
     accountId: string;
+    endingTimestamp: number | null;
     etsyListingId: string;
     etsyState: 'active' | 'inactive' | 'sold_out' | 'draft' | 'expired';
     id: string;
@@ -22,7 +23,6 @@ export interface ListingItem {
     lastRefreshError: string | null;
     lastRefreshedAt: string;
     numFavorers: number | null;
-    endingTimestamp: number | null;
     price: {
         amount: number;
         currencyCode: string;
@@ -31,9 +31,9 @@ export interface ListingItem {
     } | null;
     priceUsdValue: number | null;
     quantity: number | null;
-    shouldAutoRenew: boolean | null;
     shopId: string | null;
     shopName: string | null;
+    shouldAutoRenew: boolean | null;
     syncState: 'idle' | 'queued' | 'syncing';
     thumbnailUrl: string | null;
     title: string;

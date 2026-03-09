@@ -1,7 +1,10 @@
 import { homedir } from 'node:os';
 import path from 'node:path';
-export const CONFIG_DIR = path.join(homedir(), '.etsysentry');
-export const CONFIG_PATH = path.join(CONFIG_DIR, 'config.json');
+export const DEFAULT_STORAGE_DIR = path.join(homedir(), '.etsysentry');
+export const CONFIG_FILENAME = 'config.json';
+export const DEFAULT_CONFIG_PATH = path.join(DEFAULT_STORAGE_DIR, CONFIG_FILENAME);
+export const GLOBAL_CONFIG_PATH = path.join(DEFAULT_STORAGE_DIR, 'settings.json');
+export const DEFAULT_BASE_URL = 'https://etsysentry.merchbase.co';
 export const RANGE_VALUES = ['7d', '30d', '90d'];
 export const METRIC_VALUES = ['views', 'favorites', 'quantity', 'price'];
 export const PERFORMANCE_MODE_VALUES = ['metrics', 'table'];

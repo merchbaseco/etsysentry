@@ -2,6 +2,7 @@ import { createEtsySentryClient } from '@etsysentry/http-client';
 import { assertValidRange, resolveApiKey, resolveBaseUrl, resolveRange } from './config.js';
 import { failWith } from './errors.js';
 import { filterKeywordItems, filterListingItems, filterShopItems, parsePerformanceMetrics, parsePerformanceMode, } from './filters.js';
+import { paginateListItems, resolveListPagination } from './list-pagination.js';
 import { formatPerformanceTable } from './performance-table.js';
 const requireArg = (params) => {
     const value = params.args[params.index ?? 0]?.trim();
@@ -21,7 +22,7 @@ const createApiClient = (params) => {
     if (!apiKey) {
         failWith({
             code: 'MISSING_CONFIG',
-            message: 'config.apiKey is required',
+            message: 'ETSYSENTRY_API_KEY or --api-key is required',
         });
     }
     return createEtsySentryClient({
@@ -35,10 +36,12 @@ const createApiClient = (params) => {
 const runKeywordsCommand = async (params) => {
     const client = createApiClient(params);
     if (params.command.verb === 'list') {
+        const pagination = resolveListPagination(params.flags);
         const response = await client.queryClient.fetchQuery(client.trpc.public.keywords.list.queryOptions({}));
+        const filteredItems = filterKeywordItems(response.items, params.flags);
         return {
             data: {
-                items: filterKeywordItems(response.items, params.flags),
+                items: paginateListItems(filteredItems, pagination),
             },
             type: 'json',
         };
@@ -65,10 +68,12 @@ const runKeywordsCommand = async (params) => {
 const runListingsCommand = async (params) => {
     const client = createApiClient(params);
     if (params.command.verb === 'list') {
+        const pagination = resolveListPagination(params.flags);
         const response = await client.queryClient.fetchQuery(client.trpc.public.listings.list.queryOptions({}));
+        const filteredItems = filterListingItems(response.items, params.flags);
         return {
             data: {
-                items: filterListingItems(response.items, params.flags),
+                items: paginateListItems(filteredItems, pagination),
             },
             type: 'json',
         };
@@ -118,10 +123,12 @@ const runListingsCommand = async (params) => {
 const runShopsCommand = async (params) => {
     const client = createApiClient(params);
     if (params.command.verb === 'list') {
+        const pagination = resolveListPagination(params.flags);
         const response = await client.queryClient.fetchQuery(client.trpc.public.shops.list.queryOptions({}));
+        const filteredItems = filterShopItems(response.items, params.flags);
         return {
             data: {
-                items: filterShopItems(response.items, params.flags),
+                items: paginateListItems(filteredItems, pagination),
             },
             type: 'json',
         };
@@ -142,7 +149,7 @@ const runShopsCommand = async (params) => {
     });
     throw new Error('Unreachable');
 };
-export const runPublicCommand = async (params) => {
+export const runPublicCommand = (params) => {
     if (params.command.resource === 'keywords') {
         return runKeywordsCommand(params);
     }

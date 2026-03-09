@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+## v0.3.0 - 2026-03-09
+
+### Added
+
+- CLI now supports a persistent storage directory setting so config and local CLI data can be
+  moved to a custom path.
+
+### Changed
+
+- CLI no longer stores API keys in local config.
+
 ## v0.2.0 - 2026-03-05
 
 ### Added

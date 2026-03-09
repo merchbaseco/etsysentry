@@ -34,7 +34,7 @@ const createApiClient = (params: { config: CliConfig; flags: CliFlags }) => {
     if (!apiKey) {
         failWith({
             code: 'MISSING_CONFIG',
-            message: 'config.apiKey is required',
+            message: 'ETSYSENTRY_API_KEY or --api-key is required',
         });
     }
 

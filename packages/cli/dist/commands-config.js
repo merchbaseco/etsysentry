@@ -1,5 +1,6 @@
-import { CONFIG_PATH, clearConfig, saveConfig, updateConfigFromSet } from './config.js';
+import { clearConfig, saveConfig, switchStorageDir, updateConfigFromSet } from './config.js';
 import { failWith } from './errors.js';
+import { normalizeStorageDir } from './storage.js';
 const requireArg = (params) => {
     const value = params.args[params.index ?? 0]?.trim();
     if (!value) {
@@ -10,22 +11,24 @@ const requireArg = (params) => {
     }
     return value;
 };
-export const runConfigCommand = async (command, config) => {
+export const runConfigCommand = async (command, configState) => {
     if (command.verb === 'show') {
         return {
             data: {
-                config,
-                path: CONFIG_PATH,
+                config: configState.config,
+                path: configState.paths.configPath,
+                storageDir: configState.paths.storageDir,
             },
             type: 'json',
         };
     }
     if (command.verb === 'clear') {
-        await clearConfig();
+        await clearConfig(configState.paths.configPath);
         return {
             data: {
                 cleared: true,
-                path: CONFIG_PATH,
+                path: configState.paths.configPath,
+                storageDir: configState.paths.storageDir,
             },
             type: 'json',
         };
@@ -43,16 +46,35 @@ export const runConfigCommand = async (command, config) => {
                 message: 'config set value cannot be empty.',
             });
         }
+        if (key === 'storage-dir') {
+            const nextConfigState = await switchStorageDir({
+                config: configState.config,
+                currentPaths: configState.paths,
+                nextStorageDir: normalizeStorageDir(value),
+            });
+            return {
+                data: {
+                    config: nextConfigState.config,
+                    path: nextConfigState.paths.configPath,
+                    storageDir: nextConfigState.paths.storageDir,
+                },
+                type: 'json',
+            };
+        }
         const nextConfig = updateConfigFromSet({
-            config,
+            config: configState.config,
             key,
             value,
         });
-        await saveConfig(nextConfig);
+        await saveConfig({
+            config: nextConfig,
+            configPath: configState.paths.configPath,
+        });
         return {
             data: {
                 config: nextConfig,
-                path: CONFIG_PATH,
+                path: configState.paths.configPath,
+                storageDir: configState.paths.storageDir,
             },
             type: 'json',
         };

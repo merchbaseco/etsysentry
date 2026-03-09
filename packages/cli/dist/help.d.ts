@@ -1,1 +1,1 @@
-export declare const printUsage: () => void;
+export declare const printUsage: () => Promise<void>;

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { assertValidRange, normalizeBaseUrl, resolveBaseUrl } from './config.js';
+import { assertValidRange, normalizeBaseUrl, resolveApiKey, resolveBaseUrl } from './config.js';
 import type { CliFlags } from './types.js';
 
 describe('assertValidRange', () => {
@@ -41,6 +41,49 @@ describe('resolveBaseUrl', () => {
                 process.env.ETSYSENTRY_API_BASE_URL = undefined;
             } else {
                 process.env.ETSYSENTRY_API_BASE_URL = previousBaseUrl;
+            }
+        }
+    });
+});
+
+describe('resolveApiKey', () => {
+    test('uses the env var when no flag override is set', () => {
+        const previousApiKey = process.env.ETSYSENTRY_API_KEY;
+        process.env.ETSYSENTRY_API_KEY = 'esk_live_env';
+
+        const flags: CliFlags = {
+            help: false,
+            showDigital: false,
+        };
+
+        try {
+            expect(resolveApiKey({ config: {}, flags })).toBe('esk_live_env');
+        } finally {
+            if (previousApiKey === undefined) {
+                process.env.ETSYSENTRY_API_KEY = undefined;
+            } else {
+                process.env.ETSYSENTRY_API_KEY = previousApiKey;
+            }
+        }
+    });
+
+    test('prefers the flag over the env var', () => {
+        const previousApiKey = process.env.ETSYSENTRY_API_KEY;
+        process.env.ETSYSENTRY_API_KEY = 'esk_live_env';
+
+        const flags: CliFlags = {
+            apiKey: 'esk_live_flag',
+            help: false,
+            showDigital: false,
+        };
+
+        try {
+            expect(resolveApiKey({ config: {}, flags })).toBe('esk_live_flag');
+        } finally {
+            if (previousApiKey === undefined) {
+                process.env.ETSYSENTRY_API_KEY = undefined;
+            } else {
+                process.env.ETSYSENTRY_API_KEY = previousApiKey;
             }
         }
     });

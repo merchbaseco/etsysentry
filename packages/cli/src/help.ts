@@ -1,15 +1,17 @@
-import { CONFIG_PATH } from './constants.js';
+import { GLOBAL_CONFIG_PATH } from './constants.js';
+import { resolveStoragePaths } from './storage.js';
 
-export const printUsage = (): void => {
+export const printUsage = async (): Promise<void> => {
+    const paths = await resolveStoragePaths();
     const lines = [
         'es <command> [options]',
         '',
         'Commands:',
         '  config show',
         '  config clear',
-        '  config set api-key <value>',
         '  config set base-url <value>',
         '  config set range <7d|30d|90d|YYYY-MM-DD..YYYY-MM-DD>',
+        '  config set storage-dir <path>',
         '',
         '  keywords list [--search <text>] [--tracking-state <state>] [--sync-state <state>] [--limit <n>] [--offset <n>]',
         '  keywords track <keyword>',
@@ -43,8 +45,10 @@ export const printUsage = (): void => {
         '  --metrics <csv>            Performance metrics selection',
         '  --mode <metrics|table>     Performance output mode',
         '',
-        'Config file:',
-        `  ${CONFIG_PATH}`,
+        'Config:',
+        `  active storage dir: ${paths.storageDir}`,
+        `  active config file: ${paths.configPath}`,
+        `  bootstrap settings: ${GLOBAL_CONFIG_PATH}`,
         '',
         'Env fallbacks:',
         '  ETSYSENTRY_API_KEY',

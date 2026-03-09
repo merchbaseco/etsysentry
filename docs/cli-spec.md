@@ -17,7 +17,7 @@ Covered primitives:
 - `shop`
 
 Covered operations:
-- local config for API key auth and base URL
+- env-based API key auth plus local base URL config
 - local default time-range config
 - track/list for all primitives
 - listing performance retrieval
@@ -64,12 +64,11 @@ current app capability set first, before adding broader v1 features.
 API key lookup precedence:
 - `--api-key` flag
 - `ETSYSENTRY_API_KEY` env var
-- `~/.etsysentry/config.json` (`apiKey`)
 
 Base URL precedence:
 - `--base-url` flag
 - `ETSYSENTRY_API_BASE_URL` env var
-- `~/.etsysentry/config.json` (`baseUrl`, default `https://etsysentry.merchbase.co`)
+- `<active-storage-dir>/config.json` (`baseUrl`, default `https://etsysentry.merchbase.co`)
 
 Etsy precondition:
 - Etsy-backed commands require the API key tenant to have an active Etsy OAuth connection.
@@ -95,7 +94,7 @@ Error envelope:
   "ok": false,
   "error": {
     "code": "MISSING_CONFIG",
-    "message": "config.apiKey is required",
+    "message": "ETSYSENTRY_API_KEY or --api-key is required",
     "details": {}
   }
 }
@@ -104,14 +103,20 @@ Error envelope:
 ## Config
 
 Config file:
-- `~/.etsysentry/config.json`
+- active config: `<active-storage-dir>/config.json`
+- global storage selector: `~/.etsysentry/settings.json`
 
 Commands:
 - `es config show`
 - `es config clear`
-- `es config set api-key <value>`
 - `es config set base-url <value>`
 - `es config set range <7d|30d|90d|YYYY-MM-DD..YYYY-MM-DD>`
+- `es config set storage-dir <path>`
+
+Storage-dir behavior:
+- `storage-dir` is persisted globally in `~/.etsysentry/settings.json`
+- all subsequent CLI commands read and write config/data from that directory
+- switching directories preserves the currently active config by writing it into the next directory
 
 ## Shared Concepts
 
@@ -146,7 +151,7 @@ Time-range syntax:
 Range precedence (for commands that support `--range`):
 - `--range` flag
 - `ETSYSENTRY_DEFAULT_RANGE` env var
-- `~/.etsysentry/config.json` (`range`)
+- `<active-storage-dir>/config.json` (`range`)
 - default: `30d`
 
 Target cardinality convention:
@@ -308,9 +313,9 @@ es <command> [options]
 Commands:
   config show
   config clear
-  config set api-key <value>
   config set base-url <value>
   config set range <7d|30d|90d|YYYY-MM-DD..YYYY-MM-DD>
+  config set storage-dir <path>
 
   keywords list [--search <text>] [--tracking-state <state>] [--sync-state <state>]
     [--limit <n>] [--offset <n>]
@@ -337,9 +342,10 @@ Aliases:
 ## Command Examples
 
 ```bash
-es config set api-key esk_live_xxx
+export ETSYSENTRY_API_KEY=esk_live_xxx
 es config set base-url https://etsysentry.merchbase.co
 es config set range 30d
+es config set storage-dir ~/.config/etsysentry
 
 es track keyword "mid century wall art"
 es track product https://www.etsy.com/listing/1234567890/example

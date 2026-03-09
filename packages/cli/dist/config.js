@@ -1,6 +1,8 @@
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { CONFIG_DIR, CONFIG_PATH, RANGE_ABSOLUTE_REGEX, RANGE_VALUES, TRAILING_SLASHES_REGEX, } from './constants.js';
+import path from 'node:path';
+import { DEFAULT_BASE_URL, RANGE_ABSOLUTE_REGEX, RANGE_VALUES, TRAILING_SLASHES_REGEX, } from './constants.js';
 import { failWith } from './errors.js';
+import { resolveConfigPath, resolveStoragePaths, saveStorageDir } from './storage.js';
 const toOptionalTrimmed = (value) => {
     const trimmed = value?.trim();
     return trimmed && trimmed.length > 0 ? trimmed : undefined;
@@ -30,12 +32,11 @@ export const normalizeBaseUrl = (value) => {
     }
     return normalized;
 };
-export const loadConfig = async () => {
+const loadConfigFile = async (configPath) => {
     try {
-        const raw = await readFile(CONFIG_PATH, 'utf8');
+        const raw = await readFile(configPath, 'utf8');
         const parsed = JSON.parse(raw);
         return {
-            apiKey: typeof parsed.apiKey === 'string' ? toOptionalTrimmed(parsed.apiKey) : undefined,
             baseUrl: typeof parsed.baseUrl === 'string' && parsed.baseUrl.trim().length > 0
                 ? normalizeBaseUrl(parsed.baseUrl)
                 : undefined,
@@ -54,29 +55,57 @@ export const loadConfig = async () => {
         failWith({
             code: 'INTERNAL_ERROR',
             message: 'Failed to read CLI config.',
-            details: { path: CONFIG_PATH },
+            details: { path: configPath },
         });
         throw new Error('Unreachable');
     }
 };
-export const saveConfig = async (config) => {
-    await mkdir(CONFIG_DIR, { recursive: true });
-    await writeFile(CONFIG_PATH, `${JSON.stringify(config, null, 2)}\n`, 'utf8');
+export const loadConfigState = async () => {
+    const paths = await resolveStoragePaths();
+    const config = await loadConfigFile(paths.configPath);
+    return {
+        config,
+        paths,
+    };
 };
-export const clearConfig = async () => {
-    await rm(CONFIG_PATH, { force: true });
+export const saveConfig = async (params) => {
+    await mkdir(path.dirname(params.configPath), { recursive: true });
+    await writeFile(params.configPath, `${JSON.stringify(params.config, null, 2)}\n`, 'utf8');
+};
+export const clearConfig = async (configPath) => {
+    await rm(configPath, { force: true });
+};
+export const switchStorageDir = async (params) => {
+    const nextConfigPath = resolveConfigPath(params.nextStorageDir);
+    const existingConfig = await loadConfigFile(nextConfigPath);
+    const nextConfig = {
+        ...existingConfig,
+        ...params.config,
+    };
+    await saveConfig({
+        config: nextConfig,
+        configPath: nextConfigPath,
+    });
+    await saveStorageDir(params.nextStorageDir);
+    return {
+        config: nextConfig,
+        paths: {
+            configPath: nextConfigPath,
+            globalConfigPath: params.currentPaths.globalConfigPath,
+            storageDir: params.nextStorageDir,
+        },
+    };
 };
 export const resolveApiKey = (params) => {
     const fromFlag = toOptionalTrimmed(params.flags.apiKey);
     const fromEnv = toOptionalTrimmed(process.env.ETSYSENTRY_API_KEY);
-    const fromConfig = toOptionalTrimmed(params.config.apiKey);
-    return fromFlag ?? fromEnv ?? fromConfig ?? null;
+    return fromFlag ?? fromEnv ?? null;
 };
 export const resolveBaseUrl = (params) => {
     const fromFlag = toOptionalTrimmed(params.flags.baseUrl);
     const fromEnv = toOptionalTrimmed(process.env.ETSYSENTRY_API_BASE_URL);
     const fromConfig = toOptionalTrimmed(params.config.baseUrl);
-    return normalizeBaseUrl(fromFlag ?? fromEnv ?? fromConfig ?? 'http://localhost:8080');
+    return normalizeBaseUrl(fromFlag ?? fromEnv ?? fromConfig ?? DEFAULT_BASE_URL);
 };
 export const resolveRange = (params) => {
     const fromFlag = toOptionalTrimmed(params.flags.range);
@@ -88,10 +117,6 @@ export const updateConfigFromSet = (params) => {
     const nextConfig = {
         ...params.config,
     };
-    if (params.key === 'api-key') {
-        nextConfig.apiKey = params.value.trim();
-        return nextConfig;
-    }
     if (params.key === 'base-url') {
         nextConfig.baseUrl = normalizeBaseUrl(params.value);
         return nextConfig;
@@ -105,9 +130,8 @@ export const updateConfigFromSet = (params) => {
         message: 'Unsupported config key.',
         details: {
             key: params.key,
-            supportedKeys: ['api-key', 'base-url', 'range'],
+            supportedKeys: ['base-url', 'range', 'storage-dir'],
         },
     });
     throw new Error('Unreachable');
 };
-export { CONFIG_PATH };

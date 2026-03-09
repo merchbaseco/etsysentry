@@ -1,2 +1,2 @@
-import type { CliCommand, CliConfig, CommandRunResult } from './types.js';
-export declare const runConfigCommand: (command: CliCommand, config: CliConfig) => Promise<CommandRunResult>;
+import type { CliCommand, CommandRunResult, LoadedCliConfig } from './types.js';
+export declare const runConfigCommand: (command: CliCommand, configState: LoadedCliConfig) => Promise<CommandRunResult>;

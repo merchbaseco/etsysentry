@@ -1,14 +1,14 @@
 import { runConfigCommand } from './commands-config.js';
 import { runPublicCommand } from './commands-public.js';
-import { loadConfig } from './config.js';
+import { loadConfigState } from './config.js';
 export const runCommand = async (params) => {
-    const config = await loadConfig();
+    const configState = await loadConfigState();
     if (params.command.resource === 'config') {
-        return runConfigCommand(params.command, config);
+        return runConfigCommand(params.command, configState);
     }
     return runPublicCommand({
         command: params.command,
-        config,
+        config: configState.config,
         flags: params.flags,
     });
 };

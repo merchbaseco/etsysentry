@@ -7,7 +7,7 @@ import { parseCliInput, resolveCommand } from './parse.js';
 const main = async () => {
     const { flags, positionals } = parseCliInput();
     if (flags.help || positionals.length === 0 || positionals[0] === 'help') {
-        printUsage();
+        await printUsage();
         return;
     }
     const command = resolveCommand(positionals);

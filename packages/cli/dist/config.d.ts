@@ -1,10 +1,17 @@
-import { CONFIG_PATH } from './constants.js';
-import type { CliConfig, CliFlags } from './types.js';
+import type { CliConfig, CliFlags, CliStoragePaths, LoadedCliConfig } from './types.js';
 export declare const assertValidRange: (value: string) => string;
 export declare const normalizeBaseUrl: (value: string) => string;
-export declare const loadConfig: () => Promise<CliConfig>;
-export declare const saveConfig: (config: CliConfig) => Promise<void>;
-export declare const clearConfig: () => Promise<void>;
+export declare const loadConfigState: () => Promise<LoadedCliConfig>;
+export declare const saveConfig: (params: {
+    config: CliConfig;
+    configPath: string;
+}) => Promise<void>;
+export declare const clearConfig: (configPath: string) => Promise<void>;
+export declare const switchStorageDir: (params: {
+    config: CliConfig;
+    currentPaths: CliStoragePaths;
+    nextStorageDir: string;
+}) => Promise<LoadedCliConfig>;
 export declare const resolveApiKey: (params: {
     config: CliConfig;
     flags: CliFlags;
@@ -22,4 +29,3 @@ export declare const updateConfigFromSet: (params: {
     key: string;
     value: string;
 }) => CliConfig;
-export { CONFIG_PATH };
