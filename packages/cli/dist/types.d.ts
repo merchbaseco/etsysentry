@@ -26,6 +26,7 @@ export interface CliFlags {
     showDigital: boolean;
     syncState?: string;
     trackingState?: string;
+    version: boolean;
 }
 export interface CliCommand {
     args: string[];
@@ -38,4 +39,7 @@ export type CommandRunResult = {
 } | {
     type: 'table';
     table: string;
+} | {
+    type: 'text';
+    text: string;
 };

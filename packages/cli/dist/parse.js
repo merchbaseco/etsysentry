@@ -1,8 +1,8 @@
 import { parseArgs } from 'node:util';
-export const parseCliInput = () => {
+export const parseCliInput = (args = process.argv.slice(2)) => {
     const parsed = parseArgs({
         allowPositionals: true,
-        args: process.argv.slice(2),
+        args,
         options: {
             help: { short: 'h', type: 'boolean' },
             'api-key': { type: 'string' },
@@ -16,6 +16,7 @@ export const parseCliInput = () => {
             'show-digital': { type: 'boolean' },
             'sync-state': { type: 'string' },
             'tracking-state': { type: 'string' },
+            version: { type: 'boolean' },
         },
     });
     return {
@@ -32,6 +33,7 @@ export const parseCliInput = () => {
             showDigital: Boolean(parsed.values['show-digital']),
             syncState: parsed.values['sync-state'],
             trackingState: parsed.values['tracking-state'],
+            version: Boolean(parsed.values.version),
         },
         positionals: parsed.positionals,
     };
@@ -76,6 +78,16 @@ export const resolveCommand = (positionals) => {
             args: rest,
             resource: 'listings',
             verb: second,
+        };
+    }
+    if (first === 'changelog') {
+        if (second) {
+            return null;
+        }
+        return {
+            args: [],
+            resource: 'meta',
+            verb: 'changelog',
         };
     }
     if (!second) {

@@ -2,10 +2,15 @@
 import { runCommand } from './commands.js';
 import { failWith, toCliError } from './errors.js';
 import { printUsage } from './help.js';
+import { loadCliVersion } from './metadata.js';
 import { printFailure, printSuccess } from './output.js';
 import { parseCliInput, resolveCommand } from './parse.js';
 const main = async () => {
     const { flags, positionals } = parseCliInput();
+    if (flags.version) {
+        console.log(await loadCliVersion());
+        return;
+    }
     if (flags.help || positionals.length === 0 || positionals[0] === 'help') {
         await printUsage();
         return;
@@ -24,6 +29,10 @@ const main = async () => {
     });
     if (result.type === 'table') {
         console.log(result.table);
+        return;
+    }
+    if (result.type === 'text') {
+        console.log(result.text);
         return;
     }
     printSuccess(result.data);

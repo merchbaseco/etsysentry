@@ -77,6 +77,9 @@ Etsy precondition:
 ## Binary and Output
 
 - Binary: `es`
+- Metadata commands:
+  - `es --version`
+  - `es changelog`
 - Default output is JSON success/error envelopes.
 - `es listings performance` additionally supports `--mode table` for human-readable terminal output.
 - Graph-ready output is provided by `es listings performance --mode metrics`.
@@ -309,6 +312,8 @@ Expected top-level help shape:
 es <command> [options]
 
 Commands:
+  changelog
+
   config show
   config clear
   config set base-url <value>
@@ -334,6 +339,10 @@ Aliases:
   track product -> listings track
   track shop -> shops track
   products ... -> listings ...
+
+Options:
+  -h, --help                 Show this message
+  --version                  Show CLI version
 ```
 
 ## Command Examples
@@ -341,6 +350,8 @@ Aliases:
 ```bash
 export ES_API_KEY=esk_live_xxx
 export ES_STORAGE_DIR=/data/etsysentry
+es --version
+es changelog
 es config set base-url https://etsysentry.merchbase.co
 
 es track keyword "mid century wall art"
