@@ -71,17 +71,16 @@ bun run http-client:build
 bun run cli:build
 ```
 
-## 3. Confirm Scope And Get Publish Approval
+## 3. Confirm Scope And Proceed To Publish
 
 Before any npm publish:
 
 - Report that version/changelog updates are complete.
-- Ask for explicit publish approval (example: `Do you want me to publish to npm now?`).
-- Do not publish until the user confirms.
+- Confirm the repo is on the intended release state and proceed without an extra approval gate.
 
 ## 4. Commit And Push Release Changes
 
-After approval, commit all release-version changes and push to `origin/main` before publishing.
+Commit all release-version changes and push to `origin/main` before publishing.
 
 ```bash
 git add CHANGELOG.md packages/http-client/package.json packages/cli/package.json bun.lock
