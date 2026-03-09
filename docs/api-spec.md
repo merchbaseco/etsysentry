@@ -220,7 +220,6 @@ Output:
     name: string;
     keyPrefix: string;
     lastUsedAt: string | null; // ISO timestamp
-    revokedAt: string | null; // ISO timestamp
     createdAt: string; // ISO timestamp
     updatedAt: string; // ISO timestamp
   }>;
@@ -248,7 +247,6 @@ Output:
     name: string;
     keyPrefix: string;
     lastUsedAt: string | null; // ISO timestamp
-    revokedAt: string | null; // ISO timestamp
     createdAt: string; // ISO timestamp
     updatedAt: string; // ISO timestamp
   };
@@ -268,6 +266,7 @@ Input:
 
 Output:
 - same item shape as entries in `app.apiKeys.list` output
+- deletes the API key row for that account
 
 ### Dashboard
 

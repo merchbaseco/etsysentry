@@ -1,6 +1,6 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
-import { revokeApiKeyById } from '../../../services/auth/api-keys-service';
+import { deleteApiKeyById } from '../../../services/auth/api-keys-service';
 import { appProcedure } from '../../trpc';
 
 export const apiKeysRevokeProcedure = appProcedure
@@ -10,17 +10,17 @@ export const apiKeysRevokeProcedure = appProcedure
         })
     )
     .mutation(async ({ ctx, input }) => {
-        const revoked = await revokeApiKeyById({
+        const deleted = await deleteApiKeyById({
             accountId: ctx.accountId,
             apiKeyId: input.apiKeyId,
         });
 
-        if (!revoked) {
+        if (!deleted) {
             throw new TRPCError({
                 code: 'NOT_FOUND',
-                message: 'API key not found or already revoked for this account.',
+                message: 'API key not found for this account.',
             });
         }
 
-        return revoked;
+        return deleted;
     });
