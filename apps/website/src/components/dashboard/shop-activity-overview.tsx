@@ -125,7 +125,6 @@ function PrimaryMetricCard(props: {
             <div className="absolute inset-0">
                 <ShopMetricSparkline
                     ariaLabel={`${props.label} trend sparkline`}
-                    chartTopMargin={46}
                     metricLabel={props.label}
                     points={props.trend.points}
                     tone={props.trend.tone}
@@ -134,19 +133,19 @@ function PrimaryMetricCard(props: {
             </div>
             <div className="pointer-events-none relative z-10 px-2.5 pt-2">
                 <div className="flex items-start justify-between gap-2">
-                    <p className="text-[9px] text-muted-foreground uppercase tracking-[0.18em]">
+                    <p className="pointer-events-none text-[9px] text-muted-foreground uppercase tracking-[0.18em]">
                         {props.label}
                     </p>
                     <p
                         className={cn(
-                            'font-medium text-[10px]',
+                            'pointer-events-none font-medium text-[10px]',
                             toneTextClassByTone[props.trend.tone]
                         )}
                     >
                         {props.trend.deltaLabel}
                     </p>
                 </div>
-                <p className="mt-0.5 truncate font-semibold text-[16px] text-foreground">
+                <p className="pointer-events-none mt-0.5 truncate font-semibold text-[16px] text-foreground">
                     {props.currentValue}
                 </p>
             </div>

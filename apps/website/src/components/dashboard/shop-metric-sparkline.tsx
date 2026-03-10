@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { type CSSProperties, type RefObject, useEffect, useRef, useState } from 'react';
 import { Area, AreaChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { formatNumber } from '@/components/ui/dashboard';
 import { cn } from '@/lib/utils';
@@ -19,10 +19,30 @@ interface SparklineChartPoint {
 
 interface SparklineTooltipContentProps {
     active?: boolean;
+    containerRef: RefObject<HTMLDivElement | null>;
+    coordinate?: {
+        x?: number;
+        y?: number;
+    };
     metricLabel: string;
     payload?: Array<{ payload?: SparklineChartPoint }>;
     tone: ShopMetricSparklineTone;
     valueFormatter: ShopMetricSparklineValueFormatter;
+}
+
+interface SparklineTooltipPortalPosition {
+    left: number;
+    top: number;
+}
+
+interface SparklineTooltipPortalPositionInput {
+    containerBounds: {
+        left: number;
+        top: number;
+    };
+    coordinate?: {
+        x?: number;
+    };
 }
 
 const sparklineDateFormatter = new Intl.DateTimeFormat(undefined, {
@@ -31,6 +51,16 @@ const sparklineDateFormatter = new Intl.DateTimeFormat(undefined, {
     timeZone: 'UTC',
     year: 'numeric',
 });
+const SPARKLINE_TOOLTIP_HORIZONTAL_OFFSET_PX = 12;
+const SPARKLINE_TOOLTIP_VERTICAL_ANCHOR_PX = 28;
+const SPARKLINE_TOOLTIP_VERTICAL_GAP_PX = 6;
+const SPARKLINE_TOOLTIP_PORTAL_ATTRIBUTE = 'data-shop-metric-sparkline-tooltip-portal';
+const sparklineTooltipPortalWrapperStyle: CSSProperties = {
+    inset: 0,
+    overflow: 'visible',
+    pointerEvents: 'none',
+    position: 'absolute',
+};
 
 const toneClassByTone: Record<
     ShopMetricSparklineTone,
@@ -76,6 +106,20 @@ export const toSparklineChartData = (points: ShopMetricSparklinePoint[]): Sparkl
     }));
 };
 
+export const getSparklineTooltipPortalPosition = ({
+    containerBounds,
+    coordinate,
+}: SparklineTooltipPortalPositionInput): SparklineTooltipPortalPosition | null => {
+    if (coordinate?.x === undefined) {
+        return null;
+    }
+
+    return {
+        left: containerBounds.left + coordinate.x + SPARKLINE_TOOLTIP_HORIZONTAL_OFFSET_PX,
+        top: containerBounds.top + SPARKLINE_TOOLTIP_VERTICAL_ANCHOR_PX,
+    };
+};
+
 const hasUsableSparklineData = (points: SparklineChartPoint[]): boolean => {
     return points.length >= 2 && points.some((point) => point.value !== null);
 };
@@ -105,13 +149,31 @@ function SparklineCursor(props: {
 
 function SparklineTooltipContent(props: SparklineTooltipContentProps) {
     const point = props.payload?.[0]?.payload;
+    const containerBounds = props.containerRef.current?.getBoundingClientRect();
+    const tooltipPosition =
+        containerBounds === undefined
+            ? null
+            : getSparklineTooltipPortalPosition({
+                  containerBounds,
+                  coordinate: props.coordinate,
+              });
 
-    if (!(props.active && point)) {
+    if (!(props.active && point && tooltipPosition)) {
         return null;
     }
 
     return (
-        <div style={{ transform: 'translateY(calc(-100% - 24px))' }}>
+        <div
+            style={{
+                left: 0,
+                pointerEvents: 'none',
+                position: 'absolute',
+                top: 0,
+                transform:
+                    `translate3d(${tooltipPosition.left}px, ${tooltipPosition.top}px, 0) ` +
+                    `translateY(calc(-100% - ${SPARKLINE_TOOLTIP_VERTICAL_GAP_PX}px))`,
+            }}
+        >
             <div
                 className={cn(
                     'pointer-events-none border border-border border-l-2 bg-background px-2 py-1.5 text-left shadow-sm',
@@ -137,6 +199,7 @@ export function ShopMetricSparkline(props: {
     tone: ShopMetricSparklineTone;
     valueFormatter?: ShopMetricSparklineValueFormatter;
 }) {
+    const containerRef = useRef<HTMLDivElement>(null);
     const [tooltipPortal, setTooltipPortal] = useState<HTMLElement | null>(null);
     const toneClasses = toneClassByTone[props.tone];
     const resolvedValueFormatter = props.valueFormatter ?? defaultValueFormatter;
@@ -145,7 +208,18 @@ export function ShopMetricSparkline(props: {
     const topMargin = props.chartTopMargin ?? 2;
 
     useEffect(() => {
-        setTooltipPortal(document.body);
+        const portalNode = document.createElement('div');
+        portalNode.setAttribute(SPARKLINE_TOOLTIP_PORTAL_ATTRIBUTE, 'true');
+        portalNode.style.inset = '0';
+        portalNode.style.pointerEvents = 'none';
+        portalNode.style.position = 'fixed';
+        portalNode.style.zIndex = '80';
+        document.body.appendChild(portalNode);
+        setTooltipPortal(portalNode);
+
+        return () => {
+            portalNode.remove();
+        };
     }, []);
 
     if (!hasUsableData) {
@@ -171,7 +245,7 @@ export function ShopMetricSparkline(props: {
     }
 
     return (
-        <div aria-label={props.ariaLabel} className="h-full w-full" role="img">
+        <div aria-label={props.ariaLabel} className="h-full w-full" ref={containerRef} role="img">
             <ResponsiveContainer height="100%" width="100%">
                 <AreaChart
                     data={chartData}
@@ -181,6 +255,7 @@ export function ShopMetricSparkline(props: {
                         allowEscapeViewBox={{ x: true, y: true }}
                         content={
                             <SparklineTooltipContent
+                                containerRef={containerRef}
                                 metricLabel={props.metricLabel}
                                 tone={props.tone}
                                 valueFormatter={resolvedValueFormatter}
@@ -188,9 +263,9 @@ export function ShopMetricSparkline(props: {
                         }
                         cursor={<SparklineCursor />}
                         isAnimationActive={false}
-                        offset={12}
+                        offset={SPARKLINE_TOOLTIP_HORIZONTAL_OFFSET_PX}
                         portal={tooltipPortal}
-                        wrapperStyle={{ outline: 'none', pointerEvents: 'none', zIndex: 50 }}
+                        wrapperStyle={sparklineTooltipPortalWrapperStyle}
                     />
                     <Area
                         activeDot={{
