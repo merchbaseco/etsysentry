@@ -398,9 +398,7 @@ bun run cli:build
 
 ```bash
 cd packages/cli
-set -a
-source ../../.env
-set +a
+export NPM_TOKEN="$(security find-generic-password -a "$USER" -s rankwrangler-npm-token -w)"
 npm whoami --userconfig ../../.npmrc
 npm publish --access public --userconfig ../../.npmrc
 ```
@@ -416,16 +414,14 @@ npm publish --access public --userconfig ../../.npmrc
 
 ```bash
 cd packages/cli
-set -a
-source ../../.env
-set +a
+export NPM_TOKEN="$(security find-generic-password -a "$USER" -s rankwrangler-npm-token -w)"
 npm access get status @etsysentry/cli --userconfig ../../.npmrc
 ```
 
 ## Troubleshooting
 
 - `401 Unauthorized` / token errors:
-  Ensure repo-root `.env` is loaded before publish so `NPM_TOKEN` is available to `.npmrc`.
+  Refresh `NPM_TOKEN` from Keychain so `.npmrc` can authenticate to npm.
 - `403 You cannot publish over the previously published versions`:
   Bump patch/minor version and publish again.
 

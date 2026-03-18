@@ -39,7 +39,8 @@ Compatibility posture:
 
 ## Prerequisites
 
-- Repo-root `.env` contains a valid `NPM_TOKEN`.
+- macOS Keychain contains a valid npm token under
+  `rankwrangler-npm-token` for the current `$USER`.
 - Repo-root `.npmrc` is configured for npm registry auth.
 - You are on the release branch with only intended release changes.
 
@@ -93,9 +94,7 @@ git push origin main
 Run from `packages/http-client`:
 
 ```bash
-set -a
-source ../../.env
-set +a
+export NPM_TOKEN="$(security find-generic-password -a "$USER" -s rankwrangler-npm-token -w)"
 npm whoami --userconfig ../../.npmrc
 npm publish --access public --userconfig ../../.npmrc
 ```
@@ -105,9 +104,7 @@ npm publish --access public --userconfig ../../.npmrc
 Run from `packages/cli`:
 
 ```bash
-set -a
-source ../../.env
-set +a
+export NPM_TOKEN="$(security find-generic-password -a "$USER" -s rankwrangler-npm-token -w)"
 npm whoami --userconfig ../../.npmrc
 npm publish --access public --userconfig ../../.npmrc
 ```
@@ -118,6 +115,7 @@ Run from repo root:
 
 ```bash
 bun install
+export NPM_TOKEN="$(security find-generic-password -a "$USER" -s rankwrangler-npm-token -w)"
 npm view @etsysentry/http-client version --userconfig .npmrc
 npm view @etsysentry/cli version --userconfig .npmrc
 ```
@@ -125,7 +123,9 @@ npm view @etsysentry/cli version --userconfig .npmrc
 ## Fast Failure Handling
 
 - `401 Unauthorized`:
-  Load `.env` before publish and use `--userconfig ../../.npmrc`.
+  Refresh `NPM_TOKEN` from Keychain and use `--userconfig ../../.npmrc`.
+- `security: SecKeychainSearchCopyNext: The specified item could not be found in the keychain.`:
+  Add or update the `rankwrangler-npm-token` item for the current macOS user.
 - `403 cannot publish over previously published versions`:
   Bump version and retry publish.
 - Keep release scope tight:
