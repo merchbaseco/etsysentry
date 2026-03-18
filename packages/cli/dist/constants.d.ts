@@ -3,6 +3,8 @@ export declare const CONFIG_FILENAME = "config.json";
 export declare const DEFAULT_CONFIG_PATH: string;
 export declare const GLOBAL_CONFIG_PATH: string;
 export declare const DEFAULT_BASE_URL = "https://etsysentry.merchbase.co";
+export declare const CLI_SECURE_STORE_SERVICE = "com.etsysentry.cli";
+export declare const CLI_SECURE_STORE_ACCOUNT = "api-key";
 export declare const RANGE_VALUES: readonly ["7d", "30d", "90d"];
 export declare const METRIC_VALUES: readonly ["views", "favorites", "quantity", "price"];
 export declare const PERFORMANCE_MODE_VALUES: readonly ["metrics", "table"];

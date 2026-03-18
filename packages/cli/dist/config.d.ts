@@ -12,10 +12,6 @@ export declare const switchStorageDir: (params: {
     currentPaths: CliStoragePaths;
     nextStorageDir: string;
 }) => Promise<LoadedCliConfig>;
-export declare const resolveApiKey: (params: {
-    config: CliConfig;
-    flags: CliFlags;
-}) => string | null;
 export declare const resolveBaseUrl: (params: {
     config: CliConfig;
     flags: CliFlags;

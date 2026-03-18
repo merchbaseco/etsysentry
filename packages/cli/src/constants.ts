@@ -6,6 +6,8 @@ export const CONFIG_FILENAME = 'config.json';
 export const DEFAULT_CONFIG_PATH = path.join(DEFAULT_STORAGE_DIR, CONFIG_FILENAME);
 export const GLOBAL_CONFIG_PATH = path.join(DEFAULT_STORAGE_DIR, 'settings.json');
 export const DEFAULT_BASE_URL = 'https://etsysentry.merchbase.co';
+export const CLI_SECURE_STORE_SERVICE = 'com.etsysentry.cli';
+export const CLI_SECURE_STORE_ACCOUNT = 'api-key';
 
 export const RANGE_VALUES = ['7d', '30d', '90d'] as const;
 export const METRIC_VALUES = ['views', 'favorites', 'quantity', 'price'] as const;

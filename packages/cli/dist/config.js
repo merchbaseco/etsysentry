@@ -93,11 +93,6 @@ export const switchStorageDir = async (params) => {
         },
     };
 };
-export const resolveApiKey = (params) => {
-    const fromFlag = toOptionalTrimmed(params.flags.apiKey);
-    const fromEnv = toOptionalTrimmed(process.env.ES_API_KEY);
-    return fromFlag ?? fromEnv ?? null;
-};
 export const resolveBaseUrl = (params) => {
     const fromFlag = toOptionalTrimmed(params.flags.baseUrl);
     const fromEnv = toOptionalTrimmed(process.env.ES_BASE_URL);

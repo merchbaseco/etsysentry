@@ -29,6 +29,14 @@ describe('resolveCommand', () => {
             verb: 'changelog',
         });
     });
+
+    test('maps auth status to the auth resource', () => {
+        expect(resolveCommand(['auth', 'status'])).toEqual({
+            args: [],
+            resource: 'auth',
+            verb: 'status',
+        });
+    });
 });
 
 describe('parseCliInput', () => {

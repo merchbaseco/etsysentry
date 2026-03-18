@@ -1,3 +1,4 @@
+import { runAuthCommand } from './commands-auth.js';
 import { runConfigCommand } from './commands-config.js';
 import { runMetaCommand } from './commands-meta.js';
 import { runPublicCommand } from './commands-public.js';
@@ -10,6 +11,13 @@ export const runCommand = async (params: {
 }): Promise<CommandRunResult> => {
     if (params.command.resource === 'meta') {
         return runMetaCommand(params.command);
+    }
+
+    if (params.command.resource === 'auth') {
+        return runAuthCommand({
+            command: params.command,
+            flags: params.flags,
+        });
     }
 
     const configState = await loadConfigState();

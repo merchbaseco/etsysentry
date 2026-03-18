@@ -1,5 +1,6 @@
 import { createEtsySentryClient } from '@etsysentry/http-client';
-import { resolveApiKey, resolveBaseUrl, resolveRange } from './config.js';
+import { resolveApiKey } from './auth.js';
+import { resolveBaseUrl, resolveRange } from './config.js';
 import { failWith } from './errors.js';
 import {
     filterKeywordItems,
@@ -25,21 +26,22 @@ const requireArg = (params: { args: string[]; index?: number; message: string })
     return value;
 };
 
-const createApiClient = (params: { config: CliConfig; flags: CliFlags }) => {
-    const apiKey = resolveApiKey({
-        config: params.config,
+const createApiClient = async (params: { config: CliConfig; flags: CliFlags }) => {
+    const auth = await resolveApiKey({
         flags: params.flags,
     });
 
-    if (!apiKey) {
+    if (!auth) {
         failWith({
             code: 'MISSING_CONFIG',
-            message: 'ES_API_KEY or --api-key is required',
+            message: 'Run `es auth set <api-key>` or use ES_API_KEY/--api-key for overrides.',
         });
+
+        throw new Error('Unreachable');
     }
 
     return createEtsySentryClient({
-        apiKey: apiKey ?? undefined,
+        apiKey: auth.apiKey,
         baseUrl: resolveBaseUrl({
             config: params.config,
             flags: params.flags,
@@ -52,7 +54,7 @@ const runKeywordsCommand = async (params: {
     flags: CliFlags;
     config: CliConfig;
 }): Promise<CommandRunResult> => {
-    const client = createApiClient(params);
+    const client = await createApiClient(params);
 
     if (params.command.verb === 'list') {
         const pagination = resolveListPagination(params.flags);
@@ -98,7 +100,7 @@ const runListingsCommand = async (params: {
     flags: CliFlags;
     config: CliConfig;
 }): Promise<CommandRunResult> => {
-    const client = createApiClient(params);
+    const client = await createApiClient(params);
 
     if (params.command.verb === 'list') {
         const pagination = resolveListPagination(params.flags);
@@ -171,7 +173,7 @@ const runShopsCommand = async (params: {
     flags: CliFlags;
     config: CliConfig;
 }): Promise<CommandRunResult> => {
-    const client = createApiClient(params);
+    const client = await createApiClient(params);
 
     if (params.command.verb === 'list') {
         const pagination = resolveListPagination(params.flags);

@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+## v0.5.0 - 2026-03-18
+
+### Added
+
+- CLI now supports `es auth set`, `es auth status`, and `es auth clear` for local credential
+  management.
+
+### Changed
+
+- CLI now stores API keys in macOS Keychain for long-term local use, while `ES_API_KEY` and
+  `--api-key` act as command-time overrides for automation and ephemeral runtimes.
+
 ## v0.4.1 - 2026-03-09
 
 ### Added

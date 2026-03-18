@@ -56,7 +56,7 @@ current app capability set first, before adding broader v1 features.
 
 ## Authentication and Preconditions
 
-- All non-config commands require an API key.
+- All non-config/auth/meta commands require an API key.
 - CLI authenticates against `api.public.*` using API key auth:
   - primary header: `x-api-key: <esk_...>`
   - optional equivalent: `authorization: Bearer <esk_...>`
@@ -64,6 +64,12 @@ current app capability set first, before adding broader v1 features.
 API key lookup precedence:
 - `--api-key` flag
 - `ES_API_KEY` env var
+- secure store (`macOS Keychain` on macOS via `es auth set`)
+
+Auth commands:
+- `es auth set <api-key>`
+- `es auth status`
+- `es auth clear`
 
 Base URL precedence:
 - `--base-url` flag
@@ -97,7 +103,7 @@ Error envelope:
   "ok": false,
   "error": {
     "code": "MISSING_CONFIG",
-    "message": "ES_API_KEY or --api-key is required",
+    "message": "Run `es auth set <api-key>` or use ES_API_KEY/--api-key for overrides.",
     "details": {}
   }
 }
@@ -109,7 +115,19 @@ Config file:
 - active config: `<active-storage-dir>/config.json`
 - global storage selector: `~/.etsysentry/settings.json`
 
+Config only stores non-secret defaults:
+- `baseUrl`
+- active storage directory selection
+
+Secrets:
+- API keys are stored in the platform secure store
+- macOS uses Keychain
+- env vars remain supported as per-command overrides for automation/CI/agent runtimes
+
 Commands:
+- `es auth set <api-key>`
+- `es auth status`
+- `es auth clear`
 - `es config show`
 - `es config clear`
 - `es config set base-url <value>`
@@ -314,6 +332,10 @@ es <command> [options]
 Commands:
   changelog
 
+  auth set <api-key>
+  auth status
+  auth clear
+
   config show
   config clear
   config set base-url <value>
@@ -348,16 +370,17 @@ Options:
 ## Command Examples
 
 ```bash
-export ES_API_KEY=esk_live_xxx
 export ES_STORAGE_DIR=/data/etsysentry
 es --version
 es changelog
+es auth set esk_live_xxx
 es config set base-url https://etsysentry.merchbase.co
 
 es track keyword "mid century wall art"
 es track product https://www.etsy.com/listing/1234567890/example
 es track shop la-paz-studio
 
+ES_API_KEY=esk_live_override es auth status
 es keywords list --sync-state queued
 
 es listings list --search "gallery wall" --show-digital --limit 20 --offset 0
