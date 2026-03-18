@@ -47,9 +47,7 @@ bun run http-client:build
 
 ```bash
 cd packages/http-client
-set -a
-source ../../.env
-set +a
+export NPM_TOKEN="$(security find-generic-password -a "$USER" -s rankwrangler-npm-token -w)"
 npm whoami --userconfig ../../.npmrc
 npm publish --access public --userconfig ../../.npmrc
 ```
