@@ -1,32 +1,32 @@
 {
-  "name": "@etsysentry/cli",
-  "version": "0.5.0",
-  "description": "Official EtsySentry command line interface",
-  "type": "module",
-  "bin": {
-    "es": "dist/index.js",
-    "etsysentry": "dist/index.js"
-  },
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "files": [
-    "dist",
-    "README.md"
-  ],
-  "scripts": {
-    "build": "rm -rf dist && tsc -p tsconfig.json",
-    "test": "bun test"
-  },
-  "publishConfig": {
-    "access": "public",
-    "provenance": true
-  },
-  "dependencies": {
-    "@etsysentry/http-client": "^0.5.0",
-    "@trpc/client": "^11.10.0"
-  },
-  "devDependencies": {
-    "@types/node": "^24.5.2",
-    "typescript": "^5.9.2"
-  }
+    "name": "@etsysentry/cli",
+    "version": "0.5.0",
+    "description": "Official EtsySentry command line interface",
+    "type": "module",
+    "bin": {
+        "es": "dist/index.js",
+        "etsysentry": "dist/index.js"
+    },
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "files": [
+        "dist",
+        "README.md"
+    ],
+    "scripts": {
+        "build": "rm -rf dist && tsc -p tsconfig.json",
+        "test": "bun test"
+    },
+    "publishConfig": {
+        "access": "public",
+        "provenance": true
+    },
+    "dependencies": {
+        "@etsysentry/http-client": "0.5.0",
+        "@trpc/client": "11.10.0"
+    },
+    "devDependencies": {
+        "@types/node": "24.10.13",
+        "typescript": "5.9.3"
+    }
 }
