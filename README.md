@@ -50,7 +50,7 @@ EtsySentry tracks three primitives over time:
 ### Website Prototype
 
 ```bash
-bun install
+bun install --frozen-lockfile
 bun run dev
 ```
 
@@ -64,7 +64,7 @@ The dashboard is locked to port `3100` in this mode.
 ### Server (OAuth + Listings Scaffold)
 
 ```bash
-bun install
+bun install --frozen-lockfile
 cp .env.example .env
 bun run server:dev
 ```

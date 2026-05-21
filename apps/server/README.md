@@ -57,7 +57,7 @@ Planned next layers (not yet scaffolded):
 ## Run Locally
 
 ```bash
-bun install
+bun install --frozen-lockfile
 cp .env.example .env
 bun run server:dev
 ```
