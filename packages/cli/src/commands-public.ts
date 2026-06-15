@@ -34,7 +34,8 @@ const createApiClient = async (params: { config: CliConfig; flags: CliFlags }) =
     if (!auth) {
         failWith({
             code: 'MISSING_CONFIG',
-            message: 'Run `es auth set <api-key>` or use ES_API_KEY/--api-key for overrides.',
+            message:
+                'Run `es auth set`, `es auth set --stdin`, or use ES_API_KEY/--api-key for overrides.',
         });
 
         throw new Error('Unreachable');

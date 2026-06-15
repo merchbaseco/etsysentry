@@ -17,6 +17,11 @@ interface ConfigCommandData {
     storageDir: string;
 }
 
+interface ConfigGetData {
+    key: string;
+    value: string | null;
+}
+
 const packageRoot = path.resolve(import.meta.dir, '..');
 const cliEntrypoint = path.join(packageRoot, 'src/index.ts');
 const tempPaths: string[] = [];
@@ -140,6 +145,21 @@ describe('storage-dir config e2e', () => {
             baseUrl: 'http://localhost:8787',
         });
 
+        const getResult = await runCli(['config', 'get', 'base-url'], homeDir);
+        expect(getResult.exitCode).toBe(0);
+
+        const getEnvelope = parseSuccess<ConfigGetData>(getResult.stdout);
+        expect(getEnvelope.data).toEqual({
+            key: 'base-url',
+            value: 'http://localhost:8787',
+        });
+
+        const unsetStorageResult = await runCli(['config', 'unset', 'storage-dir'], homeDir);
+        expect(unsetStorageResult.exitCode).toBe(0);
+
+        const unsetStorageEnvelope = parseSuccess<ConfigCommandData>(unsetStorageResult.stdout);
+        expect(unsetStorageEnvelope.data.storageDir).toBe(path.join(homeDir, '.etsysentry'));
+
         const secondStorageConfigPath = path.join(secondStorageDir, 'config.json');
         expect((await stat(secondStorageConfigPath)).isFile()).toBe(true);
     });
@@ -193,5 +213,40 @@ describe('storage-dir config e2e', () => {
         expect(persistedEnvelope.data.config).toEqual({
             baseUrl: 'http://localhost:1111',
         });
+    });
+
+    test('resets non-secret config and the persisted storage selector', async () => {
+        const homeDir = await mkdtemp(path.join(tmpdir(), 'etsysentry-cli-home-'));
+        const storageDir = path.join(homeDir, 'custom-storage');
+        tempPaths.push(homeDir);
+
+        const setBaseUrlResult = await runCli(
+            ['config', 'set', 'base-url', 'http://localhost:8181'],
+            homeDir
+        );
+        expect(setBaseUrlResult.exitCode).toBe(0);
+
+        const setStorageDirResult = await runCli(
+            ['config', 'set', 'storage-dir', storageDir],
+            homeDir
+        );
+        expect(setStorageDirResult.exitCode).toBe(0);
+
+        const resetResult = await runCli(['config', 'reset'], homeDir);
+        expect(resetResult.exitCode).toBe(0);
+
+        const resetEnvelope = parseSuccess<ConfigCommandData & { reset: boolean }>(
+            resetResult.stdout
+        );
+        expect(resetEnvelope.data.reset).toBe(true);
+        expect(resetEnvelope.data.storageDir).toBe(path.join(homeDir, '.etsysentry'));
+        expect(resetEnvelope.data.config).toEqual({});
+
+        const showResult = await runCli(['config', 'show'], homeDir);
+        expect(showResult.exitCode).toBe(0);
+
+        const showEnvelope = parseSuccess<ConfigCommandData>(showResult.stdout);
+        expect(showEnvelope.data.storageDir).toBe(path.join(homeDir, '.etsysentry'));
+        expect(showEnvelope.data.config).toEqual({});
     });
 });

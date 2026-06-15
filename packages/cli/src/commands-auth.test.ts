@@ -6,6 +6,7 @@ import type { CliFlags } from './types.js';
 const defaultFlags: CliFlags = {
     help: false,
     showDigital: false,
+    stdin: false,
     version: false,
 };
 

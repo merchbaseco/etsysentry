@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import type { AuthInputReader } from './auth.js';
 import { resolveApiKey, resolveAuthStatus, storeApiKeyFromCommand } from './auth.js';
 import type { CliSecureStore } from './secure-store.js';
 import type { CliFlags } from './types.js';
@@ -6,6 +7,7 @@ import type { CliFlags } from './types.js';
 const defaultFlags: CliFlags = {
     help: false,
     showDigital: false,
+    stdin: false,
     version: false,
 };
 
@@ -138,5 +140,72 @@ describe('storeApiKeyFromCommand', () => {
             source: 'arg',
         });
         expect(storedApiKey).toBe('esk_live_positional');
+    });
+
+    test('stores an API key from stdin input', async () => {
+        let storedApiKey: string | null = null;
+        const reader: AuthInputReader = {
+            isInteractive: () => false,
+            readPrompt: () => Promise.resolve(null),
+            readStdin: () => Promise.resolve('esk_live_stdin\n'),
+        };
+
+        const result = await storeApiKeyFromCommand(
+            {
+                command: {
+                    args: [],
+                    resource: 'auth',
+                    verb: 'set',
+                },
+                flags: {
+                    ...defaultFlags,
+                    stdin: true,
+                },
+            },
+            createStore({
+                writeApiKey: (apiKey: string): Promise<void> => {
+                    storedApiKey = apiKey;
+                    return Promise.resolve();
+                },
+            }),
+            reader
+        );
+
+        expect(result).toEqual({
+            source: 'stdin',
+        });
+        expect(storedApiKey).toBe('esk_live_stdin');
+    });
+
+    test('stores an API key from an interactive prompt', async () => {
+        let storedApiKey: string | null = null;
+        const reader: AuthInputReader = {
+            isInteractive: () => true,
+            readPrompt: () => Promise.resolve('esk_live_prompt'),
+            readStdin: () => Promise.resolve(null),
+        };
+
+        const result = await storeApiKeyFromCommand(
+            {
+                command: {
+                    args: [],
+                    resource: 'auth',
+                    verb: 'set',
+                },
+                flags: defaultFlags,
+            },
+            createStore({
+                writeApiKey: (apiKey: string): Promise<void> => {
+                    storedApiKey = apiKey;
+                    return Promise.resolve();
+                },
+            }),
+            reader
+        );
+
+        expect(result).toEqual({
+            source: 'prompt',
+        });
+        expect(storedApiKey).toBe('esk_live_prompt');
     });
 });

@@ -44,7 +44,8 @@ current app capability set first, before adding broader v1 features.
 
 ## Principles
 
-- Config-only state. No interactive prompts.
+- Config-first state. API/config commands never prompt; `auth set` may prompt only for local
+  secret entry.
 - Resource-first, verb-second command shape.
 - JSON-first output, with command-scoped table rendering where explicitly supported.
 - One CLI command maps to one API capability.
@@ -67,7 +68,8 @@ API key lookup precedence:
 - secure store (`macOS Keychain` on macOS via `es auth set`)
 
 Auth commands:
-- `es auth set <api-key>`
+- `es auth set [api-key]`
+- `es auth set --stdin`
 - `es auth status`
 - `es auth clear`
 
@@ -103,7 +105,7 @@ Error envelope:
   "ok": false,
   "error": {
     "code": "MISSING_CONFIG",
-    "message": "Run `es auth set <api-key>` or use ES_API_KEY/--api-key for overrides.",
+    "message": "Run `es auth set`, `es auth set --stdin`, or use ES_API_KEY/--api-key for overrides.",
     "details": {}
   }
 }
@@ -125,19 +127,25 @@ Secrets:
 - env vars remain supported as per-command overrides for automation/CI/agent runtimes
 
 Commands:
-- `es auth set <api-key>`
+- `es auth set [api-key]`
+- `es auth set --stdin`
 - `es auth status`
 - `es auth clear`
 - `es config show`
-- `es config clear`
+- `es config get <key>`
 - `es config set base-url <value>`
 - `es config set storage-dir <path>`
+- `es config unset <key>`
+- `es config reset`
 
 Storage-dir behavior:
 - `ES_STORAGE_DIR` overrides the active storage directory for the current process only
 - `storage-dir` is persisted globally in `~/.etsysentry/settings.json`
 - all subsequent CLI commands read and write config/data from that directory
 - switching directories preserves the currently active config by writing it into the next directory
+- `config show` includes auth source/status without printing the API key
+- `config reset` removes non-secret CLI config and the persisted storage selector; it does not
+  clear secure-store auth
 
 ## Shared Concepts
 
@@ -332,14 +340,17 @@ es <command> [options]
 Commands:
   changelog
 
-  auth set <api-key>
+  auth set [api-key]
+  auth set --stdin
   auth status
   auth clear
 
   config show
-  config clear
+  config get <key>
   config set base-url <value>
   config set storage-dir <path>
+  config unset <key>
+  config reset
 
   keywords list [--search <text>] [--tracking-state <state>] [--sync-state <state>]
     [--limit <n>] [--offset <n>]
@@ -365,6 +376,7 @@ Aliases:
 Options:
   -h, --help                 Show this message
   --version                  Show CLI version
+  --stdin                    Read auth secret from standard input
 ```
 
 ## Command Examples
@@ -373,8 +385,11 @@ Options:
 export ES_STORAGE_DIR=/data/etsysentry
 es --version
 es changelog
-es auth set esk_live_xxx
+es auth set
+printf %s "$ES_API_KEY" | es auth set --stdin
 es config set base-url https://etsysentry.merchbase.co
+es config get base-url
+es config unset base-url
 
 es track keyword "mid century wall art"
 es track product https://www.etsy.com/listing/1234567890/example

@@ -52,6 +52,7 @@ export interface CliFlags {
     range?: string;
     search?: string;
     showDigital: boolean;
+    stdin: boolean;
     syncState?: string;
     trackingState?: string;
     version: boolean;

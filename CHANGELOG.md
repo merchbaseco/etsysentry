@@ -2,7 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## v0.6.0 - 2026-06-15
+
+### Added
+
+- CLI now supports `es auth set --stdin` and hidden local auth entry so agents can pipe API keys
+  and humans can avoid shell history.
+- CLI now supports `es config get`, `es config unset`, and `es config reset` for explicit
+  non-secret config inspection and cleanup.
+
+### Changed
+
+- `es config show` now includes auth source/status without printing secrets.
+- CLI help, README, and CLI spec now describe the secure-store auth and explicit config workflow.
+
+### Removed
+
+- Removed `es config clear` in favor of `es config unset <key>` and `es config reset`.
 
 ## v0.5.0 - 2026-03-18
 

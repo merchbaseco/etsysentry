@@ -32,6 +32,8 @@ describe('resolveBaseUrl', () => {
         const flags: CliFlags = {
             help: false,
             showDigital: false,
+            stdin: false,
+            version: false,
         };
 
         try {

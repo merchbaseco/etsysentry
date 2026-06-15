@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import { CONFIG_FILENAME, DEFAULT_STORAGE_DIR, GLOBAL_CONFIG_PATH } from './constants.js';
@@ -88,6 +88,10 @@ export const saveStorageDir = async (storageDir: string): Promise<void> => {
     await saveGlobalConfig({
         storageDir: normalizedStorageDir,
     });
+};
+
+export const clearStorageDir = async (): Promise<void> => {
+    await rm(GLOBAL_CONFIG_PATH, { force: true });
 };
 
 export const resolveStoragePaths = async (): Promise<CliStoragePaths> => {

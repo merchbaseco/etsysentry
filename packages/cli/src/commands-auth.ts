@@ -1,4 +1,4 @@
-import { resolveAuthStatus, storeApiKeyFromCommand } from './auth.js';
+import { type AuthInputReader, resolveAuthStatus, storeApiKeyFromCommand } from './auth.js';
 import { failWith } from './errors.js';
 import type { CliSecureStore } from './secure-store.js';
 import { secureStore } from './secure-store.js';
@@ -9,10 +9,11 @@ export const runAuthCommand = async (
         command: CliCommand;
         flags: CliFlags;
     },
-    store: CliSecureStore = secureStore
+    store: CliSecureStore = secureStore,
+    reader?: AuthInputReader
 ): Promise<CommandRunResult> => {
     if (params.command.verb === 'set') {
-        const result = await storeApiKeyFromCommand(params, store);
+        const result = await storeApiKeyFromCommand(params, store, reader);
 
         return {
             data: {

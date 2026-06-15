@@ -1,8 +1,8 @@
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { DEFAULT_BASE_URL, RANGE_ABSOLUTE_REGEX, RANGE_VALUES, TRAILING_SLASHES_REGEX, } from './constants.js';
+import { DEFAULT_BASE_URL, DEFAULT_CONFIG_PATH, DEFAULT_STORAGE_DIR, RANGE_ABSOLUTE_REGEX, RANGE_VALUES, TRAILING_SLASHES_REGEX, } from './constants.js';
 import { failWith } from './errors.js';
-import { resolveConfigPath, resolveStoragePaths, saveStorageDir } from './storage.js';
+import { clearStorageDir, resolveConfigPath, resolveStoragePaths, saveStorageDir, } from './storage.js';
 const toOptionalTrimmed = (value) => {
     const trimmed = value?.trim();
     return trimmed && trimmed.length > 0 ? trimmed : undefined;
@@ -69,8 +69,30 @@ export const saveConfig = async (params) => {
     await mkdir(path.dirname(params.configPath), { recursive: true });
     await writeFile(params.configPath, `${JSON.stringify(params.config, null, 2)}\n`, 'utf8');
 };
-export const clearConfig = async (configPath) => {
-    await rm(configPath, { force: true });
+export const resetConfig = async (paths) => {
+    await Promise.all([
+        rm(paths.configPath, { force: true }),
+        clearStorageDir(),
+        paths.configPath === DEFAULT_CONFIG_PATH
+            ? Promise.resolve()
+            : rm(DEFAULT_CONFIG_PATH, { force: true }),
+    ]);
+    return {
+        config: {},
+        paths: {
+            configPath: DEFAULT_CONFIG_PATH,
+            globalConfigPath: paths.globalConfigPath,
+            storageDir: DEFAULT_STORAGE_DIR,
+        },
+    };
+};
+export const unsetStorageDir = async () => {
+    await clearStorageDir();
+    const paths = await resolveStoragePaths();
+    return {
+        config: await loadConfigFile(paths.configPath),
+        paths,
+    };
 };
 export const switchStorageDir = async (params) => {
     const nextConfigPath = resolveConfigPath(params.nextStorageDir);
@@ -110,6 +132,41 @@ export const updateConfigFromSet = (params) => {
     if (params.key === 'base-url') {
         nextConfig.baseUrl = normalizeBaseUrl(params.value);
         return nextConfig;
+    }
+    failWith({
+        code: 'BAD_REQUEST',
+        message: 'Unsupported config key.',
+        details: {
+            key: params.key,
+            supportedKeys: ['base-url', 'storage-dir'],
+        },
+    });
+    throw new Error('Unreachable');
+};
+export const updateConfigFromUnset = (params) => {
+    const nextConfig = {
+        ...params.config,
+    };
+    if (params.key === 'base-url') {
+        nextConfig.baseUrl = undefined;
+        return nextConfig;
+    }
+    failWith({
+        code: 'BAD_REQUEST',
+        message: 'Unsupported config key.',
+        details: {
+            key: params.key,
+            supportedKeys: ['base-url', 'storage-dir'],
+        },
+    });
+    throw new Error('Unreachable');
+};
+export const getConfigValue = (params) => {
+    if (params.key === 'base-url') {
+        return params.config.baseUrl ?? null;
+    }
+    if (params.key === 'storage-dir') {
+        return params.paths.storageDir;
     }
     failWith({
         code: 'BAD_REQUEST',

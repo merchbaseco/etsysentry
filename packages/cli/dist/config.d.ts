@@ -6,7 +6,8 @@ export declare const saveConfig: (params: {
     config: CliConfig;
     configPath: string;
 }) => Promise<void>;
-export declare const clearConfig: (configPath: string) => Promise<void>;
+export declare const resetConfig: (paths: CliStoragePaths) => Promise<LoadedCliConfig>;
+export declare const unsetStorageDir: () => Promise<LoadedCliConfig>;
 export declare const switchStorageDir: (params: {
     config: CliConfig;
     currentPaths: CliStoragePaths;
@@ -22,3 +23,12 @@ export declare const updateConfigFromSet: (params: {
     key: string;
     value: string;
 }) => CliConfig;
+export declare const updateConfigFromUnset: (params: {
+    config: CliConfig;
+    key: string;
+}) => CliConfig;
+export declare const getConfigValue: (params: {
+    config: CliConfig;
+    key: string;
+    paths: CliStoragePaths;
+}) => string | null;

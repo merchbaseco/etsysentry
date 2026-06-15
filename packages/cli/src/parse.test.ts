@@ -53,11 +53,16 @@ describe('parseCliInput', () => {
                 range: undefined,
                 search: undefined,
                 showDigital: false,
+                stdin: false,
                 syncState: undefined,
                 trackingState: undefined,
                 version: true,
             },
             positionals: [],
         });
+    });
+
+    test('parses stdin auth input flag', () => {
+        expect(parseCliInput(['auth', 'set', '--stdin']).flags.stdin).toBe(true);
     });
 });

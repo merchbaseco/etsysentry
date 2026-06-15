@@ -23,7 +23,11 @@ export const runCommand = async (params: {
     const configState = await loadConfigState();
 
     if (params.command.resource === 'config') {
-        return runConfigCommand(params.command, configState);
+        return runConfigCommand({
+            command: params.command,
+            configState,
+            flags: params.flags,
+        });
     }
 
     return runPublicCommand({
