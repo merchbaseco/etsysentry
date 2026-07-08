@@ -1,0 +1,12 @@
+version = 1
+name = "etsysentry"
+
+[setup]
+script = '''
+bun install
+'''
+
+[[actions]]
+name = "Dev"
+icon = "run"
+command = "bun run dev"
