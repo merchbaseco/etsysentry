@@ -4,15 +4,15 @@ import { appRouter } from '../router';
 
 const createContext = (params: { email?: string; isAdmin: boolean }): TrpcContext => {
     return {
-        authType: 'clerk',
+        accessError: null,
+        authType: 'access',
+        credentialKind: 'session',
         isAdmin: params.isAdmin,
         reply: {} as never,
         request: {} as never,
         requestId: 'request-1',
         accountId: 'tenant-1',
         merchbaseUserId: 'mbu_test',
-        apiKey: null,
-        apiKeyError: undefined,
         user: {
             credentialKind: 'session',
             merchbaseUserId: 'mbu_test',

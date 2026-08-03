@@ -6,10 +6,30 @@ const t = initTRPC.context<TrpcContext>().create();
 export const router = t.router;
 
 export const publicProcedure = t.procedure.use(({ ctx, next }) => {
-    if (ctx.authType !== 'apiKey' || !ctx.apiKey || !ctx.accountId || !ctx.merchbaseUserId) {
+    if (ctx.accessError === 'access_denied') {
+        throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Merchbase access is not granted.',
+        });
+    }
+
+    if (ctx.accessError === 'access_unavailable') {
+        throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Merchbase access is temporarily unavailable.',
+        });
+    }
+
+    if (
+        ctx.authType !== 'access' ||
+        (ctx.credentialKind !== 'api_key' && ctx.credentialKind !== 'oauth') ||
+        !ctx.user ||
+        !ctx.accountId ||
+        !ctx.merchbaseUserId
+    ) {
         throw new TRPCError({
             code: 'UNAUTHORIZED',
-            message: ctx.apiKeyError ?? 'API key authentication required.',
+            message: 'Merchbase API key or OAuth credential required.',
         });
     }
 
@@ -17,14 +37,35 @@ export const publicProcedure = t.procedure.use(({ ctx, next }) => {
         ctx: {
             ...ctx,
             accountId: ctx.accountId,
-            apiKey: ctx.apiKey,
+            credentialKind: ctx.credentialKind,
             merchbaseUserId: ctx.merchbaseUserId,
+            user: ctx.user,
         },
     });
 });
 
 export const appProcedure = t.procedure.use(({ ctx, next }) => {
-    if (ctx.authType !== 'clerk' || !ctx.user || !ctx.accountId || !ctx.merchbaseUserId) {
+    if (ctx.accessError === 'access_denied') {
+        throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Merchbase access is not granted.',
+        });
+    }
+
+    if (ctx.accessError === 'access_unavailable') {
+        throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Merchbase access is temporarily unavailable.',
+        });
+    }
+
+    if (
+        ctx.authType !== 'access' ||
+        ctx.credentialKind !== 'session' ||
+        !ctx.user ||
+        !ctx.accountId ||
+        !ctx.merchbaseUserId
+    ) {
         throw new TRPCError({
             code: 'UNAUTHORIZED',
             message: 'Clerk authentication required.',

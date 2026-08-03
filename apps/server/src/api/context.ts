@@ -3,15 +3,12 @@ import type { CreateFastifyContextOptions } from '@trpc/server/adapters/fastify'
 import { env } from '../config/env';
 import { type EtsySentryAccess, getEtsySentryAccess } from '../services/access/etsysentry-access';
 
-type AuthType = 'apiKey' | 'clerk' | 'none';
+export type AuthType = 'access' | 'none';
+export type CredentialKind = 'api_key' | 'oauth' | 'session';
+export type AccessError = 'access_denied' | 'access_unavailable' | null;
 
 export interface AuthenticatedUser {
-    credentialKind: 'session';
-    merchbaseUserId: string;
-}
-
-export interface ApiKeyPrincipal {
-    credentialKind: 'api_key';
+    credentialKind: CredentialKind;
     merchbaseUserId: string;
 }
 
@@ -44,20 +41,6 @@ const getSharedContext = ({
     requestId: String(req.id),
 });
 
-const getAccessErrorMessage = (error: unknown): string => {
-    if (error instanceof ServiceAccessError) {
-        if (error.code === 'access_denied') {
-            return 'Merchbase access is not granted.';
-        }
-
-        if (error.code === 'access_unavailable') {
-            return 'Merchbase access is temporarily unavailable.';
-        }
-    }
-
-    return 'Valid Merchbase credential required.';
-};
-
 export const createTrpcContext = async (
     { req, res }: CreateFastifyContextOptions,
     access: EtsySentryAccess = getEtsySentryAccess()
@@ -68,53 +51,49 @@ export const createTrpcContext = async (
     if (!token) {
         return {
             ...sharedContext,
+            accessError: null as AccessError,
             authType: 'none' as AuthType,
+            credentialKind: null,
             isAdmin: false,
             accountId: null,
             merchbaseUserId: null,
-            apiKey: null,
-            apiKeyError: undefined,
             user: null,
         };
     }
 
     try {
-        const authorized = await (token.startsWith('ak_')
-            ? access.apiKeyAccess
-            : access.sessionAccess
-        ).authorize(token);
-        const isApiKey = authorized.credentialKind === 'api_key';
+        const authorized = await access.authorize(token);
+        const credentialKind = authorized.credentialKind;
         const merchbaseUserId = authorized.merchbaseUserId;
 
         return {
             ...sharedContext,
-            authType: (isApiKey ? 'apiKey' : 'clerk') as AuthType,
-            isAdmin: !isApiKey && isAdminMerchbaseUser(merchbaseUserId),
+            accessError: null as AccessError,
+            authType: 'access' as AuthType,
+            credentialKind,
+            isAdmin: credentialKind === 'session' && isAdminMerchbaseUser(merchbaseUserId),
             accountId: authorized.principal.accountId,
             merchbaseUserId,
-            apiKey: isApiKey
-                ? ({
-                      credentialKind: 'api_key',
-                      merchbaseUserId,
-                  } satisfies ApiKeyPrincipal)
-                : null,
-            apiKeyError: undefined,
-            user: isApiKey
-                ? null
-                : ({
-                      credentialKind: 'session',
-                      merchbaseUserId,
-                  } satisfies AuthenticatedUser),
+            user: {
+                credentialKind,
+                merchbaseUserId,
+            } satisfies AuthenticatedUser,
         };
     } catch (error) {
+        const accessError: AccessError =
+            error instanceof ServiceAccessError &&
+            (error.code === 'access_denied' || error.code === 'access_unavailable')
+                ? error.code
+                : null;
+
         return {
             ...sharedContext,
+            accessError,
             authType: 'none' as AuthType,
+            credentialKind: null,
             isAdmin: false,
             accountId: null,
             merchbaseUserId: null,
-            apiKey: null,
-            apiKeyError: getAccessErrorMessage(error),
             user: null,
         };
     }

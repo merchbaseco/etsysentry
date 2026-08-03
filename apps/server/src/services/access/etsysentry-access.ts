@@ -7,6 +7,7 @@ import { env } from '../../config/env';
 import { db } from '../../db';
 import { createAccessProjectionStore } from './access-projection-store';
 import { resolveEtsySentryAccountPrincipal } from './account-principal';
+import { authorizeEtsySentryCredential } from './authorize-credential';
 
 export const ETSYSENTRY_SERVICE = 'etsysentry' as const;
 
@@ -32,7 +33,7 @@ export const createEtsySentryAccess = (database: typeof db = db) => {
         service: ETSYSENTRY_SERVICE,
     } as const;
 
-    return {
+    const access = {
         apiKeyAccess: createServiceAccess({
             ...common,
             acceptedCredentialKinds: ['api_key'],
@@ -47,6 +48,11 @@ export const createEtsySentryAccess = (database: typeof db = db) => {
             ...common,
             acceptedCredentialKinds: ['session'],
         }),
+    };
+
+    return {
+        ...access,
+        authorize: (credential: string) => authorizeEtsySentryCredential(access, credential),
     };
 };
 
