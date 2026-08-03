@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1.6
+
 FROM oven/bun:1.3.5-alpine AS build
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -7,7 +9,9 @@ ENV VITE_CLERK_PUBLISHABLE_KEY=${VITE_CLERK_PUBLISHABLE_KEY}
 ENV VITE_SERVER_ORIGIN=${VITE_SERVER_ORIGIN}
 
 COPY . .
-RUN bun install --frozen-lockfile
+RUN --mount=type=secret,id=github_packages_token \
+  GITHUB_PACKAGES_TOKEN="$(cat /run/secrets/github_packages_token)" \
+  bun install --frozen-lockfile
 RUN bun run server:build
 RUN bun run website:build
 

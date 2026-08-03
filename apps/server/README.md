@@ -131,6 +131,12 @@ as-built access contract, two-phase migration tooling, and production cutover ru
 Etsy OAuth connection is provider state, not customer authentication, and remains keyed by the
 existing local account UUID.
 
+Container builds install the private `@merchbaseco/access` package through the
+`github_packages_token` BuildKit secret. For a local Compose build, export a short-lived
+`GITHUB_PACKAGES_TOKEN` with package-read access before running `docker compose build`; do not put
+the token in an image build argument, Dockerfile environment variable, or committed environment
+file. The deploy workflow supplies its package-read `github.token` to the same secret.
+
 ## API Structure
 
 - tRPC routes under `/api`

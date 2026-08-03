@@ -33,6 +33,11 @@ clean cutover. The only CLI/automation credential variable is `MERCHBASE_API_KEY
 shared Keychain account/service constants from the access package. HTTP clients send
 `Authorization: Bearer <ak_...>`.
 
+Production image builds install the private access package with the `github_packages_token`
+BuildKit secret. Compose sources that secret from a transient `GITHUB_PACKAGES_TOKEN`; the deploy
+workflow grants only `contents: read` and `packages: read` and supplies `github.token` for the build
+step. The package token is never an image build argument or Dockerfile environment variable.
+
 The HTTP authorization boundary routes `ak_` credentials to API-key access, `oat_` credentials to
 OAuth access, and JWT-shaped credentials to session access. A JWT-shaped credential falls back to
 OAuth only when session authentication returns `unauthenticated`; denied or unavailable access is

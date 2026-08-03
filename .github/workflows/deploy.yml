@@ -5,6 +5,10 @@ on:
     branches: [main, zknicker/etsy-sentry-start]
   workflow_dispatch:
 
+permissions:
+  contents: read
+  packages: read
+
 jobs:
   deploy:
     name: Build and Deploy
@@ -15,6 +19,8 @@ jobs:
 
       - name: Build and deploy
         working-directory: /Users/zknicker/srv/etsysentry
+        env:
+          GITHUB_PACKAGES_TOKEN: ${{ github.token }}
         run: |
           # Pull latest code
           git pull --ff-only
