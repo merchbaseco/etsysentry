@@ -4,6 +4,7 @@ import {
     buildCutoverPlan,
     type CutoverAudit,
     expectedIdentitySetFingerprint,
+    fingerprint,
     mappingFingerprint,
     parseCutoverMapping,
     parseCutoverPlan,
@@ -11,15 +12,20 @@ import {
 
 const mapping = parseCutoverMapping({
     accountId: 'account-test',
-    issuer: 'https://clerk.example',
     merchbaseUserId: 'mbu_test',
     retained: {
+        issuer: 'https://retained.clerk.example',
         subject: 'user_retained',
         sourceUpdatedAt: 100,
         access: 'granted',
         accessValidUntil: null,
     },
-    retiredSubjects: ['user_retired'],
+    retiredIdentities: [
+        {
+            issuer: 'https://retired.clerk.example',
+            subject: 'user_retired',
+        },
+    ],
     expected: {
         global: {
             accountCount: 1,
@@ -105,11 +111,74 @@ describe('central auth cutover planner', () => {
         ).toThrow('issuer/subject set changed');
     });
 
-    test('rejects a mapping that tries to retain and retire the same subject', () => {
+    test('accepts retained and retired identities from different issuers', () => {
+        expect(mapping.retained.issuer).not.toBe(mapping.retiredIdentities[0]?.issuer);
+        expect(() => assertCutoverAuditMatchesMapping({ audit, mapping })).not.toThrow();
+    });
+
+    test('rejects a fingerprint that rewrites the retired identity issuer', () => {
+        const target = audit.target;
+        const retiredIdentity = mapping.retiredIdentities[0];
+
+        if (!(target && retiredIdentity)) {
+            throw new Error('Test fixtures must include a target and retired identity.');
+        }
+
+        const rewrittenFingerprint = fingerprint(
+            [
+                `${mapping.retained.issuer}:${mapping.retained.subject}`,
+                `${mapping.retained.issuer}:${retiredIdentity.subject}`,
+            ]
+                .sort()
+                .join('\n')
+        );
+
+        expect(() =>
+            assertCutoverAuditMatchesMapping({
+                audit: {
+                    ...audit,
+                    target: {
+                        ...target,
+                        identitySetFingerprint: rewrittenFingerprint,
+                    },
+                },
+                mapping,
+            })
+        ).toThrow('issuer/subject set changed');
+    });
+
+    test('rejects a mapping that retains and retires the same exact identity', () => {
         expect(() =>
             parseCutoverMapping({
                 ...mapping,
-                retiredSubjects: ['user_retained'],
+                retiredIdentities: [
+                    {
+                        issuer: mapping.retained.issuer,
+                        subject: mapping.retained.subject,
+                    },
+                ],
+            })
+        ).toThrow();
+    });
+
+    test('rejects duplicate exact retired identities', () => {
+        const retiredIdentity = mapping.retiredIdentities[0];
+
+        expect(() =>
+            parseCutoverMapping({
+                ...mapping,
+                retiredIdentities: [retiredIdentity, retiredIdentity],
+            })
+        ).toThrow('duplicate issuer/subject pairs');
+    });
+
+    test('rejects the retired shared-issuer mapping shape', () => {
+        expect(() =>
+            parseCutoverMapping({
+                ...mapping,
+                issuer: mapping.retained.issuer,
+                retiredIdentities: undefined,
+                retiredSubjects: ['user_retired'],
             })
         ).toThrow();
     });

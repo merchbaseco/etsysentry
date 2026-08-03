@@ -7,6 +7,16 @@ const subjectSchema = z.string().regex(/^user_[A-Za-z0-9_-]+$/);
 const merchbaseUserIdSchema = z.string().regex(/^mbu_[A-Za-z0-9_-]+$/);
 const fingerprintSchema = z.string().regex(/^[a-f0-9]{64}$/);
 const nonNegativeCountSchema = z.number().int().nonnegative().safe();
+const identitySchema = z
+    .object({
+        issuer: issuerSchema,
+        subject: subjectSchema,
+    })
+    .strict();
+
+type CutoverIdentity = z.infer<typeof identitySchema>;
+
+const identityKey = (identity: CutoverIdentity): string => `${identity.issuer}:${identity.subject}`;
 
 export const fingerprint = (value: string): string => {
     return createHash('sha256').update(value, 'utf8').digest('hex');
@@ -15,15 +25,13 @@ export const fingerprint = (value: string): string => {
 export const cutoverMappingSchema = z
     .object({
         accountId: accountIdSchema,
-        issuer: issuerSchema,
         merchbaseUserId: merchbaseUserIdSchema,
-        retained: z.object({
-            subject: subjectSchema,
+        retained: identitySchema.extend({
             sourceUpdatedAt: z.number().int().positive().safe(),
             access: z.enum(['granted', 'not_granted']),
             accessValidUntil: z.string().datetime({ offset: true }).nullable(),
         }),
-        retiredSubjects: z.array(subjectSchema).min(1),
+        retiredIdentities: z.array(identitySchema).min(1),
         expected: z.object({
             global: z
                 .object({
@@ -47,19 +55,22 @@ export const cutoverMappingSchema = z
     })
     .strict()
     .superRefine((mapping, context) => {
-        if (mapping.retiredSubjects.includes(mapping.retained.subject)) {
+        const retainedKey = identityKey(mapping.retained);
+        const retiredKeys = mapping.retiredIdentities.map(identityKey);
+
+        if (retiredKeys.includes(retainedKey)) {
             context.addIssue({
                 code: 'custom',
-                message: 'retained.subject must not also appear in retiredSubjects.',
-                path: ['retiredSubjects'],
+                message: 'retained identity must not also appear in retiredIdentities.',
+                path: ['retiredIdentities'],
             });
         }
 
-        if (new Set(mapping.retiredSubjects).size !== mapping.retiredSubjects.length) {
+        if (new Set(retiredKeys).size !== retiredKeys.length) {
             context.addIssue({
                 code: 'custom',
-                message: 'retiredSubjects must not contain duplicates.',
-                path: ['retiredSubjects'],
+                message: 'retiredIdentities must not contain duplicate issuer/subject pairs.',
+                path: ['retiredIdentities'],
             });
         }
     });
@@ -158,10 +169,11 @@ export const mappingFingerprint = (mapping: CutoverMapping): string => {
     return fingerprint(
         JSON.stringify({
             accountId: mapping.accountId,
-            issuer: mapping.issuer,
             merchbaseUserId: mapping.merchbaseUserId,
             retained: mapping.retained,
-            retiredSubjects: [...mapping.retiredSubjects].sort(),
+            retiredIdentities: [...mapping.retiredIdentities].sort((left, right) =>
+                identityKey(left).localeCompare(identityKey(right))
+            ),
             expected: mapping.expected,
         })
     );
@@ -169,10 +181,7 @@ export const mappingFingerprint = (mapping: CutoverMapping): string => {
 
 export const expectedIdentitySetFingerprint = (mapping: CutoverMapping): string => {
     return fingerprint(
-        [mapping.retained.subject, ...mapping.retiredSubjects]
-            .map((subject) => `${mapping.issuer}:${subject}`)
-            .sort()
-            .join('\n')
+        [mapping.retained, ...mapping.retiredIdentities].map(identityKey).sort().join('\n')
     );
 };
 

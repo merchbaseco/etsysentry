@@ -6,6 +6,13 @@ import {
     fingerprint,
 } from './central-auth-cutover-lib';
 
+interface CutoverProjectionSeed {
+    eventId: string;
+    identity: { issuer: string; subject: string };
+    projection: AccessProjection | null;
+    sourceUpdatedAt: number;
+}
+
 const applyProjection = async (
     database: Sql,
     params: {
@@ -72,8 +79,14 @@ export const seedCutoverProjections = async (
     database: Sql,
     mapping: CutoverMapping
 ): Promise<void> => {
+    for (const seed of buildCutoverProjectionSeeds(mapping)) {
+        await applyProjection(database, seed);
+    }
+};
+
+export const buildCutoverProjectionSeeds = (mapping: CutoverMapping): CutoverProjectionSeed[] => {
     const retainedIdentity = {
-        issuer: mapping.issuer,
+        issuer: mapping.retained.issuer,
         subject: mapping.retained.subject,
     };
     const retainedProjection: AccessProjection = {
@@ -84,25 +97,20 @@ export const seedCutoverProjections = async (
         accessValidUntil: accessValidUntilEpoch(mapping.retained.accessValidUntil),
         sourceUpdatedAt: mapping.retained.sourceUpdatedAt,
     };
-
-    await applyProjection(database, {
+    const retainedSeed: CutoverProjectionSeed = {
         eventId: `cutover:${fingerprint(JSON.stringify(retainedProjection))}`,
         identity: retainedIdentity,
         projection: retainedProjection,
         sourceUpdatedAt: retainedProjection.sourceUpdatedAt,
-    });
+    };
 
-    for (const retiredSubject of mapping.retiredSubjects) {
-        const identity = {
-            issuer: mapping.issuer,
-            subject: retiredSubject,
-        };
-
-        await applyProjection(database, {
+    return [
+        retainedSeed,
+        ...mapping.retiredIdentities.map((identity) => ({
             eventId: `cutover:${fingerprint(`${identity.issuer}:${identity.subject}:tombstone`)}`,
             identity,
             projection: null,
             sourceUpdatedAt: TERMINAL_PROJECTION_TIMESTAMP,
-        });
-    }
+        })),
+    ];
 };

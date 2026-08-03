@@ -53,12 +53,51 @@ bun run --cwd apps/server access:backfill \
 ```
 
 The mapping file is supplied privately by the operator after checking Clerk and the approved local
-account. It must contain exactly one local `accountId`, one issuer, one retained subject, the
-explicit retired subject list, the stable `merchbaseUserId`, the retained projection's central
-source timestamp/access state, and expected global and target counts for identities, the duplicate
-normalized-email group, active legacy keys, Etsy OAuth connections, accounts, redundant ownership
-references, and system metering events. The planner hashes the issuer/subject set and mapping; it
-never prints raw identifiers or emails and never chooses a winner.
+account. Every retained or retired identity contains its own exact `issuer` and `subject`; there is
+no shared or inferred issuer. The mapping also contains exactly one local `accountId`, the stable
+`merchbaseUserId`, the retained projection's central source timestamp/access state, and expected
+global and target counts for identities, the duplicate normalized-email group, active legacy keys,
+Etsy OAuth connections, accounts, redundant ownership references, and system metering events. The
+planner hashes the exact issuer/subject set and mapping; it never prints raw identifiers or emails
+and never chooses a winner. Duplicate exact issuer/subject pairs are rejected.
+
+The private mapping has this shape; replace every example value from approved operator evidence:
+
+```json
+{
+    "accountId": "approved-local-account-id",
+    "merchbaseUserId": "mbu_approved",
+    "retained": {
+        "issuer": "https://retained-clerk.example",
+        "subject": "user_retained",
+        "sourceUpdatedAt": 1,
+        "access": "granted",
+        "accessValidUntil": null
+    },
+    "retiredIdentities": [
+        {
+            "issuer": "https://retired-clerk.example",
+            "subject": "user_retired"
+        }
+    ],
+    "expected": {
+        "global": {
+            "accountCount": 1,
+            "activeLegacyApiKeyCount": 1,
+            "clerkIdentityCount": 2,
+            "duplicateNormalizedEmailGroupCount": 1,
+            "etsyOAuthConnectionCount": 1
+        },
+        "target": {
+            "accountIdentityCount": 2,
+            "activeLegacyApiKeyCount": 1,
+            "etsyOAuthConnectionCount": 1,
+            "legacyOwnershipReferenceCount": 0,
+            "systemEtsyApiCallEventCount": 0
+        }
+    }
+}
+```
 
 `access:audit` reads global counts plus, when given a mapping, the exact target identity-set,
 legacy-key, OAuth, product-row, and legacy ownership-reference counts. It fails if an affected row
@@ -85,12 +124,13 @@ queued jobs or product data.
 ## Exact production cutover
 
 1. Freeze identity changes. Pause account/identity administration long enough to capture the Clerk
-   issuer and exact subjects involved. Record the central metadata source timestamp, access state,
-   and stable user ID in the private operator mapping. Do not use normalized email to select a
-   retained identity.
+   exact issuer and subject pair for every identity involved. Record the central metadata source
+   timestamp, access state, and stable user ID in the private operator mapping. Do not use
+   normalized email to select a retained identity or infer one identity's issuer from another.
 2. Run `access:audit` read-only. Confirm the known Phase 0 shape with private evidence: one real
-   account, the exact duplicate normalized-email group, the explicit Clerk subject set, one active
-   legacy EtsySentry key, and one Etsy OAuth connection. Confirm all product/metering row counts.
+   account, the exact duplicate normalized-email group, the explicit Clerk issuer/subject pairs,
+   one active legacy EtsySentry key, and one Etsy OAuth connection. Confirm all product/metering
+   row counts.
 3. Obtain explicit approval for the mapping, plan digest, and target account. Record who approved
    it and why; do not put those private identifiers into source or shared logs.
 4. Stop the EtsySentry server, pg-boss workers, CLI automation, and any scheduled external caller.
