@@ -17,7 +17,7 @@ Covered primitives:
 - `shop`
 
 Covered operations:
-- env-based API key auth plus local base URL config
+- shared Merchbase API-key auth plus local base URL config
 - local storage-dir config with env override support
 - track/list for all primitives
 - listing performance retrieval
@@ -59,12 +59,11 @@ current app capability set first, before adding broader v1 features.
 
 - All non-config/auth/meta commands require an API key.
 - CLI authenticates against `api.public.*` using API key auth:
-  - primary header: `x-api-key: <esk_...>`
-  - optional equivalent: `authorization: Bearer <esk_...>`
+  - `authorization: Bearer <ak_...>`
 
 API key lookup precedence:
 - `--api-key` flag
-- `ES_API_KEY` env var
+- `MERCHBASE_API_KEY` env var
 - secure store (`macOS Keychain` on macOS via `es auth set`)
 
 Auth commands:
@@ -105,7 +104,7 @@ Error envelope:
   "ok": false,
   "error": {
     "code": "MISSING_CONFIG",
-    "message": "Run `es auth set`, `es auth set --stdin`, or use ES_API_KEY/--api-key for overrides.",
+    "message": "Run `es auth set`, `es auth set --stdin`, or use MERCHBASE_API_KEY/--api-key for overrides.",
     "details": {}
   }
 }
@@ -386,7 +385,7 @@ export ES_STORAGE_DIR=/data/etsysentry
 es --version
 es changelog
 es auth set
-printf %s "$ES_API_KEY" | es auth set --stdin
+printf %s "$MERCHBASE_API_KEY" | es auth set --stdin
 es config set base-url https://etsysentry.merchbase.co
 es config get base-url
 es config unset base-url
@@ -395,7 +394,7 @@ es track keyword "mid century wall art"
 es track product https://www.etsy.com/listing/1234567890/example
 es track shop la-paz-studio
 
-ES_API_KEY=esk_live_override es auth status
+MERCHBASE_API_KEY=ak_override es auth status
 es keywords list --sync-state queued
 
 es listings list --search "gallery wall" --show-digital --limit 20 --offset 0

@@ -4,8 +4,8 @@
 
 This spec defines both first-party API modalities exposed by EtsySentry:
 
-- Dashboard App API (`api.app.*`) authenticated by Clerk bearer tokens.
-- Public API (`api.public.*`) authenticated by API keys (CLI + HTTP client).
+- Dashboard App API (`api.app.*`) authenticated by centralized Merchbase Access Clerk sessions.
+- Public API (`api.public.*`) authenticated by centralized Merchbase opaque API keys (CLI + HTTP client).
 
 Server transport base URL for both modalities:
 - `<origin>/api`
@@ -20,11 +20,11 @@ Server transport base URL for both modalities:
   - `Authorization: Bearer <clerk_jwt>`
 - Auth context behavior:
   - server validates Clerk token
-  - `accountId` is resolved server-side from mapped Clerk identity `(iss, sub)` with email match
-    as the preferred link when available
+  - the access package authenticates the session and the product resolves its stable
+    `merchbaseUserId` projection to exactly one local `accountId`
   - all tenant/domain ownership is keyed by `accountId` (not Clerk user ids)
   - procedures must not accept auth identity fields from client input
-  - admin-only procedures require Clerk email to match `ADMIN_EMAIL`
+  - admin-only procedures compare the stable `merchbaseUserId` with `ADMIN_MERCHBASE_USER_ID`
 - Current implementation status:
   - implemented and active
 
@@ -42,11 +42,11 @@ OAuth/session storage boundary:
   - `@etsysentry/http-client`
   - direct HTTP/tRPC clients
 - Authentication:
-  - required: `x-api-key: <esk_...>`
-  - optional equivalent: `authorization: Bearer <esk_...>`
+  - required: `authorization: Bearer <ak_...>`
 - Auth context behavior:
-  - tenant scoping comes from API key context (`accountId`)
-  - Clerk remains the dashboard auth provider; it is not the public tenant key
+  - the access package authenticates the opaque key and returns the stable `merchbaseUserId`
+  - the product-local projection maps that stable user to `accountId`
+  - no EtsySentry-specific key issuance, verification, header, route, or table remains
 - Current implementation status:
   - implemented for CLI v0.2 surface:
     - `public.keywords.list`
@@ -141,7 +141,7 @@ Output:
 
 ```ts
 {
-  email: string | null;
+  email: null;
   isAdmin: true;
   accountId: string;
 }
@@ -198,75 +198,6 @@ Output:
   };
 }
 ```
-
-### API Keys
-
-`app.apiKeys.list` (query)
-
-Input:
-
-```ts
-{}
-```
-
-Output:
-
-```ts
-{
-  items: Array<{
-    id: string; // uuid
-    accountId: string;
-    ownerClerkUserId: string;
-    name: string;
-    keyPrefix: string;
-    lastUsedAt: string | null; // ISO timestamp
-    createdAt: string; // ISO timestamp
-    updatedAt: string; // ISO timestamp
-  }>;
-}
-```
-
-`app.apiKeys.create` (mutation)
-
-Input:
-
-```ts
-{
-  name?: string; // optional; default "API key"
-}
-```
-
-Output:
-
-```ts
-{
-  item: {
-    id: string; // uuid
-    accountId: string;
-    ownerClerkUserId: string;
-    name: string;
-    keyPrefix: string;
-    lastUsedAt: string | null; // ISO timestamp
-    createdAt: string; // ISO timestamp
-    updatedAt: string; // ISO timestamp
-  };
-  rawApiKey: string; // returned only on create
-}
-```
-
-`app.apiKeys.revoke` (mutation)
-
-Input:
-
-```ts
-{
-  apiKeyId: string; // uuid
-}
-```
-
-Output:
-- same item shape as entries in `app.apiKeys.list` output
-- deletes the API key row for that account
 
 ### Dashboard
 
@@ -820,15 +751,14 @@ This section documents the procedures currently implemented for CLI/http consume
 ### Authentication
 
 Required on all `api.public.*` procedures:
-- `x-api-key: <esk_...>` header
-
-Optional equivalent:
-- `authorization: Bearer <esk_...>`
+- `authorization: Bearer <ak_...>`
 
 Auth notes:
-- API key resolves the tenant `accountId`; all access is account-scoped.
+- The shared access package authenticates the key and resolves the product-local stable user
+  projection to `accountId`; all access is account-scoped.
 - Public procedures do not accept tenant identity input fields.
-- For tracking mutations, server resolves an actor Clerk identity from the account mapping.
+- For tracking mutations, the stable `merchbaseUserId` is used as the product actor value. Existing
+  tracker/metering columns remain historical storage and are not authorization sources.
 
 ### Procedure Keys
 

@@ -33,11 +33,14 @@ import { createEtsySentryClient } from '@etsysentry/http-client';
 
 const client = createEtsySentryClient({
     baseUrl: 'https://etsysentry.example.com',
-    apiKey: 'esk_...',
+    apiKey: 'ak_...',
 });
 
 const listings = await client.queryClient.fetchQuery(client.trpc.public.listings.list.queryOptions({}));
 ```
+
+The client sends the credential as `Authorization: Bearer <ak_...>`. The removed
+`x-api-key` header and EtsySentry-specific `esk_` credentials are not accepted.
 
 ## Build + Publish
 

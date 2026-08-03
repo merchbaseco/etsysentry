@@ -10,6 +10,8 @@ or incident triage.
   user approval in the current conversation.
 - Keep queries bounded (`LIMIT`, tight `WHERE` clauses, explicit time windows).
 - Avoid exposing secrets or full credential values in responses.
+- For centralized-access work, use `docs/centralized-access-cutover.md`; the audit/planner hashes
+  identity sets and must not print Clerk subjects, Merchbase user IDs, emails, or credentials.
 
 ## Schema and Migration Policy
 

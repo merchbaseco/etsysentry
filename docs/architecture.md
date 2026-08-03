@@ -22,6 +22,7 @@ Current scope assumptions:
 6. Persist normalized data only (no raw Etsy payload retention).
 7. Every monitor action emits a durable event log row.
 8. Admin-only operational visibility (logs and related ops) stays in `api.app.*` and website UI.
+9. Customer authentication policy belongs to the private `@merchbaseco/access` package.
 
 ## Proposed Monorepo Layout
 
@@ -64,8 +65,9 @@ docs/
 3. PostgreSQL (Drizzle-managed schema)
 4. Etsy integration layer (bridges + client orchestration)
 5. Auth layer:
-   - Clerk bearer auth for `api.app.*` users/tenants
-   - API key validation for CLI/public surface (`api.public.*`)
+   - centralized Clerk session and opaque API-key authentication from `@merchbaseco/access`
+   - product-local Access Projection and stable `merchbaseUserId` to `accountId` mapping
+   - shared OAuth credential path exposed by the same access factory
 6. Etsy OAuth connection persistence:
    - server-managed OAuth token storage in PostgreSQL
    - keyed by `accountId`
@@ -129,25 +131,30 @@ docs/
 ## Multi-Tenant and Auth Model
 
 - Tenant boundary key: `accountId` on all tenant-owned tables.
-- Clerk user identity maps to one or more tenant memberships (no role model for regular users).
-- Clerk identifiers are boundary auth inputs only; persisted domain ownership keys are `accountId`.
+- The local account identity is the existing `accounts.id` UUID. Each retained account maps to one
+  stable `accounts.merchbaseUserId`; request authorization never creates or changes that UUID.
+- `@merchbaseco/access` authenticates Clerk sessions, suite API keys, and shared OAuth credentials.
+  EtsySentry supplies the projection store and resolves a stable user to exactly one account.
+- Access projections are keyed by `(issuer, subject)`, applied idempotently, and accepted only when
+  their source timestamp is monotonic. Missing projections cold-load from Clerk metadata; webhooks
+  and a daily repair job keep active rows current.
+- Clerk issuer+subject is the only recurring identity key. Normalized email is audit-only and may
+  support an explicit one-time operator migration only when the central contract permits it.
 - `api.app.*` procedures:
   - require Clerk bearer auth (`Authorization: Bearer <token>`)
-  - derive `accountId` from verified token/context using `(iss, sub)` identity mapping with email
-    match as the preferred link when available
+  - derive `accountId` from the centralized access result and local stable-user mapping
   - do not trust client-supplied auth identity fields
-  - enforce tenant membership
-  - enforce admin-only operations via `email === ADMIN_EMAIL`
+  - enforce the stable account mapping
+  - enforce admin-only operations via `ADMIN_MERCHBASE_USER_ID`
 - Etsy OAuth connection/session model:
   - OAuth callback exchanges code for tokens and persists connection server-side
   - connection lookup key is `accountId`
   - website does not persist OAuth tokens/session IDs in browser storage
-- API keys:
-  - generated/managed via `api.app.apiKey.*`
-  - hashed at rest in DB
-  - used by CLI against `api.public.*`
-  - user-owned keys (owned by a Clerk user)
-  - carry tenant context for authorization and query scoping
+- Customer API keys are issued and verified by Merchbase Access. EtsySentry accepts them only as
+  `Authorization: Bearer <ak_...>` and has no local key issuance, hashing, revocation, UI, or table.
+  CLI automation uses `MERCHBASE_API_KEY` or the shared Keychain convention.
+- Background jobs evaluate the mapped stable user once at job start. Denied/unavailable runs reset
+  only their queue state and leave queued jobs, Etsy OAuth, product rows, and metering intact.
 
 ## Data Model (Initial Draft)
 
@@ -155,10 +162,13 @@ docs/
 
 - `tenants`
   - `id`, `name`, `createdAt`
-- `tenant_memberships`
-  - `accountId`, `clerkIssuer`, `clerkSubject`, `createdAt`
-- `api_keys`
-  - `id`, `accountId`, `ownerClerkUserId`, `name`, `keyPrefix`, `keyHash`, `lastUsedAt`, `revokedAt`
+- `access_projection`
+  - `(issuer, subject)`, `state`, `merchbaseUserId`, `access`, `accessValidUntil`,
+    `sourceUpdatedAt`, `lastEventId`
+- `access_projection_event`
+  - idempotent event receipt keyed by central webhook event ID
+- `accounts`
+  - existing local UUID plus nullable `merchbaseUserId` mapping (required for authorized runtime use)
 - `etsy_oauth_connections`
   - `accountId`, `accessToken`, `refreshToken`, `tokenType`, `scopes`, `expiresAt`,
     `createdAt`, `updatedAt`
@@ -372,7 +382,7 @@ Public API and CLI intentionally share one canonical shape for `api.public.*`.
 ### App API (`api.app.*`)
 
 - `tenant.*` membership + metadata
-- `apiKey.create|list|revoke`
+- Central API-key issuance/revocation is outside EtsySentry; no `apiKeys` router is exposed.
 - `logs.list|tail|export` (admin-only)
 - operator/admin endpoints (admin-only)
 

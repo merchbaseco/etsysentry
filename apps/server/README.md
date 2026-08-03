@@ -70,7 +70,12 @@ Useful scripts:
 - `bun run server:typecheck` - TypeScript checks
 - `bun run server:test` - focused unit tests
 - `bun run --cwd apps/server db:generate` - generate Drizzle migrations from schema
-- `bun run --cwd apps/server db:migrate` - run Drizzle migrations
+- `bun run --cwd apps/server db:migrate` - run pending Drizzle migrations, stopping before centralized-access cleanup until it is recorded
+- `bun run --cwd apps/server db:migrate:phase1` - run only the centralized-access phase-one migration
+- `bun run --cwd apps/server db:migrate:phase2` - apply centralized-access cleanup after approved backfill
+- `bun run --cwd apps/server access:audit` - read-only central-access migration audit
+- `bun run --cwd apps/server access:plan` - fail-closed explicit mapping planner
+- `bun run --cwd apps/server access:backfill` - approved transactional projection/account backfill
 
 ## Environment Variables
 
@@ -79,7 +84,11 @@ See `.env.example` for the exact values required by this scaffold.
 Required for OAuth:
 
 - `CLERK_SECRET_KEY`
-- `ADMIN_EMAIL`
+- `CLERK_ISSUER`
+- `CLERK_JWT_KEY`
+- `CLERK_PUBLISHABLE_KEY`
+- `CLERK_AUTHORIZED_PARTIES`
+- `CLERK_WEBHOOK_SIGNING_SECRET`
 - `ETSY_API_KEY`
 - `ETSY_API_SHARED_SECRET`
 - `ETSY_OAUTH_REDIRECT_URI` (must be your public server URL in production, for example
@@ -114,6 +123,13 @@ Optional:
 4. Callback verifies `state`, exchanges `code` for tokens via the OAuth bridge, and stores token
    state keyed by `accountId`.
 5. Client calls `api.app.etsyAuth.status` / `api.app.etsyAuth.refresh` with Clerk bearer auth.
+
+## Centralized Access
+
+See [`docs/centralized-access-cutover.md`](../../docs/centralized-access-cutover.md) for the
+as-built access contract, two-phase migration tooling, and production cutover runbook. The
+Etsy OAuth connection is provider state, not customer authentication, and remains keyed by the
+existing local account UUID.
 
 ## API Structure
 
@@ -182,6 +198,11 @@ Current app surface:
   - honors `retry-after` on rate-limit responses
   - applies exponential backoff when `retry-after` is absent
 - `api.app.*` procedures require Clerk bearer auth (`Authorization: Bearer <token>`).
-- Admin-only app procedures require authenticated user email to match `ADMIN_EMAIL`.
+- Admin-only app procedures require the authenticated stable `merchbaseUserId` to match the
+  operator-supplied `ADMIN_MERCHBASE_USER_ID`; email is never used for authorization.
+- Customer API-key issuance, verification, routes, UI, and local API-key storage are removed at
+  clean cutover. CLI/automation uses `MERCHBASE_API_KEY` and the shared Merchbase Keychain entry.
+- `accounts.merchbaseUserId` is the only local account mapping used by request and background-job
+  authorization. Existing Etsy OAuth/provider state and product/metering rows remain account-keyed.
 - Keep `.env.example` updated when env vars change.
 - Do not embed Etsy HTTP calls directly in routers/jobs; add bridges instead.

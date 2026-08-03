@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+### Changed
+
+- Migrated request, websocket, CLI, and background-job authorization to centralized Merchbase
+  Access with product-local stable-user projections.
+- CLI and HTTP automation now use `MERCHBASE_API_KEY` and `Authorization: Bearer <ak_...>`.
+
+### Removed
+
+- Removed EtsySentry-specific customer API-key issuance, verification, UI, and local auth tables.
+
 ## v0.6.0 - 2026-06-15
 
 ### Added
@@ -29,7 +41,7 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
-- CLI now stores API keys in macOS Keychain for long-term local use, while `ES_API_KEY` and
+- CLI now stores API keys in macOS Keychain for long-term local use, while `MERCHBASE_API_KEY` and
   `--api-key` act as command-time overrides for automation and ephemeral runtimes.
 
 ## v0.4.1 - 2026-03-09

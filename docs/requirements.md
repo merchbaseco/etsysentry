@@ -19,12 +19,12 @@ current and historical data for analysis.
 - Monitoring orchestration: continuous spacing with pg-boss jobs (not one global fixed daily run).
 - Tenancy: multi-tenant from the start.
 - Auth:
-  - Clerk for app/user auth
-  - Clerk identity is only used at the auth boundary to resolve `accountId`
-  - tenant/domain records are keyed by `accountId` (not Clerk user ids)
-  - managed API keys for CLI/public API auth
-  - API keys are user-owned; no role system for key ownership
-  - admin-only behavior is gated by `ADMIN_EMAIL` match (RankWrangler style)
+  - centralized `@merchbaseco/access` for Clerk sessions, suite opaque API keys, and shared OAuth
+    credentials
+  - product-local Access Projection keyed by Clerk issuer+subject and mapped to the existing local
+    account UUID through one stable `merchbaseUserId`
+  - tenant/domain records remain keyed by `accountId`, never by email or a recurring Clerk lookup
+  - admin-only behavior is gated by the operator-supplied `ADMIN_MERCHBASE_USER_ID`
 - API organization: mirror RankWrangler tRPC organization with `api.public.*` and `api.app.*`.
 - API naming: user-intent-first names (for example: `track`,
   `getDailyProductRanksForKeyword`, `getKeywordRanksForProduct`).
@@ -149,8 +149,8 @@ Each primitive must be creatable, listable, retrievable, and monitorable.
 
 ## Security and Access Requirements
 
-- Public API key auth for agent/CLI use.
-- App/admin auth uses Clerk and a separate surface (`api.app.*`).
+- Public Merchbase API-key auth for agent/CLI use via `Authorization: Bearer <ak_...>`.
+- App/admin auth uses centralized Clerk sessions on the separate `api.app.*` surface.
 - Secrets remain in environment variables only.
 - Tenant isolation is required at the data and API layers.
 

@@ -8,7 +8,7 @@ as a distinct, searchable line item.
 Access model:
 
 - Separate page in the website application.
-- Admin-only visibility (`Clerk user email === ADMIN_EMAIL`).
+- Admin-only visibility (`merchbaseUserId === ADMIN_MERCHBASE_USER_ID`).
 - Not exposed via CLI or public API.
 
 Examples of actions that must log as separate rows:

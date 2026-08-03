@@ -141,6 +141,20 @@
       "when": 1772493001926,
       "tag": "0019_complete_tigra",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1785780467511,
+      "tag": "0020_early_agent_zero",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1785780492802,
+      "tag": "0021_worried_deathstrike",
+      "breakpoints": true
     }
   ]
 }

@@ -17,10 +17,10 @@ The realtime subsystem supports:
 2. Server upgrade handling validates:
    - path is `/ws`
    - request origin matches `APP_ORIGIN` (when present)
-   - token can be verified by Clerk
-3. The server resolves `accountId` from Clerk identity and stores connection identity:
+   - token can be authenticated by `@merchbaseco/access`
+3. The server resolves `accountId` from the stable access result and stores connection identity:
    - `accountId`
-   - `clerkUserId` (for future per-user routing)
+   - `merchbaseUserId` (for access-aware connection handling)
 4. Realtime messages are emitted through the in-process event bus.
 5. The runtime fan-outs only to connections whose `accountId` matches event `accountId`.
 6. Client reconnect behavior uses exponential backoff up to 10 seconds.
