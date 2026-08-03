@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import {
+    bigint,
     boolean,
     date,
     index,
@@ -76,61 +77,68 @@ export const eventLogPrimitiveTypeEnum = pgEnum('event_log_primitive_type', [
     'system',
 ]);
 
-export const accounts = pgTable('accounts', {
-    id: text('id').primaryKey().default(sql`gen_random_uuid()::text`),
-    createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
-    updatedAt: timestamp('updated_at', { mode: 'date' }).notNull().defaultNow(),
-});
+export const accessProjectionStateEnum = pgEnum('access_projection_state', ['active', 'tombstone']);
 
-export const clerkIdentities = pgTable(
-    'clerk_identities',
+export const accessProjectionAccessEnum = pgEnum('access_projection_access', [
+    'granted',
+    'not_granted',
+]);
+
+export const accounts = pgTable(
+    'accounts',
     {
-        accountId: text('account_id')
-            .notNull()
-            .references(() => accounts.id),
-        clerkIssuer: text('clerk_issuer').notNull(),
-        clerkOrgId: text('clerk_org_id'),
-        clerkSubject: text('clerk_subject').notNull(),
+        id: text('id').primaryKey().default(sql`gen_random_uuid()::text`),
+        merchbaseUserId: text('merchbase_user_id'),
         createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
-        email: text('email'),
-        lastSeenAt: timestamp('last_seen_at', { mode: 'date' }).notNull().defaultNow(),
         updatedAt: timestamp('updated_at', { mode: 'date' }).notNull().defaultNow(),
     },
     (table) => ({
-        accountIdx: index('clerk_identities_account_idx').on(table.accountId),
-        issuerSubjectPk: primaryKey({
-            columns: [table.clerkIssuer, table.clerkSubject],
-            name: 'clerk_identities_issuer_subject_pk',
-        }),
+        merchbaseUserIdUnique: uniqueIndex('accounts_merchbase_user_id_unique').on(
+            table.merchbaseUserId
+        ),
     })
 );
 
-export const apiKeys = pgTable(
-    'api_keys',
+export const accessProjections = pgTable(
+    'access_projection',
     {
-        id: uuid('id').primaryKey().defaultRandom(),
-        accountId: text('account_id')
-            .notNull()
-            .references(() => accounts.id),
-        ownerClerkUserId: text('owner_clerk_user_id').notNull(),
-        name: text('name').notNull(),
-        keyPrefix: text('key_prefix').notNull(),
-        keyHash: text('key_hash').notNull(),
-        lastUsedAt: timestamp('last_used_at', { mode: 'date' }),
-        revokedAt: timestamp('revoked_at', { mode: 'date' }),
+        issuer: text('issuer').notNull(),
+        subject: text('subject').notNull(),
+        state: accessProjectionStateEnum('state').notNull(),
+        merchbaseUserId: text('merchbase_user_id'),
+        access: accessProjectionAccessEnum('access'),
+        accessValidUntil: bigint('access_valid_until', { mode: 'number' }),
+        sourceUpdatedAt: bigint('source_updated_at', { mode: 'number' }).notNull(),
+        lastEventId: text('last_event_id'),
         createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
         updatedAt: timestamp('updated_at', { mode: 'date' }).notNull().defaultNow(),
     },
     (table) => ({
-        keyPrefixIdx: index('api_keys_key_prefix_idx').on(table.keyPrefix),
-        accountRevokedIdx: index('api_keys_account_revoked_idx').on(
-            table.accountId,
-            table.revokedAt
+        identityPk: primaryKey({
+            columns: [table.issuer, table.subject],
+            name: 'access_projection_issuer_subject_pk',
+        }),
+        merchbaseUserIdIdx: index('access_projection_merchbase_user_id_idx').on(
+            table.merchbaseUserId
         ),
-        accountCreatedAtIdx: index('api_keys_account_created_at_idx').on(
-            table.accountId,
-            table.createdAt
+        stateUpdatedAtIdx: index('access_projection_state_updated_at_idx').on(
+            table.state,
+            table.sourceUpdatedAt
         ),
+    })
+);
+
+export const accessProjectionEvents = pgTable(
+    'access_projection_event',
+    {
+        eventId: text('event_id').primaryKey(),
+        issuer: text('issuer').notNull(),
+        subject: text('subject').notNull(),
+        sourceUpdatedAt: bigint('source_updated_at', { mode: 'number' }).notNull(),
+        receivedAt: timestamp('received_at', { mode: 'date' }).notNull().defaultNow(),
+    },
+    (table) => ({
+        identityIdx: index('access_projection_event_identity_idx').on(table.issuer, table.subject),
     })
 );
 

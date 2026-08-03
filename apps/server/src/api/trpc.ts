@@ -6,7 +6,7 @@ const t = initTRPC.context<TrpcContext>().create();
 export const router = t.router;
 
 export const publicProcedure = t.procedure.use(({ ctx, next }) => {
-    if (ctx.authType !== 'apiKey' || !ctx.apiKey || !ctx.accountId) {
+    if (ctx.authType !== 'apiKey' || !ctx.apiKey || !ctx.accountId || !ctx.merchbaseUserId) {
         throw new TRPCError({
             code: 'UNAUTHORIZED',
             message: ctx.apiKeyError ?? 'API key authentication required.',
@@ -18,12 +18,13 @@ export const publicProcedure = t.procedure.use(({ ctx, next }) => {
             ...ctx,
             accountId: ctx.accountId,
             apiKey: ctx.apiKey,
+            merchbaseUserId: ctx.merchbaseUserId,
         },
     });
 });
 
 export const appProcedure = t.procedure.use(({ ctx, next }) => {
-    if (ctx.authType !== 'clerk' || !ctx.user || !ctx.accountId) {
+    if (ctx.authType !== 'clerk' || !ctx.user || !ctx.accountId || !ctx.merchbaseUserId) {
         throw new TRPCError({
             code: 'UNAUTHORIZED',
             message: 'Clerk authentication required.',
@@ -35,6 +36,7 @@ export const appProcedure = t.procedure.use(({ ctx, next }) => {
             ...ctx,
             isAdmin: ctx.isAdmin,
             accountId: ctx.accountId,
+            merchbaseUserId: ctx.merchbaseUserId,
             user: ctx.user,
         },
     });

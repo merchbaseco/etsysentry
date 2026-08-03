@@ -1,15 +1,14 @@
 import type { IncomingMessage } from 'node:http';
 import type { Socket } from 'node:net';
-import { verifyToken } from '@clerk/backend';
 import type { FastifyInstance } from 'fastify';
 import { WebSocket, WebSocketServer } from 'ws';
 import { env } from '../../config/env';
-import { resolveAccountIdFromClerk } from '../auth/resolve-account-id-from-clerk';
+import type { EtsySentryAccess } from '../access/etsysentry-access';
 import { onRealtimeEvent } from './emit-event';
 
 interface RealtimeConnectionIdentity {
     accountId: string;
-    clerkUserId: string;
+    merchbaseUserId: string;
 }
 
 const TRAILING_SLASHES_REGEX = /\/+$/;
@@ -54,32 +53,15 @@ const rejectUpgrade = (socket: Socket, statusLine: string): void => {
 };
 
 const deriveIdentityFromToken = async (
-    token: string
+    token: string,
+    access: EtsySentryAccess
 ): Promise<RealtimeConnectionIdentity | null> => {
     try {
-        const payload = await verifyToken(token, {
-            secretKey: env.CLERK_SECRET_KEY,
-        });
-
-        const subject = typeof payload.sub === 'string' ? payload.sub.trim() : '';
-        const issuer = typeof payload.iss === 'string' ? payload.iss.trim() : '';
-
-        if (!(subject && issuer)) {
-            return null;
-        }
-
-        const orgId = typeof payload.org_id === 'string' ? payload.org_id.trim() : '';
-        const email = typeof payload.email === 'string' ? payload.email : null;
-        const accountId = await resolveAccountIdFromClerk({
-            clerkIssuer: issuer,
-            clerkOrgId: orgId.length > 0 ? orgId : null,
-            clerkSubject: subject,
-            email,
-        });
+        const authorized = await access.sessionAccess.authorize(token);
 
         return {
-            accountId,
-            clerkUserId: subject,
+            accountId: authorized.principal.accountId,
+            merchbaseUserId: authorized.merchbaseUserId,
         };
     } catch {
         return null;
@@ -94,6 +76,7 @@ const shouldDeliverEvent = (
 };
 
 export const startWebsocketRuntime = (params: {
+    access: EtsySentryAccess;
     server: FastifyInstance;
 }): {
     stop: () => Promise<void>;
@@ -145,7 +128,7 @@ export const startWebsocketRuntime = (params: {
             return;
         }
 
-        deriveIdentityFromToken(token).then((connectionIdentity) => {
+        deriveIdentityFromToken(token, params.access).then((connectionIdentity) => {
             if (!connectionIdentity) {
                 rejectUpgrade(socket, '401 Unauthorized');
                 return;

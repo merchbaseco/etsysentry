@@ -8,7 +8,7 @@ Typed tRPC client for EtsySentry public APIs.
 import { createEtsySentryClient } from '@etsysentry/http-client';
 
 const client = createEtsySentryClient({
-    apiKey: 'esk_live_...',
+    apiKey: 'ak_...',
     baseUrl: 'http://localhost:8080',
 });
 
@@ -23,7 +23,7 @@ const tracked = await client.trpcClient.public.listings.track.mutate({
 
 ## Notes
 
-- Auth is sent via `x-api-key`.
+- Auth is sent via `Authorization: Bearer <ak_...>`.
 - Base URL is normalized and `/api` is appended internally.
 - The client is aligned to the currently implemented `public.*` surface:
   - `keywords.list`, `keywords.track`

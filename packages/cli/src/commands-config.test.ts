@@ -22,7 +22,7 @@ const createStore = (): CliSecureStore => {
             available: true,
             kind: 'macos-keychain',
         }),
-        readApiKey: async (): Promise<string | null> => 'esk_live_store',
+        readApiKey: async (): Promise<string | null> => 'ak_store',
         writeApiKey: (): Promise<void> => Promise.resolve(),
     };
 };

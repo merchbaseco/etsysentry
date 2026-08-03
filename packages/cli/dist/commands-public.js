@@ -1,4 +1,5 @@
 import { createEtsySentryClient } from '@etsysentry/http-client';
+import { MERCHBASE_API_KEY_ENV } from '@merchbaseco/access';
 import { resolveApiKey } from './auth.js';
 import { resolveBaseUrl, resolveRange } from './config.js';
 import { failWith } from './errors.js';
@@ -22,7 +23,7 @@ const createApiClient = async (params) => {
     if (!auth) {
         failWith({
             code: 'MISSING_CONFIG',
-            message: 'Run `es auth set`, `es auth set --stdin`, or use ES_API_KEY/--api-key for overrides.',
+            message: `Run \`es auth set\`, \`es auth set --stdin\`, or use ${MERCHBASE_API_KEY_ENV}/--api-key for overrides.`,
         });
         throw new Error('Unreachable');
     }

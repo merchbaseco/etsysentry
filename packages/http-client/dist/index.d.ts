@@ -223,5 +223,9 @@ export interface EtsySentryClient {
     trpc: EtsySentryTrpcOptionsProxy;
     trpcClient: EtsySentryTrpcClient;
 }
+export declare const createRequestHeaders: (params: {
+    apiKey?: string;
+    headers?: Record<string, string>;
+}) => Record<string, string>;
 export declare const createEtsySentryClient: (options: EtsySentryClientOptions) => EtsySentryClient;
 export {};

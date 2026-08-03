@@ -1,6 +1,7 @@
 import { and, eq } from 'drizzle-orm';
 import { db } from '../db';
 import { trackedListings } from '../db/schema';
+import { evaluateAccountAccess } from '../services/access/job-access';
 import {
     createListingSyncedEventLog,
     createListingSyncFailedEventLog,
@@ -24,6 +25,26 @@ export const syncListingJob = defineJob(SYNC_LISTING_JOB_NAME, {
         localConcurrency: SYNC_LISTING_WORKER_LOCAL_CONCURRENCY,
     })
     .work(async (job, _signal, log) => {
+        const access = await evaluateAccountAccess({
+            accountId: job.data.accountId,
+        });
+
+        if (access.state !== 'allowed') {
+            await setTrackedListingsSyncStateByEtsyListingIds({
+                accountId: job.data.accountId,
+                etsyListingIds: [job.data.etsyListingId],
+                syncState: 'idle',
+            });
+            log('Skipped listing sync because Merchbase access is unavailable.', {
+                accessState: access.state,
+                etsyListingId: job.data.etsyListingId,
+            });
+            return {
+                didWork: false,
+                etsyListingId: job.data.etsyListingId,
+            } as const;
+        }
+
         const [current] = await db
             .select({
                 trackingState: trackedListings.trackingState,

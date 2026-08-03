@@ -4,7 +4,7 @@ import { appProcedure } from '../../trpc';
 
 export const dashboardGetSummaryProcedure = appProcedure.input(z.object({})).query(({ ctx }) => {
     return getDashboardSummary({
-        clerkUserId: ctx.user.sub,
+        clerkUserId: ctx.merchbaseUserId,
         accountId: ctx.accountId,
     });
 });

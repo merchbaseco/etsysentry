@@ -10,13 +10,12 @@ const createContext = (params: { email?: string; isAdmin: boolean }): TrpcContex
         request: {} as never,
         requestId: 'request-1',
         accountId: 'tenant-1',
+        merchbaseUserId: 'mbu_test',
         apiKey: null,
         apiKeyError: undefined,
         user: {
-            email: params.email,
-            issuer: 'https://clerk.example',
-            orgId: null,
-            sub: 'user-1',
+            credentialKind: 'session',
+            merchbaseUserId: 'mbu_test',
         },
     };
 };
@@ -25,7 +24,6 @@ describe('admin status procedure', () => {
     test('allows admin user', async () => {
         const caller = appRouter.createCaller(
             createContext({
-                email: 'admin@example.com',
                 isAdmin: true,
             })
         );
@@ -33,7 +31,7 @@ describe('admin status procedure', () => {
         const result = await caller.admin.status({});
 
         expect(result).toEqual({
-            email: 'admin@example.com',
+            email: null,
             isAdmin: true,
             accountId: 'tenant-1',
         });

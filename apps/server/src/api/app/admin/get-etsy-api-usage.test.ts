@@ -10,13 +10,12 @@ const createContext = (params: { email?: string; isAdmin: boolean }): TrpcContex
         request: {} as never,
         requestId: 'request-1',
         accountId: 'tenant-1',
+        merchbaseUserId: 'mbu_test',
         apiKey: null,
         apiKeyError: undefined,
         user: {
-            email: params.email,
-            issuer: 'https://clerk.example',
-            orgId: null,
-            sub: 'user-1',
+            credentialKind: 'session',
+            merchbaseUserId: 'mbu_test',
         },
     };
 };

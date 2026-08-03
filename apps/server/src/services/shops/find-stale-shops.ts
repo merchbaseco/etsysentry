@@ -1,12 +1,11 @@
-import { and, asc, eq, lte, ne } from 'drizzle-orm';
+import { and, asc, eq, isNotNull, lte, ne } from 'drizzle-orm';
 import { db } from '../../db';
-import { trackedShops } from '../../db/schema';
+import { accounts, trackedShops } from '../../db/schema';
 import {
     SYNC_STALE_SHOPS_BATCH_SIZE,
     type SyncShopJobInput,
     syncShopJobInputSchema,
 } from '../../jobs/sync-shop-shared';
-import { findLatestClerkUserIdByAccountId } from '../auth/find-latest-clerk-user-id-by-account-id';
 
 export const findStaleShops = async (params?: { now?: Date }): Promise<SyncShopJobInput[]> => {
     const now = params?.now ?? new Date();
@@ -14,11 +13,14 @@ export const findStaleShops = async (params?: { now?: Date }): Promise<SyncShopJ
     const rows = await db
         .select({
             accountId: trackedShops.accountId,
+            clerkUserId: accounts.merchbaseUserId,
             trackedShopId: trackedShops.trackedShopId,
         })
         .from(trackedShops)
+        .innerJoin(accounts, eq(accounts.id, trackedShops.accountId))
         .where(
             and(
+                isNotNull(accounts.merchbaseUserId),
                 ne(trackedShops.trackingState, 'paused'),
                 eq(trackedShops.syncState, 'idle'),
                 lte(trackedShops.nextSyncAt, now)
@@ -27,27 +29,12 @@ export const findStaleShops = async (params?: { now?: Date }): Promise<SyncShopJ
         .orderBy(asc(trackedShops.nextSyncAt))
         .limit(SYNC_STALE_SHOPS_BATCH_SIZE);
 
-    const clerkUserIdByAccount = new Map<string, string | null>();
     const items: SyncShopJobInput[] = [];
 
     for (const row of rows) {
-        const cachedClerkUserId = clerkUserIdByAccount.get(row.accountId);
-        const clerkUserId =
-            cachedClerkUserId === undefined
-                ? await findLatestClerkUserIdByAccountId({
-                      accountId: row.accountId,
-                  })
-                : cachedClerkUserId;
-
-        clerkUserIdByAccount.set(row.accountId, clerkUserId);
-
-        if (!clerkUserId) {
-            continue;
-        }
-
         const parsedInput = syncShopJobInputSchema.safeParse({
             accountId: row.accountId,
-            clerkUserId,
+            clerkUserId: row.clerkUserId,
             trackedShopId: row.trackedShopId,
         });
 

@@ -5,7 +5,18 @@ const envSchema = z.object({
     PORT: z.coerce.number().int().positive().default(8080),
     APP_ORIGIN: z.string().url().default('http://localhost:5173'),
     CLERK_SECRET_KEY: z.string().min(1),
-    ADMIN_EMAIL: z.string().email(),
+    CLERK_ISSUER: z.string().url(),
+    CLERK_JWT_KEY: z.string().min(1),
+    CLERK_PUBLISHABLE_KEY: z.string().min(1),
+    CLERK_AUTHORIZED_PARTIES: z.string().min(1),
+    CLERK_WEBHOOK_SIGNING_SECRET: z.string().min(1),
+    ADMIN_MERCHBASE_USER_ID: z.preprocess(
+        (value) => (value === '' ? undefined : value),
+        z
+            .string()
+            .regex(/^mbu_[A-Za-z0-9_-]+$/)
+            .optional()
+    ),
     ETSY_API_KEY: z.string().min(1),
     ETSY_API_SHARED_SECRET: z.string().min(1),
     ETSY_OAUTH_REDIRECT_URI: z.string().url(),
@@ -45,12 +56,27 @@ export const resolveDisableServerJobRunner = (value: 'true' | 'false' | undefine
 
 const REQUIRED_ETSY_OAUTH_SCOPES = ['listings_r'] as const;
 const OAUTH_SCOPE_DELIMITER_REGEX = /[\s,]+/;
+const AUTHORIZED_PARTY_DELIMITER_REGEX = /[\s,]+/;
+const TRAILING_SLASHES_REGEX = /\/+$/;
 
 const parseOAuthScopes = (rawScopes: string): string[] => {
     return rawScopes
         .split(OAUTH_SCOPE_DELIMITER_REGEX)
         .map((scope) => scope.trim())
         .filter((scope) => scope.length > 0);
+};
+
+const parseAuthorizedParties = (rawParties: string): string[] => {
+    const parties = rawParties
+        .split(AUTHORIZED_PARTY_DELIMITER_REGEX)
+        .map((party) => party.trim().replace(TRAILING_SLASHES_REGEX, ''))
+        .filter((party) => party.length > 0);
+
+    if (parties.length === 0) {
+        throw new Error('CLERK_AUTHORIZED_PARTIES must contain at least one party.');
+    }
+
+    return Array.from(new Set(parties));
 };
 
 const validateOAuthRedirectUri = (params: {
@@ -82,6 +108,7 @@ validateOAuthRedirectUri({
 const etsyOAuthScopes = Array.from(
     new Set([...parseOAuthScopes(rawEnv.ETSY_OAUTH_SCOPES), ...REQUIRED_ETSY_OAUTH_SCOPES])
 );
+const clerkAuthorizedParties = parseAuthorizedParties(rawEnv.CLERK_AUTHORIZED_PARTIES);
 
 if (etsyOAuthScopes.length === 0) {
     throw new Error('ETSY_OAUTH_SCOPES must contain at least one OAuth scope.');
@@ -101,5 +128,6 @@ export const env = {
     databaseUser: rawEnv.DATABASE_USER ?? rawEnv.ETSYSENTRY_DATABASE_USER ?? 'etsysentry',
     disableServerJobRunner,
     enableServerJobs: !disableServerJobRunner,
+    clerkAuthorizedParties,
     etsyOAuthScopes,
 };

@@ -11,11 +11,11 @@ export const listingsRefreshProcedure = appProcedure
     )
     .mutation(async ({ ctx, input }) => {
         const item = await refreshTrackedListing({
-            clerkUserId: ctx.user.sub,
+            clerkUserId: ctx.merchbaseUserId,
             requestId: ctx.requestId,
             accountId: ctx.accountId,
             trackedListingId: input.trackedListingId,
-            trackerClerkUserId: ctx.user.sub,
+            trackerClerkUserId: ctx.merchbaseUserId,
         });
 
         return decorateTrackedListingWithUsd(item);

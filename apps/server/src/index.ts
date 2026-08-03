@@ -1,5 +1,6 @@
 import cors from '@fastify/cors';
 import { TRPCError } from '@trpc/server';
+import type { CreateFastifyContextOptions } from '@trpc/server/adapters/fastify';
 import { fastifyTRPCPlugin } from '@trpc/server/adapters/fastify';
 import Fastify from 'fastify';
 import { z } from 'zod';
@@ -9,6 +10,12 @@ import { env } from './config/env';
 import { testDbConnection } from './db';
 import { runMigrations } from './db/migrate';
 import { startServerJobs, stopServerJobs } from './jobs/run-server-jobs';
+import { registerClerkAccessWebhookRoute } from './services/access/clerk-webhook-route';
+import {
+    configureEtsySentryAccess,
+    createEtsySentryAccess,
+    type EtsySentryAccess,
+} from './services/access/etsysentry-access';
 import { renderOAuthErrorHtml, renderOAuthSuccessHtml } from './services/etsy/oauth-html';
 import { completeEtsyOAuthFlow } from './services/etsy/oauth-service';
 import { startWebsocketRuntime } from './services/realtime/start-websocket-runtime';
@@ -21,12 +28,14 @@ const callbackQuerySchema = z.object({
 });
 
 interface BuildServerOptions {
+    access?: EtsySentryAccess;
     completeOAuthFlow?: typeof completeEtsyOAuthFlow;
     logger?: boolean;
 }
 
 export const buildServer = async (options: BuildServerOptions = {}) => {
     const completeOAuthFlow = options.completeOAuthFlow ?? completeEtsyOAuthFlow;
+    const access = configureEtsySentryAccess(options.access ?? createEtsySentryAccess());
     const logger =
         options.logger === undefined
             ? {
@@ -43,10 +52,20 @@ export const buildServer = async (options: BuildServerOptions = {}) => {
         origin: [env.APP_ORIGIN],
     });
 
+    await registerClerkAccessWebhookRoute(server, {
+        issuer: env.CLERK_ISSUER,
+        onIdentityChanged: (identity) => {
+            access.authenticator.invalidateApiKeys(identity);
+        },
+        signingSecret: env.CLERK_WEBHOOK_SIGNING_SECRET,
+        store: access.projections,
+    });
+
     await server.register(fastifyTRPCPlugin, {
         prefix: '/api',
         trpcOptions: {
-            createContext: createTrpcContext,
+            createContext: (contextOptions: CreateFastifyContextOptions) =>
+                createTrpcContext(contextOptions, access),
             onError({ error, path }: { error: unknown; path: string | undefined }) {
                 server.log.error({ error, path }, 'tRPC procedure failed');
             },
@@ -55,6 +74,7 @@ export const buildServer = async (options: BuildServerOptions = {}) => {
     });
 
     const realtimeRuntime = startWebsocketRuntime({
+        access,
         server,
     });
 
@@ -163,7 +183,7 @@ if (import.meta.main) {
     server.log.info(
         {
             apiPrefix: '/api',
-            adminEmail: env.ADMIN_EMAIL,
+            adminConfigured: Boolean(env.ADMIN_MERCHBASE_USER_ID),
             authProvider: 'clerk',
             callbackPath: '/auth/etsy/callback',
             callbackUrl: env.ETSY_OAUTH_REDIRECT_URI,

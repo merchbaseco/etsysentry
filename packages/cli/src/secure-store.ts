@@ -1,6 +1,9 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { CLI_SECURE_STORE_ACCOUNT, CLI_SECURE_STORE_SERVICE } from './constants.js';
+import {
+    MERCHBASE_API_KEY_KEYCHAIN_ACCOUNT,
+    MERCHBASE_API_KEY_KEYCHAIN_SERVICE,
+} from '@merchbaseco/access';
 import { failWith } from './errors.js';
 import type { CliSecureStoreStatus } from './types.js';
 
@@ -102,9 +105,9 @@ const createMacOsSecureStore = (runCommand: SecureStoreCommandRunner): CliSecure
                 await runCommand('security', [
                     'delete-generic-password',
                     '-a',
-                    CLI_SECURE_STORE_ACCOUNT,
+                    MERCHBASE_API_KEY_KEYCHAIN_ACCOUNT,
                     '-s',
-                    CLI_SECURE_STORE_SERVICE,
+                    MERCHBASE_API_KEY_KEYCHAIN_SERVICE,
                 ]);
 
                 return true;
@@ -127,9 +130,9 @@ const createMacOsSecureStore = (runCommand: SecureStoreCommandRunner): CliSecure
                 const result = await runCommand('security', [
                     'find-generic-password',
                     '-a',
-                    CLI_SECURE_STORE_ACCOUNT,
+                    MERCHBASE_API_KEY_KEYCHAIN_ACCOUNT,
                     '-s',
-                    CLI_SECURE_STORE_SERVICE,
+                    MERCHBASE_API_KEY_KEYCHAIN_SERVICE,
                     '-w',
                 ]);
 
@@ -152,9 +155,9 @@ const createMacOsSecureStore = (runCommand: SecureStoreCommandRunner): CliSecure
                 await runCommand('security', [
                     'add-generic-password',
                     '-a',
-                    CLI_SECURE_STORE_ACCOUNT,
+                    MERCHBASE_API_KEY_KEYCHAIN_ACCOUNT,
                     '-s',
-                    CLI_SECURE_STORE_SERVICE,
+                    MERCHBASE_API_KEY_KEYCHAIN_SERVICE,
                     '-w',
                     apiKey,
                     '-U',

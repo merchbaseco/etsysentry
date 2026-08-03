@@ -1,6 +1,6 @@
-import { and, asc, desc, eq, inArray, lte, ne, or } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNotNull, lte, ne, or } from 'drizzle-orm';
 import { db } from '../../db';
-import { listingMetricSnapshots, trackedListings } from '../../db/schema';
+import { accounts, listingMetricSnapshots, trackedListings } from '../../db/schema';
 import {
     SYNC_STALE_LISTINGS_BATCH_SIZE,
     type SyncListingJobInput,
@@ -37,14 +37,16 @@ export const findStaleListings = async (params?: {
     const candidateRows = await db
         .select({
             trackedListingId: trackedListings.listingId,
-            clerkUserId: trackedListings.trackerClerkUserId,
+            clerkUserId: accounts.merchbaseUserId,
             etsyListingId: trackedListings.etsyListingId,
             accountId: trackedListings.accountId,
             lastRefreshedAt: trackedListings.lastRefreshedAt,
         })
         .from(trackedListings)
+        .innerJoin(accounts, eq(accounts.id, trackedListings.accountId))
         .where(
             and(
+                isNotNull(accounts.merchbaseUserId),
                 ne(trackedListings.trackingState, 'fatal'),
                 or(
                     eq(trackedListings.isDigital, true),

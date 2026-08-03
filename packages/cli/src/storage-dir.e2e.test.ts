@@ -41,6 +41,7 @@ const runCli = (
             env: {
                 ...process.env,
                 HOME: homeDir,
+                MERCHBASE_API_KEY: '',
                 ...envOverrides,
             },
         });

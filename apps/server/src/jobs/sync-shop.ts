@@ -1,3 +1,4 @@
+import { evaluateAccountAccess } from '../services/access/job-access';
 import { enqueueSyncListingJob } from '../services/listings/enqueue-sync-listing-job';
 import { setTrackedListingsSyncStateByEtsyListingIds } from '../services/listings/set-tracked-listing-sync-state';
 import { setTrackedShopSyncStateByTrackedShopId } from '../services/shops/set-tracked-shop-sync-state';
@@ -11,6 +12,26 @@ export const syncShopJob = defineJob(SYNC_SHOP_JOB_NAME, {
 })
     .input(syncShopJobInputSchema)
     .work(async (job, _signal, log, context) => {
+        const access = await evaluateAccountAccess({
+            accountId: job.data.accountId,
+        });
+
+        if (access.state !== 'allowed') {
+            await setTrackedShopSyncStateByTrackedShopId({
+                accountId: job.data.accountId,
+                syncState: 'idle',
+                trackedShopId: job.data.trackedShopId,
+            });
+            log('Skipped shop sync because Merchbase access is unavailable.', {
+                accessState: access.state,
+                trackedShopId: job.data.trackedShopId,
+            });
+            return {
+                didWork: false,
+                trackedShopId: job.data.trackedShopId,
+            } as const;
+        }
+
         await setTrackedShopSyncStateByTrackedShopId({
             accountId: job.data.accountId,
             syncState: 'syncing',

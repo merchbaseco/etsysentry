@@ -61,7 +61,7 @@ export const printUsage = async (): Promise<void> => {
         `  bootstrap settings: ${GLOBAL_CONFIG_PATH}`,
         '',
         'Env overrides:',
-        '  ES_API_KEY',
+        '  MERCHBASE_API_KEY',
         '  ES_BASE_URL',
         '  ES_STORAGE_DIR',
     ];

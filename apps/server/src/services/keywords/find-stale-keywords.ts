@@ -1,6 +1,6 @@
-import { and, asc, eq, lte, ne } from 'drizzle-orm';
+import { and, asc, eq, isNotNull, lte, ne } from 'drizzle-orm';
 import { db } from '../../db';
-import { trackedKeywords } from '../../db/schema';
+import { accounts, trackedKeywords } from '../../db/schema';
 import {
     SYNC_STALE_KEYWORDS_BATCH_SIZE,
     type SyncKeywordJobInput,
@@ -14,13 +14,15 @@ export const findStaleKeywords = async (params?: {
 
     const rows = await db
         .select({
-            clerkUserId: trackedKeywords.trackerClerkUserId,
+            clerkUserId: accounts.merchbaseUserId,
             accountId: trackedKeywords.accountId,
             trackedKeywordId: trackedKeywords.id,
         })
         .from(trackedKeywords)
+        .innerJoin(accounts, eq(accounts.id, trackedKeywords.accountId))
         .where(
             and(
+                isNotNull(accounts.merchbaseUserId),
                 ne(trackedKeywords.trackingState, 'paused'),
                 eq(trackedKeywords.syncState, 'idle'),
                 lte(trackedKeywords.nextSyncAt, now)

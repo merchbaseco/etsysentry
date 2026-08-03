@@ -7,12 +7,17 @@
         "build": "bun build ./src/index.ts --target bun --outdir ./dist",
         "start": "DISABLE_SERVER_JOB_RUNNER=false bun run ./dist/index.js",
         "typecheck": "tsc --noEmit",
-        "test": "ADMIN_EMAIL=admin@example.com CLERK_SECRET_KEY=test ETSY_API_KEY=test ETSY_API_SHARED_SECRET=test ETSY_OAUTH_REDIRECT_URI=http://localhost:8080/auth/etsy/callback bun test",
+        "test": "CLERK_SECRET_KEY=test CLERK_ISSUER=https://clerk.example CLERK_JWT_KEY=test CLERK_PUBLISHABLE_KEY=pk_test CLERK_AUTHORIZED_PARTIES=http://localhost:5173 CLERK_WEBHOOK_SIGNING_SECRET=whsec_test ETSY_API_KEY=test ETSY_API_SHARED_SECRET=test ETSY_OAUTH_REDIRECT_URI=http://localhost:8080/auth/etsy/callback bun test",
         "db:generate": "drizzle-kit generate",
-        "db:migrate": "bun run ./src/db/migrate-runner.ts"
+        "db:migrate": "bun run ./src/db/migrate-runner.ts",
+        "db:migrate:phase1": "bun run ./src/db/migrate-runner.ts --through 0020_early_agent_zero",
+        "db:migrate:phase2": "bun run ./src/db/migrate-runner.ts --through 0021_worried_deathstrike",
+        "access:audit": "bun run ./src/scripts/central-auth-cutover.ts audit",
+        "access:plan": "bun run ./src/scripts/central-auth-cutover.ts plan",
+        "access:backfill": "bun run ./src/scripts/central-auth-cutover.ts backfill"
     },
     "dependencies": {
-        "@clerk/backend": "2.33.3",
+        "@merchbaseco/access": "0.3.0",
         "@fastify/cors": "11.2.0",
         "@trpc/server": "11.10.0",
         "drizzle-orm": "0.45.2",

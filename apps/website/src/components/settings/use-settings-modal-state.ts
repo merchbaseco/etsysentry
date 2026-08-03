@@ -16,7 +16,6 @@ import {
     formatListingResyncErrorMessage,
     type SettingsPage,
 } from './shared';
-import { useApiKeysSettingsState } from './use-api-keys-settings-state';
 
 interface UseSettingsModalStateParams {
     activePage: SettingsPage;
@@ -25,10 +24,8 @@ interface UseSettingsModalStateParams {
 }
 
 interface UseSettingsModalStateOutput {
-    activeApiKey: ReturnType<typeof useApiKeysSettingsState>['activeApiKey'];
     adminEnqueueMessage: string | null;
     adminErrorMessage: string | null;
-    apiKeyErrorMessage: string | null;
     apiUsage: EtsyApiUsage | null;
     apiUsageErrorMessage: string | null;
     currencyErrorMessage: string | null;
@@ -37,19 +34,14 @@ interface UseSettingsModalStateOutput {
     handleRefreshCurrencyRates: () => Promise<void>;
     hasAdminAccess: boolean;
     isEnqueuingListingResync: boolean;
-    isLoadingApiKey: boolean;
     isLoadingApiUsage: boolean;
     isLoadingCurrencyStatus: boolean;
     isLoadingListingRefreshPolicy: boolean;
     isRefreshingCurrencyRates: boolean;
-    isRotatingApiKey: boolean;
     listingRefreshPolicy: GetListingRefreshPolicyOutput | null;
     listingRefreshPolicyErrorMessage: string | null;
-    loadApiKey: () => Promise<void>;
     loadApiUsage: () => Promise<void>;
     loadListingRefreshPolicy: () => Promise<void>;
-    rawApiKey: string | null;
-    rotateApiKey: () => Promise<void>;
 }
 
 export const useSettingsModalState = ({
@@ -90,19 +82,6 @@ export const useSettingsModalState = ({
     const [apiUsageErrorMessage, setApiUsageErrorMessage] = useState<string | null>(null);
     const [adminEnqueueMessage, setAdminEnqueueMessage] = useState<string | null>(null);
     const [adminErrorMessage, setAdminErrorMessage] = useState<string | null>(null);
-
-    const {
-        activeApiKey,
-        apiKeyErrorMessage,
-        isLoadingApiKey,
-        isRotatingApiKey,
-        loadApiKey,
-        rawApiKey,
-        rotateApiKey,
-    } = useApiKeysSettingsState({
-        activePage,
-        open,
-    });
 
     const isLoadingCurrencyStatus = currencyStatusQuery.isFetching;
     const isRefreshingCurrencyRates = refreshCurrencyRatesMutation.isPending;
@@ -240,7 +219,7 @@ export const useSettingsModalState = ({
     }, [loadAdminPrivileges, open]);
 
     useEffect(() => {
-        if (!open || (activePage !== 'etsy-api' && activePage !== 'api-keys') || !hasAdminAccess) {
+        if (!open || activePage !== 'etsy-api' || !hasAdminAccess) {
             return;
         }
 
@@ -277,10 +256,8 @@ export const useSettingsModalState = ({
     }, [open]);
 
     return {
-        activeApiKey,
         adminErrorMessage,
         adminEnqueueMessage,
-        apiKeyErrorMessage,
         apiUsage,
         apiUsageErrorMessage,
         currencyErrorMessage,
@@ -289,18 +266,13 @@ export const useSettingsModalState = ({
         handleRefreshCurrencyRates,
         hasAdminAccess,
         isEnqueuingListingResync,
-        isLoadingApiKey,
         isLoadingApiUsage,
         isLoadingCurrencyStatus,
         isLoadingListingRefreshPolicy,
         isRefreshingCurrencyRates,
-        isRotatingApiKey,
         listingRefreshPolicy,
         listingRefreshPolicyErrorMessage,
-        loadApiKey,
         loadApiUsage,
         loadListingRefreshPolicy,
-        rawApiKey,
-        rotateApiKey,
     };
 };

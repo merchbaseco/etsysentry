@@ -247,14 +247,14 @@ const toApiUrl = (baseUrl: string): string => {
     return `${normalizeBaseUrl(baseUrl)}/api`;
 };
 
-const createRequestHeaders = (params: {
+export const createRequestHeaders = (params: {
     apiKey?: string;
     headers?: Record<string, string>;
 }): Record<string, string> => {
     const trimmedApiKey = params.apiKey?.trim();
 
     return {
-        ...(trimmedApiKey ? { 'x-api-key': trimmedApiKey } : {}),
+        ...(trimmedApiKey ? { Authorization: `Bearer ${trimmedApiKey}` } : {}),
         ...(params.headers ?? {}),
     };
 };

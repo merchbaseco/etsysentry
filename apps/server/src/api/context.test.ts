@@ -1,20 +1,13 @@
 import { describe, expect, test } from 'bun:test';
-import { isAdminEmail } from './context';
+import { isAdminMerchbaseUser } from './context';
 
-describe('context admin email matching', () => {
-    test('matches configured admin email case-insensitively', () => {
-        expect(isAdminEmail('ADMIN@EXAMPLE.COM')).toBe(true);
+describe('context admin identity matching', () => {
+    test('matches only the configured stable Merchbase user ID', () => {
+        expect(isAdminMerchbaseUser('mbu_admin', 'mbu_admin')).toBe(true);
+        expect(isAdminMerchbaseUser('mbu_other', 'mbu_admin')).toBe(false);
     });
 
-    test('matches configured admin email with surrounding whitespace', () => {
-        expect(isAdminEmail('  admin@example.com  ')).toBe(true);
-    });
-
-    test('returns false for different email', () => {
-        expect(isAdminEmail('user@example.com')).toBe(false);
-    });
-
-    test('returns false when email claim is missing', () => {
-        expect(isAdminEmail(undefined)).toBe(false);
+    test('fails closed when no stable admin identity is configured', () => {
+        expect(isAdminMerchbaseUser('mbu_admin', undefined)).toBe(false);
     });
 });

@@ -1,7 +1,5 @@
-import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { enqueueKeywordSyncJob } from '../../../jobs/run-server-jobs';
-import { findLatestClerkUserIdByAccountId } from '../../../services/auth/find-latest-clerk-user-id-by-account-id';
 import { setTrackedKeywordSyncStateByKeywordId } from '../../../services/keywords/set-tracked-keyword-sync-state';
 import { trackKeyword } from '../../../services/keywords/tracked-keywords-service';
 import { createEventLog } from '../../../services/logs/create-event-log';
@@ -14,16 +12,7 @@ export const publicKeywordsTrackProcedure = publicProcedure
         })
     )
     .mutation(async ({ ctx, input }) => {
-        const clerkUserId = await findLatestClerkUserIdByAccountId({
-            accountId: ctx.accountId,
-        });
-
-        if (!clerkUserId) {
-            throw new TRPCError({
-                code: 'PRECONDITION_FAILED',
-                message: 'No Clerk identity is linked to this account.',
-            });
-        }
+        const clerkUserId = ctx.merchbaseUserId;
 
         const trackedKeyword = await trackKeyword({
             keywordInput: input.keyword,

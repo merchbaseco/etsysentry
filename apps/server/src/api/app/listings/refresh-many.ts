@@ -52,7 +52,7 @@ export const listingsRefreshManyProcedure = appProcedure
         await createEventLog({
             action: 'listing.bulk_sync_queued',
             category: 'listing',
-            clerkUserId: ctx.user.sub,
+            clerkUserId: ctx.merchbaseUserId,
             detailsJson: {
                 enqueuedCount,
                 requestedCount: trackedListingIds.length,

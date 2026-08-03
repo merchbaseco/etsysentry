@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import readline from 'node:readline';
+import { MERCHBASE_API_KEY_ENV } from '@merchbaseco/access';
 import { failWith } from './errors.js';
 import type { CliSecureStore } from './secure-store.js';
 import { secureStore } from './secure-store.js';
@@ -60,7 +61,7 @@ const resolveAuthSetInput = async (params: {
         };
     }
 
-    const fromEnv = toOptionalTrimmed(process.env.ES_API_KEY);
+    const fromEnv = toOptionalTrimmed(process.env[MERCHBASE_API_KEY_ENV]);
 
     if (fromEnv) {
         return {
@@ -71,7 +72,7 @@ const resolveAuthSetInput = async (params: {
 
     if (params.reader.isInteractive()) {
         const fromPrompt = toOptionalTrimmed(
-            (await params.reader.readPrompt('EtsySentry API key: ')) ?? undefined
+            (await params.reader.readPrompt('Merchbase API key: ')) ?? undefined
         );
 
         if (fromPrompt) {
@@ -111,7 +112,7 @@ export const resolveApiKey = async (
         };
     }
 
-    const fromEnv = toOptionalTrimmed(process.env.ES_API_KEY);
+    const fromEnv = toOptionalTrimmed(process.env[MERCHBASE_API_KEY_ENV]);
 
     if (fromEnv) {
         return {
@@ -141,7 +142,7 @@ export const resolveAuthStatus = async (
     store: CliSecureStore = secureStore
 ): Promise<CliAuthStatus> => {
     const storeStatus = await store.getStatus();
-    const hasEnvOverride = Boolean(toOptionalTrimmed(process.env.ES_API_KEY));
+    const hasEnvOverride = Boolean(toOptionalTrimmed(process.env[MERCHBASE_API_KEY_ENV]));
     const storedApiKey = await store.readApiKey();
     let activeSource: CliAuthStatus['activeSource'] = null;
 
@@ -177,7 +178,7 @@ export const storeApiKeyFromCommand = async (
     if (!(input.apiKey && input.source)) {
         failWith({
             code: 'BAD_REQUEST',
-            message: 'auth set requires <api-key>, --stdin, --api-key, or ES_API_KEY.',
+            message: `auth set requires <api-key>, --stdin, --api-key, or ${MERCHBASE_API_KEY_ENV}.`,
         });
 
         throw new Error('Unreachable');

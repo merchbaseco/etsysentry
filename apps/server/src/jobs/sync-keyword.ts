@@ -1,3 +1,4 @@
+import { evaluateAccountAccess } from '../services/access/job-access';
 import { syncRanksForKeyword } from '../services/keywords/keyword-rankings-service';
 import { setTrackedKeywordSyncStateByKeywordId } from '../services/keywords/set-tracked-keyword-sync-state';
 import { enqueueSyncListingJob } from '../services/listings/enqueue-sync-listing-job';
@@ -11,6 +12,26 @@ export const syncKeywordJob = defineJob(SYNC_KEYWORD_JOB_NAME, {
 })
     .input(syncKeywordJobInputSchema)
     .work(async (job, _signal, log, context) => {
+        const access = await evaluateAccountAccess({
+            accountId: job.data.accountId,
+        });
+
+        if (access.state !== 'allowed') {
+            await setTrackedKeywordSyncStateByKeywordId({
+                accountId: job.data.accountId,
+                trackedKeywordId: job.data.trackedKeywordId,
+                syncState: 'idle',
+            });
+            log('Skipped keyword sync because Merchbase access is unavailable.', {
+                accessState: access.state,
+                trackedKeywordId: job.data.trackedKeywordId,
+            });
+            return {
+                didWork: false,
+                trackedKeywordId: job.data.trackedKeywordId,
+            } as const;
+        }
+
         await setTrackedKeywordSyncStateByKeywordId({
             accountId: job.data.accountId,
             trackedKeywordId: job.data.trackedKeywordId,

@@ -10,7 +10,7 @@ es help
 es --version
 es changelog
 es auth set
-printf %s "$ES_API_KEY" | es auth set --stdin
+printf %s "$MERCHBASE_API_KEY" | es auth set --stdin
 es config show
 es config get base-url
 es keywords list --limit 20
@@ -19,7 +19,7 @@ es listings performance <tracked_listing_id> --range 30d --mode table
 ```
 
 `baseUrl` and storage settings are persisted in CLI config. API keys are stored in the secure
-store on macOS Keychain, while `ES_API_KEY` remains available as a command-time override for
+store on macOS Keychain, while `MERCHBASE_API_KEY` remains available as a command-time override for
 automation, CI, and agent runtimes. Use `es config unset <key>` for one non-secret value and
 `es config reset` for local config cleanup without removing stored auth.
 

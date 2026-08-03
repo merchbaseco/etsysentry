@@ -15,16 +15,16 @@ const withApiKeyEnv = async (
     apiKey: string | undefined,
     callback: () => Promise<void>
 ): Promise<void> => {
-    const previousApiKey = process.env.ES_API_KEY;
-    process.env.ES_API_KEY = apiKey;
+    const previousApiKey = process.env.MERCHBASE_API_KEY;
+    process.env.MERCHBASE_API_KEY = apiKey;
 
     try {
         await callback();
     } finally {
         if (previousApiKey === undefined) {
-            process.env.ES_API_KEY = undefined;
+            process.env.MERCHBASE_API_KEY = undefined;
         } else {
-            process.env.ES_API_KEY = previousApiKey;
+            process.env.MERCHBASE_API_KEY = previousApiKey;
         }
     }
 };
@@ -48,21 +48,21 @@ const createStore = (params?: {
 
 describe('resolveApiKey', () => {
     test('prefers the flag over env and secure storage', async () => {
-        await withApiKeyEnv('esk_live_env', async () => {
+        await withApiKeyEnv('ak_env', async () => {
             const auth = await resolveApiKey(
                 {
                     flags: {
                         ...defaultFlags,
-                        apiKey: 'esk_live_flag',
+                        apiKey: 'ak_flag',
                     },
                 },
                 createStore({
-                    storedApiKey: 'esk_live_store',
+                    storedApiKey: 'ak_store',
                 })
             );
 
             expect(auth).toEqual({
-                apiKey: 'esk_live_flag',
+                apiKey: 'ak_flag',
                 source: 'flag',
                 store: {
                     available: true,
@@ -79,11 +79,11 @@ describe('resolveApiKey', () => {
                     flags: defaultFlags,
                 },
                 createStore({
-                    storedApiKey: 'esk_live_store',
+                    storedApiKey: 'ak_store',
                 })
             );
 
-            expect(auth?.apiKey).toBe('esk_live_store');
+            expect(auth?.apiKey).toBe('ak_store');
             expect(auth?.source).toBe('secure-store');
         });
     });
@@ -91,13 +91,13 @@ describe('resolveApiKey', () => {
 
 describe('resolveAuthStatus', () => {
     test('reports env overrides while a stored key also exists', async () => {
-        await withApiKeyEnv('esk_live_env', async () => {
+        await withApiKeyEnv('ak_env', async () => {
             const status = await resolveAuthStatus(
                 {
                     flags: defaultFlags,
                 },
                 createStore({
-                    storedApiKey: 'esk_live_store',
+                    storedApiKey: 'ak_store',
                 })
             );
 
@@ -122,7 +122,7 @@ describe('storeApiKeyFromCommand', () => {
         const result = await storeApiKeyFromCommand(
             {
                 command: {
-                    args: ['esk_live_positional'],
+                    args: ['ak_positional'],
                     resource: 'auth',
                     verb: 'set',
                 },
@@ -139,7 +139,7 @@ describe('storeApiKeyFromCommand', () => {
         expect(result).toEqual({
             source: 'arg',
         });
-        expect(storedApiKey).toBe('esk_live_positional');
+        expect(storedApiKey).toBe('ak_positional');
     });
 
     test('stores an API key from stdin input', async () => {
@@ -147,7 +147,7 @@ describe('storeApiKeyFromCommand', () => {
         const reader: AuthInputReader = {
             isInteractive: () => false,
             readPrompt: () => Promise.resolve(null),
-            readStdin: () => Promise.resolve('esk_live_stdin\n'),
+            readStdin: () => Promise.resolve('ak_stdin\n'),
         };
 
         const result = await storeApiKeyFromCommand(
@@ -174,14 +174,14 @@ describe('storeApiKeyFromCommand', () => {
         expect(result).toEqual({
             source: 'stdin',
         });
-        expect(storedApiKey).toBe('esk_live_stdin');
+        expect(storedApiKey).toBe('ak_stdin');
     });
 
     test('stores an API key from an interactive prompt', async () => {
         let storedApiKey: string | null = null;
         const reader: AuthInputReader = {
             isInteractive: () => true,
-            readPrompt: () => Promise.resolve('esk_live_prompt'),
+            readPrompt: () => Promise.resolve('ak_prompt'),
             readStdin: () => Promise.resolve(null),
         };
 
@@ -206,6 +206,6 @@ describe('storeApiKeyFromCommand', () => {
         expect(result).toEqual({
             source: 'prompt',
         });
-        expect(storedApiKey).toBe('esk_live_prompt');
+        expect(storedApiKey).toBe('ak_prompt');
     });
 });

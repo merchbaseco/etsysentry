@@ -1,7 +1,5 @@
-import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { enqueueShopSyncJob } from '../../../jobs/run-server-jobs';
-import { findLatestClerkUserIdByAccountId } from '../../../services/auth/find-latest-clerk-user-id-by-account-id';
 import {
     queueTrackedShopSyncIfIdleByTrackedShopId,
     setTrackedShopSyncStateByTrackedShopId,
@@ -16,16 +14,7 @@ export const publicShopsTrackProcedure = publicProcedure
         })
     )
     .mutation(async ({ ctx, input }) => {
-        const clerkUserId = await findLatestClerkUserIdByAccountId({
-            accountId: ctx.accountId,
-        });
-
-        if (!clerkUserId) {
-            throw new TRPCError({
-                code: 'PRECONDITION_FAILED',
-                message: 'No Clerk identity is linked to this account.',
-            });
-        }
+        const clerkUserId = ctx.merchbaseUserId;
 
         const response = await trackShop({
             shopInput: input.shop,

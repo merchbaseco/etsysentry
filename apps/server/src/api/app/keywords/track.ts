@@ -16,7 +16,7 @@ export const keywordsTrackProcedure = appProcedure
             keywordInput: input.keyword,
             requestId: ctx.requestId,
             accountId: ctx.accountId,
-            trackerClerkUserId: ctx.user.sub,
+            trackerClerkUserId: ctx.merchbaseUserId,
         });
 
         const monitorRunId = await enqueueKeywordSyncJob({
@@ -36,7 +36,7 @@ export const keywordsTrackProcedure = appProcedure
         await createEventLog({
             action: 'keyword.sync_queued',
             category: 'keyword',
-            clerkUserId: ctx.user.sub,
+            clerkUserId: ctx.merchbaseUserId,
             detailsJson: {
                 keyword: trackedKeyword.item.keyword,
             },

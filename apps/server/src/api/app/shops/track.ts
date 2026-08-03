@@ -18,7 +18,7 @@ export const shopsTrackProcedure = appProcedure
             shopInput: input.shop,
             requestId: ctx.requestId,
             accountId: ctx.accountId,
-            clerkUserId: ctx.user.sub,
+            clerkUserId: ctx.merchbaseUserId,
         });
 
         const claimed = await queueTrackedShopSyncIfIdleByTrackedShopId({
@@ -30,7 +30,7 @@ export const shopsTrackProcedure = appProcedure
             try {
                 const queuedJobId = await enqueueShopSyncJob({
                     accountId: ctx.accountId,
-                    clerkUserId: ctx.user.sub,
+                    clerkUserId: ctx.merchbaseUserId,
                     trackedShopId: response.item.id,
                 });
 

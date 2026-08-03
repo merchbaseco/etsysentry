@@ -1,41 +1,25 @@
-import { verifyToken } from '@clerk/backend';
+import { ServiceAccessError } from '@merchbaseco/access';
 import type { CreateFastifyContextOptions } from '@trpc/server/adapters/fastify';
 import { env } from '../config/env';
-import {
-    type ApiKeyAuthRecord,
-    authenticateApiKey,
-    isPotentialApiKeyToken,
-} from '../services/auth/api-keys-service';
-import { resolveAccountIdFromClerk } from '../services/auth/resolve-account-id-from-clerk';
+import { type EtsySentryAccess, getEtsySentryAccess } from '../services/access/etsysentry-access';
 
 type AuthType = 'apiKey' | 'clerk' | 'none';
 
-export interface ClerkUser {
-    email?: string;
-    issuer: string;
-    orgId: string | null;
-    sub: string;
+export interface AuthenticatedUser {
+    credentialKind: 'session';
+    merchbaseUserId: string;
 }
 
 export interface ApiKeyPrincipal {
-    accountId: string;
-    id: string;
-    keyPrefix: string;
-    ownerClerkUserId: string;
+    credentialKind: 'api_key';
+    merchbaseUserId: string;
 }
 
-const normalizeEmail = (email: string): string => {
-    return email.trim().toLowerCase();
-};
-
-const adminEmail = normalizeEmail(env.ADMIN_EMAIL);
-
-export const isAdminEmail = (email?: string): boolean => {
-    if (!email) {
-        return false;
-    }
-
-    return normalizeEmail(email) === adminEmail;
+export const isAdminMerchbaseUser = (
+    merchbaseUserId: string,
+    configuredAdminUserId = env.ADMIN_MERCHBASE_USER_ID
+): boolean => {
+    return Boolean(configuredAdminUserId && configuredAdminUserId === merchbaseUserId);
 };
 
 const getBearerToken = (authorization?: string): string | null => {
@@ -47,80 +31,47 @@ const getBearerToken = (authorization?: string): string | null => {
     return token.length > 0 ? token : null;
 };
 
-const getRawApiKeyHeader = (rawHeader: string | string[] | undefined): string | null => {
-    if (typeof rawHeader === 'string') {
-        const normalized = rawHeader.trim();
-        return normalized.length > 0 ? normalized : null;
-    }
+const getSharedContext = ({
+    req,
+    res,
+}: Pick<CreateFastifyContextOptions, 'req' | 'res'>): {
+    reply: typeof res;
+    request: typeof req;
+    requestId: string;
+} => ({
+    reply: res,
+    request: req,
+    requestId: String(req.id),
+});
 
-    if (Array.isArray(rawHeader)) {
-        for (const value of rawHeader) {
-            const normalized = value.trim();
+const getAccessErrorMessage = (error: unknown): string => {
+    if (error instanceof ServiceAccessError) {
+        if (error.code === 'access_denied') {
+            return 'Merchbase access is not granted.';
+        }
 
-            if (normalized.length > 0) {
-                return normalized;
-            }
+        if (error.code === 'access_unavailable') {
+            return 'Merchbase access is temporarily unavailable.';
         }
     }
 
-    return null;
+    return 'Valid Merchbase credential required.';
 };
 
-const toApiKeyPrincipal = (record: ApiKeyAuthRecord): ApiKeyPrincipal => {
-    return {
-        accountId: record.accountId,
-        id: record.id,
-        keyPrefix: record.keyPrefix,
-        ownerClerkUserId: record.ownerClerkUserId,
-    };
-};
-
-export const createTrpcContext = async ({ req, res }: CreateFastifyContextOptions) => {
+export const createTrpcContext = async (
+    { req, res }: CreateFastifyContextOptions,
+    access: EtsySentryAccess = getEtsySentryAccess()
+) => {
+    const sharedContext = getSharedContext({ req, res });
     const token = getBearerToken(req.headers.authorization);
-    const rawApiKeyHeader = getRawApiKeyHeader(req.headers['x-api-key']);
-
-    const apiKeyCandidate = rawApiKeyHeader ?? (isPotentialApiKeyToken(token) ? token : null);
-
-    if (apiKeyCandidate) {
-        const authenticatedApiKey = await authenticateApiKey({
-            rawApiKey: apiKeyCandidate,
-        });
-
-        if (authenticatedApiKey) {
-            return {
-                authType: 'apiKey' as AuthType,
-                isAdmin: false,
-                reply: res,
-                request: req,
-                requestId: String(req.id),
-                accountId: authenticatedApiKey.accountId,
-                apiKey: toApiKeyPrincipal(authenticatedApiKey),
-                apiKeyError: undefined,
-                user: null,
-            };
-        }
-
-        return {
-            authType: 'none' as AuthType,
-            isAdmin: false,
-            reply: res,
-            request: req,
-            requestId: String(req.id),
-            accountId: null,
-            apiKey: null,
-            apiKeyError: 'Valid API key required.',
-            user: null,
-        };
-    }
 
     if (!token) {
         return {
+            ...sharedContext,
             authType: 'none' as AuthType,
             isAdmin: false,
-            reply: res,
-            request: req,
-            requestId: String(req.id),
             accountId: null,
+            merchbaseUserId: null,
             apiKey: null,
             apiKeyError: undefined,
             user: null,
@@ -128,62 +79,42 @@ export const createTrpcContext = async ({ req, res }: CreateFastifyContextOption
     }
 
     try {
-        const payload = await verifyToken(token, {
-            secretKey: env.CLERK_SECRET_KEY,
-        });
-
-        const subject = typeof payload.sub === 'string' ? payload.sub.trim() : '';
-        const issuer = typeof payload.iss === 'string' ? payload.iss.trim() : '';
-
-        if (!(subject && issuer)) {
-            return {
-                authType: 'none' as AuthType,
-                isAdmin: false,
-                reply: res,
-                request: req,
-                requestId: String(req.id),
-                accountId: null,
-                apiKey: null,
-                apiKeyError: undefined,
-                user: null,
-            };
-        }
-
-        const orgId = typeof payload.org_id === 'string' ? payload.org_id.trim() : '';
-        const email = typeof payload.email === 'string' ? payload.email : undefined;
-        const accountId = await resolveAccountIdFromClerk({
-            clerkIssuer: issuer,
-            clerkOrgId: orgId.length > 0 ? orgId : null,
-            clerkSubject: subject,
-            email: email ?? null,
-        });
+        const authorized = await (token.startsWith('ak_')
+            ? access.apiKeyAccess
+            : access.sessionAccess
+        ).authorize(token);
+        const isApiKey = authorized.credentialKind === 'api_key';
+        const merchbaseUserId = authorized.merchbaseUserId;
 
         return {
-            authType: 'clerk' as AuthType,
-            isAdmin: isAdminEmail(email),
-            reply: res,
-            request: req,
-            requestId: String(req.id),
-            accountId,
-            apiKey: null,
+            ...sharedContext,
+            authType: (isApiKey ? 'apiKey' : 'clerk') as AuthType,
+            isAdmin: !isApiKey && isAdminMerchbaseUser(merchbaseUserId),
+            accountId: authorized.principal.accountId,
+            merchbaseUserId,
+            apiKey: isApiKey
+                ? ({
+                      credentialKind: 'api_key',
+                      merchbaseUserId,
+                  } satisfies ApiKeyPrincipal)
+                : null,
             apiKeyError: undefined,
-            user: {
-                email,
-                issuer,
-                orgId: orgId.length > 0 ? orgId : null,
-                sub: subject,
-            } satisfies ClerkUser,
+            user: isApiKey
+                ? null
+                : ({
+                      credentialKind: 'session',
+                      merchbaseUserId,
+                  } satisfies AuthenticatedUser),
         };
-    } catch {
+    } catch (error) {
         return {
+            ...sharedContext,
             authType: 'none' as AuthType,
             isAdmin: false,
-            reply: res,
-            request: req,
-            requestId: String(req.id),
             accountId: null,
+            merchbaseUserId: null,
             apiKey: null,
-            apiKeyError: undefined,
+            apiKeyError: getAccessErrorMessage(error),
             user: null,
         };
     }
