@@ -40,7 +40,6 @@ export const syncShopJob = defineJob(SYNC_SHOP_JOB_NAME, {
 
         try {
             const syncResult = await syncTrackedShop({
-                clerkUserId: job.data.clerkUserId,
                 monitorRunId: job.id,
                 accountId: job.data.accountId,
                 trackedShopId: job.data.trackedShopId,
@@ -52,7 +51,6 @@ export const syncShopJob = defineJob(SYNC_SHOP_JOB_NAME, {
                 const queuedJobId = await enqueueSyncListingJob({
                     boss: context.boss,
                     payload: {
-                        clerkUserId: job.data.clerkUserId,
                         etsyListingId,
                         accountId: job.data.accountId,
                     },

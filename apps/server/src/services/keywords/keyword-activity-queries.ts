@@ -84,7 +84,6 @@ export const listLatestRankedListingsForCapture = async (params: {
             syncState: trackedListings.syncState,
             thumbnailUrl: trackedListings.thumbnailUrl,
             title: trackedListings.title,
-            trackerClerkUserId: trackedListings.trackerClerkUserId,
             trackingState: trackedListings.trackingState,
             updatedAt: trackedListings.updatedAt,
             updatedTimestamp: trackedListings.updatedTimestamp,

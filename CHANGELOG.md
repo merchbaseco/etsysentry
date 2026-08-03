@@ -9,6 +9,9 @@ All notable changes to this project will be documented in this file.
 - Migrated request, websocket, CLI, and background-job authorization to centralized Merchbase
   Access with product-local stable-user projections.
 - CLI and HTTP automation now use `MERCHBASE_API_KEY` and `Authorization: Bearer <ak_...>`.
+- Public API authorization now accepts shared OAuth credentials with fail-closed session fallback.
+- Product ownership, Etsy API metering, and background jobs now use local account ownership without
+  Clerk-subject payload or storage fields.
 
 ### Removed
 

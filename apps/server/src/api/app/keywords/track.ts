@@ -16,11 +16,9 @@ export const keywordsTrackProcedure = appProcedure
             keywordInput: input.keyword,
             requestId: ctx.requestId,
             accountId: ctx.accountId,
-            trackerClerkUserId: ctx.merchbaseUserId,
         });
 
         const monitorRunId = await enqueueKeywordSyncJob({
-            clerkUserId: trackedKeyword.item.trackerClerkUserId,
             accountId: trackedKeyword.item.accountId,
             trackedKeywordId: trackedKeyword.item.id,
         });
@@ -36,7 +34,6 @@ export const keywordsTrackProcedure = appProcedure
         await createEventLog({
             action: 'keyword.sync_queued',
             category: 'keyword',
-            clerkUserId: ctx.merchbaseUserId,
             detailsJson: {
                 keyword: trackedKeyword.item.keyword,
             },

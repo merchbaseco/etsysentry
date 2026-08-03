@@ -8,7 +8,6 @@ describe('buildListingSyncedEventLogInput', () => {
     test('builds a listing synced event payload', () => {
         const payload = buildListingSyncedEventLogInput({
             accountId: 'tenant_123',
-            clerkUserId: 'user_123',
             etsyListingId: '1234567890',
             etsyState: 'active',
             listingId: 'listing_123',
@@ -21,7 +20,6 @@ describe('buildListingSyncedEventLogInput', () => {
         expect(payload).toEqual({
             action: 'listing.synced',
             category: 'listing',
-            clerkUserId: 'user_123',
             detailsJson: {
                 etsyState: 'active',
                 title: 'Sample listing',
@@ -44,7 +42,6 @@ describe('buildListingSyncFailedEventLogInput', () => {
     test('builds a listing sync failed payload with nullable ids', () => {
         const payload = buildListingSyncFailedEventLogInput({
             accountId: 'tenant_123',
-            clerkUserId: 'user_123',
             errorMessage: 'Etsy listing was not found.',
             etsyListingId: '1234567890',
         });
@@ -52,7 +49,6 @@ describe('buildListingSyncFailedEventLogInput', () => {
         expect(payload).toEqual({
             action: 'listing.sync_failed',
             category: 'listing',
-            clerkUserId: 'user_123',
             detailsJson: {
                 error: 'Etsy listing was not found.',
             },

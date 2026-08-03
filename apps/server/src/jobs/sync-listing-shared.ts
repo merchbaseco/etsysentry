@@ -7,7 +7,6 @@ export const SYNC_STALE_LISTINGS_JOB_NAME = 'sync-stale-listings';
 export const SYNC_LISTING_WORKER_LOCAL_CONCURRENCY = 5;
 
 export const syncListingJobInputSchema = z.object({
-    clerkUserId: z.string().min(1),
     etsyListingId: z.string().min(1),
     accountId: z.string().min(1),
 });

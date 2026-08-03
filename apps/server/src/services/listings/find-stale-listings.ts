@@ -37,7 +37,6 @@ export const findStaleListings = async (params?: {
     const candidateRows = await db
         .select({
             trackedListingId: trackedListings.listingId,
-            clerkUserId: accounts.merchbaseUserId,
             etsyListingId: trackedListings.etsyListingId,
             accountId: trackedListings.accountId,
             lastRefreshedAt: trackedListings.lastRefreshedAt,

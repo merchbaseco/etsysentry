@@ -204,7 +204,6 @@ const areTrackedListingsEqual = (left: TrackedListingItem, right: TrackedListing
         left.shopName === right.shopName &&
         left.thumbnailUrl === right.thumbnailUrl &&
         left.title === right.title &&
-        left.trackerClerkUserId === right.trackerClerkUserId &&
         left.syncState === right.syncState &&
         left.trackingState === right.trackingState &&
         left.updatedAt === right.updatedAt &&

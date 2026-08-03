@@ -140,7 +140,6 @@ const buildDiscoveredListings = (params: {
 };
 
 export const buildTrackedListingDiscoveryValues = (params: {
-    clerkUserId: string;
     now: Date;
     rankedListing: RankedListingResult;
     accountId: string;
@@ -153,7 +152,6 @@ export const buildTrackedListingDiscoveryValues = (params: {
         accountId: params.accountId,
         thumbnailUrl: params.rankedListing.thumbnailUrl,
         title: params.rankedListing.title,
-        trackerClerkUserId: params.clerkUserId,
         trackingState: 'active' as const,
         updatedAt: params.now,
         url: params.rankedListing.url,
@@ -257,18 +255,13 @@ const getTrackedKeyword = async (params: { accountId: string; trackedKeywordId: 
     return keyword;
 };
 
-const fetchKeywordRanksFromEtsy = async (params: {
-    clerkUserId: string;
-    keyword: string;
-    accountId: string;
-}) => {
+const fetchKeywordRanksFromEtsy = async (params: { keyword: string; accountId: string }) => {
     const oauthToken = await getEtsyOAuthAccessToken({
         accountId: params.accountId,
     });
 
     try {
         await recordEtsyApiCallBestEffort({
-            clerkUserId: params.clerkUserId,
             endpoint: 'findAllListingsActive',
             accountId: params.accountId,
         });
@@ -290,7 +283,6 @@ const fetchKeywordRanksFromEtsy = async (params: {
 };
 
 export const syncRanksForKeyword = async (params: {
-    clerkUserId: string;
     monitorRunId?: string;
     requestId?: string;
     accountId: string;
@@ -306,7 +298,6 @@ export const syncRanksForKeyword = async (params: {
 
     try {
         const response = await fetchKeywordRanksFromEtsy({
-            clerkUserId: params.clerkUserId,
             keyword: trackedKeyword.keyword,
             accountId: params.accountId,
         });
@@ -321,7 +312,6 @@ export const syncRanksForKeyword = async (params: {
             if (uniqueRankedListings.length > 0) {
                 const discoveryValues = uniqueRankedListings.map((rankedListing) =>
                     buildTrackedListingDiscoveryValues({
-                        clerkUserId: params.clerkUserId,
                         now,
                         rankedListing,
                         accountId: params.accountId,
@@ -420,7 +410,6 @@ export const syncRanksForKeyword = async (params: {
             ...insertValues.discoveredListings.map((listing) => ({
                 action: 'listing.discovered',
                 category: 'listing',
-                clerkUserId: params.clerkUserId,
                 detailsJson: {
                     keyword: trackedKeyword.keyword,
                     title: listing.title,
@@ -442,7 +431,6 @@ export const syncRanksForKeyword = async (params: {
             {
                 action: 'keyword.synced',
                 category: 'keyword',
-                clerkUserId: params.clerkUserId,
                 detailsJson: {
                     capturedCount: insertValues.values.length,
                     discoveredCount: insertValues.newlyDiscoveredEtsyListingIds.length,
@@ -507,7 +495,6 @@ export const syncRanksForKeyword = async (params: {
             await createEventLog({
                 action: 'keyword.sync_failed',
                 category: 'keyword',
-                clerkUserId: params.clerkUserId,
                 detailsJson: {
                     error: failureMessage,
                 },

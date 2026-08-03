@@ -13,7 +13,6 @@ export interface TrackedKeywordRecord {
     nextSyncAt: string;
     normalizedKeyword: string;
     syncState: (typeof trackedKeywords.$inferSelect)['syncState'];
-    trackerClerkUserId: string;
     trackingState: (typeof trackedKeywords.$inferSelect)['trackingState'];
     updatedAt: string;
 }
@@ -47,7 +46,6 @@ const toRecord = (row: typeof trackedKeywords.$inferSelect): TrackedKeywordRecor
         nextSyncAt: row.nextSyncAt.toISOString(),
         normalizedKeyword: row.normalizedKeyword,
         accountId: row.accountId,
-        trackerClerkUserId: row.trackerClerkUserId,
         syncState: row.syncState,
         trackingState: row.trackingState,
         updatedAt: row.updatedAt.toISOString(),
@@ -74,19 +72,11 @@ export const getTrackedKeyword = async (params: {
 
 export const listTrackedKeywords = async (params: {
     accountId: string;
-    trackerClerkUserId?: string;
 }): Promise<{ items: TrackedKeywordRecord[] }> => {
-    const whereClause = params.trackerClerkUserId
-        ? and(
-              eq(trackedKeywords.accountId, params.accountId),
-              eq(trackedKeywords.trackerClerkUserId, params.trackerClerkUserId)
-          )
-        : eq(trackedKeywords.accountId, params.accountId);
-
     const rows = await db
         .select()
         .from(trackedKeywords)
-        .where(whereClause)
+        .where(eq(trackedKeywords.accountId, params.accountId))
         .orderBy(desc(trackedKeywords.updatedAt));
 
     return {
@@ -98,7 +88,6 @@ export const trackKeyword = async (params: {
     keywordInput: string;
     requestId?: string;
     accountId: string;
-    trackerClerkUserId: string;
 }): Promise<{
     created: boolean;
     item: TrackedKeywordRecord;
@@ -133,7 +122,6 @@ export const trackKeyword = async (params: {
         nextSyncAt: now,
         normalizedKeyword: normalized.normalizedKeyword,
         accountId: params.accountId,
-        trackerClerkUserId: params.trackerClerkUserId,
         trackingState: 'active' as const,
         updatedAt: now,
     };
@@ -153,7 +141,6 @@ export const trackKeyword = async (params: {
     await createEventLog({
         action: created ? 'keyword.tracked' : 'keyword.updated',
         category: 'keyword',
-        clerkUserId: params.trackerClerkUserId,
         detailsJson: {
             normalizedKeyword: item.normalizedKeyword,
         },

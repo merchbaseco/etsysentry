@@ -6,7 +6,6 @@ export interface TrackedListingSyncTarget {
     etsyListingId: string;
     syncState: (typeof trackedListings.$inferSelect)['syncState'];
     trackedListingId: string;
-    trackerClerkUserId: string;
     trackingState: (typeof trackedListings.$inferSelect)['trackingState'];
 }
 
@@ -35,7 +34,6 @@ export const findTrackedListingSyncTargets = (params: {
             etsyListingId: trackedListings.etsyListingId,
             syncState: trackedListings.syncState,
             trackingState: trackedListings.trackingState,
-            trackerClerkUserId: trackedListings.trackerClerkUserId,
         })
         .from(trackedListings)
         .where(whereClause);

@@ -11,7 +11,7 @@
         "db:generate": "drizzle-kit generate",
         "db:migrate": "bun run ./src/db/migrate-runner.ts",
         "db:migrate:phase1": "bun run ./src/db/migrate-runner.ts --through 0020_early_agent_zero",
-        "db:migrate:phase2": "bun run ./src/db/migrate-runner.ts --through 0021_worried_deathstrike",
+        "db:migrate:phase2": "bun run ./src/db/migrate-runner.ts --through 0021_known_sandman",
         "access:audit": "bun run ./src/scripts/central-auth-cutover.ts audit",
         "access:plan": "bun run ./src/scripts/central-auth-cutover.ts plan",
         "access:backfill": "bun run ./src/scripts/central-auth-cutover.ts backfill"

@@ -13,7 +13,6 @@ export const findStaleShops = async (params?: { now?: Date }): Promise<SyncShopJ
     const rows = await db
         .select({
             accountId: trackedShops.accountId,
-            clerkUserId: accounts.merchbaseUserId,
             trackedShopId: trackedShops.trackedShopId,
         })
         .from(trackedShops)
@@ -34,7 +33,6 @@ export const findStaleShops = async (params?: { now?: Date }): Promise<SyncShopJ
     for (const row of rows) {
         const parsedInput = syncShopJobInputSchema.safeParse({
             accountId: row.accountId,
-            clerkUserId: row.clerkUserId,
             trackedShopId: row.trackedShopId,
         });
 

@@ -100,14 +100,12 @@ export const trackShop = async (params: {
     shopInput: string;
     requestId?: string;
     accountId: string;
-    clerkUserId: string;
 }): Promise<{
     created: boolean;
     item: TrackedShopRecord;
 }> => {
     const resolvedShop = await resolveShopFromInput({
         shopInput: params.shopInput,
-        clerkUserId: params.clerkUserId,
         accountId: params.accountId,
     });
 
@@ -163,7 +161,6 @@ export const trackShop = async (params: {
     await createEventLog({
         action: created ? 'shop.tracked' : 'shop.updated',
         category: 'shop',
-        clerkUserId: params.clerkUserId,
         detailsJson: {
             activeListingCount: resolvedShop.activeListingCount,
             favoritesTotal: resolvedShop.numFavorers,

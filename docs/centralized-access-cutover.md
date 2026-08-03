@@ -23,14 +23,20 @@ monotonic by source update timestamp; delete events become terminal tombstones. 
 account UUID, Etsy OAuth connection, listings, keywords, shops, snapshots, event logs, jobs, and
 metering rows remain account-keyed and are not deleted or recreated.
 
-The old `trackerClerkUserId` and metering `clerkUserId` columns are historical product storage,
-not authorization sources. New product actions store the stable `merchbaseUserId` value in those
-existing columns until a separate data-model change gives them better names.
+Tracker ownership, job payloads, event logs, and Etsy API metering use `accountId` only. Phase two
+drops the redundant historical Clerk-subject columns after proving every affected row has an owning
+account and every non-system legacy value belongs to an identity on that same account. Existing
+values are never reinterpreted as Merchbase User IDs.
 
 Customer API-key issuance, local verification, UI, environment alias, route, and table are gone at
 clean cutover. The only CLI/automation credential variable is `MERCHBASE_API_KEY`; the CLI uses the
 shared Keychain account/service constants from the access package. HTTP clients send
 `Authorization: Bearer <ak_...>`.
+
+The HTTP authorization boundary routes `ak_` credentials to API-key access, `oat_` credentials to
+OAuth access, and JWT-shaped credentials to session access. A JWT-shaped credential falls back to
+OAuth only when session authentication returns `unauthenticated`; denied or unavailable access is
+preserved without fallback. Retired `esk_` keys and malformed credentials fail closed.
 
 ## Migration tooling
 
@@ -50,25 +56,27 @@ The mapping file is supplied privately by the operator after checking Clerk and 
 account. It must contain exactly one local `accountId`, one issuer, one retained subject, the
 explicit retired subject list, the stable `merchbaseUserId`, the retained projection's central
 source timestamp/access state, and expected global and target counts for identities, the duplicate
-normalized-email group, active legacy keys, Etsy OAuth connections, and accounts. The planner hashes
-the issuer/subject set and mapping; it never prints raw identifiers or emails and never chooses a
-winner.
+normalized-email group, active legacy keys, Etsy OAuth connections, accounts, redundant ownership
+references, and system metering events. The planner hashes the issuer/subject set and mapping; it
+never prints raw identifiers or emails and never chooses a winner.
 
 `access:audit` reads global counts plus, when given a mapping, the exact target identity-set,
-legacy-key, OAuth, and product-row counts. `access:plan` fails if any expected fact differs. The
-backfill runs serializable, rechecks the plan inside the transaction, sets the existing account's
-stable mapping only when it is null or already equal, seeds the retained active projection, seeds
-terminal tombstones for retired identities, and asserts product-row counts are unchanged. A
-duplicate mapping, changed identity set, changed key/OAuth count, changed plan, or unique-account
-conflict aborts the transaction.
+legacy-key, OAuth, product-row, and legacy ownership-reference counts. It fails if an affected row
+has no owning account or a non-system legacy value does not match an identity on that account.
+`access:plan` fails if any expected fact differs. The backfill runs serializable, rechecks the plan
+inside the transaction, sets the existing account's stable mapping only when it is null or already
+equal, seeds the retained active projection, seeds terminal tombstones for retired identities, and
+asserts product-row counts are unchanged. A duplicate mapping, changed identity set, changed
+key/OAuth count, changed plan, or unique-account conflict aborts the transaction.
 
 The generated migrations are intentionally staged:
 
 1. `0020_early_agent_zero.sql` adds the projection tables and nullable account mapping while the
    legacy auth tables remain available for the assertion/backfill transaction.
 2. The operator runs `access:backfill` against that phase-one schema.
-3. `0021_worried_deathstrike.sql` drops only `api_keys` and `clerk_identities` after acceptance of
-   the backfill. No product/provider table is part of cleanup.
+3. `0021_known_sandman.sql` drops `api_keys`, `clerk_identities`, and the redundant Clerk-subject
+   columns/indexes from trackers and Etsy API metering after acceptance of the backfill. It does not
+   delete or recreate product, provider, event, job, or metering rows.
 
 Do not run a migration command that applies phase two before the backfill. Do not run the backfill
 against an unplanned database. A failed backfill transaction is rolled back; it does not delete
@@ -101,7 +109,8 @@ queued jobs or product data.
    not create or rotate production credentials in this repository.
 9. Apply phase-two cleanup with `bun run --cwd apps/server db:migrate:phase2`; use this guarded runner rather
    than applying the SQL file directly. Verify the legacy local API-key and Clerk-identity tables are absent
-   and all product/provider/metering tables and row counts remain.
+   and the redundant tracker/metering identity columns are absent. Confirm all
+   product/provider/metering tables and row counts remain.
 10. Start the server and automation with the approved central Clerk configuration. Run smoke checks
     for a Clerk session, a suite `ak_` key, the shared OAuth credential path, the Etsy OAuth
     connection, and the `/ws` session. Confirm no credential value is printed.

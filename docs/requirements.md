@@ -149,7 +149,8 @@ Each primitive must be creatable, listable, retrievable, and monitorable.
 
 ## Security and Access Requirements
 
-- Public Merchbase API-key auth for agent/CLI use via `Authorization: Bearer <ak_...>`.
+- Public Merchbase API-key and shared OAuth auth via `Authorization: Bearer <credential>`; CLI
+  automation uses `ak_` credentials.
 - App/admin auth uses centralized Clerk sessions on the separate `api.app.*` surface.
 - Secrets remain in environment variables only.
 - Tenant isolation is required at the data and API layers.

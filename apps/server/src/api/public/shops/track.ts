@@ -14,13 +14,10 @@ export const publicShopsTrackProcedure = publicProcedure
         })
     )
     .mutation(async ({ ctx, input }) => {
-        const clerkUserId = ctx.merchbaseUserId;
-
         const response = await trackShop({
             shopInput: input.shop,
             requestId: ctx.requestId,
             accountId: ctx.accountId,
-            clerkUserId,
         });
 
         const claimed = await queueTrackedShopSyncIfIdleByTrackedShopId({
@@ -32,7 +29,6 @@ export const publicShopsTrackProcedure = publicProcedure
             try {
                 const queuedJobId = await enqueueShopSyncJob({
                     accountId: ctx.accountId,
-                    clerkUserId,
                     trackedShopId: response.item.id,
                 });
 

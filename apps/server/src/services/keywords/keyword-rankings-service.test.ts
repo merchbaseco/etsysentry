@@ -18,7 +18,6 @@ describe('buildTrackedListingDiscoveryValues', () => {
         const now = new Date('2026-02-23T12:00:00.000Z');
 
         const result = buildTrackedListingDiscoveryValues({
-            clerkUserId: 'user_123',
             now,
             rankedListing: {
                 listingId: '1234567890',
@@ -44,7 +43,6 @@ describe('buildTrackedListingDiscoveryValues', () => {
             accountId: 'tenant_123',
             thumbnailUrl: 'https://i.etsystatic.com/123/il/abc123/1234567890/il_170x135.jpg',
             title: 'Mid Century Wall Art',
-            trackerClerkUserId: 'user_123',
             trackingState: 'active',
             updatedAt: now,
             url: 'https://www.etsy.com/listing/1234567890/mid-century-wall-art',
@@ -55,7 +53,6 @@ describe('buildTrackedListingDiscoveryValues', () => {
         const now = new Date('2026-02-23T12:00:00.000Z');
 
         const result = buildTrackedListingDiscoveryValues({
-            clerkUserId: 'user_123',
             now,
             rankedListing: {
                 listingId: '1234567890',
@@ -79,7 +76,6 @@ describe('buildTrackedListingDiscoveryValues', () => {
         const now = new Date('2026-02-23T12:00:00.000Z');
 
         const result = buildTrackedListingDiscoveryValues({
-            clerkUserId: 'user_123',
             now,
             rankedListing: {
                 listingId: '1234567890',

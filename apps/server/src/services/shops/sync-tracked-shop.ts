@@ -36,7 +36,6 @@ const getFailureMessage = (error: unknown): string => {
 };
 
 export const syncTrackedShop = async (params: {
-    clerkUserId: string;
     monitorRunId?: string;
     requestId?: string;
     accountId: string;
@@ -77,13 +76,11 @@ export const syncTrackedShop = async (params: {
             .limit(1);
 
         const shopDetails = await fetchShopFromEtsy({
-            clerkUserId: params.clerkUserId,
             etsyShopId: trackedShop.etsyShopId,
             accountId: params.accountId,
         });
 
         const changedListings = await fetchChangedActiveListings({
-            clerkUserId: params.clerkUserId,
             etsyShopId: trackedShop.etsyShopId,
             previousWatermark: trackedShop.lastSyncedListingUpdatedTimestamp,
             accountId: params.accountId,
@@ -99,7 +96,6 @@ export const syncTrackedShop = async (params: {
 
         const discoveredListings = await discoverTrackedListings({
             now,
-            clerkUserId: params.clerkUserId,
             accountId: params.accountId,
             etsyShopId: trackedShop.etsyShopId,
             listings: changedListings,
@@ -156,7 +152,6 @@ export const syncTrackedShop = async (params: {
             ...discoveredListings.map((listing) => ({
                 action: 'listing.discovered',
                 category: 'listing',
-                clerkUserId: params.clerkUserId,
                 detailsJson: {
                     shopId: trackedShop.etsyShopId,
                     shopName: trackedShop.shopName,
@@ -178,7 +173,6 @@ export const syncTrackedShop = async (params: {
             {
                 action: 'shop.synced',
                 category: 'shop',
-                clerkUserId: params.clerkUserId,
                 detailsJson: {
                     activeListingCount: shopDetails.activeListingCount ?? 0,
                     changedListingCount: changedListings.length,
@@ -232,7 +226,6 @@ export const syncTrackedShop = async (params: {
             await createEventLog({
                 action: 'shop.sync_failed',
                 category: 'shop',
-                clerkUserId: params.clerkUserId,
                 detailsJson: {
                     error: failureMessage,
                 },

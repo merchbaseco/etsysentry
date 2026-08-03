@@ -2,10 +2,15 @@ import { createHash } from 'node:crypto';
 import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { TERMINAL_PROJECTION_TIMESTAMP } from '@merchbaseco/access';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import postgres from 'postgres';
 import { env } from '../config/env';
+import {
+    assertPhaseTwoReadiness,
+    type PhaseTwoReadiness,
+} from './central-access-migration-readiness';
 
 interface MigrationJournalEntry {
     breakpoints: boolean;
@@ -21,7 +26,7 @@ interface MigrationJournal {
     version: string;
 }
 
-const CENTRAL_ACCESS_CLEANUP_TAG = '0021_worried_deathstrike';
+const CENTRAL_ACCESS_CLEANUP_TAG = '0021_known_sandman';
 const CENTRAL_ACCESS_PHASE_ONE_TAG = '0020_early_agent_zero';
 
 const isMissingMigrationTableError = (error: unknown): boolean =>
@@ -65,38 +70,108 @@ const assertPhaseTwoReady = async (migrationClient: ReturnType<typeof postgres>)
     }
 
     try {
-        const [unmappedAccount] = await migrationClient<{ value: number | string }[]>`
-            SELECT count(*)::int AS value
-            FROM accounts
-            WHERE merchbase_user_id IS NULL
-        `;
-        const [activeProjection] = await migrationClient<{ value: number | string }[]>`
-            SELECT count(*)::int AS value
-            FROM access_projection
-            WHERE state = 'active' AND merchbase_user_id IS NOT NULL
-        `;
-        const [unprojectedIdentity] = await migrationClient<{ value: number | string }[]>`
-            SELECT count(*)::int AS value
-            FROM clerk_identities AS legacy_identity
-            LEFT JOIN access_projection AS projection
-                ON projection.issuer = legacy_identity.clerk_issuer
-                AND projection.subject = legacy_identity.clerk_subject
-            WHERE projection.subject IS NULL
+        const [readiness] = await migrationClient<PhaseTwoReadiness[]>`
+            SELECT
+                (
+                    SELECT count(*)::int
+                    FROM accounts
+                    WHERE merchbase_user_id IS NOT NULL
+                ) AS "mappedAccountCount",
+                (
+                    SELECT count(*)::int
+                    FROM accounts
+                    WHERE merchbase_user_id IS NULL
+                ) AS "unmappedAccountCount",
+                (
+                    SELECT count(*)::int
+                    FROM accounts AS account
+                    WHERE (
+                        SELECT count(*)
+                        FROM clerk_identities AS legacy_identity
+                        INNER JOIN access_projection AS projection
+                            ON projection.issuer = legacy_identity.clerk_issuer
+                            AND projection.subject = legacy_identity.clerk_subject
+                        WHERE legacy_identity.account_id = account.id
+                          AND projection.state = 'active'
+                          AND projection.merchbase_user_id = account.merchbase_user_id
+                    ) <> 1
+                ) AS "accountWithInvalidActiveProjectionCount",
+                (
+                    SELECT count(*)::int
+                    FROM clerk_identities AS legacy_identity
+                    WHERE NOT EXISTS (
+                        SELECT 1
+                        FROM access_projection AS projection
+                        WHERE projection.issuer = legacy_identity.clerk_issuer
+                          AND projection.subject = legacy_identity.clerk_subject
+                    )
+                ) AS "unprojectedIdentityCount",
+                (
+                    SELECT count(*)::int
+                    FROM clerk_identities AS legacy_identity
+                    INNER JOIN accounts AS account
+                        ON account.id = legacy_identity.account_id
+                    INNER JOIN access_projection AS projection
+                        ON projection.issuer = legacy_identity.clerk_issuer
+                        AND projection.subject = legacy_identity.clerk_subject
+                    WHERE NOT (
+                        (
+                            projection.state = 'active'
+                            AND projection.merchbase_user_id = account.merchbase_user_id
+                            AND projection.access IS NOT NULL
+                        )
+                        OR (
+                            projection.state = 'tombstone'
+                            AND projection.merchbase_user_id IS NULL
+                            AND projection.access IS NULL
+                            AND projection.access_valid_until IS NULL
+                            AND projection.source_updated_at =
+                                ${TERMINAL_PROJECTION_TIMESTAMP}
+                        )
+                    )
+                ) AS "invalidLegacyProjectionCount",
+                (
+                    SELECT count(*)::int
+                    FROM (
+                        SELECT account_id FROM tracked_keywords
+                        UNION ALL
+                        SELECT account_id FROM tracked_listings
+                        UNION ALL
+                        SELECT account_id FROM etsy_api_call_events
+                    ) AS ownership_reference
+                    WHERE NOT EXISTS (
+                        SELECT 1
+                        FROM accounts
+                        WHERE accounts.id = ownership_reference.account_id
+                    )
+                ) AS "orphanOwnershipReferenceCount",
+                (
+                    SELECT count(*)::int
+                    FROM (
+                        SELECT account_id, tracker_clerk_user_id AS subject
+                        FROM tracked_keywords
+                        UNION ALL
+                        SELECT account_id, tracker_clerk_user_id AS subject
+                        FROM tracked_listings
+                        UNION ALL
+                        SELECT account_id, clerk_user_id AS subject
+                        FROM etsy_api_call_events
+                        WHERE clerk_user_id <> 'system'
+                    ) AS legacy_reference
+                    WHERE NOT EXISTS (
+                        SELECT 1
+                        FROM clerk_identities AS legacy_identity
+                        WHERE legacy_identity.account_id = legacy_reference.account_id
+                          AND legacy_identity.clerk_subject = legacy_reference.subject
+                    )
+                ) AS "unmatchedIdentityReferenceCount"
         `;
 
-        if (Number(unmappedAccount?.value ?? 0) > 0) {
-            throw new Error('Central access phase two requires every account to be backfilled.');
+        if (!readiness) {
+            throw new Error('Central access phase-two readiness query returned no result.');
         }
 
-        if (Number(activeProjection?.value ?? 0) === 0) {
-            throw new Error('Central access phase two requires a seeded active projection.');
-        }
-
-        if (Number(unprojectedIdentity?.value ?? 0) > 0) {
-            throw new Error(
-                'Central access phase two requires every Clerk identity to be projected.'
-            );
-        }
+        assertPhaseTwoReadiness(readiness);
     } catch (error) {
         if (isMissingMigrationTableError(error)) {
             throw new Error('Central access phase two requires the phase-one schema.');
@@ -158,7 +233,12 @@ export const runMigrations = async (options?: { throughTag?: string }): Promise<
     try {
         const migrationDb = drizzle(migrationClient);
         if (options?.throughTag) {
-            if (options.throughTag === CENTRAL_ACCESS_CLEANUP_TAG) {
+            const cleanupApplied = await hasAppliedMigration(
+                migrationClient,
+                await readMigrationHash(CENTRAL_ACCESS_CLEANUP_TAG)
+            );
+
+            if (options.throughTag === CENTRAL_ACCESS_CLEANUP_TAG && !cleanupApplied) {
                 await assertPhaseTwoReady(migrationClient);
             }
 

@@ -136,7 +136,6 @@ export const upsertTrackedShopListings = async (params: {
 
 export const discoverTrackedListings = async (params: {
     now: Date;
-    clerkUserId: string;
     accountId: string;
     etsyShopId: string;
     listings: ShopListingResult[];
@@ -162,7 +161,6 @@ export const discoverTrackedListings = async (params: {
                     quantity: listing.quantity,
                     shopId: params.etsyShopId,
                     title: listing.title,
-                    trackerClerkUserId: params.clerkUserId,
                     trackingState: 'active' as const,
                     updatedAt: params.now,
                     updatedTimestamp: listing.updatedTimestamp,

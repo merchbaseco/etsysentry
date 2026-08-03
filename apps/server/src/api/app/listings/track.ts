@@ -14,7 +14,6 @@ export const listingsTrackProcedure = appProcedure
             listingInput: input.listing,
             requestId: ctx.requestId,
             accountId: ctx.accountId,
-            trackerClerkUserId: ctx.merchbaseUserId,
         });
 
         return {

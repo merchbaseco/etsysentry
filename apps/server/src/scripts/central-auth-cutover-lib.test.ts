@@ -32,6 +32,8 @@ const mapping = parseCutoverMapping({
             accountIdentityCount: 2,
             activeLegacyApiKeyCount: 1,
             etsyOAuthConnectionCount: 1,
+            legacyOwnershipReferenceCount: 0,
+            systemEtsyApiCallEventCount: 0,
         },
     },
 });
@@ -50,6 +52,14 @@ const audit: CutoverAudit = {
         etsyOAuthConnectionCount: 1,
         identityCount: 2,
         identitySetFingerprint: expectedIdentitySetFingerprint(mapping),
+        legacyOwnership: {
+            etsyApiCallEventCount: 0,
+            orphanAccountCount: 0,
+            systemEtsyApiCallEventCount: 0,
+            trackedKeywordCount: 0,
+            trackedListingCount: 0,
+            unmatchedIdentityCount: 0,
+        },
         productRowCounts: {
             currencyRates: 0,
             etsyApiCallEvents: 0,
@@ -102,6 +112,30 @@ describe('central auth cutover planner', () => {
                 retiredSubjects: ['user_retained'],
             })
         ).toThrow();
+    });
+
+    test('fails closed when a legacy ownership value is not tied to its account', () => {
+        const target = audit.target;
+
+        if (!target) {
+            throw new Error('Test audit must include a target.');
+        }
+
+        expect(() =>
+            assertCutoverAuditMatchesMapping({
+                audit: {
+                    ...audit,
+                    target: {
+                        ...target,
+                        legacyOwnership: {
+                            ...target.legacyOwnership,
+                            unmatchedIdentityCount: 1,
+                        },
+                    },
+                },
+                mapping,
+            })
+        ).toThrow('do not match identities');
     });
 
     test('plan digest changes when audited facts change', () => {

@@ -40,7 +40,6 @@ export const syncKeywordJob = defineJob(SYNC_KEYWORD_JOB_NAME, {
 
         try {
             const syncResult = await syncRanksForKeyword({
-                clerkUserId: job.data.clerkUserId,
                 monitorRunId: job.id,
                 accountId: job.data.accountId,
                 trackedKeywordId: job.data.trackedKeywordId,
@@ -52,7 +51,6 @@ export const syncKeywordJob = defineJob(SYNC_KEYWORD_JOB_NAME, {
                 const queuedJobId = await enqueueSyncListingJob({
                     boss: context.boss,
                     payload: {
-                        clerkUserId: job.data.clerkUserId,
                         etsyListingId,
                         accountId: job.data.accountId,
                     },

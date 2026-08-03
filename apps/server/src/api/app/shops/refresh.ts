@@ -52,7 +52,6 @@ export const shopsRefreshProcedure = appProcedure
         try {
             jobId = await enqueueShopSyncJob({
                 accountId: ctx.accountId,
-                clerkUserId: ctx.merchbaseUserId,
                 trackedShopId: input.trackedShopId,
             });
         } catch (error) {

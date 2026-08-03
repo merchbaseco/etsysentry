@@ -110,7 +110,6 @@ const mapBridgeErrorToTrpcError = (
 
 export const resolveShopFromInput = async (params: {
     shopInput: string;
-    clerkUserId: string;
     accountId: string;
 }): Promise<ResolvedShop> => {
     const parsed = parseShopIdentifier(params.shopInput);
@@ -125,7 +124,6 @@ export const resolveShopFromInput = async (params: {
     try {
         if (parsed.type === 'id') {
             await recordEtsyApiCallBestEffort({
-                clerkUserId: params.clerkUserId,
                 endpoint: 'getShop',
                 accountId: params.accountId,
             });
@@ -136,7 +134,6 @@ export const resolveShopFromInput = async (params: {
         }
 
         await recordEtsyApiCallBestEffort({
-            clerkUserId: params.clerkUserId,
             endpoint: 'findShops',
             accountId: params.accountId,
         });
@@ -161,7 +158,6 @@ export const resolveShopFromInput = async (params: {
         }
 
         await recordEtsyApiCallBestEffort({
-            clerkUserId: params.clerkUserId,
             endpoint: 'getShop',
             accountId: params.accountId,
         });

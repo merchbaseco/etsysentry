@@ -14,7 +14,6 @@ export const findStaleKeywords = async (params?: {
 
     const rows = await db
         .select({
-            clerkUserId: accounts.merchbaseUserId,
             accountId: trackedKeywords.accountId,
             trackedKeywordId: trackedKeywords.id,
         })

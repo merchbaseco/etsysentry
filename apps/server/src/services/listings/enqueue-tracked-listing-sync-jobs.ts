@@ -37,7 +37,6 @@ export const enqueueTrackedListingSyncJobs = async (params: {
         }
 
         const jobId = await enqueueListingSyncJob({
-            clerkUserId: target.trackerClerkUserId,
             etsyListingId: target.etsyListingId,
             accountId: params.accountId,
         });

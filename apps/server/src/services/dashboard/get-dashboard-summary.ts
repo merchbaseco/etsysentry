@@ -1,4 +1,4 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { db } from '../../db';
 import { trackedKeywords, trackedListings, trackedShops } from '../../db/schema';
 import { type EtsyApiUsageStats, getEtsyApiUsage } from '../etsy/get-etsy-api-usage';
@@ -30,27 +30,18 @@ export const toDashboardApiUsageCounts = (
     };
 };
 
-const countTrackedListings = async (params: {
-    clerkUserId: string;
-    accountId: string;
-}): Promise<number> => {
+const countTrackedListings = async (params: { accountId: string }): Promise<number> => {
     const [row] = await db
         .select({
             value: sql<number>`count(*)::int`,
         })
         .from(trackedListings)
-        .where(
-            and(
-                eq(trackedListings.accountId, params.accountId),
-                eq(trackedListings.trackerClerkUserId, params.clerkUserId)
-            )
-        );
+        .where(eq(trackedListings.accountId, params.accountId));
 
     return row?.value ?? 0;
 };
 
 const countTrackedListingSyncJobs = async (params: {
-    clerkUserId: string;
     accountId: string;
 }): Promise<SyncJobCounts> => {
     const [row] = await db
@@ -59,12 +50,7 @@ const countTrackedListingSyncJobs = async (params: {
             queuedJobs: sql<number>`count(*) filter (where ${trackedListings.syncState} = 'queued')::int`,
         })
         .from(trackedListings)
-        .where(
-            and(
-                eq(trackedListings.accountId, params.accountId),
-                eq(trackedListings.trackerClerkUserId, params.clerkUserId)
-            )
-        );
+        .where(eq(trackedListings.accountId, params.accountId));
 
     return {
         inFlightJobs: row?.inFlightJobs ?? 0,
@@ -73,7 +59,6 @@ const countTrackedListingSyncJobs = async (params: {
 };
 
 const countTrackedKeywordSyncJobs = async (params: {
-    clerkUserId: string;
     accountId: string;
 }): Promise<SyncJobCounts> => {
     const [row] = await db
@@ -82,12 +67,7 @@ const countTrackedKeywordSyncJobs = async (params: {
             queuedJobs: sql<number>`count(*) filter (where ${trackedKeywords.syncState} = 'queued')::int`,
         })
         .from(trackedKeywords)
-        .where(
-            and(
-                eq(trackedKeywords.accountId, params.accountId),
-                eq(trackedKeywords.trackerClerkUserId, params.clerkUserId)
-            )
-        );
+        .where(eq(trackedKeywords.accountId, params.accountId));
 
     return {
         inFlightJobs: row?.inFlightJobs ?? 0,
@@ -126,7 +106,6 @@ export const sumSyncJobCounts = (counts: SyncJobCounts[]): SyncJobCounts => {
 };
 
 export const getDashboardSummary = async (params: {
-    clerkUserId: string;
     accountId: string;
 }): Promise<DashboardSummary> => {
     const [
@@ -140,15 +119,12 @@ export const getDashboardSummary = async (params: {
             accountId: params.accountId,
         }),
         countTrackedListings({
-            clerkUserId: params.clerkUserId,
             accountId: params.accountId,
         }),
         countTrackedListingSyncJobs({
-            clerkUserId: params.clerkUserId,
             accountId: params.accountId,
         }),
         countTrackedKeywordSyncJobs({
-            clerkUserId: params.clerkUserId,
             accountId: params.accountId,
         }),
         countTrackedShopSyncJobs({

@@ -14,7 +14,6 @@ export const syncStaleListings = async (params: {
         const jobId = await enqueueSyncListingJob({
             boss: params.boss,
             payload: {
-                clerkUserId: staleListing.clerkUserId,
                 etsyListingId: staleListing.etsyListingId,
                 accountId: staleListing.accountId,
             },

@@ -65,7 +65,8 @@ docs/
 3. PostgreSQL (Drizzle-managed schema)
 4. Etsy integration layer (bridges + client orchestration)
 5. Auth layer:
-   - centralized Clerk session and opaque API-key authentication from `@merchbaseco/access`
+   - centralized Clerk session, opaque API-key, and shared OAuth authentication from
+     `@merchbaseco/access`
    - product-local Access Projection and stable `merchbaseUserId` to `accountId` mapping
    - shared OAuth credential path exposed by the same access factory
 6. Etsy OAuth connection persistence:
@@ -150,9 +151,12 @@ docs/
   - OAuth callback exchanges code for tokens and persists connection server-side
   - connection lookup key is `accountId`
   - website does not persist OAuth tokens/session IDs in browser storage
-- Customer API keys are issued and verified by Merchbase Access. EtsySentry accepts them only as
-  `Authorization: Bearer <ak_...>` and has no local key issuance, hashing, revocation, UI, or table.
-  CLI automation uses `MERCHBASE_API_KEY` or the shared Keychain convention.
+- Customer API keys and OAuth credentials are issued and verified by Merchbase Access. EtsySentry
+  accepts API keys as `Authorization: Bearer <ak_...>` and OAuth credentials through the same
+  bearer boundary. It has no local key issuance, hashing, revocation, UI, or table. CLI automation
+  uses `MERCHBASE_API_KEY` or the shared Keychain convention.
+- Product ownership, metering, and background job payloads are account-keyed. They do not persist a
+  Clerk subject or substitute a Merchbase User ID into a Clerk-named field.
 - Background jobs evaluate the mapped stable user once at job start. Denied/unavailable runs reset
   only their queue state and leave queued jobs, Etsy OAuth, product rows, and metering intact.
 

@@ -83,7 +83,6 @@ export const toKeywordActivityListingRecord = (params: {
         syncState: row.syncState,
         thumbnailUrl: row.thumbnailUrl,
         title: row.title,
-        trackerClerkUserId: row.trackerClerkUserId,
         trackingState: row.trackingState,
         updatedAt: row.updatedAt.toISOString(),
         updatedTimestamp: row.updatedTimestamp,

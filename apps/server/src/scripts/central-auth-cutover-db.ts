@@ -1,4 +1,5 @@
 import type { Sql } from 'postgres';
+import { readLegacyOwnershipAudit } from './central-auth-cutover-legacy-ownership';
 import {
     assertCutoverAuditMatchesMapping,
     buildCutoverPlan,
@@ -152,6 +153,7 @@ export const loadCutoverAudit = async (
         targetActiveLegacyApiKeyCount,
         targetEtsyOAuthConnectionCount,
         identityRows,
+        legacyOwnership,
         productRowCounts,
     ] = await Promise.all([
         readCount(
@@ -169,6 +171,7 @@ export const loadCutoverAudit = async (
             WHERE account_id = ${mapping.accountId}
             ORDER BY clerk_issuer, clerk_subject
         `,
+        readLegacyOwnershipAudit(database, mapping.accountId),
         readProductRowCounts(database, mapping.accountId),
     ]);
 
@@ -188,6 +191,7 @@ export const loadCutoverAudit = async (
             identitySetFingerprint: fingerprint(
                 identityRows.map((row) => `${row.issuer}:${row.subject}`).join('\n')
             ),
+            legacyOwnership,
             productRowCounts,
         },
     };

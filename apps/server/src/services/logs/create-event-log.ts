@@ -11,7 +11,6 @@ import {
 
 const createEventLogInputSchema = z
     .object({
-        clerkUserId: z.string().min(1).nullable().optional().default(null),
         accountId: z.string().min(1),
         occurredAt: z.date().optional(),
         level: eventLogLevelSchema.default('info'),

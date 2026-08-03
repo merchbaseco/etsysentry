@@ -10,13 +10,10 @@ export const publicListingsTrackProcedure = publicProcedure
         })
     )
     .mutation(async ({ ctx, input }) => {
-        const clerkUserId = ctx.merchbaseUserId;
-
         const response = await trackListing({
             listingInput: input.listing,
             requestId: ctx.requestId,
             accountId: ctx.accountId,
-            trackerClerkUserId: clerkUserId,
         });
 
         return {

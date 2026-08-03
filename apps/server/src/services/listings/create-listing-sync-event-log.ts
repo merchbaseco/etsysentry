@@ -2,7 +2,6 @@ import { createEventLog } from '../logs/create-event-log';
 
 interface ListingSyncedEventLogParams {
     accountId: string;
-    clerkUserId: string;
     etsyListingId: string;
     etsyState: string;
     listingId: string;
@@ -14,7 +13,6 @@ interface ListingSyncedEventLogParams {
 
 interface ListingSyncFailedEventLogParams {
     accountId: string;
-    clerkUserId: string;
     errorMessage: string;
     etsyListingId: string;
     listingId?: string | null;
@@ -27,7 +25,6 @@ export const buildListingSyncedEventLogInput = (params: ListingSyncedEventLogPar
     return {
         action: 'listing.synced',
         category: 'listing',
-        clerkUserId: params.clerkUserId,
         detailsJson: {
             etsyState: params.etsyState,
             title: params.title,
@@ -49,7 +46,6 @@ export const buildListingSyncFailedEventLogInput = (params: ListingSyncFailedEve
     return {
         action: 'listing.sync_failed',
         category: 'listing',
-        clerkUserId: params.clerkUserId,
         detailsJson: {
             error: params.errorMessage,
         },

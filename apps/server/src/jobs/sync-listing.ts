@@ -77,15 +77,12 @@ export const syncListingJob = defineJob(SYNC_LISTING_JOB_NAME, {
 
         try {
             const syncedListing = await syncTrackedListingFromEtsy({
-                clerkUserId: job.data.clerkUserId,
                 etsyListingId: job.data.etsyListingId,
                 accountId: job.data.accountId,
-                trackerClerkUserId: job.data.clerkUserId,
             });
 
             await createListingSyncedEventLog({
                 accountId: syncedListing.accountId,
-                clerkUserId: job.data.clerkUserId,
                 etsyListingId: syncedListing.etsyListingId,
                 etsyState: syncedListing.etsyState,
                 listingId: syncedListing.listingId,
@@ -109,7 +106,6 @@ export const syncListingJob = defineJob(SYNC_LISTING_JOB_NAME, {
             try {
                 await createListingSyncFailedEventLog({
                     accountId: job.data.accountId,
-                    clerkUserId: job.data.clerkUserId,
                     errorMessage: failureMessage,
                     etsyListingId: job.data.etsyListingId,
                     listingId: failedListing?.listingId ?? null,

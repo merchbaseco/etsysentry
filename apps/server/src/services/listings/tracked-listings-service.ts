@@ -52,7 +52,6 @@ export interface TrackedListingRecord {
     tags: string[];
     thumbnailUrl: string | null;
     title: string;
-    trackerClerkUserId: string;
     trackingState: (typeof trackedListings.$inferSelect)['trackingState'];
     updatedAt: string;
     updatedTimestamp: number | null;
@@ -164,7 +163,6 @@ const toRecord = (params: {
         tags: params.tags,
         thumbnailUrl: row.thumbnailUrl ?? null,
         title: row.title,
-        trackerClerkUserId: row.trackerClerkUserId,
         syncState: row.syncState,
         trackingState: row.trackingState,
         updatedAt: row.updatedAt.toISOString(),
@@ -178,7 +176,6 @@ const bridgeToUpsertValues = (params: {
     bridgeResponse: GetListingBridgeResponse;
     now: Date;
     accountId: string;
-    trackerClerkUserId: string;
 }) => {
     return {
         etsyListingId: params.bridgeResponse.listingId,
@@ -198,7 +195,6 @@ const bridgeToUpsertValues = (params: {
         accountId: params.accountId,
         thumbnailUrl: params.bridgeResponse.thumbnailUrl,
         title: params.bridgeResponse.title,
-        trackerClerkUserId: params.trackerClerkUserId,
         syncState: 'idle' as const,
         trackingState: 'active' as const,
         updatedAt: params.now,
@@ -209,7 +205,6 @@ const bridgeToUpsertValues = (params: {
 };
 
 const fetchListingFromEtsy = async (params: {
-    clerkUserId: string;
     etsyListingId: string;
     accountId: string;
 }): Promise<GetListingBridgeResponse> => {
@@ -219,7 +214,6 @@ const fetchListingFromEtsy = async (params: {
 
     try {
         await recordEtsyApiCallBestEffort({
-            clerkUserId: params.clerkUserId,
             endpoint: 'getListing',
             accountId: params.accountId,
         });
@@ -242,13 +236,11 @@ const upsertTrackedListingFromBridgeResponse = async (params: {
     bridgeResponse: GetListingBridgeResponse;
     now: Date;
     accountId: string;
-    trackerClerkUserId: string;
 }): Promise<typeof trackedListings.$inferSelect> => {
     const upsertValues = bridgeToUpsertValues({
         bridgeResponse: params.bridgeResponse,
         now: params.now,
         accountId: params.accountId,
-        trackerClerkUserId: params.trackerClerkUserId,
     });
 
     const [row] = await db
@@ -271,14 +263,11 @@ const upsertTrackedListingFromBridgeResponse = async (params: {
 };
 
 export const syncTrackedListingFromEtsy = async (params: {
-    clerkUserId: string;
     etsyListingId: string;
     accountId: string;
-    trackerClerkUserId: string;
 }): Promise<typeof trackedListings.$inferSelect> => {
     const now = new Date();
     const listingFromEtsy = await fetchListingFromEtsy({
-        clerkUserId: params.clerkUserId,
         etsyListingId: params.etsyListingId,
         accountId: params.accountId,
     });
@@ -287,7 +276,6 @@ export const syncTrackedListingFromEtsy = async (params: {
         bridgeResponse: listingFromEtsy,
         now,
         accountId: params.accountId,
-        trackerClerkUserId: params.trackerClerkUserId,
     });
 
     await syncListingTags({
@@ -319,16 +307,11 @@ export const syncTrackedListingFromEtsy = async (params: {
 
 export const listTrackedListings = async (params: {
     accountId: string;
-    trackerClerkUserId?: string;
 }): Promise<{ items: TrackedListingRecord[] }> => {
-    const whereClause = params.trackerClerkUserId
-        ? and(
-              eq(trackedListings.accountId, params.accountId),
-              eq(trackedListings.trackerClerkUserId, params.trackerClerkUserId)
-          )
-        : eq(trackedListings.accountId, params.accountId);
-
-    const rows = await db.select().from(trackedListings).where(whereClause);
+    const rows = await db
+        .select()
+        .from(trackedListings)
+        .where(eq(trackedListings.accountId, params.accountId));
     const tagsByListingId = await listNormalizedTagsByListingIds({
         listingIds: rows.map((row) => row.listingId),
     });
@@ -347,7 +330,6 @@ export const trackListing = async (params: {
     listingInput: string;
     requestId?: string;
     accountId: string;
-    trackerClerkUserId: string;
 }): Promise<{
     created: boolean;
     item: TrackedListingRecord;
@@ -375,10 +357,8 @@ export const trackListing = async (params: {
         .limit(1);
 
     const row = await syncTrackedListingFromEtsy({
-        clerkUserId: params.trackerClerkUserId,
         etsyListingId,
         accountId: params.accountId,
-        trackerClerkUserId: params.trackerClerkUserId,
     });
 
     const created = existing.length === 0;
@@ -393,7 +373,6 @@ export const trackListing = async (params: {
     await createEventLog({
         action: created ? 'listing.tracked' : 'listing.updated',
         category: 'listing',
-        clerkUserId: params.trackerClerkUserId,
         detailsJson: {
             title: item.title,
         },
@@ -417,11 +396,9 @@ export const trackListing = async (params: {
 };
 
 export const refreshTrackedListing = async (params: {
-    clerkUserId: string;
     requestId?: string;
     accountId: string;
     trackedListingId: string;
-    trackerClerkUserId: string;
 }): Promise<TrackedListingRecord> => {
     const [current] = await db
         .select()
@@ -470,10 +447,8 @@ export const refreshTrackedListing = async (params: {
 
     try {
         const updated = await syncTrackedListingFromEtsy({
-            clerkUserId: params.clerkUserId,
             etsyListingId: current.etsyListingId,
             accountId: params.accountId,
-            trackerClerkUserId: params.trackerClerkUserId,
         });
 
         await setTrackedListingSyncStateByListingId({
@@ -484,7 +459,6 @@ export const refreshTrackedListing = async (params: {
 
         await createListingSyncedEventLog({
             accountId: updated.accountId,
-            clerkUserId: params.clerkUserId,
             etsyListingId: updated.etsyListingId,
             etsyState: updated.etsyState,
             listingId: updated.listingId,
@@ -523,7 +497,6 @@ export const refreshTrackedListing = async (params: {
         try {
             await createListingSyncFailedEventLog({
                 accountId: updated.accountId,
-                clerkUserId: params.clerkUserId,
                 errorMessage: failureMessage,
                 etsyListingId: updated.etsyListingId,
                 listingId: updated.listingId,

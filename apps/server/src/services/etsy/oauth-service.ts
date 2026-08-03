@@ -62,7 +62,6 @@ const defaultDependencies: EtsyOAuthServiceDependencies = {
     recordApiCall: ({ accountId, endpoint }) => {
         return recordEtsyApiCallBestEffort({
             accountId,
-            clerkUserId: 'system',
             endpoint,
         });
     },

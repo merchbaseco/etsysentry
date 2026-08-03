@@ -9,7 +9,6 @@ export interface KeywordItem {
     nextSyncAt: string;
     normalizedKeyword: string;
     syncState: 'idle' | 'queued' | 'syncing';
-    trackerClerkUserId: string;
     trackingState: 'active' | 'paused' | 'error';
     updatedAt: string;
 }
@@ -37,7 +36,6 @@ export interface ListingItem {
     syncState: 'idle' | 'queued' | 'syncing';
     thumbnailUrl: string | null;
     title: string;
-    trackerClerkUserId: string;
     trackingState: 'active' | 'paused' | 'error' | 'fatal';
     updatedAt: string;
     updatedTimestamp: number | null;

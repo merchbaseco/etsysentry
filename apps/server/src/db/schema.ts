@@ -147,7 +147,6 @@ export const trackedListings = pgTable(
     {
         listingId: uuid('listing_id').primaryKey().defaultRandom(),
         accountId: text('account_id').notNull(),
-        trackerClerkUserId: text('tracker_clerk_user_id').notNull(),
         etsyListingId: text('etsy_listing_id').notNull(),
         isDigital: boolean('is_digital').notNull().default(false),
         shopId: text('shop_id'),
@@ -180,10 +179,6 @@ export const trackedListings = pgTable(
             table.etsyListingId
         ),
         accountIdx: index('tracked_listings_account_idx').on(table.accountId),
-        tenantTrackerIdx: index('tracked_listings_tenant_tracker_idx').on(
-            table.accountId,
-            table.trackerClerkUserId
-        ),
         trackingStateIdx: index('tracked_listings_tracking_state_idx').on(table.trackingState),
         syncStateIdx: index('tracked_listings_sync_state_idx').on(table.syncState),
         updatedAtIdx: index('tracked_listings_updated_at_idx').on(table.updatedAt),
@@ -225,7 +220,6 @@ export const trackedKeywords = pgTable(
     {
         id: uuid('id').primaryKey().defaultRandom(),
         accountId: text('account_id').notNull(),
-        trackerClerkUserId: text('tracker_clerk_user_id').notNull(),
         keyword: text('keyword').notNull(),
         normalizedKeyword: text('normalized_keyword').notNull(),
         trackingState: trackedKeywordTrackingStateEnum('tracking_state')
@@ -244,10 +238,6 @@ export const trackedKeywords = pgTable(
             table.normalizedKeyword
         ),
         accountIdx: index('tracked_keywords_account_idx').on(table.accountId),
-        tenantTrackerIdx: index('tracked_keywords_tenant_tracker_idx').on(
-            table.accountId,
-            table.trackerClerkUserId
-        ),
         trackingStateIdx: index('tracked_keywords_tracking_state_idx').on(table.trackingState),
         syncStateIdx: index('tracked_keywords_sync_state_idx').on(table.syncState),
         nextSyncAtIdx: index('tracked_keywords_next_sync_at_idx').on(table.nextSyncAt),
@@ -498,18 +488,12 @@ export const etsyApiCallEvents = pgTable(
     {
         id: uuid('id').primaryKey().defaultRandom(),
         accountId: text('account_id').notNull(),
-        clerkUserId: text('clerk_user_id').notNull(),
         endpoint: text('endpoint').notNull(),
         createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
     },
     (table) => ({
         tenantCreatedAtIdx: index('etsy_api_call_events_tenant_created_at_idx').on(
             table.accountId,
-            table.createdAt
-        ),
-        tenantClerkCreatedAtIdx: index('etsy_api_call_events_tenant_clerk_created_at_idx').on(
-            table.accountId,
-            table.clerkUserId,
             table.createdAt
         ),
     })

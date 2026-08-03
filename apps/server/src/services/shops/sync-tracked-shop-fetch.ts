@@ -39,13 +39,11 @@ const mapBridgeErrorToTrpcError = (
 };
 
 export const fetchShopFromEtsy = async (params: {
-    clerkUserId: string;
     etsyShopId: string;
     accountId: string;
 }): Promise<GetShopBridgeResponse> => {
     try {
         await recordEtsyApiCallBestEffort({
-            clerkUserId: params.clerkUserId,
             endpoint: 'getShop',
             accountId: params.accountId,
         });
@@ -63,7 +61,6 @@ export const fetchShopFromEtsy = async (params: {
 };
 
 export const fetchChangedActiveListings = async (params: {
-    clerkUserId: string;
     etsyShopId: string;
     previousWatermark: number | null;
     accountId: string;
@@ -74,7 +71,6 @@ export const fetchChangedActiveListings = async (params: {
     for (;;) {
         try {
             await recordEtsyApiCallBestEffort({
-                clerkUserId: params.clerkUserId,
                 endpoint: 'findAllActiveListingsByShop',
                 accountId: params.accountId,
             });

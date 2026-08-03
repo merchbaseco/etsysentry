@@ -1,5 +1,5 @@
 {
-  "id": "0cf7c970-b72b-4b86-b5ce-72ff7d6ff7a3",
+  "id": "b5524544-ce71-48c8-87b6-5c000c165147",
   "prevId": "fefd5d17-7d72-4c7f-bbc0-ff63287a3169",
   "version": "7",
   "dialect": "postgresql",
@@ -352,12 +352,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "clerk_user_id": {
-          "name": "clerk_user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
         "endpoint": {
           "name": "endpoint",
           "type": "text",
@@ -378,33 +372,6 @@
           "columns": [
             {
               "expression": "account_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "etsy_api_call_events_tenant_clerk_created_at_idx": {
-          "name": "etsy_api_call_events_tenant_clerk_created_at_idx",
-          "columns": [
-            {
-              "expression": "account_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "clerk_user_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1272,12 +1239,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "tracker_clerk_user_id": {
-          "name": "tracker_clerk_user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
         "keyword": {
           "name": "keyword",
           "type": "text",
@@ -1378,27 +1339,6 @@
           "method": "btree",
           "with": {}
         },
-        "tracked_keywords_tenant_tracker_idx": {
-          "name": "tracked_keywords_tenant_tracker_idx",
-          "columns": [
-            {
-              "expression": "account_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "tracker_clerk_user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
         "tracked_keywords_tracking_state_idx": {
           "name": "tracked_keywords_tracking_state_idx",
           "columns": [
@@ -1480,12 +1420,6 @@
         },
         "account_id": {
           "name": "account_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "tracker_clerk_user_id": {
-          "name": "tracker_clerk_user_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -1666,27 +1600,6 @@
           "columns": [
             {
               "expression": "account_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "tracked_listings_tenant_tracker_idx": {
-          "name": "tracked_listings_tenant_tracker_idx",
-          "columns": [
-            {
-              "expression": "account_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "tracker_clerk_user_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"

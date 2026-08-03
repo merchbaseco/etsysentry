@@ -41,7 +41,6 @@ export interface KeywordActivityListingLookupRow {
     syncState: (typeof trackedListings.$inferSelect)['syncState'];
     thumbnailUrl: string | null;
     title: string;
-    trackerClerkUserId: string;
     trackingState: (typeof trackedListings.$inferSelect)['trackingState'];
     updatedAt: Date;
     updatedTimestamp: number | null;

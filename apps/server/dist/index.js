@@ -76848,7 +76848,6 @@ var accessProjectionEvents = pgTable("access_projection_event", {
 var trackedListings = pgTable("tracked_listings", {
   listingId: uuid3("listing_id").primaryKey().defaultRandom(),
   accountId: text("account_id").notNull(),
-  trackerClerkUserId: text("tracker_clerk_user_id").notNull(),
   etsyListingId: text("etsy_listing_id").notNull(),
   isDigital: boolean4("is_digital").notNull().default(false),
   shopId: text("shop_id"),
@@ -76875,7 +76874,6 @@ var trackedListings = pgTable("tracked_listings", {
 }, (table) => ({
   tenantListingUnique: uniqueIndex("tracked_listings_tenant_listing_unique").on(table.accountId, table.etsyListingId),
   accountIdx: index("tracked_listings_account_idx").on(table.accountId),
-  tenantTrackerIdx: index("tracked_listings_tenant_tracker_idx").on(table.accountId, table.trackerClerkUserId),
   trackingStateIdx: index("tracked_listings_tracking_state_idx").on(table.trackingState),
   syncStateIdx: index("tracked_listings_sync_state_idx").on(table.syncState),
   updatedAtIdx: index("tracked_listings_updated_at_idx").on(table.updatedAt)
@@ -76899,7 +76897,6 @@ var listingTags = pgTable("listing_tags", {
 var trackedKeywords = pgTable("tracked_keywords", {
   id: uuid3("id").primaryKey().defaultRandom(),
   accountId: text("account_id").notNull(),
-  trackerClerkUserId: text("tracker_clerk_user_id").notNull(),
   keyword: text("keyword").notNull(),
   normalizedKeyword: text("normalized_keyword").notNull(),
   trackingState: trackedKeywordTrackingStateEnum("tracking_state").notNull().default("active"),
@@ -76912,7 +76909,6 @@ var trackedKeywords = pgTable("tracked_keywords", {
 }, (table) => ({
   tenantKeywordUnique: uniqueIndex("tracked_keywords_tenant_keyword_unique").on(table.accountId, table.normalizedKeyword),
   accountIdx: index("tracked_keywords_account_idx").on(table.accountId),
-  tenantTrackerIdx: index("tracked_keywords_tenant_tracker_idx").on(table.accountId, table.trackerClerkUserId),
   trackingStateIdx: index("tracked_keywords_tracking_state_idx").on(table.trackingState),
   syncStateIdx: index("tracked_keywords_sync_state_idx").on(table.syncState),
   nextSyncAtIdx: index("tracked_keywords_next_sync_at_idx").on(table.nextSyncAt),
@@ -77051,12 +77047,10 @@ var etsyOAuthConnections = pgTable("etsy_oauth_connections", {
 var etsyApiCallEvents = pgTable("etsy_api_call_events", {
   id: uuid3("id").primaryKey().defaultRandom(),
   accountId: text("account_id").notNull(),
-  clerkUserId: text("clerk_user_id").notNull(),
   endpoint: text("endpoint").notNull(),
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow()
 }, (table) => ({
-  tenantCreatedAtIdx: index("etsy_api_call_events_tenant_created_at_idx").on(table.accountId, table.createdAt),
-  tenantClerkCreatedAtIdx: index("etsy_api_call_events_tenant_clerk_created_at_idx").on(table.accountId, table.clerkUserId, table.createdAt)
+  tenantCreatedAtIdx: index("etsy_api_call_events_tenant_created_at_idx").on(table.accountId, table.createdAt)
 }));
 var currencyRates = pgTable("currency_rates", {
   baseCurrency: text("base_currency").primaryKey(),
@@ -77167,6 +77161,31 @@ var resolveEtsySentryAccountPrincipal = async (params) => {
   return rows[0];
 };
 
+// src/services/access/authorize-credential.ts
+var authorizeEtsySentryCredential = async (access, credential) => {
+  if (credential.startsWith("ak_")) {
+    return access.apiKeyAccess.authorize(credential);
+  }
+  if (credential.startsWith("oat_")) {
+    return access.oauthAccess.authorize(credential);
+  }
+  if (isJwtLike(credential)) {
+    try {
+      return await access.sessionAccess.authorize(credential);
+    } catch (error48) {
+      if (error48 instanceof ServiceAccessError && error48.code === "unauthenticated") {
+        return access.oauthAccess.authorize(credential);
+      }
+      throw error48;
+    }
+  }
+  throw new ServiceAccessError("unauthenticated");
+};
+var isJwtLike = (credential) => {
+  const segments = credential.split(".");
+  return segments.length === 3 && segments.every((segment) => segment.length > 0);
+};
+
 // src/services/access/etsysentry-access.ts
 var ETSYSENTRY_SERVICE = "etsysentry";
 var createEtsySentryAccess = (database = db) => {
@@ -77189,7 +77208,7 @@ var createEtsySentryAccess = (database = db) => {
     resolveServicePrincipal,
     service: ETSYSENTRY_SERVICE
   };
-  return {
+  const access = {
     apiKeyAccess: createServiceAccess({
       ...common,
       acceptedCredentialKinds: ["api_key"]
@@ -77204,6 +77223,10 @@ var createEtsySentryAccess = (database = db) => {
       ...common,
       acceptedCredentialKinds: ["session"]
     })
+  };
+  return {
+    ...access,
+    authorize: (credential) => authorizeEtsySentryCredential(access, credential)
   };
 };
 var configuredAccess = null;
@@ -77234,61 +77257,48 @@ var getSharedContext = ({
   request: req,
   requestId: String(req.id)
 });
-var getAccessErrorMessage = (error48) => {
-  if (error48 instanceof ServiceAccessError) {
-    if (error48.code === "access_denied") {
-      return "Merchbase access is not granted.";
-    }
-    if (error48.code === "access_unavailable") {
-      return "Merchbase access is temporarily unavailable.";
-    }
-  }
-  return "Valid Merchbase credential required.";
-};
 var createTrpcContext = async ({ req, res }, access = getEtsySentryAccess()) => {
   const sharedContext = getSharedContext({ req, res });
   const token = getBearerToken(req.headers.authorization);
   if (!token) {
     return {
       ...sharedContext,
+      accessError: null,
       authType: "none",
+      credentialKind: null,
       isAdmin: false,
       accountId: null,
       merchbaseUserId: null,
-      apiKey: null,
-      apiKeyError: undefined,
       user: null
     };
   }
   try {
-    const authorized = await (token.startsWith("ak_") ? access.apiKeyAccess : access.sessionAccess).authorize(token);
-    const isApiKey = authorized.credentialKind === "api_key";
+    const authorized = await access.authorize(token);
+    const credentialKind = authorized.credentialKind;
     const merchbaseUserId = authorized.merchbaseUserId;
     return {
       ...sharedContext,
-      authType: isApiKey ? "apiKey" : "clerk",
-      isAdmin: !isApiKey && isAdminMerchbaseUser(merchbaseUserId),
+      accessError: null,
+      authType: "access",
+      credentialKind,
+      isAdmin: credentialKind === "session" && isAdminMerchbaseUser(merchbaseUserId),
       accountId: authorized.principal.accountId,
       merchbaseUserId,
-      apiKey: isApiKey ? {
-        credentialKind: "api_key",
-        merchbaseUserId
-      } : null,
-      apiKeyError: undefined,
-      user: isApiKey ? null : {
-        credentialKind: "session",
+      user: {
+        credentialKind,
         merchbaseUserId
       }
     };
   } catch (error48) {
+    const accessError = error48 instanceof ServiceAccessError && (error48.code === "access_denied" || error48.code === "access_unavailable") ? error48.code : null;
     return {
       ...sharedContext,
+      accessError,
       authType: "none",
+      credentialKind: null,
       isAdmin: false,
       accountId: null,
       merchbaseUserId: null,
-      apiKey: null,
-      apiKeyError: getAccessErrorMessage(error48),
       user: null
     };
   }
@@ -77298,23 +77308,48 @@ var createTrpcContext = async ({ req, res }, access = getEtsySentryAccess()) => 
 var t = initTRPC.context().create();
 var router = t.router;
 var publicProcedure = t.procedure.use(({ ctx, next }) => {
-  if (ctx.authType !== "apiKey" || !ctx.apiKey || !ctx.accountId || !ctx.merchbaseUserId) {
+  if (ctx.accessError === "access_denied") {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Merchbase access is not granted."
+    });
+  }
+  if (ctx.accessError === "access_unavailable") {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Merchbase access is temporarily unavailable."
+    });
+  }
+  if (ctx.authType !== "access" || ctx.credentialKind !== "api_key" && ctx.credentialKind !== "oauth" || !ctx.user || !ctx.accountId || !ctx.merchbaseUserId) {
     throw new TRPCError({
       code: "UNAUTHORIZED",
-      message: ctx.apiKeyError ?? "API key authentication required."
+      message: "Merchbase API key or OAuth credential required."
     });
   }
   return next({
     ctx: {
       ...ctx,
       accountId: ctx.accountId,
-      apiKey: ctx.apiKey,
-      merchbaseUserId: ctx.merchbaseUserId
+      credentialKind: ctx.credentialKind,
+      merchbaseUserId: ctx.merchbaseUserId,
+      user: ctx.user
     }
   });
 });
 var appProcedure = t.procedure.use(({ ctx, next }) => {
-  if (ctx.authType !== "clerk" || !ctx.user || !ctx.accountId || !ctx.merchbaseUserId) {
+  if (ctx.accessError === "access_denied") {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Merchbase access is not granted."
+    });
+  }
+  if (ctx.accessError === "access_unavailable") {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Merchbase access is temporarily unavailable."
+    });
+  }
+  if (ctx.authType !== "access" || ctx.credentialKind !== "session" || !ctx.user || !ctx.accountId || !ctx.merchbaseUserId) {
     throw new TRPCError({
       code: "UNAUTHORIZED",
       message: "Clerk authentication required."
@@ -81866,7 +81901,6 @@ var SYNC_STALE_KEYWORDS_BATCH_SIZE = 100;
 var SYNC_KEYWORD_JOB_NAME = "sync-keyword";
 var SYNC_STALE_KEYWORDS_JOB_NAME = "sync-stale-keywords";
 var syncKeywordJobInputSchema = exports_external.object({
-  clerkUserId: exports_external.string().min(1),
   accountId: exports_external.string().min(1),
   trackedKeywordId: exports_external.string().uuid()
 });
@@ -81886,7 +81920,6 @@ var SYNC_LISTING_JOB_NAME = "sync-listing";
 var SYNC_STALE_LISTINGS_JOB_NAME = "sync-stale-listings";
 var SYNC_LISTING_WORKER_LOCAL_CONCURRENCY = 5;
 var syncListingJobInputSchema = exports_external.object({
-  clerkUserId: exports_external.string().min(1),
   etsyListingId: exports_external.string().min(1),
   accountId: exports_external.string().min(1)
 });
@@ -81906,7 +81939,6 @@ var SYNC_STALE_SHOPS_BATCH_SIZE = 100;
 var SYNC_SHOP_JOB_NAME = "sync-shop";
 var SYNC_STALE_SHOPS_JOB_NAME = "sync-stale-shops";
 var syncShopJobInputSchema = exports_external.object({
-  clerkUserId: exports_external.string().min(1),
   accountId: exports_external.string().min(1),
   trackedShopId: exports_external.string().uuid()
 });
@@ -82459,14 +82491,14 @@ var toDashboardApiUsageCounts = (stats) => {
 var countTrackedListings = async (params) => {
   const [row] = await db.select({
     value: sql`count(*)::int`
-  }).from(trackedListings).where(and(eq(trackedListings.accountId, params.accountId), eq(trackedListings.trackerClerkUserId, params.clerkUserId)));
+  }).from(trackedListings).where(eq(trackedListings.accountId, params.accountId));
   return row?.value ?? 0;
 };
 var countTrackedListingSyncJobs = async (params) => {
   const [row] = await db.select({
     inFlightJobs: sql`count(*) filter (where ${trackedListings.syncState} = 'syncing')::int`,
     queuedJobs: sql`count(*) filter (where ${trackedListings.syncState} = 'queued')::int`
-  }).from(trackedListings).where(and(eq(trackedListings.accountId, params.accountId), eq(trackedListings.trackerClerkUserId, params.clerkUserId)));
+  }).from(trackedListings).where(eq(trackedListings.accountId, params.accountId));
   return {
     inFlightJobs: row?.inFlightJobs ?? 0,
     queuedJobs: row?.queuedJobs ?? 0
@@ -82476,7 +82508,7 @@ var countTrackedKeywordSyncJobs = async (params) => {
   const [row] = await db.select({
     inFlightJobs: sql`count(*) filter (where ${trackedKeywords.syncState} = 'syncing')::int`,
     queuedJobs: sql`count(*) filter (where ${trackedKeywords.syncState} = 'queued')::int`
-  }).from(trackedKeywords).where(and(eq(trackedKeywords.accountId, params.accountId), eq(trackedKeywords.trackerClerkUserId, params.clerkUserId)));
+  }).from(trackedKeywords).where(eq(trackedKeywords.accountId, params.accountId));
   return {
     inFlightJobs: row?.inFlightJobs ?? 0,
     queuedJobs: row?.queuedJobs ?? 0
@@ -82515,15 +82547,12 @@ var getDashboardSummary = async (params) => {
       accountId: params.accountId
     }),
     countTrackedListings({
-      clerkUserId: params.clerkUserId,
       accountId: params.accountId
     }),
     countTrackedListingSyncJobs({
-      clerkUserId: params.clerkUserId,
       accountId: params.accountId
     }),
     countTrackedKeywordSyncJobs({
-      clerkUserId: params.clerkUserId,
       accountId: params.accountId
     }),
     countTrackedShopSyncJobs({
@@ -83392,7 +83421,6 @@ var eventLogDetailsSchema = exports_external.record(exports_external.string(), e
 
 // src/services/logs/create-event-log.ts
 var createEventLogInputSchema = exports_external.object({
-  clerkUserId: exports_external.string().min(1).nullable().optional().default(null),
   accountId: exports_external.string().min(1),
   occurredAt: exports_external.date().optional(),
   level: eventLogLevelSchema.default("info"),
@@ -83503,7 +83531,6 @@ var buildListingSyncedEventLogInput = (params) => {
   return {
     action: "listing.synced",
     category: "listing",
-    clerkUserId: params.clerkUserId,
     detailsJson: {
       etsyState: params.etsyState,
       title: params.title
@@ -83524,7 +83551,6 @@ var buildListingSyncFailedEventLogInput = (params) => {
   return {
     action: "listing.sync_failed",
     category: "listing",
-    clerkUserId: params.clerkUserId,
     detailsJson: {
       error: params.errorMessage
     },
@@ -84233,7 +84259,6 @@ var etsyOAuthConnectionStore2 = etsyOAuthConnectionStore;
 // src/services/etsy/record-etsy-api-call.ts
 var recordEtsyApiCall = async (input) => {
   await db.insert(etsyApiCallEvents).values({
-    clerkUserId: input.clerkUserId,
     createdAt: input.occurredAt ?? new Date,
     endpoint: input.endpoint,
     accountId: input.accountId
@@ -84244,7 +84269,6 @@ var recordEtsyApiCallBestEffort = async (input) => {
     await recordEtsyApiCall(input);
   } catch (error48) {
     console.warn("[EtsyApiCall] Failed to record call event.", {
-      clerkUserId: input.clerkUserId,
       endpoint: input.endpoint,
       accountId: input.accountId,
       error: error48
@@ -84268,7 +84292,6 @@ var defaultDependencies = {
   recordApiCall: ({ accountId, endpoint }) => {
     return recordEtsyApiCallBestEffort({
       accountId,
-      clerkUserId: "system",
       endpoint
     });
   },
@@ -84847,7 +84870,6 @@ var toRecord2 = (params) => {
     tags: params.tags,
     thumbnailUrl: row.thumbnailUrl ?? null,
     title: row.title,
-    trackerClerkUserId: row.trackerClerkUserId,
     syncState: row.syncState,
     trackingState: row.trackingState,
     updatedAt: row.updatedAt.toISOString(),
@@ -84875,7 +84897,6 @@ var bridgeToUpsertValues = (params) => {
     accountId: params.accountId,
     thumbnailUrl: params.bridgeResponse.thumbnailUrl,
     title: params.bridgeResponse.title,
-    trackerClerkUserId: params.trackerClerkUserId,
     syncState: "idle",
     trackingState: "active",
     updatedAt: params.now,
@@ -84890,7 +84911,6 @@ var fetchListingFromEtsy = async (params) => {
   });
   try {
     await recordEtsyApiCallBestEffort({
-      clerkUserId: params.clerkUserId,
       endpoint: "getListing",
       accountId: params.accountId
     });
@@ -84910,8 +84930,7 @@ var upsertTrackedListingFromBridgeResponse = async (params) => {
   const upsertValues = bridgeToUpsertValues({
     bridgeResponse: params.bridgeResponse,
     now: params.now,
-    accountId: params.accountId,
-    trackerClerkUserId: params.trackerClerkUserId
+    accountId: params.accountId
   });
   const [row] = await db.insert(trackedListings).values(upsertValues).onConflictDoUpdate({
     set: upsertValues,
@@ -84928,15 +84947,13 @@ var upsertTrackedListingFromBridgeResponse = async (params) => {
 var syncTrackedListingFromEtsy = async (params) => {
   const now = new Date;
   const listingFromEtsy = await fetchListingFromEtsy({
-    clerkUserId: params.clerkUserId,
     etsyListingId: params.etsyListingId,
     accountId: params.accountId
   });
   const row = await upsertTrackedListingFromBridgeResponse({
     bridgeResponse: listingFromEtsy,
     now,
-    accountId: params.accountId,
-    trackerClerkUserId: params.trackerClerkUserId
+    accountId: params.accountId
   });
   await syncListingTags({
     listingId: row.listingId,
@@ -84962,8 +84979,7 @@ var syncTrackedListingFromEtsy = async (params) => {
   return row;
 };
 var listTrackedListings = async (params) => {
-  const whereClause = params.trackerClerkUserId ? and(eq(trackedListings.accountId, params.accountId), eq(trackedListings.trackerClerkUserId, params.trackerClerkUserId)) : eq(trackedListings.accountId, params.accountId);
-  const rows = await db.select().from(trackedListings).where(whereClause);
+  const rows = await db.select().from(trackedListings).where(eq(trackedListings.accountId, params.accountId));
   const tagsByListingId = await listNormalizedTagsByListingIds({
     listingIds: rows.map((row) => row.listingId)
   });
@@ -84986,10 +85002,8 @@ var trackListing = async (params) => {
     listingId: trackedListings.listingId
   }).from(trackedListings).where(and(eq(trackedListings.accountId, params.accountId), eq(trackedListings.etsyListingId, etsyListingId))).limit(1);
   const row = await syncTrackedListingFromEtsy({
-    clerkUserId: params.trackerClerkUserId,
     etsyListingId,
-    accountId: params.accountId,
-    trackerClerkUserId: params.trackerClerkUserId
+    accountId: params.accountId
   });
   const created = existing.length === 0;
   const tagsByListingId = await listNormalizedTagsByListingIds({
@@ -85002,7 +85016,6 @@ var trackListing = async (params) => {
   await createEventLog({
     action: created ? "listing.tracked" : "listing.updated",
     category: "listing",
-    clerkUserId: params.trackerClerkUserId,
     detailsJson: {
       title: item.title
     },
@@ -85054,10 +85067,8 @@ var refreshTrackedListing = async (params) => {
   }
   try {
     const updated = await syncTrackedListingFromEtsy({
-      clerkUserId: params.clerkUserId,
       etsyListingId: current.etsyListingId,
-      accountId: params.accountId,
-      trackerClerkUserId: params.trackerClerkUserId
+      accountId: params.accountId
     });
     await setTrackedListingSyncStateByListingId({
       accountId: params.accountId,
@@ -85066,7 +85077,6 @@ var refreshTrackedListing = async (params) => {
     });
     await createListingSyncedEventLog({
       accountId: updated.accountId,
-      clerkUserId: params.clerkUserId,
       etsyListingId: updated.etsyListingId,
       etsyState: updated.etsyState,
       listingId: updated.listingId,
@@ -85099,7 +85109,6 @@ var refreshTrackedListing = async (params) => {
     try {
       await createListingSyncFailedEventLog({
         accountId: updated.accountId,
-        clerkUserId: params.clerkUserId,
         errorMessage: failureMessage,
         etsyListingId: updated.etsyListingId,
         listingId: updated.listingId,
@@ -85155,14 +85164,11 @@ var syncListingJob = defineJob(SYNC_LISTING_JOB_NAME, {
   });
   try {
     const syncedListing = await syncTrackedListingFromEtsy({
-      clerkUserId: job.data.clerkUserId,
       etsyListingId: job.data.etsyListingId,
-      accountId: job.data.accountId,
-      trackerClerkUserId: job.data.clerkUserId
+      accountId: job.data.accountId
     });
     await createListingSyncedEventLog({
       accountId: syncedListing.accountId,
-      clerkUserId: job.data.clerkUserId,
       etsyListingId: syncedListing.etsyListingId,
       etsyState: syncedListing.etsyState,
       listingId: syncedListing.listingId,
@@ -85183,7 +85189,6 @@ var syncListingJob = defineJob(SYNC_LISTING_JOB_NAME, {
     try {
       await createListingSyncFailedEventLog({
         accountId: job.data.accountId,
-        clerkUserId: job.data.clerkUserId,
         errorMessage: failureMessage,
         etsyListingId: job.data.etsyListingId,
         listingId: failedListing?.listingId ?? null,
@@ -85306,7 +85311,6 @@ var findStaleListings = async (params) => {
   });
   const candidateRows = await db.select({
     trackedListingId: trackedListings.listingId,
-    clerkUserId: accounts.merchbaseUserId,
     etsyListingId: trackedListings.etsyListingId,
     accountId: trackedListings.accountId,
     lastRefreshedAt: trackedListings.lastRefreshedAt
@@ -85373,7 +85377,6 @@ var syncStaleListings = async (params) => {
     const jobId = await enqueueSyncListingJob({
       boss: params.boss,
       payload: {
-        clerkUserId: staleListing.clerkUserId,
         etsyListingId: staleListing.etsyListingId,
         accountId: staleListing.accountId
       }
@@ -85685,7 +85688,6 @@ var mapBridgeErrorToTrpcError2 = (error48) => {
 var fetchShopFromEtsy = async (params) => {
   try {
     await recordEtsyApiCallBestEffort({
-      clerkUserId: params.clerkUserId,
       endpoint: "getShop",
       accountId: params.accountId
     });
@@ -85705,7 +85707,6 @@ var fetchChangedActiveListings = async (params) => {
   for (;; ) {
     try {
       await recordEtsyApiCallBestEffort({
-        clerkUserId: params.clerkUserId,
         endpoint: "findAllActiveListingsByShop",
         accountId: params.accountId
       });
@@ -85842,7 +85843,6 @@ var discoverTrackedListings = async (params) => {
       quantity: listing.quantity,
       shopId: params.etsyShopId,
       title: listing.title,
-      trackerClerkUserId: params.clerkUserId,
       trackingState: "active",
       updatedAt: params.now,
       updatedTimestamp: listing.updatedTimestamp,
@@ -85919,12 +85919,10 @@ var syncTrackedShop = async (params) => {
   try {
     const [previousSnapshot] = await db.select().from(trackedShopSnapshots).where(and(eq(trackedShopSnapshots.accountId, params.accountId), eq(trackedShopSnapshots.trackedShopId, params.trackedShopId))).orderBy(desc(trackedShopSnapshots.observedAt)).limit(1);
     const shopDetails = await fetchShopFromEtsy({
-      clerkUserId: params.clerkUserId,
       etsyShopId: trackedShop.etsyShopId,
       accountId: params.accountId
     });
     const changedListings = await fetchChangedActiveListings({
-      clerkUserId: params.clerkUserId,
       etsyShopId: trackedShop.etsyShopId,
       previousWatermark: trackedShop.lastSyncedListingUpdatedTimestamp,
       accountId: params.accountId
@@ -85938,7 +85936,6 @@ var syncTrackedShop = async (params) => {
     });
     const discoveredListings = await discoverTrackedListings({
       now,
-      clerkUserId: params.clerkUserId,
       accountId: params.accountId,
       etsyShopId: trackedShop.etsyShopId,
       listings: changedListings
@@ -85981,7 +85978,6 @@ var syncTrackedShop = async (params) => {
       ...discoveredListings.map((listing) => ({
         action: "listing.discovered",
         category: "listing",
-        clerkUserId: params.clerkUserId,
         detailsJson: {
           shopId: trackedShop.etsyShopId,
           shopName: trackedShop.shopName,
@@ -86001,7 +85997,6 @@ var syncTrackedShop = async (params) => {
       {
         action: "shop.synced",
         category: "shop",
-        clerkUserId: params.clerkUserId,
         detailsJson: {
           activeListingCount: shopDetails.activeListingCount ?? 0,
           changedListingCount: changedListings.length,
@@ -86046,7 +86041,6 @@ var syncTrackedShop = async (params) => {
       await createEventLog({
         action: "shop.sync_failed",
         category: "shop",
-        clerkUserId: params.clerkUserId,
         detailsJson: {
           error: failureMessage
         },
@@ -86095,7 +86089,6 @@ var syncShopJob = defineJob(SYNC_SHOP_JOB_NAME, {
   });
   try {
     const syncResult = await syncTrackedShop({
-      clerkUserId: job.data.clerkUserId,
       monitorRunId: job.id,
       accountId: job.data.accountId,
       trackedShopId: job.data.trackedShopId
@@ -86105,7 +86098,6 @@ var syncShopJob = defineJob(SYNC_SHOP_JOB_NAME, {
       const queuedJobId = await enqueueSyncListingJob({
         boss: context.boss,
         payload: {
-          clerkUserId: job.data.clerkUserId,
           etsyListingId,
           accountId: job.data.accountId
         }
@@ -86370,7 +86362,6 @@ var buildTrackedListingDiscoveryValues = (params) => {
     accountId: params.accountId,
     thumbnailUrl: params.rankedListing.thumbnailUrl,
     title: params.rankedListing.title,
-    trackerClerkUserId: params.clerkUserId,
     trackingState: "active",
     updatedAt: params.now,
     url: params.rankedListing.url
@@ -86449,7 +86440,6 @@ var fetchKeywordRanksFromEtsy = async (params) => {
   });
   try {
     await recordEtsyApiCallBestEffort({
-      clerkUserId: params.clerkUserId,
       endpoint: "findAllListingsActive",
       accountId: params.accountId
     });
@@ -86476,7 +86466,6 @@ var syncRanksForKeyword = async (params) => {
   const nextSyncAt = computeNextKeywordSyncAt(now);
   try {
     const response = await fetchKeywordRanksFromEtsy({
-      clerkUserId: params.clerkUserId,
       keyword: trackedKeyword.keyword,
       accountId: params.accountId
     });
@@ -86486,7 +86475,6 @@ var syncRanksForKeyword = async (params) => {
       let newlyDiscoveredEtsyListingIds = [];
       if (uniqueRankedListings.length > 0) {
         const discoveryValues = uniqueRankedListings.map((rankedListing) => buildTrackedListingDiscoveryValues({
-          clerkUserId: params.clerkUserId,
           now,
           rankedListing,
           accountId: params.accountId
@@ -86545,7 +86533,6 @@ var syncRanksForKeyword = async (params) => {
       ...insertValues.discoveredListings.map((listing) => ({
         action: "listing.discovered",
         category: "listing",
-        clerkUserId: params.clerkUserId,
         detailsJson: {
           keyword: trackedKeyword.keyword,
           title: listing.title
@@ -86565,7 +86552,6 @@ var syncRanksForKeyword = async (params) => {
       {
         action: "keyword.synced",
         category: "keyword",
-        clerkUserId: params.clerkUserId,
         detailsJson: {
           capturedCount: insertValues.values.length,
           discoveredCount: insertValues.newlyDiscoveredEtsyListingIds.length
@@ -86613,7 +86599,6 @@ var syncRanksForKeyword = async (params) => {
       await createEventLog({
         action: "keyword.sync_failed",
         category: "keyword",
-        clerkUserId: params.clerkUserId,
         detailsJson: {
           error: failureMessage
         },
@@ -86738,7 +86723,6 @@ var syncKeywordJob = defineJob(SYNC_KEYWORD_JOB_NAME, {
   });
   try {
     const syncResult = await syncRanksForKeyword({
-      clerkUserId: job.data.clerkUserId,
       monitorRunId: job.id,
       accountId: job.data.accountId,
       trackedKeywordId: job.data.trackedKeywordId
@@ -86748,7 +86732,6 @@ var syncKeywordJob = defineJob(SYNC_KEYWORD_JOB_NAME, {
       const queuedJobId = await enqueueSyncListingJob({
         boss: context.boss,
         payload: {
-          clerkUserId: job.data.clerkUserId,
           etsyListingId,
           accountId: job.data.accountId
         }
@@ -86784,7 +86767,6 @@ var syncKeywordJob = defineJob(SYNC_KEYWORD_JOB_NAME, {
 var findStaleKeywords = async (params) => {
   const now = params?.now ?? new Date;
   const rows = await db.select({
-    clerkUserId: accounts.merchbaseUserId,
     accountId: trackedKeywords.accountId,
     trackedKeywordId: trackedKeywords.id
   }).from(trackedKeywords).innerJoin(accounts, eq(accounts.id, trackedKeywords.accountId)).where(and(isNotNull(accounts.merchbaseUserId), ne(trackedKeywords.trackingState, "paused"), eq(trackedKeywords.syncState, "idle"), lte(trackedKeywords.nextSyncAt, now))).orderBy(asc(trackedKeywords.nextSyncAt)).limit(SYNC_STALE_KEYWORDS_BATCH_SIZE);
@@ -86855,14 +86837,12 @@ var findStaleShops = async (params) => {
   const now = params?.now ?? new Date;
   const rows = await db.select({
     accountId: trackedShops.accountId,
-    clerkUserId: accounts.merchbaseUserId,
     trackedShopId: trackedShops.trackedShopId
   }).from(trackedShops).innerJoin(accounts, eq(accounts.id, trackedShops.accountId)).where(and(isNotNull(accounts.merchbaseUserId), ne(trackedShops.trackingState, "paused"), eq(trackedShops.syncState, "idle"), lte(trackedShops.nextSyncAt, now))).orderBy(asc(trackedShops.nextSyncAt)).limit(SYNC_STALE_SHOPS_BATCH_SIZE);
   const items = [];
   for (const row of rows) {
     const parsedInput = syncShopJobInputSchema.safeParse({
       accountId: row.accountId,
-      clerkUserId: row.clerkUserId,
       trackedShopId: row.trackedShopId
     });
     if (!parsedInput.success) {
@@ -87090,8 +87070,7 @@ var findTrackedListingSyncTargets = (params) => {
     trackedListingId: trackedListings.listingId,
     etsyListingId: trackedListings.etsyListingId,
     syncState: trackedListings.syncState,
-    trackingState: trackedListings.trackingState,
-    trackerClerkUserId: trackedListings.trackerClerkUserId
+    trackingState: trackedListings.trackingState
   }).from(trackedListings).where(whereClause);
 };
 
@@ -87116,7 +87095,6 @@ var enqueueTrackedListingSyncJobs = async (params) => {
       continue;
     }
     const jobId = await enqueueListingSyncJob({
-      clerkUserId: target.trackerClerkUserId,
       etsyListingId: target.etsyListingId,
       accountId: params.accountId
     });
@@ -87175,7 +87153,6 @@ var adminEnqueueSyncAllListingsProcedure = adminProcedure.input(exports_external
   await createEventLog({
     action: "listing.bulk_sync_queued",
     category: "listing",
-    clerkUserId: ctx.merchbaseUserId,
     detailsJson: {
       enqueuedCount,
       skippedCount,
@@ -87304,7 +87281,6 @@ var currencyRouter = router({
 // src/api/app/dashboard/get-summary.ts
 var dashboardGetSummaryProcedure = appProcedure.input(exports_external.object({})).query(({ ctx }) => {
   return getDashboardSummary({
-    clerkUserId: ctx.merchbaseUserId,
     accountId: ctx.accountId
   });
 });
@@ -87405,7 +87381,6 @@ var listLatestRankedListingsForCapture = async (params) => {
     syncState: trackedListings.syncState,
     thumbnailUrl: trackedListings.thumbnailUrl,
     title: trackedListings.title,
-    trackerClerkUserId: trackedListings.trackerClerkUserId,
     trackingState: trackedListings.trackingState,
     updatedAt: trackedListings.updatedAt,
     updatedTimestamp: trackedListings.updatedTimestamp,
@@ -87516,7 +87491,6 @@ var toKeywordActivityListingRecord = (params) => {
     syncState: row.syncState,
     thumbnailUrl: row.thumbnailUrl,
     title: row.title,
-    trackerClerkUserId: row.trackerClerkUserId,
     trackingState: row.trackingState,
     updatedAt: row.updatedAt.toISOString(),
     updatedTimestamp: row.updatedTimestamp,
@@ -87592,7 +87566,6 @@ var toRecord4 = (row) => {
     nextSyncAt: row.nextSyncAt.toISOString(),
     normalizedKeyword: row.normalizedKeyword,
     accountId: row.accountId,
-    trackerClerkUserId: row.trackerClerkUserId,
     syncState: row.syncState,
     trackingState: row.trackingState,
     updatedAt: row.updatedAt.toISOString()
@@ -87603,8 +87576,7 @@ var getTrackedKeyword2 = async (params) => {
   return row ? toRecord4(row) : null;
 };
 var listTrackedKeywords = async (params) => {
-  const whereClause = params.trackerClerkUserId ? and(eq(trackedKeywords.accountId, params.accountId), eq(trackedKeywords.trackerClerkUserId, params.trackerClerkUserId)) : eq(trackedKeywords.accountId, params.accountId);
-  const rows = await db.select().from(trackedKeywords).where(whereClause).orderBy(desc(trackedKeywords.updatedAt));
+  const rows = await db.select().from(trackedKeywords).where(eq(trackedKeywords.accountId, params.accountId)).orderBy(desc(trackedKeywords.updatedAt));
   return {
     items: rows.map(toRecord4)
   };
@@ -87628,7 +87600,6 @@ var trackKeyword = async (params) => {
     nextSyncAt: now,
     normalizedKeyword: normalized.normalizedKeyword,
     accountId: params.accountId,
-    trackerClerkUserId: params.trackerClerkUserId,
     trackingState: "active",
     updatedAt: now
   };
@@ -87641,7 +87612,6 @@ var trackKeyword = async (params) => {
   await createEventLog({
     action: created ? "keyword.tracked" : "keyword.updated",
     category: "keyword",
-    clerkUserId: params.trackerClerkUserId,
     detailsJson: {
       normalizedKeyword: item.normalizedKeyword
     },
@@ -87824,7 +87794,6 @@ var keywordsRefreshProcedure = appProcedure.input(exports_external.object({
   }
   const jobId = await enqueueKeywordSyncJob({
     accountId: ctx.accountId,
-    clerkUserId: ctx.merchbaseUserId,
     trackedKeywordId: input.trackedKeywordId
   });
   if (!jobId) {
@@ -87858,11 +87827,9 @@ var keywordsTrackProcedure = appProcedure.input(exports_external.object({
   const trackedKeyword = await trackKeyword({
     keywordInput: input.keyword,
     requestId: ctx.requestId,
-    accountId: ctx.accountId,
-    trackerClerkUserId: ctx.merchbaseUserId
+    accountId: ctx.accountId
   });
   const monitorRunId = await enqueueKeywordSyncJob({
-    clerkUserId: trackedKeyword.item.trackerClerkUserId,
     accountId: trackedKeyword.item.accountId,
     trackedKeywordId: trackedKeyword.item.id
   });
@@ -87876,7 +87843,6 @@ var keywordsTrackProcedure = appProcedure.input(exports_external.object({
   await createEventLog({
     action: "keyword.sync_queued",
     category: "keyword",
-    clerkUserId: ctx.merchbaseUserId,
     detailsJson: {
       keyword: trackedKeyword.item.keyword
     },
@@ -88263,11 +88229,9 @@ var listingsRefreshProcedure = appProcedure.input(exports_external.object({
   trackedListingId: exports_external.string().uuid()
 })).mutation(async ({ ctx, input }) => {
   const item = await refreshTrackedListing({
-    clerkUserId: ctx.merchbaseUserId,
     requestId: ctx.requestId,
     accountId: ctx.accountId,
-    trackedListingId: input.trackedListingId,
-    trackerClerkUserId: ctx.merchbaseUserId
+    trackedListingId: input.trackedListingId
   });
   return decorateTrackedListingWithUsd(item);
 });
@@ -88313,7 +88277,6 @@ var listingsRefreshManyProcedure = appProcedure.input(refreshManyInputSchema).mu
   await createEventLog({
     action: "listing.bulk_sync_queued",
     category: "listing",
-    clerkUserId: ctx.merchbaseUserId,
     detailsJson: {
       enqueuedCount,
       requestedCount: trackedListingIds.length,
@@ -88341,8 +88304,7 @@ var listingsTrackProcedure = appProcedure.input(exports_external.object({
   const response = await trackListing({
     listingInput: input.listing,
     requestId: ctx.requestId,
-    accountId: ctx.accountId,
-    trackerClerkUserId: ctx.merchbaseUserId
+    accountId: ctx.accountId
   });
   return {
     created: response.created,
@@ -88878,7 +88840,6 @@ var resolveShopFromInput = async (params) => {
   try {
     if (parsed.type === "id") {
       await recordEtsyApiCallBestEffort({
-        clerkUserId: params.clerkUserId,
         endpoint: "getShop",
         accountId: params.accountId
       });
@@ -88887,7 +88848,6 @@ var resolveShopFromInput = async (params) => {
       });
     }
     await recordEtsyApiCallBestEffort({
-      clerkUserId: params.clerkUserId,
       endpoint: "findShops",
       accountId: params.accountId
     });
@@ -88908,7 +88868,6 @@ var resolveShopFromInput = async (params) => {
       });
     }
     await recordEtsyApiCallBestEffort({
-      clerkUserId: params.clerkUserId,
       endpoint: "getShop",
       accountId: params.accountId
     });
@@ -88967,7 +88926,6 @@ var getTrackedShop = async (params) => {
 var trackShop = async (params) => {
   const resolvedShop = await resolveShopFromInput({
     shopInput: params.shopInput,
-    clerkUserId: params.clerkUserId,
     accountId: params.accountId
   });
   const [existing] = await db.select({
@@ -89005,7 +88963,6 @@ var trackShop = async (params) => {
   await createEventLog({
     action: created ? "shop.tracked" : "shop.updated",
     category: "shop",
-    clerkUserId: params.clerkUserId,
     detailsJson: {
       activeListingCount: resolvedShop.activeListingCount,
       favoritesTotal: resolvedShop.numFavorers,
@@ -89187,7 +89144,6 @@ var shopsRefreshProcedure = appProcedure.input(exports_external.object({
   try {
     jobId = await enqueueShopSyncJob({
       accountId: ctx.accountId,
-      clerkUserId: ctx.merchbaseUserId,
       trackedShopId: input.trackedShopId
     });
   } catch (error48) {
@@ -89229,8 +89185,7 @@ var shopsTrackProcedure = appProcedure.input(exports_external.object({
   const response = await trackShop({
     shopInput: input.shop,
     requestId: ctx.requestId,
-    accountId: ctx.accountId,
-    clerkUserId: ctx.merchbaseUserId
+    accountId: ctx.accountId
   });
   const claimed = await queueTrackedShopSyncIfIdleByTrackedShopId({
     accountId: ctx.accountId,
@@ -89240,7 +89195,6 @@ var shopsTrackProcedure = appProcedure.input(exports_external.object({
     try {
       const queuedJobId = await enqueueShopSyncJob({
         accountId: ctx.accountId,
-        clerkUserId: ctx.merchbaseUserId,
         trackedShopId: response.item.id
       });
       if (!queuedJobId) {
@@ -89417,15 +89371,12 @@ var publicKeywordsListingsRouter = router({
 var publicKeywordsTrackProcedure = publicProcedure.input(exports_external.object({
   keyword: exports_external.string().min(1)
 })).mutation(async ({ ctx, input }) => {
-  const clerkUserId = ctx.merchbaseUserId;
   const trackedKeyword = await trackKeyword({
     keywordInput: input.keyword,
     requestId: ctx.requestId,
-    accountId: ctx.accountId,
-    trackerClerkUserId: clerkUserId
+    accountId: ctx.accountId
   });
   const monitorRunId = await enqueueKeywordSyncJob({
-    clerkUserId: trackedKeyword.item.trackerClerkUserId,
     accountId: trackedKeyword.item.accountId,
     trackedKeywordId: trackedKeyword.item.id
   });
@@ -89439,7 +89390,6 @@ var publicKeywordsTrackProcedure = publicProcedure.input(exports_external.object
   await createEventLog({
     action: "keyword.sync_queued",
     category: "keyword",
-    clerkUserId,
     detailsJson: {
       keyword: trackedKeyword.item.keyword
     },
@@ -89592,12 +89542,10 @@ var publicListingsListProcedure = publicProcedure.input(publicListingsListInputS
 var publicListingsTrackProcedure = publicProcedure.input(exports_external.object({
   listing: exports_external.string().min(1)
 })).mutation(async ({ ctx, input }) => {
-  const clerkUserId = ctx.merchbaseUserId;
   const response = await trackListing({
     listingInput: input.listing,
     requestId: ctx.requestId,
-    accountId: ctx.accountId,
-    trackerClerkUserId: clerkUserId
+    accountId: ctx.accountId
   });
   return {
     created: response.created,
@@ -89665,12 +89613,10 @@ var publicShopsOverviewRouter = router({
 var publicShopsTrackProcedure = publicProcedure.input(exports_external.object({
   shop: exports_external.string().min(1)
 })).mutation(async ({ ctx, input }) => {
-  const clerkUserId = ctx.merchbaseUserId;
   const response = await trackShop({
     shopInput: input.shop,
     requestId: ctx.requestId,
-    accountId: ctx.accountId,
-    clerkUserId
+    accountId: ctx.accountId
   });
   const claimed = await queueTrackedShopSyncIfIdleByTrackedShopId({
     accountId: ctx.accountId,
@@ -89680,7 +89626,6 @@ var publicShopsTrackProcedure = publicProcedure.input(exports_external.object({
     try {
       const queuedJobId = await enqueueShopSyncJob({
         accountId: ctx.accountId,
-        clerkUserId,
         trackedShopId: response.item.id
       });
       if (!queuedJobId) {
@@ -89774,8 +89719,33 @@ async function migrate2(db2, config2) {
   await db2.dialect.migrate(migrations, db2.session, config2);
 }
 
+// src/db/central-access-migration-readiness.ts
+var assertPhaseTwoReadiness = (readiness) => {
+  if (readiness.unmappedAccountCount > 0) {
+    throw new Error("Central access phase two requires every account to be backfilled.");
+  }
+  if (readiness.mappedAccountCount === 0) {
+    throw new Error("Central access phase two requires at least one mapped account.");
+  }
+  if (readiness.accountWithInvalidActiveProjectionCount > 0) {
+    throw new Error("Central access phase two requires exactly one retained active identity per account.");
+  }
+  if (readiness.unprojectedIdentityCount > 0) {
+    throw new Error("Central access phase two requires every Clerk identity to be projected.");
+  }
+  if (readiness.invalidLegacyProjectionCount > 0) {
+    throw new Error("Central access phase two requires valid retained or terminal legacy projections.");
+  }
+  if (readiness.orphanOwnershipReferenceCount > 0) {
+    throw new Error("Central access phase two found product or metering rows without an owning account.");
+  }
+  if (readiness.unmatchedIdentityReferenceCount > 0) {
+    throw new Error("Central access phase two found legacy ownership values not tied to their account.");
+  }
+};
+
 // src/db/migrate.ts
-var CENTRAL_ACCESS_CLEANUP_TAG = "0021_worried_deathstrike";
+var CENTRAL_ACCESS_CLEANUP_TAG = "0021_known_sandman";
 var CENTRAL_ACCESS_PHASE_ONE_TAG = "0020_early_agent_zero";
 var isMissingMigrationTableError = (error48) => typeof error48 === "object" && error48 !== null && ("code" in error48) && error48.code === "42P01";
 var readMigrationHash = async (tag) => {
@@ -89803,33 +89773,106 @@ var assertPhaseTwoReady = async (migrationClient) => {
     throw new Error("Central access phase two requires the phase-one migration to be applied.");
   }
   try {
-    const [unmappedAccount] = await migrationClient`
-            SELECT count(*)::int AS value
-            FROM accounts
-            WHERE merchbase_user_id IS NULL
+    const [readiness] = await migrationClient`
+            SELECT
+                (
+                    SELECT count(*)::int
+                    FROM accounts
+                    WHERE merchbase_user_id IS NOT NULL
+                ) AS "mappedAccountCount",
+                (
+                    SELECT count(*)::int
+                    FROM accounts
+                    WHERE merchbase_user_id IS NULL
+                ) AS "unmappedAccountCount",
+                (
+                    SELECT count(*)::int
+                    FROM accounts AS account
+                    WHERE (
+                        SELECT count(*)
+                        FROM clerk_identities AS legacy_identity
+                        INNER JOIN access_projection AS projection
+                            ON projection.issuer = legacy_identity.clerk_issuer
+                            AND projection.subject = legacy_identity.clerk_subject
+                        WHERE legacy_identity.account_id = account.id
+                          AND projection.state = 'active'
+                          AND projection.merchbase_user_id = account.merchbase_user_id
+                    ) <> 1
+                ) AS "accountWithInvalidActiveProjectionCount",
+                (
+                    SELECT count(*)::int
+                    FROM clerk_identities AS legacy_identity
+                    WHERE NOT EXISTS (
+                        SELECT 1
+                        FROM access_projection AS projection
+                        WHERE projection.issuer = legacy_identity.clerk_issuer
+                          AND projection.subject = legacy_identity.clerk_subject
+                    )
+                ) AS "unprojectedIdentityCount",
+                (
+                    SELECT count(*)::int
+                    FROM clerk_identities AS legacy_identity
+                    INNER JOIN accounts AS account
+                        ON account.id = legacy_identity.account_id
+                    INNER JOIN access_projection AS projection
+                        ON projection.issuer = legacy_identity.clerk_issuer
+                        AND projection.subject = legacy_identity.clerk_subject
+                    WHERE NOT (
+                        (
+                            projection.state = 'active'
+                            AND projection.merchbase_user_id = account.merchbase_user_id
+                            AND projection.access IS NOT NULL
+                        )
+                        OR (
+                            projection.state = 'tombstone'
+                            AND projection.merchbase_user_id IS NULL
+                            AND projection.access IS NULL
+                            AND projection.access_valid_until IS NULL
+                            AND projection.source_updated_at =
+                                ${TERMINAL_PROJECTION_TIMESTAMP}
+                        )
+                    )
+                ) AS "invalidLegacyProjectionCount",
+                (
+                    SELECT count(*)::int
+                    FROM (
+                        SELECT account_id FROM tracked_keywords
+                        UNION ALL
+                        SELECT account_id FROM tracked_listings
+                        UNION ALL
+                        SELECT account_id FROM etsy_api_call_events
+                    ) AS ownership_reference
+                    WHERE NOT EXISTS (
+                        SELECT 1
+                        FROM accounts
+                        WHERE accounts.id = ownership_reference.account_id
+                    )
+                ) AS "orphanOwnershipReferenceCount",
+                (
+                    SELECT count(*)::int
+                    FROM (
+                        SELECT account_id, tracker_clerk_user_id AS subject
+                        FROM tracked_keywords
+                        UNION ALL
+                        SELECT account_id, tracker_clerk_user_id AS subject
+                        FROM tracked_listings
+                        UNION ALL
+                        SELECT account_id, clerk_user_id AS subject
+                        FROM etsy_api_call_events
+                        WHERE clerk_user_id <> 'system'
+                    ) AS legacy_reference
+                    WHERE NOT EXISTS (
+                        SELECT 1
+                        FROM clerk_identities AS legacy_identity
+                        WHERE legacy_identity.account_id = legacy_reference.account_id
+                          AND legacy_identity.clerk_subject = legacy_reference.subject
+                    )
+                ) AS "unmatchedIdentityReferenceCount"
         `;
-    const [activeProjection2] = await migrationClient`
-            SELECT count(*)::int AS value
-            FROM access_projection
-            WHERE state = 'active' AND merchbase_user_id IS NOT NULL
-        `;
-    const [unprojectedIdentity] = await migrationClient`
-            SELECT count(*)::int AS value
-            FROM clerk_identities AS legacy_identity
-            LEFT JOIN access_projection AS projection
-                ON projection.issuer = legacy_identity.clerk_issuer
-                AND projection.subject = legacy_identity.clerk_subject
-            WHERE projection.subject IS NULL
-        `;
-    if (Number(unmappedAccount?.value ?? 0) > 0) {
-      throw new Error("Central access phase two requires every account to be backfilled.");
+    if (!readiness) {
+      throw new Error("Central access phase-two readiness query returned no result.");
     }
-    if (Number(activeProjection2?.value ?? 0) === 0) {
-      throw new Error("Central access phase two requires a seeded active projection.");
-    }
-    if (Number(unprojectedIdentity?.value ?? 0) > 0) {
-      throw new Error("Central access phase two requires every Clerk identity to be projected.");
-    }
+    assertPhaseTwoReadiness(readiness);
   } catch (error48) {
     if (isMissingMigrationTableError(error48)) {
       throw new Error("Central access phase two requires the phase-one schema.");
@@ -89872,7 +89915,8 @@ var runMigrations = async (options) => {
   try {
     const migrationDb = drizzle(migrationClient);
     if (options?.throughTag) {
-      if (options.throughTag === CENTRAL_ACCESS_CLEANUP_TAG) {
+      const cleanupApplied = await hasAppliedMigration(migrationClient, await readMigrationHash(CENTRAL_ACCESS_CLEANUP_TAG));
+      if (options.throughTag === CENTRAL_ACCESS_CLEANUP_TAG && !cleanupApplied) {
         await assertPhaseTwoReady(migrationClient);
       }
       migrationFolder = await createMigrationFolderThrough(options.throughTag);

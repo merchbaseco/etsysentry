@@ -36,7 +36,6 @@ export const keywordsRefreshProcedure = appProcedure
 
         const jobId = await enqueueKeywordSyncJob({
             accountId: ctx.accountId,
-            clerkUserId: ctx.merchbaseUserId,
             trackedKeywordId: input.trackedKeywordId,
         });
 

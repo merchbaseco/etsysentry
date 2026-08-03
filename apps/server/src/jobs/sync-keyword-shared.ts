@@ -6,7 +6,6 @@ export const SYNC_KEYWORD_JOB_NAME = 'sync-keyword';
 export const SYNC_STALE_KEYWORDS_JOB_NAME = 'sync-stale-keywords';
 
 export const syncKeywordJobInputSchema = z.object({
-    clerkUserId: z.string().min(1),
     accountId: z.string().min(1),
     trackedKeywordId: z.string().uuid(),
 });

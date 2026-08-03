@@ -12,17 +12,13 @@ export const publicKeywordsTrackProcedure = publicProcedure
         })
     )
     .mutation(async ({ ctx, input }) => {
-        const clerkUserId = ctx.merchbaseUserId;
-
         const trackedKeyword = await trackKeyword({
             keywordInput: input.keyword,
             requestId: ctx.requestId,
             accountId: ctx.accountId,
-            trackerClerkUserId: clerkUserId,
         });
 
         const monitorRunId = await enqueueKeywordSyncJob({
-            clerkUserId: trackedKeyword.item.trackerClerkUserId,
             accountId: trackedKeyword.item.accountId,
             trackedKeywordId: trackedKeyword.item.id,
         });
@@ -38,7 +34,6 @@ export const publicKeywordsTrackProcedure = publicProcedure
         await createEventLog({
             action: 'keyword.sync_queued',
             category: 'keyword',
-            clerkUserId,
             detailsJson: {
                 keyword: trackedKeyword.item.keyword,
             },

@@ -5,7 +5,8 @@
 This spec defines both first-party API modalities exposed by EtsySentry:
 
 - Dashboard App API (`api.app.*`) authenticated by centralized Merchbase Access Clerk sessions.
-- Public API (`api.public.*`) authenticated by centralized Merchbase opaque API keys (CLI + HTTP client).
+- Public API (`api.public.*`) authenticated by centralized Merchbase opaque API keys or shared OAuth
+  credentials.
 
 Server transport base URL for both modalities:
 - `<origin>/api`
@@ -42,9 +43,13 @@ OAuth/session storage boundary:
   - `@etsysentry/http-client`
   - direct HTTP/tRPC clients
 - Authentication:
-  - required: `authorization: Bearer <ak_...>`
+  - required: `authorization: Bearer <ak_...|oat_...|oauth_jwt>`
 - Auth context behavior:
-  - the access package authenticates the opaque key and returns the stable `merchbaseUserId`
+  - the access package authenticates the API key or OAuth credential and returns the stable
+    `merchbaseUserId`
+  - JWT-shaped credentials try session auth first and OAuth only after an `unauthenticated` result
+  - denied/unavailable session results do not fall through to OAuth
+  - malformed credentials and retired `esk_` keys fail closed
   - the product-local projection maps that stable user to `accountId`
   - no EtsySentry-specific key issuance, verification, header, route, or table remains
 - Current implementation status:
@@ -305,7 +310,6 @@ Output:
     lastRefreshedAt: string; // ISO timestamp
     nextSyncAt: string; // ISO timestamp
     lastRefreshError: string | null;
-    trackerClerkUserId: string;
     updatedAt: string; // ISO timestamp
   }>;
 }

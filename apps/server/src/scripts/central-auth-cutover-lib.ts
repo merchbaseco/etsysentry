@@ -39,6 +39,8 @@ export const cutoverMappingSchema = z
                     accountIdentityCount: nonNegativeCountSchema,
                     activeLegacyApiKeyCount: nonNegativeCountSchema,
                     etsyOAuthConnectionCount: nonNegativeCountSchema,
+                    legacyOwnershipReferenceCount: nonNegativeCountSchema,
+                    systemEtsyApiCallEventCount: nonNegativeCountSchema,
                 })
                 .strict(),
         }),
@@ -84,6 +86,19 @@ const productRowCountsSchema = z
 
 export type ProductRowCounts = z.infer<typeof productRowCountsSchema>;
 
+const legacyOwnershipAuditSchema = z
+    .object({
+        etsyApiCallEventCount: nonNegativeCountSchema,
+        orphanAccountCount: nonNegativeCountSchema,
+        systemEtsyApiCallEventCount: nonNegativeCountSchema,
+        trackedKeywordCount: nonNegativeCountSchema,
+        trackedListingCount: nonNegativeCountSchema,
+        unmatchedIdentityCount: nonNegativeCountSchema,
+    })
+    .strict();
+
+export type LegacyOwnershipAudit = z.infer<typeof legacyOwnershipAuditSchema>;
+
 export const cutoverAuditSchema = z
     .object({
         global: z
@@ -102,6 +117,7 @@ export const cutoverAuditSchema = z
                 etsyOAuthConnectionCount: nonNegativeCountSchema,
                 identityCount: nonNegativeCountSchema,
                 identitySetFingerprint: fingerprintSchema,
+                legacyOwnership: legacyOwnershipAuditSchema,
                 productRowCounts: productRowCountsSchema,
             })
             .strict()
@@ -211,6 +227,44 @@ export const assertCutoverAuditMatchesMapping = (params: {
         target.etsyOAuthConnectionCount !== params.mapping.expected.target.etsyOAuthConnectionCount
     ) {
         throw new Error('Etsy OAuth connection count changed; obtain a fresh explicit mapping.');
+    }
+
+    const legacyOwnershipReferenceCount =
+        target.legacyOwnership.etsyApiCallEventCount +
+        target.legacyOwnership.trackedKeywordCount +
+        target.legacyOwnership.trackedListingCount;
+
+    if (
+        legacyOwnershipReferenceCount !==
+        params.mapping.expected.target.legacyOwnershipReferenceCount
+    ) {
+        throw new Error(
+            'Legacy ownership reference count changed; obtain a fresh explicit mapping.'
+        );
+    }
+
+    if (
+        target.legacyOwnership.systemEtsyApiCallEventCount !==
+        params.mapping.expected.target.systemEtsyApiCallEventCount
+    ) {
+        throw new Error('System metering count changed; obtain a fresh explicit mapping.');
+    }
+
+    if (target.legacyOwnership.orphanAccountCount > 0) {
+        throw new Error('Legacy ownership rows exist without an owning local account.');
+    }
+
+    if (target.legacyOwnership.unmatchedIdentityCount > 0) {
+        throw new Error('Legacy ownership values do not match identities on their local account.');
+    }
+
+    if (
+        target.legacyOwnership.etsyApiCallEventCount !==
+            target.productRowCounts.etsyApiCallEvents ||
+        target.legacyOwnership.trackedKeywordCount !== target.productRowCounts.trackedKeywords ||
+        target.legacyOwnership.trackedListingCount !== target.productRowCounts.trackedListings
+    ) {
+        throw new Error('Legacy ownership audit does not match preserved product row counts.');
     }
 };
 
