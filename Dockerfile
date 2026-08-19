@@ -9,8 +9,8 @@ ENV VITE_CLERK_PUBLISHABLE_KEY=${VITE_CLERK_PUBLISHABLE_KEY}
 ENV VITE_SERVER_ORIGIN=${VITE_SERVER_ORIGIN}
 
 COPY . .
-RUN --mount=type=secret,id=github_packages_token \
-  GITHUB_PACKAGES_TOKEN="$(cat /run/secrets/github_packages_token)" \
+RUN --mount=type=secret,id=merchbase_github_npm_token \
+  MERCHBASE_GITHUB_NPM_TOKEN="$(cat /run/secrets/merchbase_github_npm_token)" \
   bun install --frozen-lockfile
 RUN bun run server:build
 RUN bun run website:build

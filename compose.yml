@@ -31,7 +31,7 @@ services:
       dockerfile: Dockerfile
       target: runtime
       secrets:
-        - github_packages_token
+        - merchbase_github_npm_token
       args:
         VITE_CLERK_PUBLISHABLE_KEY: ${VITE_CLERK_PUBLISHABLE_KEY}
         VITE_SERVER_ORIGIN: ${VITE_SERVER_ORIGIN:-}
@@ -139,5 +139,5 @@ networks:
     driver: bridge
 
 secrets:
-  github_packages_token:
-    environment: GITHUB_PACKAGES_TOKEN
+  merchbase_github_npm_token:
+    environment: MERCHBASE_GITHUB_NPM_TOKEN

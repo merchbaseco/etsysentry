@@ -20,7 +20,7 @@ jobs:
       - name: Build and deploy
         working-directory: /Users/zknicker/srv/etsysentry
         env:
-          GITHUB_PACKAGES_TOKEN: ${{ github.token }}
+          MERCHBASE_GITHUB_NPM_TOKEN: ${{ github.token }}
         run: |
           # Pull latest code
           git pull --ff-only
