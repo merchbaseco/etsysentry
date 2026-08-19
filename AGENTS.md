@@ -77,3 +77,24 @@ This file is the always-on guide for AI coding assistants in EtsySentry.
 - Docs vs AGENTS placement guide: `docs/agent-doc-placement.md`
 - Server operations: `apps/server/README.md`
 - Typed client package: `packages/http-client/README.md`
+
+## Cursor Cloud specific instructions
+
+The Cloud Agent environment is repo-managed via `.cursor/environment.json` (`install.sh`
+installs Bun 1.3.5 + PostgreSQL 16 + JS deps; `start.sh` starts Postgres). Two terminals run the
+stack: `server` (Fastify/tRPC on `:8080`, runs Drizzle migrations on boot) and `website`
+(Vite on `:3100`, proxying `/api` → `:8080`).
+
+- `bun install --frozen-lockfile` needs the `MERCHBASE_GITHUB_NPM_TOKEN` secret (a token with
+  `read:packages` on the `merchbaseco` org) to fetch the private `@merchbaseco/access` package;
+  without it the install fails with a `401`/`403` from `npm.pkg.github.com`.
+- Do not run the root `bun run dev` in the cloud VM: it pins `DATABASE_HOST` to a Tailscale host
+  (`zachs-mac-mini.taila0b849.ts.net`) that is unreachable here. Run the server against the local
+  DB instead (`DATABASE_HOST=127.0.0.1 DATABASE_PORT=5435`), as the `server` terminal does.
+- Local Postgres lives at `~/etsysentry-pgdata` (port `5435`, socket dir `~/pgsock`, log
+  `~/etsysentry-pg.log`); database `etsysentry`, user/password `etsysentry` /
+  `etsysentry_local_dev_password`.
+- The server boots on `.env.example` placeholders (copied to `.env` by `install.sh`). Real
+  Clerk/Etsy values injected as environment secrets override `.env` and are required for auth and
+  live Etsy calls. The website renders a "misconfigured" screen until `VITE_CLERK_PUBLISHABLE_KEY`
+  is set.
