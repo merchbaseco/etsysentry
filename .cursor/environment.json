@@ -5,7 +5,7 @@
     "terminals": [
         {
             "name": "server",
-            "command": "DATABASE_HOST=127.0.0.1 DATABASE_PORT=5435 DISABLE_SERVER_JOB_RUNNER=true bun --cwd apps/server --env-file=\"$PWD/.env\" --watch src/index.ts"
+            "command": "DATABASE_HOST=127.0.0.1 DATABASE_PORT=5435 DATABASE_PASSWORD=etsysentry_local_dev_password DISABLE_SERVER_JOB_RUNNER=true bun --cwd apps/server --env-file=\"$PWD/.env\" --watch src/index.ts"
         },
         {
             "name": "website",

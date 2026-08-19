@@ -90,7 +90,11 @@ stack: `server` (Fastify/tRPC on `:8080`, runs Drizzle migrations on boot) and `
   without it the install fails with a `401`/`403` from `npm.pkg.github.com`.
 - Do not run the root `bun run dev` in the cloud VM: it pins `DATABASE_HOST` to a Tailscale host
   (`zachs-mac-mini.taila0b849.ts.net`) that is unreachable here. Run the server against the local
-  DB instead (`DATABASE_HOST=127.0.0.1 DATABASE_PORT=5435`), as the `server` terminal does.
+  DB instead, as the `server` terminal does:
+  `DATABASE_HOST=127.0.0.1 DATABASE_PORT=5435 DATABASE_PASSWORD=etsysentry_local_dev_password`.
+  These inline vars are required because Bun's `--env-file` is overridden by process env, and
+  committed `.env`/`.env.example` ship `DATABASE_PASSWORD=replace_me`, which does not match the
+  local cluster password.
 - Local Postgres lives at `~/etsysentry-pgdata` (port `5435`, socket dir `~/pgsock`, log
   `~/etsysentry-pg.log`); database `etsysentry`, user/password `etsysentry` /
   `etsysentry_local_dev_password`.
