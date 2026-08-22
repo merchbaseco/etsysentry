@@ -38,20 +38,31 @@ jobs:
       - name: Install dependencies
         working-directory: /Users/zknicker/srv/etsysentry
         env:
-          MERCHBASE_GITHUB_NPM_TOKEN: ${{ github.token }}
-        run: bun install --frozen-lockfile
+          # The deploy agent reads both lifecycle vaults, so the install token
+          # resolves through the schema like every other value. Nothing is
+          # injected from a platform secret under a canonical name.
+          CURSOR_CLOUD_AGENTS_DEVELOPMENT_OP_TOKEN: ${{ secrets.GH_DEPLOY_AGENT_PRODUCTION_OP_TOKEN }}
+        run: |
+          MERCHBASE_GITHUB_NPM_TOKEN="$(ETSYSENTRY_RESOLVE_INSTALL_TOKENS=true \
+            bunx varlock@1.16.1 printenv MERCHBASE_GITHUB_NPM_TOKEN)"
+          if [ -z "${MERCHBASE_GITHUB_NPM_TOKEN}" ]; then
+            echo "MERCHBASE_GITHUB_NPM_TOKEN did not resolve from the Development vault." >&2
+            exit 1
+          fi
+          export MERCHBASE_GITHUB_NPM_TOKEN
+          bun install --frozen-lockfile
 
       - name: Deploy
         working-directory: /Users/zknicker/srv/etsysentry
         env:
-          # The deploy-agent role slot, filled here by the GitHub deploy agent's
-          # read-only Production identity. The deploy script pins
-          # VARLOCK_ENV=production and resolves every value through the schema;
-          # no .env file is read and none is written.
+          # One identity fills both schema slots: the GitHub deploy agent reads
+          # Production for runtime values and Development for the install token
+          # the image build needs. The deploy script pins VARLOCK_ENV=production
+          # and resolves everything through the schema; no .env file is read,
+          # none is written, and no credential is injected under a canonical
+          # name.
           DEPLOY_AGENT_PRODUCTION_OP_TOKEN: ${{ secrets.GH_DEPLOY_AGENT_PRODUCTION_OP_TOKEN }}
-          # Private @merchbaseco/* packages install with the workflow's own
-          # repository-scoped token, so the image build never needs 1Password.
-          MERCHBASE_GITHUB_NPM_TOKEN: ${{ github.token }}
+          CURSOR_CLOUD_AGENTS_DEVELOPMENT_OP_TOKEN: ${{ secrets.GH_DEPLOY_AGENT_PRODUCTION_OP_TOKEN }}
         run: bun run deploy
 
       - name: Verify from the consumer

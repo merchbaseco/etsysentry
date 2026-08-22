@@ -40,10 +40,15 @@ Two identities fill the same role slot, `DEPLOY_AGENT_PRODUCTION_OP_TOKEN`:
 | `Deploy Stack` workflow (preferred) | GitHub deploy agent | Repository secret `GH_DEPLOY_AGENT_PRODUCTION_OP_TOKEN` |
 | Operator at the mini | Mac Mini production Varlock | `scripts/deploy-with-varlock.ts` re-execs under `op run` |
 
+The GitHub deploy agent reads both lifecycle vaults, so the workflow maps that one secret into both
+schema slots: the production slot for runtime values, and the development slot so the install token
+resolves through the schema too. No credential is injected under a canonical name, and
+`github.token` is not part of the environment contract.
+
 The private `@merchbaseco/*` install token reaches the image build as a BuildKit secret mount —
-never a build argument, image environment variable, or layer. In the workflow it is the
-repository-scoped `github.token`; for a hand-run build it comes from `varlock printenv` under the
-install switch.
+never a build argument, image environment variable, or layer. It always comes from
+`varlock printenv MERCHBASE_GITHUB_NPM_TOKEN` under the install switch, which resolves the shared
+`GitHub Packages Read - Merchbase` item from the `Development` vault.
 
 `NODE_ENV` is set by the runtime image, not by the schema: `VARLOCK_ENV` is a varlock builtin and is
 never delivered to a container, so in-container lifecycle branching uses `NODE_ENV`.
