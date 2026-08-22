@@ -412,7 +412,8 @@ bun run cli:build
 
 ```bash
 cd packages/cli
-export NPM_TOKEN="$(security find-generic-password -a "$USER" -s rankwrangler-npm-token -w)"
+export MERCHBASE_NPM_PUBLISH_TOKEN="$(ETSYSENTRY_RESOLVE_RELEASE_TOKENS=true \
+    bunx varlock printenv MERCHBASE_NPM_PUBLISH_TOKEN)"
 npm whoami --userconfig ../../.npmrc
 npm publish --access public --userconfig ../../.npmrc
 ```
@@ -428,14 +429,16 @@ npm publish --access public --userconfig ../../.npmrc
 
 ```bash
 cd packages/cli
-export NPM_TOKEN="$(security find-generic-password -a "$USER" -s rankwrangler-npm-token -w)"
+export MERCHBASE_NPM_PUBLISH_TOKEN="$(ETSYSENTRY_RESOLVE_RELEASE_TOKENS=true \
+    bunx varlock printenv MERCHBASE_NPM_PUBLISH_TOKEN)"
 npm access get status @etsysentry/cli --userconfig ../../.npmrc
 ```
 
 ## Troubleshooting
 
 - `401 Unauthorized` / token errors:
-  Refresh `NPM_TOKEN` from Keychain so `.npmrc` can authenticate to npm.
+  Re-resolve `MERCHBASE_NPM_PUBLISH_TOKEN` under the release switch so `.npmrc` can
+  authenticate to npm.
 - `403 You cannot publish over the previously published versions`:
   Bump patch/minor version and publish again.
 

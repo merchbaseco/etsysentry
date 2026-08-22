@@ -54,7 +54,8 @@ This file is the always-on guide for AI coding assistants in EtsySentry.
 1. Keep docs current when API shape, jobs, or storage models change.
 2. Keep startup status logging intact in the server entrypoint when adding features/jobs.
 3. Keep secrets out of version control.
-4. Update `.env.example` when environment variables change.
+4. Update `.env.schema` when environment variables change; it is the committed contract and
+   `bun run check` fails when it drifts from the server surface, Compose, or the Dockerfile.
 5. Prefer adding Etsy bridges/services over embedding Etsy HTTP calls in routers/jobs.
 6. If requirements are unclear, add an explicit note in `docs/requirements.md` and ask.
 
@@ -75,5 +76,26 @@ This file is the always-on guide for AI coding assistants in EtsySentry.
 - Known product/implementation gaps: `docs/known-gaps.md`
 - Database query runbook: `docs/database-queries.md`
 - Docs vs AGENTS placement guide: `docs/agent-doc-placement.md`
+- Deployment and the environment contract: `docs/deployment.md`
 - Server operations: `apps/server/README.md`
 - Typed client package: `packages/http-client/README.md`
+
+## Cursor Cloud Specific Instructions
+
+The Cloud Agent environment is repo-managed via `.cursor/environment.json`: `install.sh` installs
+Bun 1.3.5, PostgreSQL, and workspace dependencies; `start.sh` provisions the local database and
+launches the server (`:8080`) and website (`:3100`) under `varlock run`.
+
+- There is no `.env` step anywhere. `.env.schema` is the contract and values resolve from 1Password
+  through the fleet-wide Development identity Cursor injects as a Runtime Secret.
+- `bun install --frozen-lockfile` needs `MERCHBASE_GITHUB_NPM_TOKEN` to fetch the private
+  `@merchbaseco/access` package. It is an `@internal` schema item, so `varlock run` does not export
+  it; `install.sh` fetches it explicitly with `varlock printenv` under
+  `ETSYSENTRY_RESOLVE_INSTALL_TOKENS=true`. Without it the install fails with a `401`/`403` from
+  `npm.pkg.github.com`.
+- The schema's development arm points `ETSYSENTRY_DATABASE_HOST` at the Mac mini over Tailscale,
+  which is how local development reaches the live database. A cloud VM has no Tailscale, so
+  `start.sh` runs its own PostgreSQL on `5435` and overrides that one public value for the session.
+  The password still resolves from the Development vault, so the local cluster and the server agree.
+- Do not run the root `bun run dev` expecting the Tailscale database in the cloud VM; use the
+  `start.sh` path.

@@ -42,6 +42,7 @@ EtsySentry tracks three primitives over time:
 - `docs/http-client-spec.md` - typed npm client release and versioning contract
 - `docs/api-spec.md` - canonical `api.public.*` contract shared by CLI and HTTP client
 - `docs/release-runbook.md` - canonical changelog/version bump/npm publish workflow
+- `docs/deployment.md` - deployment topology and the environment/secrets contract
 - `docs/log-view.md` - rich event log UX and storage specification
 - `apps/server/README.md` - server-specific runbook
 
@@ -54,20 +55,23 @@ bun install --frozen-lockfile
 bun run dev
 ```
 
-`bun run dev` starts both the website and server in watch mode. In this mode, the server is pinned
-to `DATABASE_HOST=zachs-mac-mini.taila0b849.ts.net` and `DATABASE_PORT=5435`, and the website uses
-the local server via Vite proxy (`/api` -> `http://localhost:8080`). The server loads OAuth/env
-secrets from root `.env`. Background jobs are disabled in this mode
-(`DISABLE_SERVER_JOB_RUNNER=true`).
-The dashboard is locked to port `3100` in this mode.
+`bun run dev` starts both the website and server in watch mode under `varlock run`, so every value
+comes from the committed `.env.schema` — there is no `.env` file and no manual setup step. The
+development lifecycle points the server at the Mac mini's PostgreSQL over Tailscale
+(`zachs-mac-mini.taila0b849.ts.net:5435`) and the website reaches the local server through the Vite
+proxy (`/api` -> `http://localhost:8080`). Background jobs are disabled outside production. The
+dashboard is locked to port `3100`.
 
 ### Server (OAuth + Listings Scaffold)
 
 ```bash
 bun install --frozen-lockfile
-cp .env.example .env
 bun run server:dev
 ```
+
+Secrets resolve from 1Password through the schema. Local sessions authorize with the 1Password
+desktop app; unattended consumers hold their own read-only identity. See
+[`docs/deployment.md`](docs/deployment.md) for the full source-to-runtime map.
 
 Server endpoints:
 

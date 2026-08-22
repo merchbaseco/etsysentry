@@ -22,15 +22,15 @@ or incident triage.
 
 ## Connection Setup
 
-Run from repo root:
+Run from repo root. Values come from the schema, never from a `.env` file, and the password moves
+through the environment rather than the terminal:
 
 ```bash
-set -a
-source .env
-set +a
-
-export DATABASE_PORT=5435
-export PGPASSWORD="$DATABASE_PASSWORD"
+export DATABASE_HOST="$(bunx varlock printenv ETSYSENTRY_DATABASE_HOST)"
+export DATABASE_PORT="$(bunx varlock printenv ETSYSENTRY_DATABASE_PORT)"
+export DATABASE_NAME="$(bunx varlock printenv ETSYSENTRY_DATABASE_NAME)"
+export DATABASE_USER="$(bunx varlock printenv ETSYSENTRY_DATABASE_USER)"
+export PGPASSWORD="$(bunx varlock printenv ETSYSENTRY_DATABASE_PASSWORD)"
 export PGOPTIONS='-c default_transaction_read_only=on'
 ```
 

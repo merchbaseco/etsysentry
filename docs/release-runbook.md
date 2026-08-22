@@ -39,9 +39,10 @@ Compatibility posture:
 
 ## Prerequisites
 
-- macOS Keychain contains a valid npm token under
-  `rankwrangler-npm-token` for the current `$USER`.
-- Repo-root `.npmrc` is configured for npm registry auth.
+- The shared npm publish credential resolves: `ETSYSENTRY_RESOLVE_RELEASE_TOKENS=true bunx
+  varlock printenv MERCHBASE_NPM_PUBLISH_TOKEN` returns a value (1Password `Tooling` vault,
+  item `NPM Publish - Merchbase`). One token publishes every Merchbase package.
+- Repo-root `.npmrc` reads `MERCHBASE_NPM_PUBLISH_TOKEN` for npm registry auth.
 - You are on the release branch with only intended release changes.
 
 ## 1. Choose Release Version
@@ -94,7 +95,8 @@ git push origin main
 Run from `packages/http-client`:
 
 ```bash
-export NPM_TOKEN="$(security find-generic-password -a "$USER" -s rankwrangler-npm-token -w)"
+export MERCHBASE_NPM_PUBLISH_TOKEN="$(ETSYSENTRY_RESOLVE_RELEASE_TOKENS=true \
+    bunx varlock printenv MERCHBASE_NPM_PUBLISH_TOKEN)"
 npm whoami --userconfig ../../.npmrc
 npm publish --access public --userconfig ../../.npmrc
 ```
@@ -104,7 +106,8 @@ npm publish --access public --userconfig ../../.npmrc
 Run from `packages/cli`:
 
 ```bash
-export NPM_TOKEN="$(security find-generic-password -a "$USER" -s rankwrangler-npm-token -w)"
+export MERCHBASE_NPM_PUBLISH_TOKEN="$(ETSYSENTRY_RESOLVE_RELEASE_TOKENS=true \
+    bunx varlock printenv MERCHBASE_NPM_PUBLISH_TOKEN)"
 npm whoami --userconfig ../../.npmrc
 npm publish --access public --userconfig ../../.npmrc
 ```
@@ -115,7 +118,8 @@ Run from repo root:
 
 ```bash
 bun install
-export NPM_TOKEN="$(security find-generic-password -a "$USER" -s rankwrangler-npm-token -w)"
+export MERCHBASE_NPM_PUBLISH_TOKEN="$(ETSYSENTRY_RESOLVE_RELEASE_TOKENS=true \
+    bunx varlock printenv MERCHBASE_NPM_PUBLISH_TOKEN)"
 npm view @etsysentry/http-client version --userconfig .npmrc
 npm view @etsysentry/cli version --userconfig .npmrc
 ```
@@ -123,9 +127,10 @@ npm view @etsysentry/cli version --userconfig .npmrc
 ## Fast Failure Handling
 
 - `401 Unauthorized`:
-  Refresh `NPM_TOKEN` from Keychain and use `--userconfig ../../.npmrc`.
-- `security: SecKeychainSearchCopyNext: The specified item could not be found in the keychain.`:
-  Add or update the `rankwrangler-npm-token` item for the current macOS user.
+  Re-resolve `MERCHBASE_NPM_PUBLISH_TOKEN` and use `--userconfig ../../.npmrc`.
+- `varlock printenv` returns nothing:
+  The release switch was not set. `MERCHBASE_NPM_PUBLISH_TOKEN` is an `@internal` schema item
+  and resolves only behind `ETSYSENTRY_RESOLVE_RELEASE_TOKENS=true`.
 - `403 cannot publish over previously published versions`:
   Bump version and retry publish.
 - Keep release scope tight:

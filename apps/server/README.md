@@ -58,9 +58,11 @@ Planned next layers (not yet scaffolded):
 
 ```bash
 bun install --frozen-lockfile
-cp .env.example .env
 bun run server:dev
 ```
+
+`server:dev` runs under `varlock run`, so there is no `.env` step: values resolve from the committed
+`.env.schema` through 1Password.
 
 Useful scripts:
 
@@ -79,46 +81,41 @@ Useful scripts:
 
 ## Environment Variables
 
-See `.env.example` for the exact values required by this scaffold.
+`.env.schema` at the repository root is the contract: canonical names, types, sensitivity, and the
+per-lifecycle 1Password references. There is no `.env` file and no manual setup step — every entry
+point runs under `varlock run`. `docs/deployment.md` maps each value to the vault that holds it.
 
-Required for OAuth:
+Secrets (resolved from 1Password):
 
-- `CLERK_SECRET_KEY`
-- `CLERK_ISSUER`
-- `CLERK_JWT_KEY`
-- `CLERK_PUBLISHABLE_KEY`
-- `CLERK_AUTHORIZED_PARTIES`
-- `CLERK_WEBHOOK_SIGNING_SECRET`
-- `ETSY_API_KEY`
-- `ETSY_API_SHARED_SECRET`
-- `ETSY_OAUTH_REDIRECT_URI` (must be your public server URL in production, for example
-  `https://etsysentry.merchbase.co/auth/etsy/callback`)
+- `MERCHBASE_CLERK_SECRET_KEY`, `MERCHBASE_CLERK_JWT_KEY` — shared suite Clerk instance
+- `ETSYSENTRY_CLERK_WEBHOOK_SIGNING_SECRET` — production only; development registers no webhook route
+- `ETSYSENTRY_ADMIN_MERCHBASE_USER_ID` — optional; unset disables the admin tRPC surface
+- `ETSYSENTRY_ETSY_API_KEY`, `ETSYSENTRY_ETSY_API_SHARED_SECRET`
+- `ETSYSENTRY_DATABASE_PASSWORD`
 
-Optional:
+Public values (schema literals, per lifecycle):
 
-- `ETSY_OAUTH_SCOPES` (space/comma-delimited; `listings_r` is always required)
-- `ETSY_OAUTH_STATE_TTL_MS`
-- `ETSY_OAUTH_REFRESH_SKEW_MS`
-- `ETSY_RATE_LIMIT_DEFAULT_PER_SECOND`
-- `ETSY_RATE_LIMIT_DEFAULT_PER_DAY`
-- `ETSY_RATE_LIMIT_MAX_RETRIES`
-- `ETSY_RATE_LIMIT_BACKOFF_INITIAL_MS`
-- `ETSY_RATE_LIMIT_BACKOFF_MAX_MS`
-- `ETSY_API_REQUEST_TIMEOUT_MS`
-- `DATABASE_HOST` (default `localhost`)
-- `DATABASE_PORT` (default `5435`)
-- `DATABASE_NAME` (default `etsysentry`)
-- `DATABASE_USER` (default `etsysentry`)
-- `DATABASE_PASSWORD` (default `etsysentry_local_dev_password`)
-- `DISABLE_SERVER_JOB_RUNNER` (default `false`; set `true` to disable pg-boss workers in this
-  process)
+- `MERCHBASE_CLERK_ISSUER`, `MERCHBASE_CLERK_PUBLISHABLE_KEY`
+- `ETSYSENTRY_CLERK_AUTHORIZED_PARTIES`
+- `ETSYSENTRY_PORT`, `ETSYSENTRY_APP_ORIGIN`, `ETSYSENTRY_DISABLE_SERVER_JOB_RUNNER`
+- `ETSYSENTRY_ETSY_OAUTH_REDIRECT_URI` (must be the public server URL in production, for example
+  `https://etsysentry.merchbase.co/auth/etsy/callback`, and must match the Etsy app settings)
+- `ETSYSENTRY_ETSY_OAUTH_SCOPES` (space/comma-delimited; `listings_r` is always added)
+- `ETSYSENTRY_ETSY_OAUTH_STATE_TTL_MS`, `ETSYSENTRY_ETSY_OAUTH_REFRESH_SKEW_MS`
+- `ETSYSENTRY_ETSY_RATE_LIMIT_DEFAULT_PER_SECOND`, `ETSYSENTRY_ETSY_RATE_LIMIT_DEFAULT_PER_DAY`,
+  `ETSYSENTRY_ETSY_RATE_LIMIT_MAX_RETRIES`, `ETSYSENTRY_ETSY_RATE_LIMIT_BACKOFF_INITIAL_MS`,
+  `ETSYSENTRY_ETSY_RATE_LIMIT_BACKOFF_MAX_MS`, `ETSYSENTRY_ETSY_API_REQUEST_TIMEOUT_MS`
+- `ETSYSENTRY_DATABASE_HOST`, `ETSYSENTRY_DATABASE_PORT`, `ETSYSENTRY_DATABASE_NAME`,
+  `ETSYSENTRY_DATABASE_USER`
+
+`NODE_ENV` is set by the runtime image, not by the schema, and is the in-container lifecycle signal.
 
 ## OAuth Flow (Etsy v3)
 
 1. Client calls `api.app.etsyAuth.start` (mutation) with Clerk bearer auth to obtain:
    - `authorizationUrl`
 2. Client redirects user to Etsy authorize URL.
-3. Etsy redirects to `ETSY_OAUTH_REDIRECT_URI` (`/auth/etsy/callback`), and this value must also be
+3. Etsy redirects to `ETSYSENTRY_ETSY_OAUTH_REDIRECT_URI` (`/auth/etsy/callback`), and this value must also be
    registered in your Etsy app settings.
 4. Callback verifies `state`, exchanges `code` for tokens via the OAuth bridge, and stores token
    state keyed by `accountId`.
@@ -132,10 +129,10 @@ Etsy OAuth connection is provider state, not customer authentication, and remain
 existing local account UUID.
 
 Container builds install the private `@merchbaseco/access` package through the
-`github_packages_token` BuildKit secret. For a local Compose build, export a short-lived
-`GITHUB_PACKAGES_TOKEN` with package-read access before running `docker compose build`; do not put
-the token in an image build argument, Dockerfile environment variable, or committed environment
-file. The deploy workflow supplies its package-read `github.token` to the same secret.
+`github_packages_token` BuildKit secret, which Compose sources from `MERCHBASE_GITHUB_NPM_TOKEN`.
+`bun run deploy` resolves it under the install switch when the environment does not already carry
+one; the deploy workflow supplies its package-read `github.token` instead. The token is never an
+image build argument, Dockerfile environment variable, or committed environment file.
 
 ## API Structure
 
@@ -205,10 +202,10 @@ Current app surface:
   - applies exponential backoff when `retry-after` is absent
 - `api.app.*` procedures require Clerk bearer auth (`Authorization: Bearer <token>`).
 - Admin-only app procedures require the authenticated stable `merchbaseUserId` to match the
-  operator-supplied `ADMIN_MERCHBASE_USER_ID`; email is never used for authorization.
+  operator-supplied `ETSYSENTRY_ADMIN_MERCHBASE_USER_ID`; email is never used for authorization.
 - Customer API-key issuance, verification, routes, UI, and local API-key storage are removed at
   clean cutover. CLI/automation uses `MERCHBASE_API_KEY` and the shared Merchbase Keychain entry.
 - `accounts.merchbaseUserId` is the only local account mapping used by request and background-job
   authorization. Existing Etsy OAuth/provider state and product/metering rows remain account-keyed.
-- Keep `.env.example` updated when env vars change.
+- Keep `.env.schema` updated when env vars change; `bun run check` fails when it drifts.
 - Do not embed Etsy HTTP calls directly in routers/jobs; add bridges instead.
