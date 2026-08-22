@@ -76,7 +76,8 @@ This file is the always-on guide for AI coding assistants in EtsySentry.
 - Known product/implementation gaps: `docs/known-gaps.md`
 - Database query runbook: `docs/database-queries.md`
 - Docs vs AGENTS placement guide: `docs/agent-doc-placement.md`
-- Deployment and the environment contract: `docs/deployment.md`
+- Deployment and the environment contract: `docs/deployment.md` (deploys are manual —
+  `workflow_dispatch` only; pushing to `main` does not deploy)
 - Server operations: `apps/server/README.md`
 - Typed client package: `packages/http-client/README.md`
 

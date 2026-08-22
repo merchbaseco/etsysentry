@@ -130,9 +130,10 @@ existing local account UUID.
 
 Container builds install the private `@merchbaseco/access` package through the
 `github_packages_token` BuildKit secret, which Compose sources from `MERCHBASE_GITHUB_NPM_TOKEN`.
-`bun run deploy` resolves it under the install switch when the environment does not already carry
-one; the deploy workflow supplies its package-read `github.token` instead. The token is never an
-image build argument, Dockerfile environment variable, or committed environment file.
+`bun run deploy` resolves it under the install switch from the shared `GitHub Packages Read -
+Merchbase` item in the `Development` vault. Actions' `github.token` is **not** used: a GitHub
+Packages package grants no other repository access by default, so it gets a 403. The token is never
+an image build argument, Dockerfile environment variable, or committed environment file.
 
 ## API Structure
 

@@ -36,10 +36,9 @@ shared Keychain account/service constants from the access package. HTTP clients 
 Production image builds install the private access package with the `github_packages_token`
 BuildKit secret. Compose sources that secret from `MERCHBASE_GITHUB_NPM_TOKEN` — the shared suite
 credential, an `@internal` schema item that resolves only behind
-`ETSYSENTRY_RESOLVE_INSTALL_TOKENS`. The deploy workflow grants only `contents: read` and
-`packages: read` and supplies `github.token` for the build step, so a workflow deploy needs no
-1Password access for the build at all. The package token is never an image build argument or
-Dockerfile environment variable.
+`ETSYSENTRY_RESOLVE_INSTALL_TOKENS`. It resolves from the `Development` vault in every venue,
+including CI: Actions' `github.token` gets a 403 from GitHub Packages for this package and is not
+used. The package token is never an image build argument or Dockerfile environment variable.
 
 The HTTP authorization boundary routes `ak_` credentials to API-key access, `oat_` credentials to
 OAuth access, and JWT-shaped credentials to session access. A JWT-shaped credential falls back to

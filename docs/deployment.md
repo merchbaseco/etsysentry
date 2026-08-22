@@ -15,8 +15,10 @@ Compose on the Mac mini.
 
 ## Deploying
 
-Deploys are **manual**. Pushing to `main` no longer deploys anything: run the `Deploy Stack`
-workflow from the Actions tab (`workflow_dispatch`). It runs on the Mac mini's self-hosted runner,
+Deploys are **manual**. Pushing to `main` no longer deploys anything — the workflow is
+`workflow_dispatch` only, and the former push trigger (and the `zknicker/etsy-sentry-start` branch
+trigger) are gone. A deploy is an explicit act now that it resolves production credentials from
+1Password. Run `Deploy Stack` from the Actions tab: it runs on the Mac mini's self-hosted runner,
 synchronizes the long-lived deployment checkout at `/Users/zknicker/srv/etsysentry` to the
 dispatched commit, and calls `bun run deploy`.
 
@@ -96,12 +98,28 @@ redirect and scopes, and the Etsy rate-limit tuning.
 machines. They are an external contract, not part of this repo's environment: they are deliberately
 absent from `.env.schema` and must never be renamed.
 
+## Continuous integration
+
+Both workflows install the private `@merchbaseco/access` package, and **`github.token` cannot fetch
+it**: a GitHub Packages package grants no other repository access by default, so Actions' own token
+gets a 403. It is not used for installs anywhere in this repo.
+
+Instead the install credential resolves through the schema like every other value. Each workflow
+maps the `GH_DEPLOY_AGENT_PRODUCTION_OP_TOKEN` secret into the schema's *development* slot — the
+deploy agent reads both lifecycle vaults, and install tokens live in `Development` — then fetches
+`MERCHBASE_GITHUB_NPM_TOKEN` with `varlock printenv` under `ETSYSENTRY_RESOLVE_INSTALL_TOKENS`. No
+credential is injected under a canonical name, and the quality gates themselves reach no vault:
+`check` pins the schema's `test` lifecycle, which resolves entirely offline.
+
+Know this failure mode: **`bun install` prints its banner and then hangs silently and indefinitely**
+when it cannot authenticate to the private scope — it does not fail fast. Quality's install step is
+therefore capped with `timeout-minutes`, so a credential problem surfaces as a timeout with a
+message rather than as fifteen silent minutes.
+
 ## Guards
 
 `bun run check` runs `env:check` (the schema resolves offline in the `test` lifecycle) and
 `env:contract` (a name-only diff across `.env.schema`, the typed server surface, the Compose
-delivery, and the Dockerfile `ARG` list). The gates themselves reach no vault; both workflows hold
-a 1Password identity only for their install step, because Actions' `github.token` gets a 403 from
-GitHub Packages for the private `@merchbaseco/access` package. `scripts/verify-deployed-secrets.ts` runs after every real
+delivery, and the Dockerfile `ARG` list). `scripts/verify-deployed-secrets.ts` runs after every real
 deploy and fails when a delivered name is not a schema item or a production-required sensitive item
 never reached the container.
