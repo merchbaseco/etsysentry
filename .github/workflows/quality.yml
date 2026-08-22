@@ -29,10 +29,16 @@ jobs:
         with:
           bun-version: '1.3.5'
 
+      # `bun install` hangs silently and indefinitely when it cannot authenticate
+      # to the private @merchbaseco scope, so cap the step rather than let it
+      # burn the whole job timeout with no output. If this step times out, the
+      # `access` package is missing an Actions-access grant for this repository.
       - name: Install dependencies
+        timeout-minutes: 5
         env:
           # Private @merchbaseco/* packages install with the workflow's own
-          # repository-scoped token; no 1Password access is involved.
+          # repository-scoped token; no 1Password access is involved. CI never
+          # holds a vault identity.
           MERCHBASE_GITHUB_NPM_TOKEN: ${{ github.token }}
         run: bun install --frozen-lockfile
 
