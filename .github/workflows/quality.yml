@@ -1,0 +1,42 @@
+name: Quality
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.5'
+
+      - name: Install dependencies
+        env:
+          # Private @merchbaseco/* packages install with the workflow's own
+          # repository-scoped token; no 1Password access is involved.
+          MERCHBASE_GITHUB_NPM_TOKEN: ${{ github.token }}
+        run: bun install --frozen-lockfile
+
+      # `check` pins the schema's `test` lifecycle itself, so CI needs no
+      # environment selector and no 1Password access.
+      - name: Run quality gates
+        run: bun run check
