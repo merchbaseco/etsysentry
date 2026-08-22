@@ -6,4 +6,6 @@ node_modules/
 
 .env
 .env.*
-!.env.example
+
+# Varlock schema is the committed contract
+!.env.schema
