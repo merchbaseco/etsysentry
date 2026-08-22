@@ -1,0 +1,9 @@
+{
+  "name": "Merchbase EtsySentry",
+  "install": "bash .cursor/install.sh",
+  "start": "bash .cursor/start.sh",
+  "ports": [
+    { "name": "api", "port": 8080 },
+    { "name": "website", "port": 3100 }
+  ]
+}
