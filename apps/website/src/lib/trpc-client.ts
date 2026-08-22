@@ -13,7 +13,9 @@ export const configureTrpcAuthTokenGetter = (tokenGetter: TrpcAuthTokenGetter | 
 };
 
 const getApiBaseUrl = (): string => {
-    const configuredOrigin = (import.meta.env.VITE_SERVER_ORIGIN as string | undefined)?.trim();
+    const configuredOrigin = (
+        import.meta.env.VITE_ETSYSENTRY_SERVER_ORIGIN as string | undefined
+    )?.trim();
 
     if (!configuredOrigin) {
         return '/api';

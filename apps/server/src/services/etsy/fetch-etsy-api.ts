@@ -25,7 +25,7 @@ const getDefaultFetchEtsyApiDependencies = (): FetchEtsyApiDependencies => {
 
             await new Promise((resolve) => setTimeout(resolve, delayMs));
         },
-        requestTimeoutMs: env.ETSY_API_REQUEST_TIMEOUT_MS,
+        requestTimeoutMs: env.ETSYSENTRY_ETSY_API_REQUEST_TIMEOUT_MS,
     };
 };
 
@@ -111,8 +111,8 @@ const shouldRetryRateLimitedResponse = (response: Response): boolean => {
 
 const getExponentialBackoffMs = (attempt: number): number => {
     const multiplier = 2 ** Math.max(0, attempt);
-    const delay = env.ETSY_RATE_LIMIT_BACKOFF_INITIAL_MS * multiplier;
-    return Math.min(env.ETSY_RATE_LIMIT_BACKOFF_MAX_MS, delay);
+    const delay = env.ETSYSENTRY_ETSY_RATE_LIMIT_BACKOFF_INITIAL_MS * multiplier;
+    return Math.min(env.ETSYSENTRY_ETSY_RATE_LIMIT_BACKOFF_MAX_MS, delay);
 };
 
 export const fetchEtsyApi = async (
@@ -142,7 +142,7 @@ export const fetchEtsyApi = async (
         } catch (error) {
             if (
                 !(error instanceof EtsyFetchTimeoutError) ||
-                attempt >= env.ETSY_RATE_LIMIT_MAX_RETRIES
+                attempt >= env.ETSYSENTRY_ETSY_RATE_LIMIT_MAX_RETRIES
             ) {
                 throw error;
             }
@@ -170,7 +170,7 @@ export const fetchEtsyApi = async (
             return response;
         }
 
-        if (attempt >= env.ETSY_RATE_LIMIT_MAX_RETRIES) {
+        if (attempt >= env.ETSYSENTRY_ETSY_RATE_LIMIT_MAX_RETRIES) {
             return response;
         }
 

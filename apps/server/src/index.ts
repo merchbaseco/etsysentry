@@ -49,17 +49,23 @@ export const buildServer = async (options: BuildServerOptions = {}) => {
 
     await server.register(cors, {
         credentials: true,
-        origin: [env.APP_ORIGIN],
+        origin: [env.ETSYSENTRY_APP_ORIGIN],
     });
 
-    await registerClerkAccessWebhookRoute(server, {
-        issuer: env.CLERK_ISSUER,
-        onIdentityChanged: (identity) => {
-            access.authenticator.invalidateApiKeys(identity);
-        },
-        signingSecret: env.CLERK_WEBHOOK_SIGNING_SECRET,
-        store: access.projections,
-    });
+    // Only production runs a Clerk webhook endpoint, so development resolves no
+    // signing secret and the route is not registered there.
+    const clerkWebhookSigningSecret = env.ETSYSENTRY_CLERK_WEBHOOK_SIGNING_SECRET;
+
+    if (clerkWebhookSigningSecret) {
+        await registerClerkAccessWebhookRoute(server, {
+            issuer: env.MERCHBASE_CLERK_ISSUER,
+            onIdentityChanged: (identity) => {
+                access.authenticator.invalidateApiKeys(identity);
+            },
+            signingSecret: clerkWebhookSigningSecret,
+            store: access.projections,
+        });
+    }
 
     await server.register(fastifyTRPCPlugin, {
         prefix: '/api',
@@ -183,10 +189,10 @@ if (import.meta.main) {
     server.log.info(
         {
             apiPrefix: '/api',
-            adminConfigured: Boolean(env.ADMIN_MERCHBASE_USER_ID),
+            adminConfigured: Boolean(env.ETSYSENTRY_ADMIN_MERCHBASE_USER_ID),
             authProvider: 'clerk',
             callbackPath: '/auth/etsy/callback',
-            callbackUrl: env.ETSY_OAUTH_REDIRECT_URI,
+            callbackUrl: env.ETSYSENTRY_ETSY_OAUTH_REDIRECT_URI,
             databaseHost: env.databaseHost,
             databaseName: env.databaseName,
             databasePort: env.databasePort,
@@ -194,19 +200,19 @@ if (import.meta.main) {
             enableServerJobs: env.enableServerJobs,
             oauthScopes: env.etsyOAuthScopes,
             etsyRateLimitDefaults: {
-                backoffInitialMs: env.ETSY_RATE_LIMIT_BACKOFF_INITIAL_MS,
-                backoffMaxMs: env.ETSY_RATE_LIMIT_BACKOFF_MAX_MS,
-                maxRetries: env.ETSY_RATE_LIMIT_MAX_RETRIES,
-                perDay: env.ETSY_RATE_LIMIT_DEFAULT_PER_DAY,
-                perSecond: env.ETSY_RATE_LIMIT_DEFAULT_PER_SECOND,
+                backoffInitialMs: env.ETSYSENTRY_ETSY_RATE_LIMIT_BACKOFF_INITIAL_MS,
+                backoffMaxMs: env.ETSYSENTRY_ETSY_RATE_LIMIT_BACKOFF_MAX_MS,
+                maxRetries: env.ETSYSENTRY_ETSY_RATE_LIMIT_MAX_RETRIES,
+                perDay: env.ETSYSENTRY_ETSY_RATE_LIMIT_DEFAULT_PER_DAY,
+                perSecond: env.ETSYSENTRY_ETSY_RATE_LIMIT_DEFAULT_PER_SECOND,
             },
-            port: env.PORT,
+            port: env.ETSYSENTRY_PORT,
         },
         'Startup status summary'
     );
 
     await server.listen({
         host: '0.0.0.0',
-        port: env.PORT,
+        port: env.ETSYSENTRY_PORT,
     });
 }

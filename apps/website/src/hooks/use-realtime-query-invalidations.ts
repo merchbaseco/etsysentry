@@ -23,7 +23,9 @@ export interface RealtimeWebsocketState {
 }
 
 const buildRealtimeWebsocketUrl = (token: string): string => {
-    const configuredOrigin = (import.meta.env.VITE_SERVER_ORIGIN as string | undefined)?.trim();
+    const configuredOrigin = (
+        import.meta.env.VITE_ETSYSENTRY_SERVER_ORIGIN as string | undefined
+    )?.trim();
     const origin = configuredOrigin?.length ? configuredOrigin : window.location.origin;
     const url = new URL(origin);
     url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';

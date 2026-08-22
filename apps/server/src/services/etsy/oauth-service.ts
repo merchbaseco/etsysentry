@@ -72,10 +72,10 @@ const getAuthorizationUrl = (params: { codeChallenge: string; state: string }): 
     const url = new URL('https://www.etsy.com/oauth/connect');
 
     url.search = new URLSearchParams({
-        client_id: env.ETSY_API_KEY,
+        client_id: env.ETSYSENTRY_ETSY_API_KEY,
         code_challenge: params.codeChallenge,
         code_challenge_method: 'S256',
-        redirect_uri: env.ETSY_OAUTH_REDIRECT_URI,
+        redirect_uri: env.ETSYSENTRY_ETSY_OAUTH_REDIRECT_URI,
         response_type: 'code',
         scope: env.etsyOAuthScopes.join(' '),
         state: params.state,
@@ -116,7 +116,8 @@ const createStatus = (params: {
         connected: true,
         expiresAt: params.tokens.expiresAt,
         needsRefresh:
-            params.nowMs + env.ETSY_OAUTH_REFRESH_SKEW_MS >= params.tokens.expiresAt.getTime(),
+            params.nowMs + env.ETSYSENTRY_ETSY_OAUTH_REFRESH_SKEW_MS >=
+            params.tokens.expiresAt.getTime(),
         scopes: [...params.tokens.scopes],
     };
 };
@@ -358,7 +359,7 @@ export const createEtsyOAuthService = (
                 code: params.code,
                 codeVerifier: statePayload.codeVerifier,
                 grantType: 'authorization_code',
-                redirectUri: env.ETSY_OAUTH_REDIRECT_URI,
+                redirectUri: env.ETSYSENTRY_ETSY_OAUTH_REDIRECT_URI,
             });
 
             logOAuthDebug('received auth code token exchange response', {

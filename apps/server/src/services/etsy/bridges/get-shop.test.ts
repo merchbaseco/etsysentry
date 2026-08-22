@@ -4,11 +4,11 @@ import { resetEtsyRateLimitStateForTests } from '../fetch-etsy-api';
 import { EtsyGetShopBridgeError, getShop } from './get-shop';
 
 const originalFetch = globalThis.fetch;
-const originalEtsyApiSharedSecret = env.ETSY_API_SHARED_SECRET;
+const originalEtsyApiSharedSecret = env.ETSYSENTRY_ETSY_API_SHARED_SECRET;
 
 afterEach(() => {
     globalThis.fetch = originalFetch;
-    env.ETSY_API_SHARED_SECRET = originalEtsyApiSharedSecret;
+    env.ETSYSENTRY_ETSY_API_SHARED_SECRET = originalEtsyApiSharedSecret;
     resetEtsyRateLimitStateForTests();
 });
 
@@ -87,7 +87,7 @@ describe('get-shop bridge', () => {
     });
 
     test('sends key:secret in x-api-key header when shared secret is configured', async () => {
-        env.ETSY_API_SHARED_SECRET = 'shared-secret-1';
+        env.ETSYSENTRY_ETSY_API_SHARED_SECRET = 'shared-secret-1';
 
         let xApiKeyHeader: string | null = null;
 
@@ -113,7 +113,7 @@ describe('get-shop bridge', () => {
             throw new Error('x-api-key header was not sent');
         }
 
-        expect(xApiKeyHeader === `${env.ETSY_API_KEY}:shared-secret-1`).toBe(true);
+        expect(xApiKeyHeader === `${env.ETSYSENTRY_ETSY_API_KEY}:shared-secret-1`).toBe(true);
     });
 
     test('throws EtsyGetShopBridgeError for non-2xx responses', async () => {

@@ -14,10 +14,10 @@ export const ETSYSENTRY_SERVICE = 'etsysentry' as const;
 export const createEtsySentryAccess = (database: typeof db = db) => {
     const authenticatorOptions: ClerkAuthenticatorOptions = {
         authorizedParties: env.clerkAuthorizedParties,
-        issuer: env.CLERK_ISSUER,
-        jwtKey: env.CLERK_JWT_KEY,
-        publishableKey: env.CLERK_PUBLISHABLE_KEY,
-        secretKey: env.CLERK_SECRET_KEY,
+        issuer: env.MERCHBASE_CLERK_ISSUER,
+        jwtKey: env.MERCHBASE_CLERK_JWT_KEY,
+        publishableKey: env.MERCHBASE_CLERK_PUBLISHABLE_KEY,
+        secretKey: env.MERCHBASE_CLERK_SECRET_KEY,
     };
     const authenticator = createClerkAuthenticator(authenticatorOptions);
     const projections = createAccessProjectionStore(database);

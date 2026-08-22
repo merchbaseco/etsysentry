@@ -288,7 +288,7 @@ describe('fetch-etsy-api', () => {
         );
 
         expect(response.status).toBe(429);
-        expect(requestCount).toBe(env.ETSY_RATE_LIMIT_MAX_RETRIES + 1);
-        expect(sleepCalls.length).toBe(env.ETSY_RATE_LIMIT_MAX_RETRIES);
+        expect(requestCount).toBe(env.ETSYSENTRY_ETSY_RATE_LIMIT_MAX_RETRIES + 1);
+        expect(sleepCalls.length).toBe(env.ETSYSENTRY_ETSY_RATE_LIMIT_MAX_RETRIES);
     });
 });

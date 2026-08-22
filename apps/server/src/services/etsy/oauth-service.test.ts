@@ -90,7 +90,7 @@ describe('oauth-service', () => {
             code: 'code-1',
             codeVerifier: 'verifier-1',
             grantType: 'authorization_code',
-            redirectUri: process.env.ETSY_OAUTH_REDIRECT_URI,
+            redirectUri: process.env.ETSYSENTRY_ETSY_OAUTH_REDIRECT_URI,
         });
         expect(status.connected).toBe(true);
         expect(status.expiresAt).not.toBeNull();

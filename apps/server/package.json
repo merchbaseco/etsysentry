@@ -1,37 +1,37 @@
 {
-    "name": "@etsysentry/server",
-    "private": true,
-    "type": "module",
-    "scripts": {
-        "dev": "DISABLE_SERVER_JOB_RUNNER=true bun --watch src/index.ts",
-        "build": "bun build ./src/index.ts --target bun --outdir ./dist",
-        "start": "DISABLE_SERVER_JOB_RUNNER=false bun run ./dist/index.js",
-        "typecheck": "tsc --noEmit",
-        "test": "CLERK_SECRET_KEY=test CLERK_ISSUER=https://clerk.example CLERK_JWT_KEY=test CLERK_PUBLISHABLE_KEY=pk_test CLERK_AUTHORIZED_PARTIES=http://localhost:5173 CLERK_WEBHOOK_SIGNING_SECRET=whsec_test ETSY_API_KEY=test ETSY_API_SHARED_SECRET=test ETSY_OAUTH_REDIRECT_URI=http://localhost:8080/auth/etsy/callback bun test",
-        "db:generate": "drizzle-kit generate",
-        "db:migrate": "bun run ./src/db/migrate-runner.ts",
-        "db:migrate:phase1": "bun run ./src/db/migrate-runner.ts --through 0020_early_agent_zero",
-        "db:migrate:phase2": "bun run ./src/db/migrate-runner.ts --through 0021_known_sandman",
-        "access:audit": "bun run ./src/scripts/central-auth-cutover.ts audit",
-        "access:plan": "bun run ./src/scripts/central-auth-cutover.ts plan",
-        "access:backfill": "bun run ./src/scripts/central-auth-cutover.ts backfill"
-    },
-    "dependencies": {
-        "@merchbaseco/access": "0.3.0",
-        "@fastify/cors": "11.2.0",
-        "@trpc/server": "11.10.0",
-        "drizzle-orm": "0.45.2",
-        "fastify": "5.8.5",
-        "pg-boss": "12.13.0",
-        "postgres": "3.4.8",
-        "ws": "8.20.1",
-        "zod": "4.3.6"
-    },
-    "devDependencies": {
-        "@types/node": "24.10.13",
-        "@types/ws": "8.18.1",
-        "bun-types": "1.3.9",
-        "drizzle-kit": "0.31.10",
-        "typescript": "5.9.3"
-    }
+  "name": "@etsysentry/server",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "build": "bun build ./src/index.ts --target bun --outdir ./dist",
+    "start": "bun run ./dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "bun run ./src/db/migrate-runner.ts",
+    "db:migrate:phase1": "bun run ./src/db/migrate-runner.ts --through 0020_early_agent_zero",
+    "db:migrate:phase2": "bun run ./src/db/migrate-runner.ts --through 0021_known_sandman",
+    "access:audit": "bun run ./src/scripts/central-auth-cutover.ts audit",
+    "access:plan": "bun run ./src/scripts/central-auth-cutover.ts plan",
+    "access:backfill": "bun run ./src/scripts/central-auth-cutover.ts backfill"
+  },
+  "dependencies": {
+    "@merchbaseco/access": "0.3.0",
+    "@fastify/cors": "11.2.0",
+    "@trpc/server": "11.10.0",
+    "drizzle-orm": "0.45.2",
+    "fastify": "5.8.5",
+    "pg-boss": "12.13.0",
+    "postgres": "3.4.8",
+    "ws": "8.20.1",
+    "zod": "4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.13",
+    "@types/ws": "8.18.1",
+    "bun-types": "1.3.9",
+    "drizzle-kit": "0.31.10",
+    "typescript": "5.9.3"
+  }
 }

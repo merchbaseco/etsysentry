@@ -40,7 +40,7 @@ const isAllowedOrigin = (request: IncomingMessage): boolean => {
         return true;
     }
 
-    return normalizeOrigin(requestOrigin) === normalizeOrigin(env.APP_ORIGIN);
+    return normalizeOrigin(requestOrigin) === normalizeOrigin(env.ETSYSENTRY_APP_ORIGIN);
 };
 
 const rejectUpgrade = (socket: Socket, statusLine: string): void => {

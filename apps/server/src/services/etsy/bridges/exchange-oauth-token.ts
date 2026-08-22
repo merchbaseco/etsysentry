@@ -54,7 +54,7 @@ export class EtsyOAuthBridgeError extends Error {
 const buildRequestBody = (input: EtsyOAuthTokenRequest): URLSearchParams => {
     if (input.grantType === 'authorization_code') {
         return new URLSearchParams({
-            client_id: env.ETSY_API_KEY,
+            client_id: env.ETSYSENTRY_ETSY_API_KEY,
             code: input.code,
             code_verifier: input.codeVerifier,
             grant_type: input.grantType,
@@ -63,7 +63,7 @@ const buildRequestBody = (input: EtsyOAuthTokenRequest): URLSearchParams => {
     }
 
     return new URLSearchParams({
-        client_id: env.ETSY_API_KEY,
+        client_id: env.ETSYSENTRY_ETSY_API_KEY,
         grant_type: input.grantType,
         refresh_token: input.refreshToken,
     });

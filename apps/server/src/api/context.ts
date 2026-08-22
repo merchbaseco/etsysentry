@@ -14,7 +14,7 @@ export interface AuthenticatedUser {
 
 export const isAdminMerchbaseUser = (
     merchbaseUserId: string,
-    configuredAdminUserId = env.ADMIN_MERCHBASE_USER_ID
+    configuredAdminUserId = env.ETSYSENTRY_ADMIN_MERCHBASE_USER_ID
 ): boolean => {
     return Boolean(configuredAdminUserId && configuredAdminUserId === merchbaseUserId);
 };

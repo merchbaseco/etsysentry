@@ -11,7 +11,7 @@ import { configureTrpcAuthTokenGetter, queryClient } from './lib/trpc-client';
 import './styles/global.css';
 
 const clerkPublishableKey = (
-    import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string | undefined
+    import.meta.env.VITE_MERCHBASE_CLERK_PUBLISHABLE_KEY as string | undefined
 )?.trim();
 
 const rootElement = document.getElementById('root');
@@ -45,8 +45,8 @@ const MissingConfig = () => {
                     EtsySentry is misconfigured
                 </h1>
                 <p className="mt-2 text-muted-foreground text-sm">
-                    Missing <code className="font-mono">VITE_CLERK_PUBLISHABLE_KEY</code> in your
-                    env.
+                    Missing <code className="font-mono">VITE_MERCHBASE_CLERK_PUBLISHABLE_KEY</code>{' '}
+                    in your env.
                 </p>
             </div>
         </div>

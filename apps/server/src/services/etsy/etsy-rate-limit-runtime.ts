@@ -16,8 +16,8 @@ export interface EtsyRateLimitDependencies {
 
 const getDefaultRateLimitState = (): EtsyRateLimitState => {
     return createInitialRateLimitState({
-        defaultPerDayLimit: Math.max(1, env.ETSY_RATE_LIMIT_DEFAULT_PER_DAY),
-        defaultPerSecondLimit: Math.max(1, env.ETSY_RATE_LIMIT_DEFAULT_PER_SECOND),
+        defaultPerDayLimit: Math.max(1, env.ETSYSENTRY_ETSY_RATE_LIMIT_DEFAULT_PER_DAY),
+        defaultPerSecondLimit: Math.max(1, env.ETSYSENTRY_ETSY_RATE_LIMIT_DEFAULT_PER_SECOND),
     });
 };
 

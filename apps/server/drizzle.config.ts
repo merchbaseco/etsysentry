@@ -1,12 +1,14 @@
 import { defineConfig } from 'drizzle-kit';
 
+// drizzle-kit runs under `varlock run`, so the schema is the only owner of
+// these values; no local fallbacks are declared here.
 export default defineConfig({
     dbCredentials: {
-        database: process.env.DATABASE_NAME || 'etsysentry',
-        host: process.env.DATABASE_HOST || 'localhost',
-        password: process.env.DATABASE_PASSWORD || 'etsysentry_local_dev_password',
-        port: Number(process.env.DATABASE_PORT) || 5435,
-        user: process.env.DATABASE_USER || 'etsysentry',
+        database: process.env.ETSYSENTRY_DATABASE_NAME,
+        host: process.env.ETSYSENTRY_DATABASE_HOST,
+        password: process.env.ETSYSENTRY_DATABASE_PASSWORD,
+        port: Number(process.env.ETSYSENTRY_DATABASE_PORT),
+        user: process.env.ETSYSENTRY_DATABASE_USER,
     },
     dialect: 'postgresql',
     out: './drizzle',
