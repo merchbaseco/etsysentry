@@ -100,6 +100,8 @@ absent from `.env.schema` and must never be renamed.
 
 `bun run check` runs `env:check` (the schema resolves offline in the `test` lifecycle) and
 `env:contract` (a name-only diff across `.env.schema`, the typed server surface, the Compose
-delivery, and the Dockerfile `ARG` list). `scripts/verify-deployed-secrets.ts` runs after every real
+delivery, and the Dockerfile `ARG` list). The gates themselves reach no vault; both workflows hold
+a 1Password identity only for their install step, because Actions' `github.token` gets a 403 from
+GitHub Packages for the private `@merchbaseco/access` package. `scripts/verify-deployed-secrets.ts` runs after every real
 deploy and fails when a delivered name is not a schema item or a production-required sensitive item
 never reached the container.

@@ -31,18 +31,28 @@ jobs:
 
       # `bun install` hangs silently and indefinitely when it cannot authenticate
       # to the private @merchbaseco scope, so cap the step rather than let it
-      # burn the whole job timeout with no output. If this step times out, the
-      # `access` package is missing an Actions-access grant for this repository.
+      # burn the whole job timeout with no output.
       - name: Install dependencies
         timeout-minutes: 5
         env:
-          # Private @merchbaseco/* packages install with the workflow's own
-          # repository-scoped token; no 1Password access is involved. CI never
-          # holds a vault identity.
-          MERCHBASE_GITHUB_NPM_TOKEN: ${{ github.token }}
-        run: bun install --frozen-lockfile
+          # Actions' own github.token gets a 403 from GitHub Packages for
+          # @merchbaseco/access — a package grants no other repository access by
+          # default — so the install credential resolves through the schema like
+          # every other value. The deploy agent reads the Development vault,
+          # which is where install tokens live.
+          CURSOR_CLOUD_AGENTS_DEVELOPMENT_OP_TOKEN: ${{ secrets.GH_DEPLOY_AGENT_PRODUCTION_OP_TOKEN }}
+        run: |
+          MERCHBASE_GITHUB_NPM_TOKEN="$(ETSYSENTRY_RESOLVE_INSTALL_TOKENS=true \
+            bunx varlock@1.16.1 printenv MERCHBASE_GITHUB_NPM_TOKEN)"
+          if [ -z "${MERCHBASE_GITHUB_NPM_TOKEN}" ]; then
+            echo "MERCHBASE_GITHUB_NPM_TOKEN did not resolve from the Development vault." >&2
+            exit 1
+          fi
+          export MERCHBASE_GITHUB_NPM_TOKEN
+          bun install --frozen-lockfile
 
-      # `check` pins the schema's `test` lifecycle itself, so CI needs no
-      # environment selector and no 1Password access.
+      # `check` pins the schema's `test` lifecycle itself, so the gates need no
+      # environment selector and reach no vault: the identity above is scoped to
+      # the install step.
       - name: Run quality gates
         run: bun run check
