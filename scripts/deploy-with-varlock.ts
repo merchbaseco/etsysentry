@@ -26,6 +26,7 @@ const installTokenName = 'MERCHBASE_GITHUB_NPM_TOKEN';
 const projectName = 'etsysentry';
 const argPattern = /^ARG\s+([A-Z][A-Z0-9_]*)/gmu;
 const composeServicePattern = /^ {2}([a-z][a-z0-9-]*):$/gmu;
+const composeTopLevelKeyPattern = /^([a-z][a-z0-9-]*):$/u;
 
 const dryRun = process.argv.includes('--dry-run');
 
@@ -89,7 +90,9 @@ if (!environment[installTokenName]) {
 }
 if (!environment[installTokenName]) {
     console.error(
-        `${installTokenName} did not resolve; the image build cannot install private packages.`
+        `${installTokenName} did not resolve; the image build cannot install private packages. ` +
+            'Supply it in the environment (the workflow passes github.token), or run from a ' +
+            'session that holds a Development-vault identity so the install switch can resolve it.'
     );
     process.exit(1);
 }
@@ -127,10 +130,21 @@ if (dryRun) {
         process.exit(rendered.status ?? 1);
     }
     // The rendered document contains resolved secrets, so only its shape is
-    // reported — never its contents.
-    const services = [...(rendered.stdout ?? '').matchAll(composeServicePattern)].map(
-        (match) => match[1]
-    );
+    // reported — never its contents. Scan the `services:` block alone:
+    // `networks:` and `volumes:` use the same two-space key shape and would
+    // otherwise be counted as services.
+    const renderedLines = (rendered.stdout ?? '').split('\n');
+    const servicesStart = renderedLines.indexOf('services:');
+    const afterServices = renderedLines
+        .slice(servicesStart + 1)
+        .findIndex((line) => composeTopLevelKeyPattern.test(line));
+    const servicesBlock = renderedLines
+        .slice(
+            servicesStart + 1,
+            afterServices === -1 ? undefined : servicesStart + 1 + afterServices
+        )
+        .join('\n');
+    const services = [...servicesBlock.matchAll(composeServicePattern)].map((match) => match[1]);
     console.log(
         `Dry run OK: schema resolved and Compose rendered ${services.length} services (${services.join(', ')}).`
     );
