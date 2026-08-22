@@ -1,3 +1,6 @@
+# Every value is interpolated from the process environment that `varlock run`
+# supplies; the schema is the only owner of defaults, so no `${VAR:-default}`
+# fallbacks and no `--env-file` appear anywhere in this file.
 services:
   postgres:
     image: postgres:16-alpine
@@ -6,9 +9,11 @@ services:
     ports:
       - '127.0.0.1:5435:5432'
     environment:
-      POSTGRES_DB: ${ETSYSENTRY_DATABASE_NAME:-etsysentry}
-      POSTGRES_USER: ${ETSYSENTRY_DATABASE_USER:-etsysentry}
-      POSTGRES_PASSWORD: ${ETSYSENTRY_DATABASE_PASSWORD:-etsysentry_local_dev_password}
+      # Postgres' own literal names are required by the image. Values come from
+      # the schema so the database and the server cannot drift apart.
+      POSTGRES_DB: ${ETSYSENTRY_DATABASE_NAME}
+      POSTGRES_USER: ${ETSYSENTRY_DATABASE_USER}
+      POSTGRES_PASSWORD: ${ETSYSENTRY_DATABASE_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./apps/server/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
@@ -18,7 +23,7 @@ services:
       test:
         [
           'CMD-SHELL',
-          'pg_isready -U ${ETSYSENTRY_DATABASE_USER:-etsysentry} -d ${ETSYSENTRY_DATABASE_NAME:-etsysentry}',
+          'pg_isready -U ${ETSYSENTRY_DATABASE_USER} -d ${ETSYSENTRY_DATABASE_NAME}',
         ]
       interval: 10s
       timeout: 5s
@@ -33,15 +38,11 @@ services:
       secrets:
         - github_packages_token
       args:
-        VITE_CLERK_PUBLISHABLE_KEY: ${VITE_CLERK_PUBLISHABLE_KEY}
-        VITE_SERVER_ORIGIN: ${VITE_SERVER_ORIGIN:-}
+        VITE_MERCHBASE_CLERK_PUBLISHABLE_KEY: ${VITE_MERCHBASE_CLERK_PUBLISHABLE_KEY}
+        VITE_ETSYSENTRY_SERVER_ORIGIN: ${VITE_ETSYSENTRY_SERVER_ORIGIN}
     image: etsysentry-website:local
     container_name: etsysentry-website
     restart: unless-stopped
-    environment:
-      PORT: 3000
-      HOSTNAME: 0.0.0.0
-      DATABASE_URL: postgresql://${ETSYSENTRY_DATABASE_USER:-etsysentry}:${ETSYSENTRY_DATABASE_PASSWORD:-etsysentry_local_dev_password}@postgres:5432/${ETSYSENTRY_DATABASE_NAME:-etsysentry}
     depends_on:
       postgres:
         condition: service_healthy
@@ -66,27 +67,35 @@ services:
     restart: unless-stopped
     command: ['bun', 'run', '--cwd', 'apps/server', 'start']
     environment:
-      PORT: 8080
-      NODE_ENV: production
-      APP_ORIGIN: ${APP_ORIGIN:-https://etsysentry.merchbase.co}
-      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY}
-      CLERK_ISSUER: ${CLERK_ISSUER}
-      CLERK_JWT_KEY: ${CLERK_JWT_KEY}
-      CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY}
-      CLERK_AUTHORIZED_PARTIES: ${CLERK_AUTHORIZED_PARTIES}
-      CLERK_WEBHOOK_SIGNING_SECRET: ${CLERK_WEBHOOK_SIGNING_SECRET}
-      ADMIN_MERCHBASE_USER_ID: ${ADMIN_MERCHBASE_USER_ID}
-      ETSY_API_KEY: ${ETSY_API_KEY}
-      ETSY_API_SHARED_SECRET: ${ETSY_API_SHARED_SECRET}
-      ETSY_OAUTH_REDIRECT_URI: ${ETSY_OAUTH_REDIRECT_URI}
-      ETSY_OAUTH_SCOPES: '${ETSY_OAUTH_SCOPES:-listings_r listings_w shops_r transactions_r}'
-      ETSY_OAUTH_STATE_TTL_MS: ${ETSY_OAUTH_STATE_TTL_MS:-600000}
-      ETSY_OAUTH_REFRESH_SKEW_MS: ${ETSY_OAUTH_REFRESH_SKEW_MS:-120000}
-      DATABASE_HOST: postgres
-      DATABASE_PORT: 5432
-      DATABASE_NAME: ${ETSYSENTRY_DATABASE_NAME:-etsysentry}
-      DATABASE_USER: ${ETSYSENTRY_DATABASE_USER:-etsysentry}
-      DATABASE_PASSWORD: ${ETSYSENTRY_DATABASE_PASSWORD:-etsysentry_local_dev_password}
+      ETSYSENTRY_PORT: ${ETSYSENTRY_PORT}
+      ETSYSENTRY_APP_ORIGIN: ${ETSYSENTRY_APP_ORIGIN}
+      MERCHBASE_CLERK_SECRET_KEY: ${MERCHBASE_CLERK_SECRET_KEY}
+      MERCHBASE_CLERK_ISSUER: ${MERCHBASE_CLERK_ISSUER}
+      MERCHBASE_CLERK_JWT_KEY: ${MERCHBASE_CLERK_JWT_KEY}
+      MERCHBASE_CLERK_PUBLISHABLE_KEY: ${MERCHBASE_CLERK_PUBLISHABLE_KEY}
+      ETSYSENTRY_CLERK_AUTHORIZED_PARTIES: ${ETSYSENTRY_CLERK_AUTHORIZED_PARTIES}
+      ETSYSENTRY_CLERK_WEBHOOK_SIGNING_SECRET: ${ETSYSENTRY_CLERK_WEBHOOK_SIGNING_SECRET}
+      ETSYSENTRY_ADMIN_MERCHBASE_USER_ID: ${ETSYSENTRY_ADMIN_MERCHBASE_USER_ID}
+      ETSYSENTRY_ETSY_API_KEY: ${ETSYSENTRY_ETSY_API_KEY}
+      ETSYSENTRY_ETSY_API_SHARED_SECRET: ${ETSYSENTRY_ETSY_API_SHARED_SECRET}
+      ETSYSENTRY_ETSY_OAUTH_REDIRECT_URI: ${ETSYSENTRY_ETSY_OAUTH_REDIRECT_URI}
+      ETSYSENTRY_ETSY_OAUTH_SCOPES: ${ETSYSENTRY_ETSY_OAUTH_SCOPES}
+      ETSYSENTRY_ETSY_OAUTH_STATE_TTL_MS: ${ETSYSENTRY_ETSY_OAUTH_STATE_TTL_MS}
+      ETSYSENTRY_ETSY_OAUTH_REFRESH_SKEW_MS: ${ETSYSENTRY_ETSY_OAUTH_REFRESH_SKEW_MS}
+      ETSYSENTRY_ETSY_RATE_LIMIT_DEFAULT_PER_SECOND: ${ETSYSENTRY_ETSY_RATE_LIMIT_DEFAULT_PER_SECOND}
+      ETSYSENTRY_ETSY_RATE_LIMIT_DEFAULT_PER_DAY: ${ETSYSENTRY_ETSY_RATE_LIMIT_DEFAULT_PER_DAY}
+      ETSYSENTRY_ETSY_RATE_LIMIT_MAX_RETRIES: ${ETSYSENTRY_ETSY_RATE_LIMIT_MAX_RETRIES}
+      ETSYSENTRY_ETSY_RATE_LIMIT_BACKOFF_INITIAL_MS: ${ETSYSENTRY_ETSY_RATE_LIMIT_BACKOFF_INITIAL_MS}
+      ETSYSENTRY_ETSY_RATE_LIMIT_BACKOFF_MAX_MS: ${ETSYSENTRY_ETSY_RATE_LIMIT_BACKOFF_MAX_MS}
+      ETSYSENTRY_ETSY_API_REQUEST_TIMEOUT_MS: ${ETSYSENTRY_ETSY_API_REQUEST_TIMEOUT_MS}
+      # The container reaches Postgres over the compose network, so the
+      # production arms of these items resolve to the service name and 5432.
+      ETSYSENTRY_DATABASE_HOST: ${ETSYSENTRY_DATABASE_HOST}
+      ETSYSENTRY_DATABASE_PORT: ${ETSYSENTRY_DATABASE_PORT}
+      ETSYSENTRY_DATABASE_NAME: ${ETSYSENTRY_DATABASE_NAME}
+      ETSYSENTRY_DATABASE_USER: ${ETSYSENTRY_DATABASE_USER}
+      ETSYSENTRY_DATABASE_PASSWORD: ${ETSYSENTRY_DATABASE_PASSWORD}
+      ETSYSENTRY_DISABLE_SERVER_JOB_RUNNER: ${ETSYSENTRY_DISABLE_SERVER_JOB_RUNNER}
     depends_on:
       postgres:
         condition: service_healthy
@@ -140,4 +149,4 @@ networks:
 
 secrets:
   github_packages_token:
-    environment: GITHUB_PACKAGES_TOKEN
+    environment: MERCHBASE_GITHUB_NPM_TOKEN

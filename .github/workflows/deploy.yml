@@ -1,36 +1,64 @@
-name: Build and Deploy
+name: Deploy Stack
 
+# Manual only. Pushing to main no longer deploys: a deploy is an explicit act
+# now that it resolves production credentials from 1Password.
 on:
-  push:
-    branches: [main, zknicker/etsy-sentry-start]
   workflow_dispatch:
 
 permissions:
   contents: read
   packages: read
 
+concurrency:
+  group: deploy-stack
+  cancel-in-progress: false
+
 jobs:
   deploy:
-    name: Build and Deploy
+    name: Deploy Stack
+    # The stack is hosted on the Mac mini, so GitHub Actions stays the single
+    # deploy surface and the job runs on the mini's self-hosted runner.
     runs-on: self-hosted
+    timeout-minutes: 30
+
     steps:
-      - name: Checkout
+      - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Build and deploy
+      - name: Sync the deployment checkout
+        working-directory: /Users/zknicker/srv/etsysentry
+        run: |
+          # Move the long-lived deploy checkout to the exact dispatched commit.
+          # This discards tracked-file edits on the host that would otherwise
+          # make a fast-forward pull fail.
+          git fetch --depth=1 origin "${GITHUB_SHA}"
+          git reset --hard FETCH_HEAD
+          git rev-parse HEAD
+
+      - name: Install dependencies
         working-directory: /Users/zknicker/srv/etsysentry
         env:
-          GITHUB_PACKAGES_TOKEN: ${{ github.token }}
+          MERCHBASE_GITHUB_NPM_TOKEN: ${{ github.token }}
+        run: bun install --frozen-lockfile
+
+      - name: Deploy
+        working-directory: /Users/zknicker/srv/etsysentry
+        env:
+          # The deploy-agent role slot, filled here by the GitHub deploy agent's
+          # read-only Production identity. The deploy script pins
+          # VARLOCK_ENV=production and resolves every value through the schema;
+          # no .env file is read and none is written.
+          DEPLOY_AGENT_PRODUCTION_OP_TOKEN: ${{ secrets.GH_DEPLOY_AGENT_PRODUCTION_OP_TOKEN }}
+          # Private @merchbaseco/* packages install with the workflow's own
+          # repository-scoped token, so the image build never needs 1Password.
+          MERCHBASE_GITHUB_NPM_TOKEN: ${{ github.token }}
+        run: bun run deploy
+
+      - name: Verify from the consumer
         run: |
-          # Pull latest code
-          git pull --ff-only
-
-          # Build and restart
-          docker compose -p etsysentry --env-file /Users/zknicker/srv/etsysentry/.env build
-          docker compose -p etsysentry --env-file /Users/zknicker/srv/etsysentry/.env up -d --remove-orphans
-
-          # Show status
-          docker compose -p etsysentry --env-file /Users/zknicker/srv/etsysentry/.env ps
+          curl --fail --show-error --silent --max-time 20 \
+            https://etsysentry.merchbase.co/healthz > /dev/null
+          echo "Health endpoint OK."
 
       - name: Notify Discord
         if: always()

@@ -2,23 +2,29 @@
 
 FROM oven/bun:1.3.5-alpine AS build
 WORKDIR /app
-ENV NEXT_TELEMETRY_DISABLED=1
-ARG VITE_CLERK_PUBLISHABLE_KEY
-ARG VITE_SERVER_ORIGIN
-ENV VITE_CLERK_PUBLISHABLE_KEY=${VITE_CLERK_PUBLISHABLE_KEY}
-ENV VITE_SERVER_ORIGIN=${VITE_SERVER_ORIGIN}
+# Every VITE_ value the website bundle reads must be declared here AND passed
+# by compose — Docker silently discards a build argument the Dockerfile never
+# declares. `bun run env:contract` enforces both halves.
+ARG VITE_MERCHBASE_CLERK_PUBLISHABLE_KEY
+ARG VITE_ETSYSENTRY_SERVER_ORIGIN
+ENV VITE_MERCHBASE_CLERK_PUBLISHABLE_KEY=${VITE_MERCHBASE_CLERK_PUBLISHABLE_KEY}
+ENV VITE_ETSYSENTRY_SERVER_ORIGIN=${VITE_ETSYSENTRY_SERVER_ORIGIN}
 
 COPY . .
 RUN --mount=type=secret,id=github_packages_token \
-  GITHUB_PACKAGES_TOKEN="$(cat /run/secrets/github_packages_token)" \
+  MERCHBASE_GITHUB_NPM_TOKEN="$(cat /run/secrets/github_packages_token)" \
   bun install --frozen-lockfile
-RUN bun run server:build
-RUN bun run website:build
+# Build the workspaces directly rather than through the root scripts: those run
+# under `varlock run`, and the image has neither .env.schema (dockerignored) nor
+# any 1Password access. The website's VITE_ values arrive as build ARGs above.
+RUN bun run --cwd apps/server build
+RUN bun run --cwd apps/website build
 
 FROM oven/bun:1.3.5-alpine AS runtime
 WORKDIR /app
+# The lifecycle signal inside the container: VARLOCK_ENV is a varlock builtin
+# and is never delivered, so runtime code branches on NODE_ENV instead.
 ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
 
 COPY --from=build /app /app
 

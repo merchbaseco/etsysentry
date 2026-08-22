@@ -5,4 +5,5 @@ node_modules
 apps/website/.next
 .env
 .env.*
-!.env.example
+# The committed schema is the environment contract and must reach the build.
+!.env.schema
