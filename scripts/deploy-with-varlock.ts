@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { delimiter, join } from 'node:path';
 
 /**
@@ -29,6 +29,22 @@ const composeServicePattern = /^ {2}([a-z][a-z0-9-]*):$/gmu;
 const composeTopLevelKeyPattern = /^([a-z][a-z0-9-]*):$/u;
 
 const dryRun = process.argv.includes('--dry-run');
+
+// A leftover .env in the deploy checkout silently poisons the whole resolution:
+// varlock loads it at higher precedence than the schema, so its stale values
+// win, its `$` sequences are parsed as ref() expressions, and — once one item
+// fails to parse — every op() reference in the file reports "Unable to
+// authenticate with 1Password". That is how a superseded .env took BidBeacon's
+// production down after its migration: the database password arrived truncated
+// at its first `$`.
+if (existsSync('.env')) {
+    console.error(
+        'A .env file exists in the deploy checkout. Varlock loads it at higher precedence than .env.schema, ' +
+            'which silently overrides resolved values and breaks op() resolution. Move it aside before deploying — ' +
+            'every value it holds now lives in 1Password.'
+    );
+    process.exit(1);
+}
 
 const binDirectories = [
     join(process.cwd(), 'node_modules', '.bin'),
