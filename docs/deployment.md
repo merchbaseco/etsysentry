@@ -130,8 +130,8 @@ This shape is fleet-wide, not an EtsySentry quirk: Quality answers one question 
 contract intact and does the fast stuff pass? — in under about sixty seconds, with installs capped
 at `timeout-minutes: 5` and a concurrency group that cancels in progress. Application builds,
 browser and GPU tests, golden corpora, database simulations, and licensed or heavyweight downloads
-belong to full `check` instead. Canonical standard:
-`~/Programming/agents/docs/quality-ci-standard.md` (agents repo).
+belong to full `check` instead. Treat that division as the standard when editing the Quality
+workflow.
 
 ## Guards
 
