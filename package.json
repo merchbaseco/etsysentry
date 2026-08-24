@@ -8,7 +8,8 @@
   ],
   "scripts": {
     "build": "bun run website:build",
-    "check": "bun run env:check && bun run env:contract && bun run lint && bun run server:typecheck && bun run test && bun run server:build",
+    "check": "bun run check:fast && bun run server:build",
+    "check:fast": "bun run env:check && bun run env:contract && bun run lint && bun run server:typecheck && bun run test",
     "cli:build": "bun run http-client:build && bun run --cwd packages/cli build",
     "cli:test": "bun run --cwd packages/cli test",
     "deploy": "bun run scripts/deploy-with-varlock.ts",
