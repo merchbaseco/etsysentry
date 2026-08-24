@@ -51,8 +51,14 @@ jobs:
           export MERCHBASE_GITHUB_NPM_TOKEN
           bun install --frozen-lockfile
 
-      # `check` pins the schema's `test` lifecycle itself, so the gates need no
-      # environment selector and reach no vault: the identity above is scoped to
-      # the install step.
-      - name: Run quality gates
-        run: bun run check
+      # `check:fast` pins the schema's `test` lifecycle itself, so the gates need
+      # no environment selector and reach no vault: the identity above is scoped
+      # to the install step.
+      #
+      # Policy, not an oversight: Quality runs the fast lane only. It
+      # deliberately does not run `bun run server:build` — the Deploy workflow
+      # builds the image for real on the Mac mini and is the build's proof.
+      # `bun run check` is `check:fast` plus that build, and that is what gates
+      # local work. Keep this job free of application builds.
+      - name: Run fast quality gates
+        run: bun run check:fast
