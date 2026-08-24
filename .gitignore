@@ -9,3 +9,6 @@ node_modules/
 
 # Varlock schema is the committed contract
 !.env.schema
+
+# Cursor-discovered fleet skills, seeded by .cursor/install.sh in cloud VMs
+.agents/
