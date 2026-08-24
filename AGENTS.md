@@ -55,7 +55,7 @@ This file is the always-on guide for AI coding assistants in EtsySentry.
 2. Keep startup status logging intact in the server entrypoint when adding features/jobs.
 3. Keep secrets out of version control.
 4. Update `.env.schema` when environment variables change; it is the committed contract and
-   `bun run check` fails when it drifts from the server surface, Compose, or the Dockerfile.
+   `bun run check:fast` fails when it drifts from the server surface, Compose, or the Dockerfile.
 5. Prefer adding Etsy bridges/services over embedding Etsy HTTP calls in routers/jobs.
 6. If requirements are unclear, add an explicit note in `docs/requirements.md` and ask.
 

@@ -109,17 +109,36 @@ maps the `GH_DEPLOY_AGENT_PRODUCTION_OP_TOKEN` secret into the schema's *develop
 deploy agent reads both lifecycle vaults, and install tokens live in `Development` — then fetches
 `MERCHBASE_GITHUB_NPM_TOKEN` with `varlock printenv` under `ETSYSENTRY_RESOLVE_INSTALL_TOKENS`. No
 credential is injected under a canonical name, and the quality gates themselves reach no vault:
-`check` pins the schema's `test` lifecycle, which resolves entirely offline.
+`check:fast` pins the schema's `test` lifecycle, which resolves entirely offline.
 
 Know this failure mode: **`bun install` prints its banner and then hangs silently and indefinitely**
 when it cannot authenticate to the private scope — it does not fail fast. Quality's install step is
 therefore capped with `timeout-minutes`, so a credential problem surfaces as a timeout with a
 message rather than as fifteen silent minutes.
 
+## Quality is the fast lane, on purpose
+
+`bun run check` is split, and the split is deliberate — preserve it.
+
+`bun run check:fast` is the polite lane: `env:check`, `env:contract`, lint, `server:typecheck`, and
+`test`. It is what the Quality workflow runs on every push and pull request. `bun run check` is
+`check:fast` plus `bun run server:build`. Total coverage is unchanged; the build simply stops
+running on every commit, because the deploy below builds the image for real on the Mac mini and is
+the build's proof.
+
+This shape is fleet-wide, not an EtsySentry quirk: Quality answers one question per push — is the
+contract intact and does the fast stuff pass? — in under about sixty seconds, with installs capped
+at `timeout-minutes: 5` and a concurrency group that cancels in progress. Application builds,
+browser and GPU tests, golden corpora, database simulations, and licensed or heavyweight downloads
+belong to full `check` instead. Canonical standard:
+`~/Programming/agents/docs/quality-ci-standard.md` (agents repo).
+
 ## Guards
 
-`bun run check` runs `env:check` (the schema resolves offline in the `test` lifecycle) and
+`bun run check:fast` runs `env:check` (the schema resolves offline in the `test` lifecycle) and
 `env:contract` (a name-only diff across `.env.schema`, the typed server surface, the Compose
 delivery, and the Dockerfile `ARG` list). `scripts/verify-deployed-secrets.ts` runs after every real
 deploy and fails when a delivered name is not a schema item or a production-required sensitive item
-never reached the container.
+never reached the container. The deploy then ends with `docker image prune -f` so the rebuilt images
+do not leave dangling layers pooling on the Mac mini — dangling images only, never volumes and never
+a blanket `system prune`.
