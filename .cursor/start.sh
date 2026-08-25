@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Per-boot startup for EtsySentry Cursor cloud agents.
 # Starts the local PostgreSQL cluster, ensures the role/database/extensions
-# exist using the credential the schema resolves, then launches the development
-# servers under varlock. Idempotent and safe to re-run.
+# exist using the credential the schema resolves, fills the database with
+# synthetic development data, then launches the development servers under
+# varlock. Idempotent and safe to re-run.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -63,6 +64,19 @@ SQL
 unset DB_PASSWORD
 
 echo "[start] PostgreSQL ready on 127.0.0.1:5435 (database: ${DB_NAME})."
+
+# Synthetic development data, so a cloud session opens the dashboard on a
+# catalog, a month of listing and rank history, and an event log instead of
+# empty states. Seeded per boot rather than baked into the environment snapshot
+# because the dataset is anchored to the current date, and a week-old snapshot
+# would show a week-old week. The seed applies pending migrations itself, and it
+# only ever reaches this local cluster: it refuses any database host that is not
+# loopback, which is why the override above is set before it runs. Best-effort —
+# a session must still boot if seeding fails.
+if ! bun run db:seed:dev >/dev/null; then
+    echo "[start] Skipping synthetic dev data (seed failed)." >&2
+fi
+
 echo "[start] Launching development servers (server:8080, website:3100)..."
 
 exec bunx varlock run -- sh -c '
