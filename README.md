@@ -44,6 +44,7 @@ EtsySentry tracks three primitives over time:
 - `docs/release-runbook.md` - canonical changelog/version bump/npm publish workflow
 - `docs/deployment.md` - deployment topology and the environment/secrets contract
 - `docs/log-view.md` - rich event log UX and storage specification
+- `docs/dev-data-seed.md` - synthetic development data seeding and its local-only guard
 - `apps/server/README.md` - server-specific runbook
 
 ## Quick Start

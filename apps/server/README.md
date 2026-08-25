@@ -71,6 +71,7 @@ Useful scripts:
 - `bun run server:start` - run bundled server (jobs enabled)
 - `bun run server:typecheck` - TypeScript checks
 - `bun run server:test` - focused unit tests
+- `bun run db:seed:dev` - fill a local database with synthetic development data (refuses any non-loopback host)
 - `bun run --cwd apps/server db:generate` - generate Drizzle migrations from schema
 - `bun run --cwd apps/server db:migrate` - run pending Drizzle migrations, stopping before centralized-access cleanup until it is recorded
 - `bun run --cwd apps/server db:migrate:phase1` - run only the centralized-access phase-one migration

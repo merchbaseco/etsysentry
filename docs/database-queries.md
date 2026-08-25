@@ -13,6 +13,13 @@ or incident triage.
 - For centralized-access work, use `docs/centralized-access-cutover.md`; the audit/planner hashes
   identity sets and must not print Clerk subjects, Merchbase user IDs, emails, or credentials.
 
+## Need Data Rather Than Answers?
+
+If the goal is a populated database to develop against rather than an inspection of the live one,
+use the synthetic seed instead of writing rows by hand — see
+[`dev-data-seed.md`](dev-data-seed.md). It only ever targets a loopback host, refuses everything
+else, and re-running replaces its dataset rather than stacking a second copy on top.
+
 ## Schema and Migration Policy
 
 - Use Drizzle ORM for schema and query definitions.

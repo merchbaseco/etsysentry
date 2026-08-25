@@ -75,6 +75,7 @@ This file is the always-on guide for AI coding assistants in EtsySentry.
 - Log UX spec: `docs/log-view.md`
 - Known product/implementation gaps: `docs/known-gaps.md`
 - Database query runbook: `docs/database-queries.md`
+- Synthetic development data and its local-only guard: `docs/dev-data-seed.md`
 - Docs vs AGENTS placement guide: `docs/agent-doc-placement.md`
 - Deployment and the environment contract: `docs/deployment.md` (deploys are manual —
   `workflow_dispatch` only; pushing to `main` does not deploy)
@@ -84,8 +85,9 @@ This file is the always-on guide for AI coding assistants in EtsySentry.
 ## Cursor Cloud Specific Instructions
 
 The Cloud Agent environment is repo-managed via `.cursor/environment.json`: `install.sh` installs
-Bun 1.3.5, PostgreSQL, and workspace dependencies; `start.sh` provisions the local database and
-launches the server (`:8080`) and website (`:3100`) under `varlock run`.
+Bun 1.3.5, PostgreSQL, and workspace dependencies; `start.sh` provisions the local database, seeds
+it with synthetic development data, and launches the server (`:8080`) and website (`:3100`) under
+`varlock run`.
 
 - There is no `.env` step anywhere. `.env.schema` is the contract and values resolve from 1Password
   through the fleet-wide Development identity Cursor injects as a Runtime Secret.
@@ -100,3 +102,8 @@ launches the server (`:8080`) and website (`:3100`) under `varlock run`.
   The password still resolves from the Development vault, so the local cluster and the server agree.
 - Do not run the root `bun run dev` expecting the Tailscale database in the cloud VM; use the
   `start.sh` path.
+- Cloud sessions boot on synthetic data: `start.sh` runs `bun run db:seed:dev` against the local
+  cluster on every boot, which also applies pending migrations. The seed refuses any non-loopback
+  database host and `NODE_ENV=production`, with no override, so it can never reach the live
+  database — including from a developer machine, where local runs stay explicit-only. See
+  `docs/dev-data-seed.md`.
