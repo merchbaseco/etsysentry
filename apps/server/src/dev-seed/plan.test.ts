@@ -188,6 +188,20 @@ describe('dev seed plan', () => {
         expect(plan.shopListings.some((row) => row.isActive === true)).toBe(true);
     });
 
+    test('every shop has tracked listings, so no shop tab renders near-empty', () => {
+        const plan = buildPlan();
+
+        // The shop activity tab lists only the listings the account tracks for
+        // that shop, not the whole discovery roster.
+        for (const shop of plan.trackedShops) {
+            const tracked = plan.trackedListings.filter((row) => row.shopId === shop.etsyShopId);
+
+            expect(tracked.length, `${shop.shopName} has too few tracked listings`).toBeGreaterThan(
+                2
+            );
+        }
+    });
+
     test('the log view has every level, status, and primitive it filters on', () => {
         const rows = buildPlan().eventLogs;
 

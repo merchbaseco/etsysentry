@@ -24,6 +24,7 @@ const ETSY_LISTING_ID_MAX = 1_899_999_999;
 const PRICE_DIVISOR = 100;
 const TAGS_PER_LISTING_MIN = 4;
 const TAGS_PER_LISTING_MAX = 8;
+const COMPETITOR_LISTINGS = 3;
 
 export interface ListingsBuild {
     listings: SeedListing[];
@@ -53,13 +54,18 @@ export const buildListings = (params: {
     const listings: SeedListing[] = [];
     const rows: (typeof trackedListings.$inferInsert)[] = [];
     const listingTagRows: (typeof listingTags.$inferInsert)[] = [];
+    const shopByIndex = assignShops({
+        listingCount: params.listingCount,
+        ownShop,
+        shops: params.shops,
+    });
 
     for (let index = 0; index < params.listingCount; index += 1) {
         const listing = buildListing({
             index,
             ownShop,
             random: params.random,
-            shops: params.shops,
+            shop: shopByIndex[index] ?? ownShop,
         });
 
         listings.push(listing);
@@ -83,23 +89,46 @@ export const buildListings = (params: {
     return { listingTagRows, listings, rows, tagRows };
 };
 
+/**
+ * Most tracked listings are the operator's own, but every watched shop gets a
+ * few as well. The shop activity tab lists only the listings the account
+ * actually tracks for that shop, so a competitor with one tracked listing
+ * renders an almost-empty tab. Competitors are assigned from the tail, which
+ * keeps the operator's own best sellers at the head of the catalog and matches
+ * how a competitor's items actually get tracked — a few at a time, none of them
+ * your top line.
+ */
+const assignShops = (params: {
+    listingCount: number;
+    ownShop: SeedShop;
+    shops: SeedShop[];
+}): SeedShop[] => {
+    const assignment = Array.from({ length: params.listingCount }, () => params.ownShop);
+    const competitors = params.shops.filter((shop) => shop !== params.ownShop);
+    let slot = params.listingCount - 1;
+
+    for (const shop of competitors) {
+        for (let taken = 0; taken < COMPETITOR_LISTINGS && slot > 0; taken += 1) {
+            assignment[slot] = shop;
+            slot -= 1;
+        }
+    }
+
+    return assignment;
+};
+
 const buildListing = (params: {
     index: number;
     ownShop: SeedShop;
     random: SeededRandom;
-    shops: SeedShop[];
+    shop: SeedShop;
 }): SeedListing => {
-    const { random } = params;
+    const { random, shop } = params;
     const isDigital = params.index < DIGITAL_OBJECTS.length;
     const object = isDigital
         ? (DIGITAL_OBJECTS[params.index] ?? DIGITAL_OBJECTS[0])
         : random.pick(LISTING_OBJECTS);
     const title = `${random.pick(LISTING_QUALIFIERS)} ${random.pick(LISTING_SUBJECTS)} ${object}`;
-
-    // Most tracked listings are the operator's own; a handful come from a
-    // watched competitor shop, which is how shop discovery actually fills the
-    // table.
-    const shop = params.index % 5 === 4 ? random.pick(params.shops) : params.ownShop;
 
     return {
         currencyCode: pickCurrencyCode(params.index),
