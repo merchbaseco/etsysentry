@@ -12,6 +12,7 @@
     "check:fast": "bun run env:check && bun run env:contract && bun run lint && bun run server:typecheck && bun run test",
     "cli:build": "bun run http-client:build && bun run --cwd packages/cli build",
     "cli:test": "bun run --cwd packages/cli test",
+    "db:seed:dev": "bunx varlock run -- bun run --cwd apps/server db:seed:dev",
     "deploy": "bun run scripts/deploy-with-varlock.ts",
     "deploy:dry-run": "bun run scripts/deploy-with-varlock.ts --dry-run",
     "deploy:verify": "bun run scripts/verify-deployed-secrets.ts",
