@@ -46,6 +46,17 @@ export class SeedTargetRefusedError extends Error {
 export const describeTarget = (target: SeedDatabaseTarget): string =>
     `${target.host}:${target.port}/${target.name}`;
 
+/**
+ * The same target as a DSN, for callers that take one. Deliberately carries no
+ * user and no password: the only consumer is the access package's development
+ * bootstrap, which reads the URL solely to prove the host is loopback.
+ */
+export const toDatabaseUrl = (target: SeedDatabaseTarget): string => {
+    const host = target.host.includes(':') ? `[${target.host}]` : target.host;
+
+    return `postgres://${host}:${target.port}/${target.name}`;
+};
+
 export const assertLocalSeedTarget = (input: SeedTargetInput): SeedDatabaseTarget => {
     const target: SeedDatabaseTarget = {
         host: input.host.trim().replace(IPV6_BRACKETS, '').toLowerCase(),

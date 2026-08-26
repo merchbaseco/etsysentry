@@ -1,3 +1,4 @@
+import { DEV_SIGN_IN_MERCHBASE_USER_ID } from '@merchbaseco/access/dev';
 import { buildActivity } from './build-activity';
 import { buildKeywords } from './build-keywords';
 import { applyLatestMetricsToListings, buildListingSnapshots } from './build-listing-snapshots';
@@ -19,13 +20,18 @@ import type { DevSeedOptions, DevSeedPlan } from './types';
  * rank 30 days earlier, and a 30-day window's oldest capture is only 29 days
  * back — so the 30-day change column would read a flat zero for every listing.
  * The extra week gives every comparison the dashboard offers a real baseline.
+ *
+ * The seeded account is owned by the shared Merchbase Dev Sign-In user, which
+ * is the identity a development session is signed in as. That is not a
+ * preference — an account mapped to any other Merchbase user is invisible to
+ * every surface in a seeded session, so there is no flag to change it.
  */
 export const DEFAULT_SEED_OPTIONS = {
     accountId: 'acct_dev_seed',
     dayCount: 35,
     keywordCount: 6,
     listingCount: 24,
-    merchbaseUserId: 'mbu_dev_seed',
+    merchbaseUserId: DEV_SIGN_IN_MERCHBASE_USER_ID,
     seed: 'etsysentry-dev',
 } as const;
 
