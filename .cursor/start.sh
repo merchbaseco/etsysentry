@@ -19,6 +19,13 @@ export PATH="$BUN_INSTALL/bin:$PATH"
 # the Development vault, and the local cluster is provisioned with it.
 export ETSYSENTRY_DATABASE_HOST=127.0.0.1
 
+# Cursor forwards a session's ports by watching the VM for listening sockets,
+# and the repository's default loopback bind is invisible to that watcher, so
+# the agent's browser could never reach the website. The API server already
+# binds every interface. Only the socket widens: ETSYSENTRY_APP_ORIGIN stays
+# loopback, so the app still believes it serves the origin it always did.
+export ETSYSENTRY_DEV_HOST=0.0.0.0
+
 SUDO=""
 if [ "$(id -u)" -ne 0 ]; then
     SUDO="sudo"
@@ -69,12 +76,18 @@ echo "[start] PostgreSQL ready on 127.0.0.1:5435 (database: ${DB_NAME})."
 # catalog, a month of listing and rank history, and an event log instead of
 # empty states. Seeded per boot rather than baked into the environment snapshot
 # because the dataset is anchored to the current date, and a week-old snapshot
-# would show a week-old week. The seed applies pending migrations itself, and it
-# only ever reaches this local cluster: it refuses any database host that is not
-# loopback, which is why the override above is set before it runs. Best-effort —
-# a session must still boot if seeding fails.
-if ! bun run db:seed:dev >/dev/null; then
-    echo "[start] Skipping synthetic dev data (seed failed)." >&2
+# would show a week-old week. The seed applies pending migrations itself and
+# grants the shared Dev Sign-In user access to the result, and it only ever
+# reaches this local cluster: it refuses any database host that is not loopback,
+# which is why the override above is set before it runs.
+#
+# Its output is the session's starting receipt — which database was filled,
+# which signed-in user owns it, how many rows, through which day — so it is
+# printed rather than discarded. The seed prints identifiers only; it never
+# prints a credential or a sign-in ticket. Best-effort: a session must still
+# boot if seeding fails.
+if ! bun run db:seed:dev; then
+    echo "[start] Skipping synthetic dev data (seed failed; see the refusal above)." >&2
 fi
 
 echo "[start] Launching development servers (server:8080, website:3100)..."
