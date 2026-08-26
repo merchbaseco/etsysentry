@@ -18,7 +18,8 @@
     "access:backfill": "bun run ./src/scripts/central-auth-cutover.ts backfill"
   },
   "dependencies": {
-    "@merchbaseco/access": "0.3.0",
+    "@merchbaseco/access": "0.4.0",
+    "@clerk/backend": "2.33.3",
     "@fastify/cors": "11.2.0",
     "@trpc/server": "11.10.0",
     "drizzle-orm": "0.45.2",

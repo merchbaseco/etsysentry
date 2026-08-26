@@ -5,3 +5,8 @@ auto = "disable"
 ignoreScripts = true
 saveTextLockfile = true
 minimumReleaseAge = 259200
+# The release-age delay is a supply-chain guard against a freshly published
+# third-party version. `@merchbaseco/access` is first-party, private to the
+# suite, and released by this fleet's own operator, so waiting three days to
+# adopt it buys nothing and would block a same-day contract change.
+minimumReleaseAgeExcludes = ["@merchbaseco/access"]

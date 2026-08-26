@@ -22,7 +22,7 @@
     "provenance": true
   },
   "dependencies": {
-    "@merchbaseco/access": "0.3.0",
+    "@merchbaseco/access": "0.4.0",
     "@etsysentry/http-client": "^0.6.0",
     "@trpc/client": "11.10.0"
   },
