@@ -1,5 +1,9 @@
 import { describe, expect, test } from 'bun:test';
-import { assertLocalSeedTarget, SeedTargetRefusedError } from './local-database-guard';
+import {
+    assertLocalSeedTarget,
+    SeedTargetRefusedError,
+    toDatabaseUrl,
+} from './local-database-guard';
 
 const LOCAL = {
     name: 'etsysentry',
@@ -64,5 +68,31 @@ describe('assertLocalSeedTarget', () => {
         expect(message).toContain('db.internal');
         expect(message).not.toContain('password');
         expect(message).not.toContain('://');
+    });
+});
+
+// The access package's development bootstrap takes a DSN and refuses a
+// non-loopback host, so the URL this builds has to survive `new URL()` and
+// present the loopback host the guard already accepted.
+describe('toDatabaseUrl', () => {
+    test('renders a parsable loopback DSN', () => {
+        const url = new URL(toDatabaseUrl(assertLocalSeedTarget({ ...LOCAL, host: '127.0.0.1' })));
+
+        expect(url.hostname).toBe('127.0.0.1');
+        expect(url.port).toBe('5435');
+        expect(url.pathname).toBe('/etsysentry');
+    });
+
+    test('brackets an IPv6 loopback host so the URL parses', () => {
+        const url = new URL(toDatabaseUrl(assertLocalSeedTarget({ ...LOCAL, host: '::1' })));
+
+        expect(url.hostname).toBe('[::1]');
+    });
+
+    test('carries no credential', () => {
+        const dsn = toDatabaseUrl(assertLocalSeedTarget({ ...LOCAL, host: 'localhost' }));
+
+        expect(dsn).not.toContain('@');
+        expect(dsn).toBe('postgres://localhost:5435/etsysentry');
     });
 });

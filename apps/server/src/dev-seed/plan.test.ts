@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { DEV_SIGN_IN_MERCHBASE_USER_ID } from '@merchbaseco/access/dev';
 import { deriveListingHistorySales } from '../services/listings/derive-listing-history-sales';
 import { deriveShopSalesPerDay } from '../services/shops/derive-shop-sales-per-day';
 import { buildDevSeedPlan, countPlanRows, DEFAULT_SEED_OPTIONS } from './plan';
@@ -241,10 +242,13 @@ describe('dev seed plan', () => {
         expect([...days].sort().at(-1)).toBe(toUtcDayLabel(NOW));
     });
 
-    test('maps the account to a merchbase user so a dev can sign in against it', () => {
-        const plan = buildPlan({ merchbaseUserId: 'mbu_local_dev' });
+    // Ownership is the whole point: a session is signed in as the shared Dev
+    // Sign-In user, and an account mapped to anyone else is invisible to every
+    // surface in it.
+    test('maps the account to the shared Dev Sign-In user', () => {
+        const plan = buildPlan();
 
-        expect(plan.account.merchbaseUserId).toBe('mbu_local_dev');
+        expect(plan.account.merchbaseUserId).toBe(DEV_SIGN_IN_MERCHBASE_USER_ID);
         expect(plan.account.id).toBe(plan.accountId);
     });
 });
