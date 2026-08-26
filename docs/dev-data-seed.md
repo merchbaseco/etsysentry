@@ -4,6 +4,10 @@
 EtsySentry surface renders something instead of an empty state. It is never run automatically on a
 developer machine.
 
+The account belongs to the shared Merchbase **Dev Sign-In user** — the identity a development
+session signs itself in as. That pairing is the whole point: seeded data owned by anyone else is
+invisible to every surface in a session. [`dev-sign-in.md`](dev-sign-in.md) owns the auth half.
+
 ## Why It Refuses Almost Everywhere
 
 Local development points at the **live** database: the schema's development arm resolves
@@ -31,7 +35,8 @@ Roughly 2,700 rows in well under a second:
 
 | What | Shape |
 | --- | --- |
-| Account | One account mapped to a `merchbase_user_id`, so a signed-in dashboard resolves to it. |
+| Account | One account mapped to the Dev Sign-In user's `merchbase_user_id`, so a signed-in dashboard resolves to it. |
+| Access | The Access Projection that authorizes that user against this database, written by `@merchbaseco/access/dev`. |
 | Listings | 24 tracked listings with a 30-tag vocabulary, mixed tracking/sync/Etsy states, one refresh error, non-USD prices, digital listings, and inline SVG thumbnails. |
 | Listing history | One `listing_metric_snapshots` row per listing per day. Quantity falls as units sell and jumps on renewal, so `deriveListingHistorySales` reports estimated sales both ways. |
 | Keywords | 6 tracked keywords, each with a daily rank capture across 3 pages of results. |
@@ -55,7 +60,34 @@ column would read zero.
 | `--listings=<n>` | Size of the catalog. Default 24. |
 | `--keywords=<n>` | Number of tracked keywords. Default 6. |
 | `--account-id=<id>` | Account to seed. Default `acct_dev_seed`. |
-| `--merchbase-user-id=<mbu_…>` | Merchbase user the seeded account maps to. Pass your own to sign in to the dashboard against this data. |
+
+There is no flag for the owning Merchbase user. Ownership comes from the Access Projection the run
+actually stored, so the seeded account and the signed-in identity cannot drift apart.
+
+## The Receipt
+
+A run prints what it left behind, because a cloud session's whole starting state is decided by it
+and the alternative is opening a `psql` prompt to find out:
+
+```
+[seed] Database:       127.0.0.1:5435/etsysentry
+[seed] Clerk issuer:   https://tolerant-roughy-27.clerk.accounts.dev
+[seed] Signed-in user: user_38Q9fcwOarmNP41Hb4P9TPUt8rS -> mbu_0ae4691c2dff45559d559bea99cd621b
+[seed] Account:        acct_dev_seed
+[seed] Window:         35 days through 2026-08-26 (UTC)
+[seed] Dataset:        seed=etsysentry-dev
+[seed] Rows:           2,813 total
+[seed] Tables:         currency_rates=1 etsy_api_call_events=424 …
+[seed] Finished:       216ms
+```
+
+Identifiers only — never a credential, and never a sign-in ticket. `.cursor/start.sh` prints this
+rather than discarding it, so a cloud boot log is a receipt. Values varlock holds as sensitive are
+masked in it, which is why the database name can render as `et▒▒▒▒▒` when it collides with a secret
+literal; the host and port are always legible.
+
+A refusal — either the loopback guard or the access bootstrap — prints its own message and exits
+`1`, with no stack trace to bury it.
 
 ## Re-running Replaces, It Does Not Stack
 
@@ -76,9 +108,10 @@ migration and gates the phase-two cleanup behind a readiness check, because on t
 that cleanup drops legacy identity tables and columns. A fresh local database starts out failing
 that gate — it has no mapped account at all — which would leave the seed writing into a schema that
 still carries `tracker_clerk_user_id NOT NULL`. So `dev-seed/migrate-to-head.ts` satisfies the gate
-the way the cutover backfill does: it writes the seed account, that account's Clerk identity, and
-the matching active projection, then asks for the cleanup. Those rows are the truthful phase-one
-shape of the account the seed is about to fill, not a stub built to pass a check. See
+the way the cutover backfill does: it writes the seed account and that account's Clerk identity, the
+access bootstrap writes the matching active projection against the same issuer and subject, and only
+then does it ask for the cleanup. Those rows are the truthful phase-one shape of the account the
+seed is about to fill, not a stub built to pass a check. See
 [`centralized-access-cutover.md`](centralized-access-cutover.md).
 
 ## Cloud Sessions
@@ -87,7 +120,8 @@ Cursor Cloud Agents get the data for free: `.cursor/start.sh` provisions the iso
 overrides `ETSYSENTRY_DATABASE_HOST` to `127.0.0.1` for the session, and then seeds on every boot.
 Seeding is per boot rather than baked into the environment snapshot because the dataset is anchored
 to the current date, and a week-old snapshot would show a week-old week. A failed seed logs and is
-skipped; it never blocks the session.
+skipped; it never blocks the session — but the session then boots signed in to an empty dashboard,
+which is what the printed receipt is for.
 
 ## The Coverage Contract
 
@@ -100,4 +134,4 @@ a single listing), and that the log view's levels, statuses, and primitives are 
 one of those fails, some dashboard surface boots empty.
 
 `local-database-guard.test.ts` covers the refusal, including the live Tailscale host and the
-production Compose host by name.
+production Compose host by name, and the credential-free DSN handed to the access bootstrap.

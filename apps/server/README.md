@@ -71,7 +71,7 @@ Useful scripts:
 - `bun run server:start` - run bundled server (jobs enabled)
 - `bun run server:typecheck` - TypeScript checks
 - `bun run server:test` - focused unit tests
-- `bun run db:seed:dev` - fill a local database with synthetic development data (refuses any non-loopback host)
+- `bun run db:seed:dev` - fill a local database with synthetic development data owned by the shared Dev Sign-In user, and grant that user access to it (refuses any non-loopback host)
 - `bun run --cwd apps/server db:generate` - generate Drizzle migrations from schema
 - `bun run --cwd apps/server db:migrate` - run pending Drizzle migrations, stopping before centralized-access cleanup until it is recorded
 - `bun run --cwd apps/server db:migrate:phase1` - run only the centralized-access phase-one migration
@@ -98,6 +98,9 @@ Public values (schema literals, per lifecycle):
 
 - `MERCHBASE_CLERK_ISSUER`, `MERCHBASE_CLERK_PUBLISHABLE_KEY`
 - `ETSYSENTRY_CLERK_AUTHORIZED_PARTIES`
+- `ETSYSENTRY_DEV_CLERK_SIGN_IN_USER_ID` — development only; the Clerk identity a development
+  session signs itself in as. Resolves to nothing in production, where the route that mints its
+  tickets is never registered. See [`../../docs/dev-sign-in.md`](../../docs/dev-sign-in.md)
 - `ETSYSENTRY_PORT`, `ETSYSENTRY_APP_ORIGIN`, `ETSYSENTRY_DISABLE_SERVER_JOB_RUNNER`
 - `ETSYSENTRY_ETSY_OAUTH_REDIRECT_URI` (must be the public server URL in production, for example
   `https://etsysentry.merchbase.co/auth/etsy/callback`, and must match the Etsy app settings)
@@ -128,6 +131,11 @@ See [`docs/centralized-access-cutover.md`](../../docs/centralized-access-cutover
 as-built access contract, two-phase migration tooling, and production cutover runbook. The
 Etsy OAuth connection is provider state, not customer authentication, and remains keyed by the
 existing local account UUID.
+
+A development or cloud database receives no Clerk webhooks, so its Access Projection is written by
+`bootstrapDevAccessProjection` from `@merchbaseco/access/dev`, through this repository's own
+`AccessProjectionStore` adapter. Nothing here writes projection SQL by hand. See
+[`docs/dev-sign-in.md`](../../docs/dev-sign-in.md).
 
 Container builds install the private `@merchbaseco/access` package through the
 `github_packages_token` BuildKit secret, which Compose sources from `MERCHBASE_GITHUB_NPM_TOKEN`.

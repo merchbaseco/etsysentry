@@ -92,6 +92,12 @@ that same database over Tailscale. Each note cross-references the other; rotate 
 Everything else in `.env.schema` is a public literal owned by the schema — ports, origins, the OAuth
 redirect and scopes, and the Etsy rate-limit tuning.
 
+Two of those literals are development-only and resolve to nothing in production:
+`ETSYSENTRY_DEV_CLERK_SIGN_IN_USER_ID`, the Clerk identity a development session signs itself in as,
+and `ETSYSENTRY_DEV_HOST`, the website dev server's bind address. Both are committed rather than
+vaulted because the venue that needs them most — an ephemeral cloud VM — has to be correct before it
+can reach a vault. See [`dev-sign-in.md`](dev-sign-in.md).
+
 ## Published-package contracts
 
 `MERCHBASE_API_KEY`, `ES_BASE_URL`, and `ES_STORAGE_DIR` are read by `@etsysentry/cli` on end users'

@@ -45,6 +45,7 @@ EtsySentry tracks three primitives over time:
 - `docs/deployment.md` - deployment topology and the environment/secrets contract
 - `docs/log-view.md` - rich event log UX and storage specification
 - `docs/dev-data-seed.md` - synthetic development data seeding and its local-only guard
+- `docs/dev-sign-in.md` - development auto sign-in, the Access Projection bootstrap, and the dev bind host
 - `apps/server/README.md` - server-specific runbook
 
 ## Quick Start
@@ -61,7 +62,11 @@ comes from the committed `.env.schema` — there is no `.env` file and no manual
 development lifecycle points the server at the Mac mini's PostgreSQL over Tailscale
 (`zachs-mac-mini.taila0b849.ts.net:5435`) and the website reaches the local server through the Vite
 proxy (`/api` -> `http://localhost:8080`). Background jobs are disabled outside production. The
-dashboard is locked to port `3100`.
+dashboard is locked to port `3100` and binds `ETSYSENTRY_DEV_HOST`, which defaults to loopback.
+
+Because that database is the live one, nothing auto-signs-in and nothing is seeded: both are armed
+only against a loopback database. Point the run at a PostgreSQL on your machine to get a seeded,
+signed-in session — see [`docs/dev-sign-in.md`](docs/dev-sign-in.md).
 
 ### Server (OAuth + Listings Scaffold)
 

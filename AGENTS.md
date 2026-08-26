@@ -76,6 +76,8 @@ This file is the always-on guide for AI coding assistants in EtsySentry.
 - Known product/implementation gaps: `docs/known-gaps.md`
 - Database query runbook: `docs/database-queries.md`
 - Synthetic development data and its local-only guard: `docs/dev-data-seed.md`
+- Development auto sign-in, the Access Projection bootstrap, and the dev bind host:
+  `docs/dev-sign-in.md`
 - Docs vs AGENTS placement guide: `docs/agent-doc-placement.md`
 - Deployment and the environment contract: `docs/deployment.md` (deploys are manual —
   `workflow_dispatch` only; pushing to `main` does not deploy)
@@ -105,5 +107,15 @@ it with synthetic development data, and launches the server (`:8080`) and websit
 - Cloud sessions boot on synthetic data: `start.sh` runs `bun run db:seed:dev` against the local
   cluster on every boot, which also applies pending migrations. The seed refuses any non-loopback
   database host and `NODE_ENV=production`, with no override, so it can never reach the live
-  database — including from a developer machine, where local runs stay explicit-only. See
+  database — including from a developer machine, where local runs stay explicit-only. The seed's
+  output is the session's starting receipt and is printed, not discarded. See
   `docs/dev-data-seed.md`.
+- Cloud sessions also boot **signed in**, as the shared Merchbase Dev Sign-In user the seed gives
+  the data to. The seed writes that user's Access Projection through `@merchbaseco/access/dev`;
+  never hand-write projection SQL. Auto sign-in arms only for a non-production process pointed at a
+  loopback database, so a local checkout on the live Tailscale database is unaffected. See
+  `docs/dev-sign-in.md`.
+- `start.sh` exports `ETSYSENTRY_DEV_HOST=0.0.0.0`. Cursor forwards a session's ports by watching
+  for listening sockets, and the repository's default loopback bind is invisible to that watcher.
+  The knowledge that this is a Cursor detail lives under `.cursor/`; app code reads only the schema
+  item. The API server already binds every interface.
