@@ -12,17 +12,16 @@ export const configureTrpcAuthTokenGetter = (tokenGetter: TrpcAuthTokenGetter | 
     getAuthToken = tokenGetter;
 };
 
-const getApiBaseUrl = (): string => {
+/** Empty for the same-origin default, where the dev server proxies to the API. */
+export const getServerBaseUrl = (): string => {
     const configuredOrigin = (
         import.meta.env.VITE_ETSYSENTRY_SERVER_ORIGIN as string | undefined
     )?.trim();
 
-    if (!configuredOrigin) {
-        return '/api';
-    }
-
-    return `${configuredOrigin.replace(TRAILING_SLASHES_REGEX, '')}/api`;
+    return configuredOrigin ? configuredOrigin.replace(TRAILING_SLASHES_REGEX, '') : '';
 };
+
+const getApiBaseUrl = (): string => `${getServerBaseUrl()}/api`;
 
 const DEFAULT_QUERY_STALE_TIME_MS = 30_000;
 const DEFAULT_QUERY_GC_TIME_MS = 10 * 60_000;

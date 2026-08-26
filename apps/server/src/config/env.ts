@@ -33,6 +33,12 @@ const envSchema = z.object({
             .regex(/^mbu_[A-Za-z0-9_-]+$/)
             .optional()
     ),
+    ETSYSENTRY_DEV_CLERK_SIGN_IN_USER_ID: emptyAsUndefined(
+        z
+            .string()
+            .regex(/^user_[A-Za-z0-9]+$/)
+            .optional()
+    ),
     ETSYSENTRY_ETSY_API_KEY: z.string().min(1),
     ETSYSENTRY_ETSY_API_SHARED_SECRET: z.string().min(1),
     ETSYSENTRY_ETSY_OAUTH_REDIRECT_URI: z.string().url(),

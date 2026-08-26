@@ -11,6 +11,7 @@ import { testDbConnection } from './db';
 import { runMigrations } from './db/migrate';
 import { startServerJobs, stopServerJobs } from './jobs/run-server-jobs';
 import { registerClerkAccessWebhookRoute } from './services/access/clerk-webhook-route';
+import { isDevSignInArmed, registerDevSignInRoute } from './services/access/dev-sign-in-route';
 import {
     configureEtsySentryAccess,
     createEtsySentryAccess,
@@ -66,6 +67,13 @@ export const buildServer = async (options: BuildServerOptions = {}) => {
             store: access.projections,
         });
     }
+
+    registerDevSignInRoute(server, {
+        clerkSecretKey: env.MERCHBASE_CLERK_SECRET_KEY,
+        databaseHost: env.databaseHost,
+        devSignInUserId: env.ETSYSENTRY_DEV_CLERK_SIGN_IN_USER_ID,
+        nodeEnv: env.NODE_ENV,
+    });
 
     await server.register(fastifyTRPCPlugin, {
         prefix: '/api',
@@ -196,6 +204,13 @@ if (import.meta.main) {
             databaseHost: env.databaseHost,
             databaseName: env.databaseName,
             databasePort: env.databasePort,
+            devAutoSignIn: isDevSignInArmed({
+                databaseHost: env.databaseHost,
+                devSignInUserId: env.ETSYSENTRY_DEV_CLERK_SIGN_IN_USER_ID,
+                nodeEnv: env.NODE_ENV,
+            })
+                ? env.ETSYSENTRY_DEV_CLERK_SIGN_IN_USER_ID
+                : 'off',
             disableServerJobRunner: env.disableServerJobRunner,
             enableServerJobs: env.enableServerJobs,
             oauthScopes: env.etsyOAuthScopes,

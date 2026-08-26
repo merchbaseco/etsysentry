@@ -26,6 +26,13 @@ const varlockBuiltins = new Set(['VARLOCK_ENV']);
 // lifecycle signal precisely because VARLOCK_ENV is never delivered.
 const imageProvidedNames = new Set(['NODE_ENV']);
 
+// Read by a development-time process that is neither the server container nor
+// the website build — the Vite dev server. They are deliberately not @internal:
+// `varlock run` strips @internal items from the child environment, and the dev
+// server is exactly such a child. Nothing delivers them to a deployed image, so
+// the "every deliverable item has a consumer" rule cannot see them.
+const devServerNames = new Set(['ETSYSENTRY_DEV_HOST']);
+
 // The postgres image requires these literal names for first-boot
 // initialisation. Compose delivers them to the database container; the server
 // never reads them.
@@ -230,6 +237,10 @@ for (const name of sorted(dockerfileArgNames)) {
 
 // 7. No orphans: every deliverable schema item must have a consumer.
 for (const name of sorted(deliverableNames)) {
+    if (devServerNames.has(name)) {
+        continue;
+    }
+
     if (!(serverReadNames.has(name) || composeBuildArgNames.has(name))) {
         issues.push(
             `${name} is a deliverable .env.schema item but nothing reads it (server surface or website build argument).`
