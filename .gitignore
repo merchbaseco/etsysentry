@@ -12,3 +12,6 @@ node_modules/
 
 # Cursor-discovered fleet skills, seeded by .cursor/install.sh in cloud VMs
 .agents/
+
+# Claude-managed worktrees carry nested biome configs that break lint at config load
+.claude/
