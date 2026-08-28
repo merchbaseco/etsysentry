@@ -89,44 +89,4 @@ fi
 
 bun install --frozen-lockfile
 
-# --- Shared agent skills (fleet dev environment parity) ---------------------
-# Cursor discovers Agent Skills from .agents/skills in the checkout. Locally
-# the operator's home-directory links already provide the fleet skill library;
-# in the cloud VM it is seeded from the private agents repo, read with the
-# fine-grained PAT that Cursor injects as the account-level Runtime Secret
-# CURSOR_CLOUD_AGENTS_GH_READ_TOKEN. Agent tooling is not part of this
-# repository's environment contract, so the PAT lives in Cursor's own secret
-# store rather than in .env.schema, and nothing here touches varlock. The
-# tarball fetch leaves no credential or git state on disk. Always refetched so
-# snapshot reuse cannot pin a stale copy. Best-effort: every failure path logs
-# and skips — seeding must never fail the install.
-if [ -n "${CURSOR_CLOUD_AGENTS_GH_READ_TOKEN:-}" ]; then
-    SKILLS_TMP="$(mktemp -d)" || SKILLS_TMP=""
-    if [ -n "$SKILLS_TMP" ] &&
-        curl -fsSL -H "Authorization: Bearer $CURSOR_CLOUD_AGENTS_GH_READ_TOKEN" \
-            https://api.github.com/repos/zknicker/agents/tarball/main \
-            | tar -xz -C "$SKILLS_TMP"; then
-        SKILLS_SRC=""
-        for SKILLS_CANDIDATE in "$SKILLS_TMP"/*/agents/skills; do
-            if [ -d "$SKILLS_CANDIDATE" ]; then
-                SKILLS_SRC="$SKILLS_CANDIDATE"
-                break
-            fi
-        done
-        if [ -n "$SKILLS_SRC" ] &&
-            mkdir -p "$REPO_ROOT/.agents" &&
-            rm -rf "$REPO_ROOT/.agents/skills" &&
-            cp -R "$SKILLS_SRC" "$REPO_ROOT/.agents/skills"; then
-            echo "[install] Seeded fleet agent skills into .agents/skills."
-        else
-            echo "[install] Skipping fleet agent skills (skills directory unavailable)." >&2
-        fi
-    else
-        echo "[install] Skipping fleet agent skills (tarball fetch failed)." >&2
-    fi
-    rm -rf "$SKILLS_TMP" || true
-else
-    echo "[install] Skipping fleet agent skills (no read token)." >&2
-fi
-
 echo "[install] Done."
