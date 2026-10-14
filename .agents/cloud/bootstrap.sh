@@ -48,7 +48,7 @@ CLOUD_AGENTS_DEVELOPMENT_OP_TOKEN=
 # @sensitive @internal
 FLEET_GITHUB_READ_TOKEN=op(development, "op://Development/GitHub Repo Read - Fleet Agents/credential")
 EOF
-  if ! read_token="$(cd "$root" && bunx varlock@1.16.1 printenv FLEET_GITHUB_READ_TOKEN -p "$scratch/schema")" ||
+  if ! read_token="$(cd "$root" && npx --yes varlock@1.16.1 printenv FLEET_GITHUB_READ_TOKEN -p "$scratch/schema")" ||
     ! printf 'header = "Authorization: Bearer %s"\n' "$read_token" |
       curl --fail --silent --show-error --max-time 60 --config - --output "$scratch/fleet.tar.gz" \
         "https://raw.githubusercontent.com/zknicker/agents/$ref/cloud/fleet.tar.gz" ||
