@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.6
 
-FROM oven/bun:1.3.5-alpine AS build
+FROM oven/bun:1.4.2-alpine AS build
 WORKDIR /app
 # Every VITE_ value the website bundle reads must be declared here AND passed
 # by compose — Docker silently discards a build argument the Dockerfile never
@@ -20,7 +20,7 @@ RUN --mount=type=secret,id=github_packages_token \
 RUN bun run --cwd apps/server build
 RUN bun run --cwd apps/website build
 
-FROM oven/bun:1.3.5-alpine AS runtime
+FROM oven/bun:1.4.2-alpine AS runtime
 WORKDIR /app
 # The lifecycle signal inside the container: VARLOCK_ENV is a varlock builtin
 # and is never delivered, so runtime code branches on NODE_ENV instead.

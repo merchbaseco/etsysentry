@@ -27,7 +27,7 @@ jobs:
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: '1.3.5'
+          bun-version: '1.4.2'
 
       # `bun install` hangs silently and indefinitely when it cannot authenticate
       # to the private @merchbaseco scope, so cap the step rather than let it
@@ -40,7 +40,7 @@ jobs:
           # default — so the install credential resolves through the schema like
           # every other value. The deploy agent reads the Development vault,
           # which is where install tokens live.
-          CURSOR_CLOUD_AGENTS_DEVELOPMENT_OP_TOKEN: ${{ secrets.GH_DEPLOY_AGENT_PRODUCTION_OP_TOKEN }}
+          CI_OP_TOKEN: ${{ secrets.GH_DEPLOY_AGENT_PRODUCTION_OP_TOKEN }}
         run: |
           MERCHBASE_GITHUB_NPM_TOKEN="$(ETSYSENTRY_RESOLVE_INSTALL_TOKENS=true \
             bunx varlock@1.16.1 printenv MERCHBASE_GITHUB_NPM_TOKEN)"

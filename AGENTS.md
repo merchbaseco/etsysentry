@@ -84,38 +84,58 @@ This file is the always-on guide for AI coding assistants in EtsySentry.
 - Server operations: `apps/server/README.md`
 - Typed client package: `packages/http-client/README.md`
 
-## Cursor Cloud Specific Instructions
+## Cloud agents
 
-The Cloud Agent environment is repo-managed via `.cursor/environment.json`: `install.sh` installs
-Bun 1.3.5, PostgreSQL, and workspace dependencies; `start.sh` provisions the local database, seeds
-it with synthetic development data, and launches the server (`:8080`) and website (`:3100`) under
-`varlock run`.
+EtsySentry follows the fleet cloud agent contract; set up or repair it with the `zknicker/agents`
+`cloud-agent-setup` skill.
 
-- There is no `.env` step anywhere. `.env.schema` is the contract and values resolve from 1Password
-  through the fleet-wide Development identity Cursor injects as a Runtime Secret.
+- `.agents/cloud/bootstrap.sh` is a fleet-owned copy; never edit it here. Claude runs
+  `bootstrap.sh claude` from the `.claude/settings.json` SessionStart hook in cloud sessions;
+  Cursor runs the repo-managed **Merchbase EtsySentry** environment (`.cursor/environment.json`),
+  which installs with `install.sh` and starts with `bootstrap.sh cursor`.
+- `.agents/cloud/install.sh` installs PostgreSQL (configured for port `5435`) and the Bun version
+  pinned by `packageManager` in `package.json` (replacing any other Bun on the image), then
+  `bun install --frozen-lockfile`.
+- `.agents/cloud/start.sh` starts the local PostgreSQL cluster (as the `postgres` account on root
+  hosts), provisions the role and database with the schema's password, and seeds synthetic
+  development data. It returns; it never runs the dev servers.
+- `.agents/cloud/env.sh` exports `ETSYSENTRY_DATABASE_HOST=127.0.0.1` into every session shell.
+- There is no `.env` step and no per-repo cloud secret. `.env.schema` is the contract and values
+  resolve from 1Password through the fleet-wide Development identity every platform provides as
+  `CLOUD_AGENTS_DEVELOPMENT_OP_TOKEN`. CI maps its own identity into `CI_OP_TOKEN` instead.
 - `bun install --frozen-lockfile` needs `MERCHBASE_GITHUB_NPM_TOKEN` to fetch the private
   `@merchbaseco/access` package. It is an `@internal` schema item, so `varlock run` does not export
   it; `install.sh` fetches it explicitly with `varlock printenv` under
   `ETSYSENTRY_RESOLVE_INSTALL_TOKENS=true`. Without it the install fails with a `401`/`403` from
   `npm.pkg.github.com`.
 - The schema's development arm points `ETSYSENTRY_DATABASE_HOST` at the Mac mini over Tailscale,
-  which is how local development reaches the live database. A cloud VM has no Tailscale, so
-  `start.sh` runs its own PostgreSQL on `5435` and overrides that one public value for the session.
+  which is how local development reaches the live database. A cloud VM has no Tailscale, so it
+  runs its own PostgreSQL on `5435` and `env.sh` overrides that one public value for the session.
   The password still resolves from the Development vault, so the local cluster and the server agree.
-- Do not run the root `bun run dev` expecting the Tailscale database in the cloud VM; use the
-  `start.sh` path.
+  Never run `bun run dev` in a cloud VM without `env.sh` sourced.
 - Cloud sessions boot on synthetic data: `start.sh` runs `bun run db:seed:dev` against the local
   cluster on every boot, which also applies pending migrations. The seed refuses any non-loopback
   database host and `NODE_ENV=production`, with no override, so it can never reach the live
-  database — including from a developer machine, where local runs stay explicit-only. The seed's
-  output is the session's starting receipt and is printed, not discarded. See
+  database. Its output is the session's starting receipt and is printed, not discarded. See
   `docs/dev-data-seed.md`.
-- Cloud sessions also boot **signed in**, as the shared Merchbase Dev Sign-In user the seed gives
-  the data to. The seed writes that user's Access Projection through `@merchbaseco/access/dev`;
-  never hand-write projection SQL. Auto sign-in arms only for a non-production process pointed at a
-  loopback database, so a local checkout on the live Tailscale database is unaffected. See
-  `docs/dev-sign-in.md`.
-- `start.sh` exports `ETSYSENTRY_DEV_HOST=0.0.0.0`. Cursor forwards a session's ports by watching
-  for listening sockets, and the repository's default loopback bind is invisible to that watcher.
-  The knowledge that this is a Cursor detail lives under `.cursor/`; app code reads only the schema
-  item. The API server already binds every interface.
+- The dashboard signs in automatically as the shared Merchbase Dev Sign-In user the seed gives the
+  data to; there is no sign-in form. The seed writes that user's Access Projection through
+  `@merchbaseco/access/dev`; never hand-write projection SQL. Auto sign-in arms only for a
+  non-production process pointed at a loopback database. See `docs/dev-sign-in.md`.
+
+### Run the app and capture a screenshot
+
+```bash
+. .agents/cloud/env.sh            # Claude sessions already have it via CLAUDE_ENV_FILE
+bun run dev                       # server :8080, website :3100, under varlock run
+# in another shell, once http://localhost:3100 answers:
+capture-page http://localhost:3100/ /tmp/etsysentry.png --settle 8000
+```
+
+`capture-page` is the fleet's Playwright wrapper around the image's Chromium; it routes external
+hosts such as Clerk through the agent proxy and keeps loopback direct. Use `localhost`, not
+`127.0.0.1`: Clerk's authorized party for development is `http://localhost:3100`. The settle time
+gives the auto sign-in and first queries time to finish before capture.
+Cursor's `dev` terminal runs the same command with `ETSYSENTRY_DEV_HOST=0.0.0.0`, because Cursor
+forwards ports by watching listening sockets and the default loopback bind is invisible to it; app
+code reads only that schema item. The API server already binds every interface.

@@ -16,13 +16,17 @@ const withApiKeyEnv = async (
     callback: () => Promise<void>
 ): Promise<void> => {
     const previousApiKey = process.env.MERCHBASE_API_KEY;
-    process.env.MERCHBASE_API_KEY = apiKey;
+    if (apiKey === undefined) {
+        Reflect.deleteProperty(process.env, 'MERCHBASE_API_KEY');
+    } else {
+        process.env.MERCHBASE_API_KEY = apiKey;
+    }
 
     try {
         await callback();
     } finally {
         if (previousApiKey === undefined) {
-            process.env.MERCHBASE_API_KEY = undefined;
+            Reflect.deleteProperty(process.env, 'MERCHBASE_API_KEY');
         } else {
             process.env.MERCHBASE_API_KEY = previousApiKey;
         }

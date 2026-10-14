@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
-# Idempotent repository bootstrap for EtsySentry Cursor cloud agents.
+# Idempotent EtsySentry cloud agent install, the repo-owned part of the fleet
+# cloud agent contract (zknicker/agents cloud-agent-setup skill). Cursor runs it
+# as its snapshot install; Claude runs it from the fleet start each session.
 # Installs the system toolchain (PostgreSQL + Bun) if missing, then installs
 # workspace dependencies. There is no .env step: the committed .env.schema is
 # the environment contract and values resolve from 1Password through the
-# fleet-wide Development identity that Cursor injects as a Runtime Secret.
+# fleet-wide Development identity each platform provides as
+# CLOUD_AGENTS_DEVELOPMENT_OP_TOKEN.
 set -euo pipefail
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$REPO_ROOT"
 
 # Pinned so `bunx varlock` behaves identically before node_modules exists.
@@ -56,23 +59,38 @@ if [ -n "$PG_CONF" ]; then
 fi
 
 # --- System dependency: Bun (pinned by package.json packageManager) ---
+# Cloud images can already carry another repository's Bun, so the pinned
+# version is installed whenever the active one differs, not only when missing.
+BUN_VERSION="$(sed -n 's/.*"packageManager": *"bun@\([^"]*\)".*/\1/p' package.json)"
+if [ -z "$BUN_VERSION" ]; then
+    echo "[install] ERROR: package.json does not pin packageManager bun@<version>." >&2
+    exit 1
+fi
 export BUN_INSTALL="${BUN_INSTALL:-$HOME/.bun}"
 export PATH="$BUN_INSTALL/bin:$PATH"
-if ! command -v bun >/dev/null 2>&1; then
-    echo "[install] Installing Bun 1.3.5..."
-    curl -fsSL https://bun.sh/install | bash -s "bun-v1.3.5"
+if [ "$(bun --version 2>/dev/null || true)" != "$BUN_VERSION" ]; then
+    echo "[install] Installing Bun ${BUN_VERSION}..."
+    curl -fsSL https://bun.sh/install | bash -s "bun-v${BUN_VERSION}"
     if ! grep -q 'BUN_INSTALL' "$HOME/.bashrc" 2>/dev/null; then
         printf '\nexport BUN_INSTALL="$HOME/.bun"\nexport PATH="$BUN_INSTALL/bin:$PATH"\n' >>"$HOME/.bashrc"
     fi
 else
-    echo "[install] Bun already present ($(bun --version))."
+    echo "[install] Bun ${BUN_VERSION} already present."
+fi
+# Shells that never read .bashrc (hooks, terminals) resolve bun from PATH, where
+# another install may sit first; point the shared locations at the pinned one.
+$SUDO ln -sf "$BUN_INSTALL/bin/bun" /usr/local/bin/bun
+$SUDO ln -sf "$BUN_INSTALL/bin/bunx" /usr/local/bin/bunx
+if [ "$(bun --version)" != "$BUN_VERSION" ]; then
+    echo "[install] ERROR: bun reports $(bun --version), expected ${BUN_VERSION}." >&2
+    exit 1
 fi
 
 # --- Install-time credential ---
 # The private @merchbaseco/* scope needs a GitHub Packages read token. It is an
 # @internal schema item, so `varlock run` deliberately does not export it; it is
 # fetched explicitly under the install switch, resolved from the Development
-# vault via the Cursor fleet identity.
+# vault via CLOUD_AGENTS_DEVELOPMENT_OP_TOKEN.
 if [ -z "${MERCHBASE_GITHUB_NPM_TOKEN:-}" ]; then
     echo "[install] Resolving the GitHub Packages read token from 1Password..."
     MERCHBASE_GITHUB_NPM_TOKEN="$(
@@ -87,6 +105,6 @@ if [ -z "${MERCHBASE_GITHUB_NPM_TOKEN:-}" ]; then
     exit 1
 fi
 
-bun install --frozen-lockfile
+timeout 900 bun install --frozen-lockfile || { echo "[install] ERROR: bun install failed or timed out" >&2; exit 1; }
 
 echo "[install] Done."

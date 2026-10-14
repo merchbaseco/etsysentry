@@ -27,7 +27,7 @@ describe('normalizeBaseUrl', () => {
 describe('resolveBaseUrl', () => {
     test('falls back to hosted default when no override is set', () => {
         const previousBaseUrl = process.env.ES_BASE_URL;
-        process.env.ES_BASE_URL = undefined;
+        Reflect.deleteProperty(process.env, 'ES_BASE_URL');
 
         const flags: CliFlags = {
             help: false,
@@ -40,7 +40,7 @@ describe('resolveBaseUrl', () => {
             expect(resolveBaseUrl({ config: {}, flags })).toBe('https://etsysentry.merchbase.co');
         } finally {
             if (previousBaseUrl === undefined) {
-                process.env.ES_BASE_URL = undefined;
+                Reflect.deleteProperty(process.env, 'ES_BASE_URL');
             } else {
                 process.env.ES_BASE_URL = previousBaseUrl;
             }
