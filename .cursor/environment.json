@@ -1,6 +1,6 @@
 {
   "name": "Merchbase EtsySentry",
-  "install": "bash .agents/cloud/install.sh",
+  "install": "bash .agents/cloud/bootstrap.sh cursor-install",
   "start": "bash .agents/cloud/bootstrap.sh cursor",
   "ports": [
     { "name": "api", "port": 8080 },

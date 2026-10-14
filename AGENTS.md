@@ -92,7 +92,7 @@ EtsySentry follows the fleet cloud agent contract; set up or repair it with the 
 - `.agents/cloud/bootstrap.sh` is a fleet-owned copy; never edit it here. Claude runs
   `bootstrap.sh claude` from the `.claude/settings.json` SessionStart hook in cloud sessions;
   Cursor runs the repo-managed **Merchbase EtsySentry** environment (`.cursor/environment.json`),
-  which installs with `install.sh` and starts with `bootstrap.sh cursor`.
+  which installs with `bootstrap.sh cursor-install` and starts with `bootstrap.sh cursor`.
 - `.agents/cloud/install.sh` installs PostgreSQL (configured for port `5435`) and the Bun version
   pinned by `packageManager` in `package.json` (replacing any other Bun on the image), then
   `bun install --frozen-lockfile`.
