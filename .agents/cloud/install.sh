@@ -105,6 +105,6 @@ if [ -z "${MERCHBASE_GITHUB_NPM_TOKEN:-}" ]; then
     exit 1
 fi
 
-bun install --frozen-lockfile
+timeout 900 bun install --frozen-lockfile || { echo "[install] ERROR: bun install failed or timed out" >&2; exit 1; }
 
 echo "[install] Done."

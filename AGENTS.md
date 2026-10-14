@@ -129,13 +129,13 @@ EtsySentry follows the fleet cloud agent contract; set up or repair it with the 
 . .agents/cloud/env.sh            # Claude sessions already have it via CLAUDE_ENV_FILE
 bun run dev                       # server :8080, website :3100, under varlock run
 # in another shell, once http://localhost:3100 answers:
-google-chrome --headless=new --virtual-time-budget=15000 --window-size=1440,900 \
-  --screenshot=/tmp/etsysentry.png http://localhost:3100/
+capture-page http://localhost:3100/ /tmp/etsysentry.png --settle 8000
 ```
 
-`google-chrome` is the fleet's name for the preinstalled `/opt/pw-browsers/chromium`. Use
-`localhost`, not `127.0.0.1`: Clerk's authorized party for development is `http://localhost:3100`.
-The virtual-time budget gives the auto sign-in and first queries time to settle before capture.
+`capture-page` is the fleet's Playwright wrapper around the image's Chromium; it routes external
+hosts such as Clerk through the agent proxy and keeps loopback direct. Use `localhost`, not
+`127.0.0.1`: Clerk's authorized party for development is `http://localhost:3100`. The settle time
+gives the auto sign-in and first queries time to finish before capture.
 Cursor's `dev` terminal runs the same command with `ETSYSENTRY_DEV_HOST=0.0.0.0`, because Cursor
 forwards ports by watching listening sockets and the default loopback bind is invisible to it; app
 code reads only that schema item. The API server already binds every interface.
