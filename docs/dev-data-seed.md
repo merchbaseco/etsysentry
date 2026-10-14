@@ -81,7 +81,7 @@ and the alternative is opening a `psql` prompt to find out:
 [seed] Finished:       216ms
 ```
 
-Identifiers only — never a credential, and never a sign-in ticket. `.cursor/start.sh` prints this
+Identifiers only — never a credential, and never a sign-in ticket. `.agents/cloud/start.sh` prints this
 rather than discarding it, so a cloud boot log is a receipt. Values varlock holds as sensitive are
 masked in it, which is why the database name can render as `et▒▒▒▒▒` when it collides with a secret
 literal; the host and port are always legible.
@@ -116,7 +116,7 @@ seed is about to fill, not a stub built to pass a check. See
 
 ## Cloud Sessions
 
-Cursor Cloud Agents get the data for free: `.cursor/start.sh` provisions the isolated local cluster,
+Cloud agents (Claude and Cursor) get the data for free: `.agents/cloud/start.sh` provisions the isolated local cluster,
 overrides `ETSYSENTRY_DATABASE_HOST` to `127.0.0.1` for the session, and then seeds on every boot.
 Seeding is per boot rather than baked into the environment snapshot because the dataset is anchored
 to the current date, and a week-old snapshot would show a week-old week. A failed seed logs and is

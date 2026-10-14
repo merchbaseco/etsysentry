@@ -10,8 +10,11 @@ node_modules/
 # Varlock schema is the committed contract
 !.env.schema
 
-# Cursor-discovered fleet skills, seeded by .cursor/start.sh in cloud VMs
-.agents/
+# Cursor links fleet skills into .agents/skills; the cloud agent scripts stay tracked.
+.agents/*
+!.agents/cloud/
 
-# Claude-managed worktrees carry nested biome configs that break lint at config load
-.claude/
+# Claude-managed worktrees carry nested biome configs that break lint at config load;
+# the cloud agent adapter stays tracked.
+.claude/*
+!.claude/settings.json

@@ -111,9 +111,10 @@ it**: a GitHub Packages package grants no other repository access by default, so
 gets a 403. It is not used for installs anywhere in this repo.
 
 Instead the install credential resolves through the schema like every other value. Each workflow
-maps the `GH_DEPLOY_AGENT_PRODUCTION_OP_TOKEN` secret into the schema's *development* slot — the
-deploy agent reads both lifecycle vaults, and install tokens live in `Development` — then fetches
-`MERCHBASE_GITHUB_NPM_TOKEN` with `varlock printenv` under `ETSYSENTRY_RESOLVE_INSTALL_TOKENS`. No
+maps the `GH_DEPLOY_AGENT_PRODUCTION_OP_TOKEN` secret into `CI_OP_TOKEN`, the schema's CI fallback
+for its *development* identity (`CLOUD_AGENTS_DEVELOPMENT_OP_TOKEN` is reserved for cloud agent
+platforms) — the deploy agent reads both lifecycle vaults, and install tokens live in
+`Development` — then fetches `MERCHBASE_GITHUB_NPM_TOKEN` with `varlock printenv` under `ETSYSENTRY_RESOLVE_INSTALL_TOKENS`. No
 credential is injected under a canonical name, and the quality gates themselves reach no vault:
 `check:fast` pins the schema's `test` lifecycle, which resolves entirely offline.
 

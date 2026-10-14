@@ -110,8 +110,8 @@ which keeps a dev server — and the synthetic data behind it — off the networ
 
 An environment that reaches the server through a port forwarder sets `0.0.0.0`, because such
 forwarders find a session's ports by watching for listening sockets and a loopback-only bind is
-invisible to them. `.cursor/start.sh` exports it for the cloud flow, so that vendor detail lives
-under `.cursor/` rather than in app code. The API server already binds every interface and needs no
+invisible to them. Cursor's `dev` terminal (`.cursor/environment.json`) sets it for the cloud flow, so that vendor
+detail lives under `.cursor/` rather than in app code. The API server already binds every interface and needs no
 knob.
 
 Only the socket widens. `ETSYSENTRY_APP_ORIGIN` stays loopback, so nothing about the origin the app

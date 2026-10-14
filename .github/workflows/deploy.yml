@@ -41,7 +41,7 @@ jobs:
           # The deploy agent reads both lifecycle vaults, so the install token
           # resolves through the schema like every other value. Nothing is
           # injected from a platform secret under a canonical name.
-          CURSOR_CLOUD_AGENTS_DEVELOPMENT_OP_TOKEN: ${{ secrets.GH_DEPLOY_AGENT_PRODUCTION_OP_TOKEN }}
+          CI_OP_TOKEN: ${{ secrets.GH_DEPLOY_AGENT_PRODUCTION_OP_TOKEN }}
         run: |
           MERCHBASE_GITHUB_NPM_TOKEN="$(ETSYSENTRY_RESOLVE_INSTALL_TOKENS=true \
             bunx varlock@1.16.1 printenv MERCHBASE_GITHUB_NPM_TOKEN)"
@@ -62,7 +62,7 @@ jobs:
           # none is written, and no credential is injected under a canonical
           # name.
           DEPLOY_AGENT_PRODUCTION_OP_TOKEN: ${{ secrets.GH_DEPLOY_AGENT_PRODUCTION_OP_TOKEN }}
-          CURSOR_CLOUD_AGENTS_DEVELOPMENT_OP_TOKEN: ${{ secrets.GH_DEPLOY_AGENT_PRODUCTION_OP_TOKEN }}
+          CI_OP_TOKEN: ${{ secrets.GH_DEPLOY_AGENT_PRODUCTION_OP_TOKEN }}
         run: bun run deploy
 
       - name: Verify from the consumer
