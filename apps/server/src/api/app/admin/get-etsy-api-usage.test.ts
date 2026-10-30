@@ -7,6 +7,7 @@ const createContext = (params: { email?: string; isAdmin: boolean }): TrpcContex
         accessError: null,
         authType: 'access',
         credentialKind: 'session',
+        expiresAt: null,
         isAdmin: params.isAdmin,
         reply: {} as never,
         request: {} as never,

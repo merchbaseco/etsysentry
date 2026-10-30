@@ -1,4 +1,3 @@
-import { useAuth } from '@clerk/clerk-react';
 import { Activity, Clock, Eye, ShoppingCart, Store } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
@@ -55,11 +54,7 @@ export function DashboardShell() {
         loadKeywordActivityTabs()
     );
     const [shopTabs, setShopTabs] = useState<ShopActivityTabState[]>(() => loadShopActivityTabs());
-    const { getToken } = useAuth();
-    const getAuthToken = useCallback(async () => {
-        return (await getToken()) ?? null;
-    }, [getToken]);
-    useRealtimeQueryInvalidations(getAuthToken);
+    useRealtimeQueryInvalidations();
 
     const activeKeywordActivity = useMemo(() => {
         return parseKeywordActivityPath(location.pathname);
@@ -214,6 +209,12 @@ export function DashboardShell() {
                     <span className="mx-0.5 text-border">|</span>
                     <ThemeToggle />
                     <SettingsModal connection={connection} />
+                    <a
+                        className="rounded px-2 py-1 text-muted-foreground text-xs hover:bg-muted hover:text-foreground"
+                        href="/cdn-cgi/access/logout"
+                    >
+                        Sign out
+                    </a>
                 </div>
             </header>
 

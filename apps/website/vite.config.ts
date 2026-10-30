@@ -21,6 +21,7 @@ const envDir = resolve(rootDir, '../..');
  * handing it to the child.
  */
 const devServerHost = process.env.ETSYSENTRY_DEV_HOST ?? '127.0.0.1';
+const apiProxyTarget = `http://localhost:${process.env.ETSYSENTRY_PORT ?? '8080'}`;
 
 export default defineConfig({
     envDir,
@@ -34,19 +35,19 @@ export default defineConfig({
         },
         proxy: {
             '/api': {
-                target: 'http://localhost:8080',
+                target: apiProxyTarget,
                 changeOrigin: true,
             },
             '/auth': {
-                target: 'http://localhost:8080',
+                target: apiProxyTarget,
                 changeOrigin: true,
             },
             '/healthz': {
-                target: 'http://localhost:8080',
+                target: apiProxyTarget,
                 changeOrigin: true,
             },
             '/ws': {
-                target: 'ws://localhost:8080',
+                target: apiProxyTarget.replace(/^http/u, 'ws'),
                 changeOrigin: true,
                 ws: true,
             },

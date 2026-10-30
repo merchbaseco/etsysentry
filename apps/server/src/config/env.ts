@@ -4,9 +4,6 @@ import { z } from 'zod';
 // varlock builtin and is never delivered to a container, so NODE_ENV is the
 // lifecycle signal available inside the process.
 //
-// Production must not boot without a webhook signing secret, but development
-// has no Clerk webhook endpoint and therefore no secret to resolve — the schema
-// leaves it undefined there.
 const isProduction = process.env.NODE_ENV === 'production';
 
 // Compose interpolates every delivered name, so a value the schema resolves as
@@ -19,24 +16,32 @@ const envSchema = z.object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
     ETSYSENTRY_PORT: z.coerce.number().int().positive().default(8080),
     ETSYSENTRY_APP_ORIGIN: z.string().url().default('http://localhost:3100'),
-    MERCHBASE_CLERK_SECRET_KEY: z.string().min(1),
-    MERCHBASE_CLERK_ISSUER: z.string().url(),
-    MERCHBASE_CLERK_JWT_KEY: z.string().min(1),
-    MERCHBASE_CLERK_PUBLISHABLE_KEY: z.string().min(1),
-    ETSYSENTRY_CLERK_AUTHORIZED_PARTIES: z.string().min(1),
-    ETSYSENTRY_CLERK_WEBHOOK_SIGNING_SECRET: isProduction
+    MERCHBASE_ACCESS_ISSUER: isProduction
+        ? z.string().url()
+        : emptyAsUndefined(z.string().url().optional()),
+    MERCHBASE_ACCESS_AUTHORITY_ORIGIN: z.string().url(),
+    MERCHBASE_ACCESS_API_AUDIENCE: isProduction
+        ? z.string().min(1)
+        : emptyAsUndefined(z.string().min(1).optional()),
+    MERCHBASE_ACCESS_INTERACTIVE_AUDIENCE: isProduction
+        ? z.string().min(1)
+        : emptyAsUndefined(z.string().min(1).optional()),
+    MERCHBASE_ACCESS_AUTHORITY_CLIENT_ID: isProduction
+        ? z.string().min(1)
+        : emptyAsUndefined(z.string().min(1).optional()),
+    MERCHBASE_ACCESS_ETYSENTRY_INTERNAL_AUDIENCE: isProduction
+        ? z.string().min(1)
+        : emptyAsUndefined(z.string().min(1).optional()),
+    MERCHBASE_ACCESS_ETYSENTRY_CLIENT_ID: isProduction
+        ? z.string().min(1)
+        : emptyAsUndefined(z.string().min(1).optional()),
+    MERCHBASE_ACCESS_ETYSENTRY_CLIENT_SECRET: isProduction
         ? z.string().min(1)
         : emptyAsUndefined(z.string().min(1).optional()),
     ETSYSENTRY_ADMIN_MERCHBASE_USER_ID: emptyAsUndefined(
         z
             .string()
             .regex(/^mbu_[A-Za-z0-9_-]+$/)
-            .optional()
-    ),
-    ETSYSENTRY_DEV_CLERK_SIGN_IN_USER_ID: emptyAsUndefined(
-        z
-            .string()
-            .regex(/^user_[A-Za-z0-9]+$/)
             .optional()
     ),
     ETSYSENTRY_ETSY_API_KEY: z.string().min(1),
@@ -77,27 +82,12 @@ export const resolveDisableServerJobRunner = (value: 'true' | 'false' | undefine
 
 const REQUIRED_ETSY_OAUTH_SCOPES = ['listings_r'] as const;
 const OAUTH_SCOPE_DELIMITER_REGEX = /[\s,]+/;
-const AUTHORIZED_PARTY_DELIMITER_REGEX = /[\s,]+/;
-const TRAILING_SLASHES_REGEX = /\/+$/;
 
 const parseOAuthScopes = (rawScopes: string): string[] => {
     return rawScopes
         .split(OAUTH_SCOPE_DELIMITER_REGEX)
         .map((scope) => scope.trim())
         .filter((scope) => scope.length > 0);
-};
-
-const parseAuthorizedParties = (rawParties: string): string[] => {
-    const parties = rawParties
-        .split(AUTHORIZED_PARTY_DELIMITER_REGEX)
-        .map((party) => party.trim().replace(TRAILING_SLASHES_REGEX, ''))
-        .filter((party) => party.length > 0);
-
-    if (parties.length === 0) {
-        throw new Error('ETSYSENTRY_CLERK_AUTHORIZED_PARTIES must contain at least one party.');
-    }
-
-    return Array.from(new Set(parties));
 };
 
 const validateOAuthRedirectUri = (params: {
@@ -132,7 +122,6 @@ const etsyOAuthScopes = Array.from(
         ...REQUIRED_ETSY_OAUTH_SCOPES,
     ])
 );
-const clerkAuthorizedParties = parseAuthorizedParties(rawEnv.ETSYSENTRY_CLERK_AUTHORIZED_PARTIES);
 
 if (etsyOAuthScopes.length === 0) {
     throw new Error('ETSYSENTRY_ETSY_OAUTH_SCOPES must contain at least one OAuth scope.');
@@ -151,6 +140,5 @@ export const env = {
     databaseUser: rawEnv.ETSYSENTRY_DATABASE_USER,
     disableServerJobRunner,
     enableServerJobs: !disableServerJobRunner,
-    clerkAuthorizedParties,
     etsyOAuthScopes,
 };

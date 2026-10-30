@@ -22,8 +22,8 @@ export const formatSeedReceipt = (summary: SeedRunSummary): string => {
 
     return [
         line('Database', summary.target),
-        line('Clerk issuer', summary.clerkIssuer),
-        line('Signed-in user', `${summary.clerkSubject} -> ${summary.merchbaseUserId}`),
+        line('Access issuer', summary.accessIssuer),
+        line('Signed-in user', `${summary.accessSubject} -> ${summary.merchbaseUserId}`),
         line('Account', summary.accountId),
         line('Window', `${summary.dayCount} days through ${summary.through} (UTC)`),
         line('Dataset', `seed=${summary.seed}`),

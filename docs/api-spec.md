@@ -4,12 +4,14 @@
 
 This spec defines both first-party API modalities exposed by EtsySentry:
 
-- Dashboard App API (`api.app.*`) authenticated by centralized Merchbase Access Clerk sessions.
-- Public API (`api.public.*`) authenticated by centralized Merchbase opaque API keys or shared OAuth
-  credentials.
+- Dashboard App API (`api.app.*`) authenticated by Cloudflare Access interactive assertions on
+  `etsysentry.merchbase.co`.
+- Public API (`api.public.*`) authenticated by Cloudflare Access API assertions on
+  `etsysentry-api.merchbase.co`, backed by shared API-key or OAuth credentials.
 
-Server transport base URL for both modalities:
-- `<origin>/api`
+Transport base URLs:
+- Dashboard browser calls use the same-origin `/api` path.
+- Public clients use `https://etsysentry-api.merchbase.co/api` by default.
 
 ## API Modalities
 
@@ -18,12 +20,14 @@ Server transport base URL for both modalities:
 - Intended clients:
   - EtsySentry dashboard website (`apps/website`)
 - Authentication:
-  - `Authorization: Bearer <clerk_jwt>`
+  - Cloudflare Access sends `Cf-Access-Jwt-Assertion` after its interactive policy succeeds.
+  - Browser mutations require `Origin` exactly equal to `ETSYSENTRY_APP_ORIGIN`.
 - Auth context behavior:
-  - server validates Clerk token
+  - server verifies the signed assertion against the exact interactive audience selected by the
+    raw `Host` header
   - the access package authenticates the session and the product resolves its stable
     `merchbaseUserId` projection to exactly one local `accountId`
-  - all tenant/domain ownership is keyed by `accountId` (not Clerk user ids)
+  - all tenant/domain ownership is keyed by `accountId` (not provider user ids)
   - procedures must not accept auth identity fields from client input
   - admin-only procedures compare the stable `merchbaseUserId` with `ADMIN_MERCHBASE_USER_ID`
 - Current implementation status:
@@ -43,13 +47,17 @@ OAuth/session storage boundary:
   - `@etsysentry/http-client`
   - direct HTTP/tRPC clients
 - Authentication:
-  - required: `authorization: Bearer <ak_...|oat_...|oauth_jwt>`
+  - shared `mbk_v1.<canonical-base64url-json>` machine keys or opaque OAuth access tokens are
+    translated by public clients into Cloudflare Access credentials
 - Auth context behavior:
   - the access package authenticates the API key or OAuth credential and returns the stable
     `merchbaseUserId`
-  - JWT-shaped credentials try session auth first and OAuth only after an `unauthenticated` result
-  - denied/unavailable session results do not fall through to OAuth
-  - malformed credentials and retired `esk_` keys fail closed
+  - the public HTTP client translates strict `mbk_v1.<base64url-json>` keys to Cloudflare Access
+    service headers; opaque OAuth access tokens pass as bearer values without local JWT parsing
+  - server verifies the signed assertion against the exact shared API audience selected by the raw
+    `Host` header; person assertions map to OAuth context and API-key assertions map to API-key
+    context
+  - malformed machine-key envelopes fail closed
   - the product-local projection maps that stable user to `accountId`
   - no EtsySentry-specific key issuance, verification, header, route, or table remains
 - Current implementation status:
@@ -81,8 +89,11 @@ OAuth/session storage boundary:
 Realtime endpoint:
 
 - path: `/ws`
-- auth: Clerk bearer token passed as `?token=<clerk_jwt>`
+- auth: the Cloudflare Access assertion from the websocket upgrade headers; credentials never go in
+  the URL. The browser supplies the exact dashboard `Origin`.
 - server routing: account-scoped fan-out by resolved `accountId`
+- sockets close on access projection changes and at the earliest signed assertion, business-grant,
+  or API-key expiry.
 
 Message contract (server -> client):
 
@@ -755,11 +766,15 @@ This section documents the procedures currently implemented for CLI/http consume
 ### Authentication
 
 Required on all `api.public.*` procedures:
-- `authorization: Bearer <ak_...>`
+- an API-audience Cloudflare Access assertion. Public clients provide either the strict `mbk_v1`
+  key envelope or an opaque OAuth bearer credential; they do not set identity headers.
 
 Auth notes:
-- The shared access package authenticates the key and resolves the product-local stable user
-  projection to `accountId`; all access is account-scoped.
+- Cloudflare Access authenticates the key or OAuth credential at the API host. EtsySentry verifies
+  the signed assertion and resolves the product-local stable user projection to `accountId`; all
+  access is account-scoped.
+- API-audience people map to OAuth context, machine identities map to API-key context, and neither
+  may use session-only app/admin procedures.
 - Public procedures do not accept tenant identity input fields.
 - For tracking mutations, the stable `merchbaseUserId` is used as the product actor value. Existing
   tracker/metering columns remain historical storage and are not authorization sources.
@@ -994,7 +1009,8 @@ Common tRPC error codes returned by public procedures:
 - `INTERNAL_SERVER_ERROR`
 
 Notes:
-- `PRECONDITION_FAILED` is returned for tracking mutations when account-to-Clerk mapping is missing.
+- `PRECONDITION_FAILED` is returned for tracking mutations when the account-to-user mapping is
+  missing.
 - CLI envelope mapping (`ok/data/error`) is a CLI concern, not the raw tRPC response format.
 
 ### Deferred Public Surface

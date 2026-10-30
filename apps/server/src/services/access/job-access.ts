@@ -37,7 +37,7 @@ export const evaluateAccountAccess = async (params: {
             };
         }
 
-        await (params.access ?? getEtsySentryAccess()).sessionAccess.evaluateAccess(
+        await (params.access ?? getEtsySentryAccess()).interactiveAccess.evaluateAccess(
             merchbaseUserId
         );
 

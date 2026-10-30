@@ -19,11 +19,11 @@ current and historical data for analysis.
 - Monitoring orchestration: continuous spacing with pg-boss jobs (not one global fixed daily run).
 - Tenancy: multi-tenant from the start.
 - Auth:
-  - centralized `@merchbaseco/access` for Clerk sessions, suite opaque API keys, and shared OAuth
-    credentials
-  - product-local Access Projection keyed by Clerk issuer+subject and mapped to the existing local
+  - centralized `@merchbaseco/access` for Cloudflare Access sessions, suite machine keys, and shared
+    OAuth credentials
+  - product-local Access Projection keyed by provider-neutral issuer+subject and mapped to the existing local
     account UUID through one stable `merchbaseUserId`
-  - tenant/domain records remain keyed by `accountId`, never by email or a recurring Clerk lookup
+  - tenant/domain records remain keyed by `accountId`, never by email or a provider lookup
   - admin-only behavior is gated by the operator-supplied `ADMIN_MERCHBASE_USER_ID`
 - API organization: mirror RankWrangler tRPC organization with `api.public.*` and `api.app.*`.
 - API naming: user-intent-first names (for example: `track`,
@@ -149,9 +149,10 @@ Each primitive must be creatable, listable, retrievable, and monitorable.
 
 ## Security and Access Requirements
 
-- Public Merchbase API-key and shared OAuth auth via `Authorization: Bearer <credential>`; CLI
-  automation uses `ak_` credentials.
-- App/admin auth uses centralized Clerk sessions on the separate `api.app.*` surface.
+- Public Merchbase API-key and shared OAuth auth use the shared Cloudflare Access API audience;
+  public CLI automation uses strict `mbk_v1` machine-key envelopes or an opaque OAuth access token.
+- App/admin auth uses Cloudflare Access interactive assertions on `api.app.*`; API-audience people
+  cannot call session-only app and admin procedures.
 - Secrets remain in environment variables only.
 - Tenant isolation is required at the data and API layers.
 

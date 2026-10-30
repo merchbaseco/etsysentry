@@ -16,6 +16,7 @@ const createContext = (
         accountId: 'account-test',
         authType: accessError ? 'none' : 'access',
         credentialKind: accessError ? null : credentialKind,
+        expiresAt: null,
         isAdmin: false,
         merchbaseUserId: 'mbu_test',
         reply: {} as never,

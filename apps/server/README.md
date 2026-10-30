@@ -88,19 +88,18 @@ point runs under `varlock run`. `docs/deployment.md` maps each value to the vaul
 
 Secrets (resolved from 1Password):
 
-- `MERCHBASE_CLERK_SECRET_KEY`, `MERCHBASE_CLERK_JWT_KEY` — shared suite Clerk instance
-- `ETSYSENTRY_CLERK_WEBHOOK_SIGNING_SECRET` — production only; development registers no webhook route
+- `MERCHBASE_ACCESS_ETYSENTRY_CLIENT_ID`, `MERCHBASE_ACCESS_ETYSENTRY_CLIENT_SECRET` — EtsySentry's
+  internal Cloudflare service credential
 - `ETSYSENTRY_ADMIN_MERCHBASE_USER_ID` — optional; unset disables the admin tRPC surface
 - `ETSYSENTRY_ETSY_API_KEY`, `ETSYSENTRY_ETSY_API_SHARED_SECRET`
 - `ETSYSENTRY_DATABASE_PASSWORD`
 
 Public values (schema literals, per lifecycle):
 
-- `MERCHBASE_CLERK_ISSUER`, `MERCHBASE_CLERK_PUBLISHABLE_KEY`
-- `ETSYSENTRY_CLERK_AUTHORIZED_PARTIES`
-- `ETSYSENTRY_DEV_CLERK_SIGN_IN_USER_ID` — development only; the Clerk identity a development
-  session signs itself in as. Resolves to nothing in production, where the route that mints its
-  tickets is never registered. See [`../../docs/dev-sign-in.md`](../../docs/dev-sign-in.md)
+- `MERCHBASE_ACCESS_ISSUER`, `MERCHBASE_ACCESS_AUTHORITY_ORIGIN`,
+  `MERCHBASE_ACCESS_API_AUDIENCE`, `MERCHBASE_ACCESS_INTERACTIVE_AUDIENCE`,
+  `MERCHBASE_ACCESS_AUTHORITY_CLIENT_ID`,
+  `MERCHBASE_ACCESS_ETYSENTRY_INTERNAL_AUDIENCE`
 - `ETSYSENTRY_PORT`, `ETSYSENTRY_APP_ORIGIN`, `ETSYSENTRY_DISABLE_SERVER_JOB_RUNNER`
 - `ETSYSENTRY_ETSY_OAUTH_REDIRECT_URI` (must be the public server URL in production, for example
   `https://etsysentry.merchbase.co/auth/etsy/callback`, and must match the Etsy app settings)
@@ -116,14 +115,15 @@ Public values (schema literals, per lifecycle):
 
 ## OAuth Flow (Etsy v3)
 
-1. Client calls `api.app.etsyAuth.start` (mutation) with Clerk bearer auth to obtain:
+1. Client calls `api.app.etsyAuth.start` (mutation) with Cloudflare Access interactive auth to obtain:
    - `authorizationUrl`
 2. Client redirects user to Etsy authorize URL.
 3. Etsy redirects to `ETSYSENTRY_ETSY_OAUTH_REDIRECT_URI` (`/auth/etsy/callback`), and this value must also be
    registered in your Etsy app settings.
 4. Callback verifies `state`, exchanges `code` for tokens via the OAuth bridge, and stores token
    state keyed by `accountId`.
-5. Client calls `api.app.etsyAuth.status` / `api.app.etsyAuth.refresh` with Clerk bearer auth.
+5. Client calls `api.app.etsyAuth.status` / `api.app.etsyAuth.refresh` with Cloudflare Access
+   interactive auth.
 
 ## Centralized Access
 
@@ -132,9 +132,9 @@ as-built access contract, two-phase migration tooling, and production cutover ru
 Etsy OAuth connection is provider state, not customer authentication, and remains keyed by the
 existing local account UUID.
 
-A development or cloud database receives no Clerk webhooks, so its Access Projection is written by
-`bootstrapDevAccessProjection` from `@merchbaseco/access/dev`, through this repository's own
-`AccessProjectionStore` adapter. Nothing here writes projection SQL by hand. See
+A development or cloud database receives no Cloudflare snapshot callbacks, so its Access Projection
+is written by `createDevCloudflareAccess` from `@merchbaseco/access/dev`, through this repository's
+own `AccessProjectionStore` adapter. Nothing here writes projection SQL by hand. See
 [`docs/dev-sign-in.md`](../../docs/dev-sign-in.md).
 
 Container builds install the private `@merchbaseco/access` package through the
@@ -187,7 +187,8 @@ Current app surface:
 ## Operational Notes
 
 - Startup logs include a status summary with API prefix, callback path, and OAuth scopes.
-- `/ws` requires a Clerk bearer token passed as `token` query param during websocket connect.
+- `/ws` requires the Cloudflare Access assertion in the websocket upgrade headers; credentials are
+  never passed in the URL, and the browser's exact trusted origin is checked.
 - Realtime websocket payloads are invalidation-only events (no record payloads), currently targeting
   `app.keywords.list`, `app.listings.list`, and `app.shops.list`.
 - Job runtime performs startup reconciliation via `apps/server/src/jobs/startup-reconciliation*.ts`
@@ -210,11 +211,12 @@ Current app surface:
   - reads `x-limit-per-second`, `x-limit-per-day`, `x-remaining-*`
   - honors `retry-after` on rate-limit responses
   - applies exponential backoff when `retry-after` is absent
-- `api.app.*` procedures require Clerk bearer auth (`Authorization: Bearer <token>`).
+- `api.app.*` procedures require a verified interactive Cloudflare Access assertion.
 - Admin-only app procedures require the authenticated stable `merchbaseUserId` to match the
   operator-supplied `ETSYSENTRY_ADMIN_MERCHBASE_USER_ID`; email is never used for authorization.
-- Customer API-key issuance, verification, routes, UI, and local API-key storage are removed at
-  clean cutover. CLI/automation uses `MERCHBASE_API_KEY` and the shared Merchbase Keychain entry.
+- Customer API-key issuance, verification, routes, UI, and local API-key storage remain in the
+  central Merchbase authority. CLI/automation uses `MERCHBASE_API_KEY` and the shared Keychain entry;
+  its `mbk_v1` envelope is translated to Cloudflare Access service headers by the public client.
 - `accounts.merchbaseUserId` is the only local account mapping used by request and background-job
   authorization. Existing Etsy OAuth/provider state and product/metering rows remain account-keyed.
 - Keep `.env.schema` updated when env vars change; `bun run check` fails when it drifts.

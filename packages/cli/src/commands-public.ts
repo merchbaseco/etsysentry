@@ -1,7 +1,7 @@
 import { createEtsySentryClient } from '@etsysentry/http-client';
-import { MERCHBASE_API_KEY_ENV } from '@merchbaseco/access';
 import { resolveApiKey } from './auth.js';
 import { resolveBaseUrl, resolveRange } from './config.js';
+import { MERCHBASE_API_KEY_ENV } from './constants.js';
 import { failWith } from './errors.js';
 import {
     filterKeywordItems,

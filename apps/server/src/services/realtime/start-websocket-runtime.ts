@@ -2,46 +2,30 @@ import type { IncomingMessage } from 'node:http';
 import type { Socket } from 'node:net';
 import type { FastifyInstance } from 'fastify';
 import { WebSocket, WebSocketServer } from 'ws';
-import { env } from '../../config/env';
 import type { EtsySentryAccess } from '../access/etsysentry-access';
 import { onRealtimeEvent } from './emit-event';
 
 interface RealtimeConnectionIdentity {
     accountId: string;
+    expiresAt: number | null;
     merchbaseUserId: string;
 }
 
-const TRAILING_SLASHES_REGEX = /\/+$/;
+interface ManagedConnection {
+    expiryTimer: NodeJS.Timeout | null;
+    identity: RealtimeConnectionIdentity;
+}
 
-const normalizeOrigin = (origin: string): string => {
-    return origin.trim().replace(TRAILING_SLASHES_REGEX, '');
+const parseRequestUrl = (request: IncomingMessage): URL =>
+    new URL(request.url ?? '', `http://${request.headers.host ?? 'localhost'}`);
+
+const parseAssertion = (request: IncomingMessage): string | undefined => {
+    const assertion = request.headers['cf-access-jwt-assertion'];
+    return typeof assertion === 'string' && assertion.length > 0 ? assertion : undefined;
 };
 
-const parsePathname = (request: IncomingMessage): string => {
-    const url = new URL(request.url ?? '', 'http://localhost');
-    return url.pathname;
-};
-
-const parseToken = (request: IncomingMessage): string | null => {
-    const url = new URL(request.url ?? '', 'http://localhost');
-    const token = url.searchParams.get('token')?.trim();
-
-    if (!token) {
-        return null;
-    }
-
-    return token;
-};
-
-const isAllowedOrigin = (request: IncomingMessage): boolean => {
-    const requestOrigin = request.headers.origin;
-
-    if (!requestOrigin) {
-        return true;
-    }
-
-    return normalizeOrigin(requestOrigin) === normalizeOrigin(env.ETSYSENTRY_APP_ORIGIN);
-};
+const parseUserIdHeader = (request: IncomingMessage): string | string[] | undefined =>
+    request.headers['x-merchbase-user-id'];
 
 const rejectUpgrade = (socket: Socket, statusLine: string): void => {
     if (socket.destroyed) {
@@ -52,15 +36,23 @@ const rejectUpgrade = (socket: Socket, statusLine: string): void => {
     socket.destroy();
 };
 
-const deriveIdentityFromToken = async (
-    token: string,
+const getConnectionIdentity = async (
+    request: IncomingMessage,
     access: EtsySentryAccess
 ): Promise<RealtimeConnectionIdentity | null> => {
     try {
-        const authorized = await access.sessionAccess.authorize(token);
+        const authorized = await access.authorizeRequest({
+            assertion: parseAssertion(request),
+            host: request.headers.host,
+            method: 'GET',
+            upgrade: true,
+            origin: request.headers.origin,
+            userIdHeader: parseUserIdHeader(request),
+        });
 
         return {
             accountId: authorized.principal.accountId,
+            expiresAt: authorized.expiresAt,
             merchbaseUserId: authorized.merchbaseUserId,
         };
     } catch {
@@ -71,23 +63,37 @@ const deriveIdentityFromToken = async (
 const shouldDeliverEvent = (
     eventAccountId: string,
     connectionIdentity: RealtimeConnectionIdentity
-): boolean => {
-    return eventAccountId === connectionIdentity.accountId;
-};
+): boolean => eventAccountId === connectionIdentity.accountId;
 
 export const startWebsocketRuntime = (params: {
     access: EtsySentryAccess;
     server: FastifyInstance;
 }): {
+    closeForUser: (merchbaseUserId: string) => void;
     stop: () => Promise<void>;
 } => {
-    const websocketServer = new WebSocketServer({
-        noServer: true,
-    });
-    const identityByConnection = new Map<WebSocket, RealtimeConnectionIdentity>();
+    const websocketServer = new WebSocketServer({ noServer: true });
+    const managedConnections = new Map<WebSocket, ManagedConnection>();
+    const closeConnection = (connection: WebSocket, code: number, reason: string): void => {
+        const managed = managedConnections.get(connection);
+        if (!managed) {
+            return;
+        }
+        managedConnections.delete(connection);
+        if (managed.expiryTimer) {
+            clearTimeout(managed.expiryTimer);
+        }
+        if (
+            connection.readyState === WebSocket.OPEN ||
+            connection.readyState === WebSocket.CONNECTING
+        ) {
+            connection.close(code, reason);
+        }
+    };
+
     const removeInvalidationListener = onRealtimeEvent((event) => {
-        for (const [connection, connectionIdentity] of identityByConnection.entries()) {
-            if (!shouldDeliverEvent(event.accountId, connectionIdentity)) {
+        for (const [connection, managed] of managedConnections.entries()) {
+            if (!shouldDeliverEvent(event.accountId, managed.identity)) {
                 continue;
             }
 
@@ -101,10 +107,7 @@ export const startWebsocketRuntime = (params: {
                 }
 
                 params.server.log.warn(
-                    {
-                        error,
-                        accountId: event.accountId,
-                    },
+                    { error, accountId: event.accountId },
                     'Failed to send realtime invalidation event.'
                 );
             });
@@ -112,34 +115,40 @@ export const startWebsocketRuntime = (params: {
     });
 
     const onUpgrade = (request: IncomingMessage, socket: Socket, head: Buffer) => {
-        if (parsePathname(request) !== '/ws') {
+        let url: URL;
+        try {
+            url = parseRequestUrl(request);
+        } catch {
+            return;
+        }
+        if (url.pathname !== '/ws') {
+            return;
+        }
+        if (url.search !== '') {
+            rejectUpgrade(socket, '400 Bad Request');
             return;
         }
 
-        if (!isAllowedOrigin(request)) {
-            rejectUpgrade(socket, '403 Forbidden');
-            return;
-        }
-
-        const token = parseToken(request);
-
-        if (!token) {
-            rejectUpgrade(socket, '401 Unauthorized');
-            return;
-        }
-
-        deriveIdentityFromToken(token, params.access).then((connectionIdentity) => {
-            if (!connectionIdentity) {
+        getConnectionIdentity(request, params.access).then((identity) => {
+            if (!identity || socket.destroyed) {
                 rejectUpgrade(socket, '401 Unauthorized');
                 return;
             }
 
-            if (socket.destroyed) {
-                return;
-            }
-
             websocketServer.handleUpgrade(request, socket, head, (connection: WebSocket) => {
-                identityByConnection.set(connection, connectionIdentity);
+                const managed: ManagedConnection = { identity, expiryTimer: null };
+                if (identity.expiresAt !== null) {
+                    const remainingMs = identity.expiresAt - Date.now();
+                    if (remainingMs <= 0) {
+                        connection.close(4001, 'Access expired');
+                        return;
+                    }
+                    managed.expiryTimer = setTimeout(() => {
+                        closeConnection(connection, 4001, 'Access expired');
+                    }, remainingMs);
+                    managed.expiryTimer.unref();
+                }
+                managedConnections.set(connection, managed);
                 websocketServer.emit('connection', connection, request);
             });
         });
@@ -147,32 +156,36 @@ export const startWebsocketRuntime = (params: {
 
     websocketServer.on('connection', (connection: WebSocket) => {
         connection.on('close', () => {
-            identityByConnection.delete(connection);
+            closeConnection(connection, 1000, 'Closed');
         });
 
         connection.on('error', () => {
-            identityByConnection.delete(connection);
+            closeConnection(connection, 1011, 'Socket error');
         });
     });
 
     params.server.server.on('upgrade', onUpgrade);
 
     return {
+        closeForUser: (merchbaseUserId) => {
+            for (const [connection, managed] of managedConnections.entries()) {
+                if (managed.identity.merchbaseUserId === merchbaseUserId) {
+                    closeConnection(connection, 4001, 'Access changed');
+                }
+            }
+        },
         stop: async () => {
             params.server.server.off('upgrade', onUpgrade);
             removeInvalidationListener();
 
             for (const connection of websocketServer.clients) {
-                connection.close();
+                closeConnection(connection, 1001, 'Server stopping');
             }
 
             await new Promise<void>((resolve) => {
-                websocketServer.close(() => {
-                    resolve();
-                });
+                websocketServer.close(() => resolve());
             });
-
-            identityByConnection.clear();
+            managedConnections.clear();
         },
     };
 };

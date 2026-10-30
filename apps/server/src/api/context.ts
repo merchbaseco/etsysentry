@@ -1,10 +1,14 @@
 import { ServiceAccessError } from '@merchbaseco/access';
 import type { CreateFastifyContextOptions } from '@trpc/server/adapters/fastify';
 import { env } from '../config/env';
-import { type EtsySentryAccess, getEtsySentryAccess } from '../services/access/etsysentry-access';
+import {
+    type EtsySentryAccess,
+    type EtsySentryCredentialKind,
+    getEtsySentryAccess,
+} from '../services/access/etsysentry-access';
 
 export type AuthType = 'access' | 'none';
-export type CredentialKind = 'api_key' | 'oauth' | 'session';
+export type CredentialKind = EtsySentryCredentialKind;
 export type AccessError = 'access_denied' | 'access_unavailable' | null;
 
 export interface AuthenticatedUser {
@@ -15,18 +19,10 @@ export interface AuthenticatedUser {
 export const isAdminMerchbaseUser = (
     merchbaseUserId: string,
     configuredAdminUserId = env.ETSYSENTRY_ADMIN_MERCHBASE_USER_ID
-): boolean => {
-    return Boolean(configuredAdminUserId && configuredAdminUserId === merchbaseUserId);
-};
+): boolean => Boolean(configuredAdminUserId && configuredAdminUserId === merchbaseUserId);
 
-const getBearerToken = (authorization?: string): string | null => {
-    if (!authorization?.startsWith('Bearer ')) {
-        return null;
-    }
-
-    const token = authorization.slice('Bearer '.length).trim();
-    return token.length > 0 ? token : null;
-};
+const singleHeader = (value: string | string[] | undefined): string | undefined =>
+    typeof value === 'string' ? value : undefined;
 
 const getSharedContext = ({
     req,
@@ -46,23 +42,15 @@ export const createTrpcContext = async (
     access: EtsySentryAccess = getEtsySentryAccess()
 ) => {
     const sharedContext = getSharedContext({ req, res });
-    const token = getBearerToken(req.headers.authorization);
-
-    if (!token) {
-        return {
-            ...sharedContext,
-            accessError: null as AccessError,
-            authType: 'none' as AuthType,
-            credentialKind: null,
-            isAdmin: false,
-            accountId: null,
-            merchbaseUserId: null,
-            user: null,
-        };
-    }
 
     try {
-        const authorized = await access.authorize(token);
+        const authorized = await access.authorizeRequest({
+            assertion: singleHeader(req.headers['cf-access-jwt-assertion']),
+            host: req.headers.host,
+            method: req.method,
+            origin: req.headers.origin,
+            userIdHeader: req.headers['x-merchbase-user-id'],
+        });
         const credentialKind = authorized.credentialKind;
         const merchbaseUserId = authorized.merchbaseUserId;
 
@@ -71,6 +59,7 @@ export const createTrpcContext = async (
             accessError: null as AccessError,
             authType: 'access' as AuthType,
             credentialKind,
+            expiresAt: authorized.expiresAt,
             isAdmin: credentialKind === 'session' && isAdminMerchbaseUser(merchbaseUserId),
             accountId: authorized.principal.accountId,
             merchbaseUserId,
@@ -91,6 +80,7 @@ export const createTrpcContext = async (
             accessError,
             authType: 'none' as AuthType,
             credentialKind: null,
+            expiresAt: null,
             isAdmin: false,
             accountId: null,
             merchbaseUserId: null,

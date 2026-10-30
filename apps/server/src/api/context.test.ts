@@ -2,11 +2,12 @@ import { describe, expect, mock, test } from 'bun:test';
 import { ServiceAccessError } from '@merchbaseco/access';
 import { createTrpcContext, isAdminMerchbaseUser } from './context';
 
-const createContextOptions = (credential: string) =>
+const createContextOptions = (assertion: string) =>
     ({
         req: {
             headers: {
-                authorization: `Bearer ${credential}`,
+                'cf-access-jwt-assertion': assertion,
+                host: 'etsysentry-api.merchbase.co',
             },
             id: 'request-test',
         },
@@ -25,26 +26,35 @@ describe('context admin identity matching', () => {
 });
 
 describe('context credential authorization', () => {
-    test('uses the unified access boundary and preserves OAuth credential kind', async () => {
-        const authorize = mock(async () => ({
+    test('uses the host-selected access boundary and preserves API person kind', async () => {
+        const authorizeRequest = mock(async () => ({
             credentialKind: 'oauth' as const,
+            expiresAt: 1_800_000_000_000,
             merchbaseUserId: 'mbu_test',
             principal: {
                 accountId: 'account-test',
                 merchbaseUserId: 'mbu_test',
             },
+            service: 'etsysentry' as const,
         }));
 
-        const context = await createTrpcContext(createContextOptions('oat_test'), {
-            authorize,
+        const context = await createTrpcContext(createContextOptions('signed-api-assertion'), {
+            authorizeRequest,
         } as never);
 
-        expect(authorize).toHaveBeenCalledWith('oat_test');
+        expect(authorizeRequest).toHaveBeenCalledWith({
+            assertion: 'signed-api-assertion',
+            host: 'etsysentry-api.merchbase.co',
+            method: undefined,
+            origin: undefined,
+            userIdHeader: undefined,
+        });
         expect(context).toMatchObject({
             accessError: null,
             accountId: 'account-test',
             authType: 'access',
             credentialKind: 'oauth',
+            expiresAt: 1_800_000_000_000,
             isAdmin: false,
             merchbaseUserId: 'mbu_test',
             user: {
@@ -55,13 +65,15 @@ describe('context credential authorization', () => {
     });
 
     test('preserves unavailable access without a second authorization attempt', async () => {
-        const authorize = mock(() => Promise.reject(new ServiceAccessError('access_unavailable')));
+        const authorizeRequest = mock(() =>
+            Promise.reject(new ServiceAccessError('access_unavailable'))
+        );
 
-        const context = await createTrpcContext(createContextOptions('one.two.three'), {
-            authorize,
+        const context = await createTrpcContext(createContextOptions('invalid-assertion'), {
+            authorizeRequest,
         } as never);
 
-        expect(authorize).toHaveBeenCalledTimes(1);
+        expect(authorizeRequest).toHaveBeenCalledTimes(1);
         expect(context).toMatchObject({
             accessError: 'access_unavailable',
             accountId: null,

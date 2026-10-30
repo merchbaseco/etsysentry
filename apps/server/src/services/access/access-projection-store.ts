@@ -2,18 +2,23 @@ import type {
     AccessProjection,
     AccessProjectionEvent,
     AccessProjectionStore,
-    ClerkIdentity,
+    ProjectionIdentity,
 } from '@merchbaseco/access';
-import { and, asc, desc, eq, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
+import { env } from '../../config/env';
 import { db } from '../../db';
 import { accessProjectionEvents, accessProjections } from '../../db/schema';
 
 type ProjectionRow = typeof accessProjections.$inferSelect;
 
-export const createAccessProjectionStore = (database: typeof db = db): AccessProjectionStore => ({
+export const createAccessProjectionStore = (
+    database: typeof db = db,
+    authorityOrigin: string = env.MERCHBASE_ACCESS_AUTHORITY_ORIGIN
+): AccessProjectionStore => ({
     apply: (event) => applyProjectionEvent(database, event),
     findByIdentity: (identity) => findByIdentity(database, identity),
-    findByMerchbaseUserId: (merchbaseUserId) => findByMerchbaseUserId(database, merchbaseUserId),
+    findByMerchbaseUserId: (merchbaseUserId) =>
+        findByMerchbaseUserId(database, authorityOrigin, merchbaseUserId),
 });
 
 const applyProjectionEvent = async (
@@ -72,7 +77,7 @@ const applyProjectionEvent = async (
 
 const findByIdentity = async (
     database: typeof db,
-    identity: ClerkIdentity
+    identity: ProjectionIdentity
 ): Promise<Awaited<ReturnType<AccessProjectionStore['findByIdentity']>>> => {
     const [row] = await database
         .select()
@@ -101,6 +106,7 @@ const findByIdentity = async (
 
 const findByMerchbaseUserId = async (
     database: typeof db,
+    authorityOrigin: string,
     merchbaseUserId: string
 ): Promise<AccessProjection | null> => {
     const [row] = await database
@@ -109,13 +115,10 @@ const findByMerchbaseUserId = async (
         .where(
             and(
                 eq(accessProjections.state, 'active'),
+                eq(accessProjections.issuer, authorityOrigin),
+                eq(accessProjections.subject, merchbaseUserId),
                 eq(accessProjections.merchbaseUserId, merchbaseUserId)
             )
-        )
-        .orderBy(
-            desc(accessProjections.sourceUpdatedAt),
-            asc(accessProjections.issuer),
-            asc(accessProjections.subject)
         )
         .limit(1);
 

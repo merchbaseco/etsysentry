@@ -8,7 +8,7 @@ Typed tRPC client for EtsySentry public APIs.
 import { createEtsySentryClient } from '@etsysentry/http-client';
 
 const client = createEtsySentryClient({
-    apiKey: 'ak_...',
+    apiKey: 'mbk_v1.<canonical-base64url-json>',
     baseUrl: 'http://localhost:8080',
 });
 
@@ -23,7 +23,9 @@ const tracked = await client.trpcClient.public.listings.track.mutate({
 
 ## Notes
 
-- Auth is sent via `Authorization: Bearer <ak_...>`.
+- `apiKey` accepts a strict `mbk_v1` credential envelope and uses Cloudflare Access service
+  headers; opaque OAuth credentials use the separate `accessToken` option.
+- Requests omit ambient cookies and do not follow redirects with service credentials.
 - Base URL is normalized and `/api` is appended internally.
 - The client is aligned to the currently implemented `public.*` surface:
   - `keywords.list`, `keywords.track`

@@ -3,7 +3,7 @@ import { promisify } from 'node:util';
 import {
     MERCHBASE_API_KEY_KEYCHAIN_ACCOUNT,
     MERCHBASE_API_KEY_KEYCHAIN_SERVICE,
-} from '@merchbaseco/access';
+} from './constants.js';
 import { failWith } from './errors.js';
 import type { CliSecureStoreStatus } from './types.js';
 

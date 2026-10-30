@@ -1,4 +1,5 @@
 import cors from '@fastify/cors';
+import { ServiceAccessError } from '@merchbaseco/access';
 import { TRPCError } from '@trpc/server';
 import type { CreateFastifyContextOptions } from '@trpc/server/adapters/fastify';
 import { fastifyTRPCPlugin } from '@trpc/server/adapters/fastify';
@@ -10,12 +11,15 @@ import { env } from './config/env';
 import { testDbConnection } from './db';
 import { runMigrations } from './db/migrate';
 import { startServerJobs, stopServerJobs } from './jobs/run-server-jobs';
-import { registerClerkAccessWebhookRoute } from './services/access/clerk-webhook-route';
-import { isDevSignInArmed, registerDevSignInRoute } from './services/access/dev-sign-in-route';
 import {
+    assertEtsySentryDevelopmentTarget,
     configureEtsySentryAccess,
     createEtsySentryAccess,
+    ETSYSENTRY_INTERNAL_HOST,
+    ETSYSENTRY_INTERNAL_SNAPSHOT_PATH,
+    ETSYSENTRY_UI_HOST,
     type EtsySentryAccess,
+    isEtsySentryDevelopmentHost,
 } from './services/access/etsysentry-access';
 import { renderOAuthErrorHtml, renderOAuthSuccessHtml } from './services/etsy/oauth-html';
 import { completeEtsyOAuthFlow } from './services/etsy/oauth-service';
@@ -34,13 +38,35 @@ interface BuildServerOptions {
     logger?: boolean;
 }
 
+const getSingleHeader = (value: string | string[] | undefined): string | undefined =>
+    typeof value === 'string' ? value : undefined;
+
+const getSessionFailureStatus = (error: unknown): number => {
+    if (error instanceof ServiceAccessError && error.code === 'access_unavailable') {
+        return 503;
+    }
+    if (error instanceof ServiceAccessError && error.code === 'access_denied') {
+        return 403;
+    }
+    return 401;
+};
+
 export const buildServer = async (options: BuildServerOptions = {}) => {
     const completeOAuthFlow = options.completeOAuthFlow ?? completeEtsyOAuthFlow;
-    const access = configureEtsySentryAccess(options.access ?? createEtsySentryAccess());
+    const access = configureEtsySentryAccess(options.access ?? (await createEtsySentryAccess()));
     const logger =
         options.logger === undefined
             ? {
                   level: env.NODE_ENV === 'development' ? 'info' : 'warn',
+                  redact: {
+                      paths: [
+                          'req.headers.authorization',
+                          'req.headers.cookie',
+                          'req.headers.cf-access-client-secret',
+                          'req.headers.cf-access-jwt-assertion',
+                      ],
+                      censor: '[redacted]',
+                  },
               }
             : options.logger;
 
@@ -51,28 +77,6 @@ export const buildServer = async (options: BuildServerOptions = {}) => {
     await server.register(cors, {
         credentials: true,
         origin: [env.ETSYSENTRY_APP_ORIGIN],
-    });
-
-    // Only production runs a Clerk webhook endpoint, so development resolves no
-    // signing secret and the route is not registered there.
-    const clerkWebhookSigningSecret = env.ETSYSENTRY_CLERK_WEBHOOK_SIGNING_SECRET;
-
-    if (clerkWebhookSigningSecret) {
-        await registerClerkAccessWebhookRoute(server, {
-            issuer: env.MERCHBASE_CLERK_ISSUER,
-            onIdentityChanged: (identity) => {
-                access.authenticator.invalidateApiKeys(identity);
-            },
-            signingSecret: clerkWebhookSigningSecret,
-            store: access.projections,
-        });
-    }
-
-    registerDevSignInRoute(server, {
-        clerkSecretKey: env.MERCHBASE_CLERK_SECRET_KEY,
-        databaseHost: env.databaseHost,
-        devSignInUserId: env.ETSYSENTRY_DEV_CLERK_SIGN_IN_USER_ID,
-        nodeEnv: env.NODE_ENV,
     });
 
     await server.register(fastifyTRPCPlugin, {
@@ -92,6 +96,36 @@ export const buildServer = async (options: BuildServerOptions = {}) => {
         server,
     });
 
+    server.post(ETSYSENTRY_INTERNAL_SNAPSHOT_PATH, async (request, reply) => {
+        if (request.headers.host !== ETSYSENTRY_INTERNAL_HOST) {
+            return reply.status(404).send();
+        }
+
+        const handler = access.createProjectionHandler((merchbaseUserId) =>
+            realtimeRuntime.closeForUser(merchbaseUserId)
+        );
+        const headers = new Headers();
+        const assertion = getSingleHeader(request.headers['cf-access-jwt-assertion']);
+        if (assertion) {
+            headers.set('cf-access-jwt-assertion', assertion);
+        }
+        const contentType = getSingleHeader(request.headers['content-type']);
+        if (contentType) {
+            headers.set('content-type', contentType);
+        }
+        const url = new URL(
+            request.raw.url ?? ETSYSENTRY_INTERNAL_SNAPSHOT_PATH,
+            `https://${ETSYSENTRY_INTERNAL_HOST}`
+        );
+        const webRequest = new Request(url, {
+            body: JSON.stringify(request.body),
+            headers,
+            method: request.method,
+        });
+        const response = await handler(webRequest);
+        return reply.status(response.status).send();
+    });
+
     server.addHook('onClose', async () => {
         await realtimeRuntime.stop();
     });
@@ -101,6 +135,36 @@ export const buildServer = async (options: BuildServerOptions = {}) => {
             service: 'etsy-sentry-server',
             status: 'ok',
         };
+    });
+
+    server.get('/auth/session', async (request, reply) => {
+        if (
+            request.headers.host !== ETSYSENTRY_UI_HOST &&
+            !isEtsySentryDevelopmentHost(request.headers.host)
+        ) {
+            return reply.status(404).send({ authenticated: false });
+        }
+
+        try {
+            const authorized = await access.authorizeRequest({
+                assertion: getSingleHeader(request.headers['cf-access-jwt-assertion']),
+                host: request.headers.host,
+                method: request.method,
+                origin: request.headers.origin,
+                userIdHeader: request.headers['x-merchbase-user-id'],
+            });
+            if (authorized.credentialKind !== 'session') {
+                return reply.status(401).send({ authenticated: false });
+            }
+            return reply
+                .header('cache-control', 'no-store')
+                .send({ authenticated: true, merchbaseUserId: authorized.merchbaseUserId });
+        } catch (error) {
+            return reply
+                .status(getSessionFailureStatus(error))
+                .header('cache-control', 'no-store')
+                .send({ authenticated: false });
+        }
     });
 
     server.get('/auth/etsy/callback', async (request, reply) => {
@@ -120,11 +184,6 @@ export const buildServer = async (options: BuildServerOptions = {}) => {
         const { code, error, error_description: errorDescription, state } = parsedQuery.data;
 
         if (error) {
-            server.log.warn(
-                { error, errorDescription },
-                'Etsy OAuth callback returned an OAuth error'
-            );
-
             return reply
                 .status(400)
                 .type('text/html')
@@ -148,7 +207,7 @@ export const buildServer = async (options: BuildServerOptions = {}) => {
 
             return reply.status(200).type('text/html').send(renderOAuthSuccessHtml());
         } catch (callbackError) {
-            server.log.error({ callbackError }, 'Etsy OAuth callback failed');
+            server.log.error('Etsy OAuth callback failed.');
 
             if (callbackError instanceof TRPCError && callbackError.code === 'BAD_REQUEST') {
                 return reply
@@ -172,6 +231,7 @@ export const buildServer = async (options: BuildServerOptions = {}) => {
 };
 
 if (import.meta.main) {
+    assertEtsySentryDevelopmentTarget();
     await runMigrations();
     await testDbConnection();
 
@@ -198,19 +258,12 @@ if (import.meta.main) {
         {
             apiPrefix: '/api',
             adminConfigured: Boolean(env.ETSYSENTRY_ADMIN_MERCHBASE_USER_ID),
-            authProvider: 'clerk',
+            authProvider: 'cloudflare_access',
             callbackPath: '/auth/etsy/callback',
             callbackUrl: env.ETSYSENTRY_ETSY_OAUTH_REDIRECT_URI,
             databaseHost: env.databaseHost,
             databaseName: env.databaseName,
             databasePort: env.databasePort,
-            devAutoSignIn: isDevSignInArmed({
-                databaseHost: env.databaseHost,
-                devSignInUserId: env.ETSYSENTRY_DEV_CLERK_SIGN_IN_USER_ID,
-                nodeEnv: env.NODE_ENV,
-            })
-                ? env.ETSYSENTRY_DEV_CLERK_SIGN_IN_USER_ID
-                : 'off',
             disableServerJobRunner: env.disableServerJobRunner,
             enableServerJobs: env.enableServerJobs,
             oauthScopes: env.etsyOAuthScopes,

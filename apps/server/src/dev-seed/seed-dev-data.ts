@@ -1,4 +1,9 @@
-import { assertLocalSeedTarget, SeedTargetRefusedError } from './local-database-guard';
+import { assertDevCloudflareAccessTarget } from '@merchbaseco/access/dev';
+import {
+    assertLocalSeedTarget,
+    SeedTargetRefusedError,
+    toDatabaseUrl,
+} from './local-database-guard';
 import { DEFAULT_SEED_OPTIONS } from './plan';
 import { printSeedReceipt } from './receipt';
 
@@ -56,6 +61,10 @@ try {
         name: process.env.ETSYSENTRY_DATABASE_NAME ?? 'etsysentry',
         nodeEnv: process.env.NODE_ENV,
         port: Number(process.env.ETSYSENTRY_DATABASE_PORT ?? 5435),
+    });
+    assertDevCloudflareAccessTarget({
+        databaseUrl: toDatabaseUrl(target),
+        env: process.env,
     });
 
     const { runSeed } = await import('./run-seed');

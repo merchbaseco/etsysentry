@@ -37,7 +37,9 @@ describe('resolveBaseUrl', () => {
         };
 
         try {
-            expect(resolveBaseUrl({ config: {}, flags })).toBe('https://etsysentry.merchbase.co');
+            expect(resolveBaseUrl({ config: {}, flags })).toBe(
+                'https://etsysentry-api.merchbase.co'
+            );
         } finally {
             if (previousBaseUrl === undefined) {
                 Reflect.deleteProperty(process.env, 'ES_BASE_URL');

@@ -68,7 +68,7 @@ export const appProcedure = t.procedure.use(({ ctx, next }) => {
     ) {
         throw new TRPCError({
             code: 'UNAUTHORIZED',
-            message: 'Clerk authentication required.',
+            message: 'Interactive Merchbase Access required.',
         });
     }
 

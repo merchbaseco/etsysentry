@@ -1,4 +1,4 @@
-import { env } from '../config/env';
+import { DEV_ACCESS_AUTHORITY_ORIGIN } from '@merchbaseco/access/dev';
 import { closeDbConnection, db } from '../db';
 import { createAccessProjectionStore } from '../services/access/access-projection-store';
 import type { SeedDatabaseTarget } from './local-database-guard';
@@ -15,9 +15,9 @@ import { writeDevSeedPlan } from './write-plan';
  */
 
 export interface SeedRunSummary {
+    accessIssuer: string;
+    accessSubject: string;
     accountId: string;
-    clerkIssuer: string;
-    clerkSubject: string;
     dayCount: number;
     durationMs: number;
     merchbaseUserId: string;
@@ -43,8 +43,7 @@ export const runSeed = async (params: {
         const access = await migrateLocalDatabaseToHead(db, {
             accountId: options.accountId,
             databaseUrl: toDatabaseUrl(params.target),
-            issuer: env.MERCHBASE_CLERK_ISSUER,
-            store: createAccessProjectionStore(db),
+            projections: createAccessProjectionStore(db, DEV_ACCESS_AUTHORITY_ORIGIN),
         });
 
         // Ownership comes from the projection that was actually stored, not
@@ -55,8 +54,8 @@ export const runSeed = async (params: {
 
         return {
             accountId: plan.accountId,
-            clerkIssuer: access.issuer,
-            clerkSubject: access.clerkSubject,
+            accessIssuer: access.issuer,
+            accessSubject: access.subject,
             dayCount: options.dayCount,
             durationMs: Date.now() - startedAt,
             merchbaseUserId: access.merchbaseUserId,

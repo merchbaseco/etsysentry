@@ -22,7 +22,8 @@ Current scope assumptions:
 6. Persist normalized data only (no raw Etsy payload retention).
 7. Every monitor action emits a durable event log row.
 8. Admin-only operational visibility (logs and related ops) stays in `api.app.*` and website UI.
-9. Customer authentication policy belongs to the private `@merchbaseco/access` package.
+9. Customer authentication policy belongs to the private `@merchbaseco/access` package and the
+   Cloudflare Access audience selected for each exact product host.
 
 ## Proposed Monorepo Layout
 
@@ -65,7 +66,7 @@ docs/
 3. PostgreSQL (Drizzle-managed schema)
 4. Etsy integration layer (bridges + client orchestration)
 5. Auth layer:
-   - centralized Clerk session, opaque API-key, and shared OAuth authentication from
+   - centralized Cloudflare Access session, machine-key, and shared OAuth authentication from
      `@merchbaseco/access`
    - product-local Access Projection and stable `merchbaseUserId` to `accountId` mapping
    - shared OAuth credential path exposed by the same access factory
@@ -134,15 +135,22 @@ docs/
 - Tenant boundary key: `accountId` on all tenant-owned tables.
 - The local account identity is the existing `accounts.id` UUID. Each retained account maps to one
   stable `accounts.merchbaseUserId`; request authorization never creates or changes that UUID.
-- `@merchbaseco/access` authenticates Clerk sessions, suite API keys, and shared OAuth credentials.
-  EtsySentry supplies the projection store and resolves a stable user to exactly one account.
-- Access projections are keyed by `(issuer, subject)`, applied idempotently, and accepted only when
-  their source timestamp is monotonic. Missing projections cold-load from Clerk metadata; webhooks
-  and a daily repair job keep active rows current.
-- Clerk issuer+subject is the only recurring identity key. Normalized email is audit-only and may
-  support an explicit one-time operator migration only when the central contract permits it.
+- `@merchbaseco/access` verifies Cloudflare Access assertions for interactive sessions, suite API
+  keys, and shared OAuth credentials. EtsySentry supplies the projection store and resolves a stable
+  user to exactly one account.
+- The exact raw `Host` selects the interactive audience on `etsysentry.merchbase.co`, the shared API
+  audience on `etsysentry-api.merchbase.co`, or the product-only receiver audience on
+  `etsysentry-internal.merchbase.co`. Unknown production hosts fail closed; forwarded-host headers
+  do not select privileges.
+- Access projections are keyed by provider-neutral `(issuer, subject)`, applied idempotently, and
+  accepted only when their source timestamp is monotonic. The canonical authority grant, one person
+  identity, and any number of API-key aliases may coexist for the same stable user. Missing
+  projections cold-load from the authority; the signed internal snapshot receiver updates them.
+- The exact canonical authority issuer+`mbu_ID` pair is used for grant lookup. Person and key aliases
+  use their signed issuer and `person:<sub>` / `api_key:<clientID>` subjects. Normalized email is
+  audit-only.
 - `api.app.*` procedures:
-  - require Clerk bearer auth (`Authorization: Bearer <token>`)
+  - require a verified interactive Cloudflare Access assertion
   - derive `accountId` from the centralized access result and local stable-user mapping
   - do not trust client-supplied auth identity fields
   - enforce the stable account mapping
@@ -151,12 +159,13 @@ docs/
   - OAuth callback exchanges code for tokens and persists connection server-side
   - connection lookup key is `accountId`
   - website does not persist OAuth tokens/session IDs in browser storage
-- Customer API keys and OAuth credentials are issued and verified by Merchbase Access. EtsySentry
-  accepts API keys as `Authorization: Bearer <ak_...>` and OAuth credentials through the same
-  bearer boundary. It has no local key issuance, hashing, revocation, UI, or table. CLI automation
-  uses `MERCHBASE_API_KEY` or the shared Keychain convention.
-- Product ownership, metering, and background job payloads are account-keyed. They do not persist a
-  Clerk subject or substitute a Merchbase User ID into a Clerk-named field.
+- Customer API keys and OAuth credentials are issued and verified by Merchbase Access. Public
+  `mbk_v1` machine-key envelopes are translated to Cloudflare Access service headers by the public
+  npm client; opaque OAuth values remain bearer credentials and are never locally decoded.
+  EtsySentry has no local key issuance, hashing, revocation, UI, or table. CLI automation uses
+  `MERCHBASE_API_KEY` or the shared Keychain convention.
+- Product ownership, metering, and background job payloads are account-keyed. Provider identities
+  are not copied into business ownership fields.
 - Background jobs evaluate the mapped stable user once at job start. Denied/unavailable runs reset
   only their queue state and leave queued jobs, Etsy OAuth, product rows, and metering intact.
 
@@ -170,7 +179,7 @@ docs/
   - `(issuer, subject)`, `state`, `merchbaseUserId`, `access`, `accessValidUntil`,
     `sourceUpdatedAt`, `lastEventId`
 - `access_projection_event`
-  - idempotent event receipt keyed by central webhook event ID
+  - idempotent event receipt keyed by central authority event ID
 - `accounts`
   - existing local UUID plus nullable `merchbaseUserId` mapping (required for authorized runtime use)
 - `etsy_oauth_connections`
@@ -389,6 +398,11 @@ Public API and CLI intentionally share one canonical shape for `api.public.*`.
 - Central API-key issuance/revocation is outside EtsySentry; no `apiKeys` router is exposed.
 - `logs.list|tail|export` (admin-only)
 - operator/admin endpoints (admin-only)
+
+Browser tRPC calls use the UI host's same-origin `/api` route and interactive assertion. Public
+clients use `https://etsysentry-api.merchbase.co/api`. The internal snapshot receiver is only
+available at `POST https://etsysentry-internal.merchbase.co/api/internal/access-snapshot` and
+verifies a separate receiver audience and authority service client ID.
 
 ## CLI Design
 

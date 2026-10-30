@@ -2,20 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## v0.7.0 - 2026-10-29
 
 ### Changed
 
-- Migrated request, websocket, CLI, and background-job authorization to centralized Merchbase
-  Access with product-local stable-user projections.
-- CLI and HTTP automation now use `MERCHBASE_API_KEY` and `Authorization: Bearer <ak_...>`.
-- Public API authorization now accepts shared OAuth credentials with fail-closed session fallback.
-- Product ownership, Etsy API metering, and background jobs now use local account ownership without
-  Clerk-subject payload or storage fields.
-
-### Removed
-
-- Removed EtsySentry-specific customer API-key issuance, verification, UI, and local auth tables.
+- Breaking: API and MCP clients use `https://etsysentry-api.merchbase.co`. Replace saved Clerk credentials with a new Merchbase API key or Cloudflare sign-in.
+- Dashboard, WebSocket, and background-job access use local account permissions, including prompt account revocation and API-key retirement.
+- Existing Etsy connections, listing ownership, and metering remain attached to the same Merchbase account.
 
 ## v0.6.0 - 2026-06-15
 

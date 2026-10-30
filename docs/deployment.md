@@ -2,7 +2,9 @@
 
 Production is served at `https://etsysentry.merchbase.co`. Caddy serves the website bundle and
 proxies `/api`, `/auth`, `/healthz`, and `/ws` to the Fastify server. The whole stack runs as Docker
-Compose on the Mac mini.
+Compose on the Mac mini. The source Cloudflare Access integration requires separate UI, public API,
+and internal host policies; production stays on its existing release until the parent coordinates
+the database and Cloudflare cutover.
 
 ## Topology
 
@@ -77,9 +79,11 @@ redeploy, not just a restart.
 
 | 1Password item | Vault(s) | Canonical names |
 | --- | --- | --- |
-| `Clerk - Merchbase` (shared) | `Development`, `Production` | `MERCHBASE_CLERK_SECRET_KEY`, `MERCHBASE_CLERK_JWT_KEY`, `MERCHBASE_CLERK_PUBLISHABLE_KEY` |
+| `Cloudflare Access - Merchbase` (shared) | `Production` | `MERCHBASE_ACCESS_ISSUER`, `MERCHBASE_ACCESS_INTERACTIVE_AUDIENCE`, `MERCHBASE_ACCESS_API_AUDIENCE` |
+| `Cloudflare Service - Merchbase Access` (shared) | `Production` | `MERCHBASE_ACCESS_AUTHORITY_CLIENT_ID` |
+| `Cloudflare Access - Merchbase` (product audience) | `Production` | `MERCHBASE_ACCESS_ETYSENTRY_INTERNAL_AUDIENCE` |
+| `Cloudflare Service - EtsySentry` | `Production` | `MERCHBASE_ACCESS_ETYSENTRY_CLIENT_ID`, `MERCHBASE_ACCESS_ETYSENTRY_CLIENT_SECRET` |
 | `Etsy API - EtsySentry` | `Development`, `Production` | `ETSYSENTRY_ETSY_API_KEY`, `ETSYSENTRY_ETSY_API_SHARED_SECRET` |
-| `Clerk Webhook - EtsySentry` | `Production` | `ETSYSENTRY_CLERK_WEBHOOK_SIGNING_SECRET` |
 | `Admin User - EtsySentry` | `Production` | `ETSYSENTRY_ADMIN_MERCHBASE_USER_ID` |
 | `Postgres - EtsySentry` | `Development`, `Production` | `ETSYSENTRY_DATABASE_PASSWORD` |
 | `GitHub Packages Read - Merchbase` (shared) | `Development` | `MERCHBASE_GITHUB_NPM_TOKEN` |
@@ -89,14 +93,13 @@ redeploy, not just a restart.
 vaults: EtsySentry runs one Etsy application and one database, and local development connects to
 that same database over Tailscale. Each note cross-references the other; rotate both together.
 
+`MERCHBASE_ACCESS_AUTHORITY_ORIGIN` is the public literal `https://access-internal.merchbase.co`.
 Everything else in `.env.schema` is a public literal owned by the schema — ports, origins, the OAuth
 redirect and scopes, and the Etsy rate-limit tuning.
 
-Two of those literals are development-only and resolve to nothing in production:
-`ETSYSENTRY_DEV_CLERK_SIGN_IN_USER_ID`, the Clerk identity a development session signs itself in as,
-and `ETSYSENTRY_DEV_HOST`, the website dev server's bind address. Both are committed rather than
-vaulted because the venue that needs them most — an ephemeral cloud VM — has to be correct before it
-can reach a vault. See [`dev-sign-in.md`](dev-sign-in.md).
+`ETSYSENTRY_DEV_HOST` controls the website dev server's bind address. The development identity is
+the stable ID imported from `@merchbaseco/access/dev`; it does not require a Cloudflare secret or
+identity-provider setting. See [`dev-sign-in.md`](dev-sign-in.md).
 
 ## Published-package contracts
 

@@ -33,7 +33,7 @@ Current server status:
   - `public.listings.getPerformance`
   - `public.shops.list`
   - `public.shops.track`
-- dashboard website remains on `api.app.*` (Clerk auth)
+- dashboard website uses `api.app.*` with Cloudflare Access interactive assertions
 
 Current CLI package status:
 - implemented in `packages/cli`
@@ -58,8 +58,9 @@ current app capability set first, before adding broader v1 features.
 ## Authentication and Preconditions
 
 - All non-config/auth/meta commands require an API key.
-- CLI authenticates against `api.public.*` using API key auth:
-  - `authorization: Bearer <ak_...>`
+- CLI authenticates against `api.public.*` using the shared machine credential format:
+  - `MERCHBASE_API_KEY=mbk_v1.<canonical-base64url-json>`
+  - the client transports its client ID and secret in Cloudflare Access service headers
 
 API key lookup precedence:
 - `--api-key` flag
@@ -75,7 +76,7 @@ Auth commands:
 Base URL precedence:
 - `--base-url` flag
 - `ES_BASE_URL` env var
-- `<active-storage-dir>/config.json` (`baseUrl`, default `https://etsysentry.merchbase.co`)
+  - `<active-storage-dir>/config.json` (`baseUrl`, default `https://etsysentry-api.merchbase.co`)
 
 Etsy precondition:
 - Etsy-backed commands require the API key tenant to have an active Etsy OAuth connection.
@@ -394,7 +395,7 @@ es track keyword "mid century wall art"
 es track product https://www.etsy.com/listing/1234567890/example
 es track shop la-paz-studio
 
-MERCHBASE_API_KEY=ak_override es auth status
+MERCHBASE_API_KEY=mbk_v1.<canonical-base64url-json> es auth status
 es keywords list --sync-state queued
 
 es listings list --search "gallery wall" --show-digital --limit 20 --offset 0

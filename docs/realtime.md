@@ -13,17 +13,27 @@ The realtime subsystem supports:
 
 ## Connection Lifecycle
 
-1. The website creates a WebSocket URL at `/ws?token=<clerk_jwt>`.
+1. The website opens same-origin `/ws`; credentials stay in the Cloudflare Access upgrade headers.
 2. Server upgrade handling validates:
-   - path is `/ws`
-   - request origin matches `APP_ORIGIN` (when present)
-   - token can be authenticated by `@merchbaseco/access`
+   - path is exactly `/ws` with no query string
+   - UI-host upgrades require `Origin` exactly equal to `ETSYSENTRY_APP_ORIGIN`; native API-host
+     upgrades may omit it, but reject a foreign or repeated origin
+   - the signed assertion is valid for the audience selected by exact `Host`
 3. The server resolves `accountId` from the stable access result and stores connection identity:
    - `accountId`
    - `merchbaseUserId` (for access-aware connection handling)
+   - verified authorization expiry
 4. Realtime messages are emitted through the in-process event bus.
 5. The runtime fan-outs only to connections whose `accountId` matches event `accountId`.
 6. Client reconnect behavior uses exponential backoff up to 10 seconds.
+
+Projection changes close every socket for the affected Merchbase user immediately. Each socket also
+closes at the earliest Cloudflare assertion, canonical business-grant, or API-key alias expiry.
+API-host sockets also close within 300 seconds of admission, independently of the longer signed
+person assertion lifetime.
+Native clients that reconnect after closure must fetch a fresh OAuth or machine credential for each
+upgrade and put it only in the upgrade headers; tokens never belong in websocket URLs or connection
+parameters.
 
 ## Message Types
 

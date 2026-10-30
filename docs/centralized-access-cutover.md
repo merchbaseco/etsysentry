@@ -1,37 +1,43 @@
 # Centralized Merchbase Access Cutover
 
-<!-- Read when changing authentication, account mapping, Clerk webhooks, API credentials, or jobs. -->
+<!-- Read when changing authentication, account mapping, API credentials, or jobs. -->
 
-This is the EtsySentry as-built contract and production runbook for the centralized
-`@merchbaseco/access` migration. It is intentionally operator-driven. This repository contains no
-production Clerk subjects, Merchbase user IDs, API keys, webhook secrets, backup credentials, or
-account identifiers.
+This documents EtsySentry's Cloudflare Access runtime and the historical product-local Clerk data
+cleanup. The source now verifies Cloudflare Access assertions through `@merchbaseco/access`, while
+production stays on the previous Clerk release until the parent coordinates the complete data,
+Cloudflare, and deployment cutover. Do not deploy this source against the current production
+configuration. This repository contains no production identity maps, credentials, backup details,
+or account identifiers.
 
 ## Runtime contract
 
-The fixed Merchbase service is `etsysentry`. The server uses the private package for Clerk web
-sessions, suite opaque API keys, and the shared OAuth credential path. EtsySentry supplies:
+The fixed Merchbase service is `etsysentry`. The server uses the private package for Cloudflare
+Access assertions, suite API-key aliases, and the shared OAuth credential path. EtsySentry supplies:
 
 - a product-local Access Projection store keyed by `(issuer, subject)`;
 - the exact `merchbaseUserId` to existing local `accounts.id` resolver;
-- signed Clerk webhook handling and opaque-key cache invalidation;
-- a daily sequential refresh of active projections.
+- an exact canonical `mbu_ID` lookup and resolver to the existing local account UUID;
+- a product-only internal snapshot receiver with an independent audience/client check; and
+- immediate WebSocket disconnects when a projection changes or its verified authorization expires.
 
-Requests never resolve an account from normalized email or from the most recently seen Clerk row.
-Missing projections cold-load from Clerk through the package. Webhook updates are idempotent and
-monotonic by source update timestamp; delete events become terminal tombstones. The retained local
-account UUID, Etsy OAuth connection, listings, keywords, shops, snapshots, event logs, jobs, and
-metering rows remain account-keyed and are not deleted or recreated.
+The exact raw `Host` selects one of three audiences: interactive UI, shared public API, or the
+EtsySentry internal snapshot receiver. Unknown hosts fail closed. Missing projections load from the
+authority only through its service credential. Snapshot events are idempotent and monotonic by
+source timestamp; removals become tombstones. The canonical grant plus person and multiple API-key
+aliases coexist in the existing `(issuer, subject)` projection table. The retained local account
+UUID, Etsy OAuth connection, listings, keywords, shops, snapshots, event logs, jobs, and metering
+rows remain account-keyed and are not deleted or recreated.
 
-Tracker ownership, job payloads, event logs, and Etsy API metering use `accountId` only. Phase two
-drops the redundant historical Clerk-subject columns after proving every affected row has an owning
-account and every non-system legacy value belongs to an identity on that same account. Existing
-values are never reinterpreted as Merchbase User IDs.
+Tracker ownership, job payloads, event logs, and Etsy API metering use `accountId` only. The
+historical phase-two cleanup drops redundant Clerk-subject columns after proving every affected row
+has an owning account and every non-system legacy value belongs to an identity on that same
+account. Existing values are never reinterpreted as Merchbase User IDs.
 
-Customer API-key issuance, local verification, UI, environment alias, route, and table are gone at
-clean cutover. The only CLI/automation credential variable is `MERCHBASE_API_KEY`; the CLI uses the
-shared Keychain account/service constants from the access package. HTTP clients send
-`Authorization: Bearer <ak_...>`.
+Customer API-key issuance remains in the central authority. EtsySentry has no local issuance,
+verification, UI, or key table. The CLI keeps `MERCHBASE_API_KEY` and the shared Keychain
+convention; public clients decode only the strict `mbk_v1.<canonical-base64url-json>` transport
+envelope and send its client ID/secret as Cloudflare Access service headers. Opaque OAuth tokens use
+the separate bearer `accessToken` option and are never parsed locally.
 
 Production image builds install the private access package with the `github_packages_token`
 BuildKit secret. Compose sources that secret from `MERCHBASE_GITHUB_NPM_TOKEN` — the shared suite
@@ -40,10 +46,11 @@ credential, an `@internal` schema item that resolves only behind
 including CI: Actions' `github.token` gets a 403 from GitHub Packages for this package and is not
 used. The package token is never an image build argument or Dockerfile environment variable.
 
-The HTTP authorization boundary routes `ak_` credentials to API-key access, `oat_` credentials to
-OAuth access, and JWT-shaped credentials to session access. A JWT-shaped credential falls back to
-OAuth only when session authentication returns `unauthenticated`; denied or unavailable access is
-preserved without fallback. Retired `esk_` keys and malformed credentials fail closed.
+The server verifies `Cf-Access-Jwt-Assertion` against the audience selected from exact `Host`.
+Interactive persons map to session context, API-audience people map to OAuth context, and machine
+assertions resolve only through local API-key aliases. API-host people cannot call app/admin routes.
+All customer requests reject `x-merchbase-user-id`; caller-supplied identity headers never grant
+access.
 
 ## Migration tooling
 
@@ -151,22 +158,26 @@ queued jobs or product data.
 7. Run `access:backfill` with the private mapping, matching plan, backup fingerprint, and explicit
    approval. Confirm the transaction output contains only safe counts/fingerprints and the status
    is `backfilled`.
-8. Seed/verify the retained active projection and retired terminal tombstones. Configure the
-   signed Clerk webhook endpoint at `/api/webhooks/clerk/access` and verify its signature path; do
-   not create or rotate production credentials in this repository.
+8. Before deploying the new source, have the parent verify the canonical Merchbase grant and its
+   Cloudflare person and API-key aliases in the production projection data. Configure the exact UI,
+   public API, and EtsySentry internal audiences, plus the authority and product service clients,
+   through the separately managed Cloudflare/secret-store workflow. This repository does not create
+   credentials or change remote policy.
 9. Apply phase-two cleanup with `bun run --cwd apps/server db:migrate:phase2`; use this guarded runner rather
    than applying the SQL file directly. Verify the legacy local API-key and Clerk-identity tables are absent
    and the redundant tracker/metering identity columns are absent. Confirm all
    product/provider/metering tables and row counts remain.
-10. Start the server and automation with the approved central Clerk configuration. Run smoke checks
-    for a Clerk session, a suite `ak_` key, the shared OAuth credential path, the Etsy OAuth
-    connection, and the `/ws` session. Confirm no credential value is printed.
+10. Deploy only after the parent confirms that the Cloudflare host policies, service credentials,
+    projection aliases, production-required environment values, and app source are all ready. Run
+    smoke checks for a UI session, a public API machine key, the shared OAuth credential path, the
+    Etsy OAuth connection, the internal snapshot receiver, and `/ws`. Confirm no credential value
+    is printed.
 11. Run one controlled background-job check for each keyword, listing, and shop worker. Confirm
     access is evaluated once at job start, an allowed run preserves the normal sync lifecycle, and
     a denied/unavailable run returns to queue-safe state without deleting provider or product data.
-12. Confirm daily projection refresh is scheduled and the webhook receipt path is idempotent. Keep
-    the verified backup until post-cutover acceptance is complete; then remove temporary backup
-    copies according to the approved retention policy.
+12. Confirm snapshot callbacks apply idempotently and immediately close affected sockets. Keep the
+    verified backup until post-cutover acceptance is complete; then remove temporary backup copies
+    according to the approved retention policy.
 
 ## Rollback
 
@@ -179,7 +190,7 @@ the Etsy OAuth connection, and rerun the read-only audit before accepting traffi
 
 ## Facts still owned by the orchestrator
 
-The implementation cannot safely infer the production Clerk issuer/subjects, retained stable
-Merchbase user ID, central projection source timestamp, operator admin user ID, current authorized
-party list, webhook secret, backup fingerprint, or exact production row counts. The orchestrator
-must resolve and approve those facts privately with Clerk and the user before any cutover.
+The implementation cannot safely infer the production legacy identity set and account mapping,
+retained stable Merchbase user ID, central projection source timestamp, operator admin user ID,
+Cloudflare audiences/service clients, backup fingerprint, or exact production row counts. The
+orchestrator must resolve and approve those facts privately before any cutover.

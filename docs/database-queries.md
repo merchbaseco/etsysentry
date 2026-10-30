@@ -11,7 +11,8 @@ or incident triage.
 - Keep queries bounded (`LIMIT`, tight `WHERE` clauses, explicit time windows).
 - Avoid exposing secrets or full credential values in responses.
 - For centralized-access work, use `docs/centralized-access-cutover.md`; the audit/planner hashes
-  identity sets and must not print Clerk subjects, Merchbase user IDs, emails, or credentials.
+  identity sets and must not print historical provider subjects, Merchbase user IDs, emails, or
+  credentials.
 
 ## Need Data Rather Than Answers?
 

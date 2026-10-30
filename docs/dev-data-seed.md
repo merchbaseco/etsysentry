@@ -4,8 +4,8 @@
 EtsySentry surface renders something instead of an empty state. It is never run automatically on a
 developer machine.
 
-The account belongs to the shared Merchbase **Dev Sign-In user** — the identity a development
-session signs itself in as. That pairing is the whole point: seeded data owned by anyone else is
+The account belongs to the fixed Merchbase **Dev Sign-In user** supplied by
+`@merchbaseco/access/dev`. That pairing is the whole point: seeded data owned by anyone else is
 invisible to every surface in a session. [`dev-sign-in.md`](dev-sign-in.md) owns the auth half.
 
 ## Why It Refuses Almost Everywhere
@@ -71,8 +71,8 @@ and the alternative is opening a `psql` prompt to find out:
 
 ```
 [seed] Database:       127.0.0.1:5435/etsysentry
-[seed] Clerk issuer:   https://tolerant-roughy-27.clerk.accounts.dev
-[seed] Signed-in user: user_38Q9fcwOarmNP41Hb4P9TPUt8rS -> mbu_0ae4691c2dff45559d559bea99cd621b
+[seed] Access issuer:  https://identity.merchbase.invalid
+[seed] Signed-in user: person:development -> mbu_0ae4691c2dff45559d559bea99cd621b
 [seed] Account:        acct_dev_seed
 [seed] Window:         35 days through 2026-08-26 (UTC)
 [seed] Dataset:        seed=etsysentry-dev
@@ -107,11 +107,11 @@ That takes two passes. `runMigrations()` deliberately stops at the central-acces
 migration and gates the phase-two cleanup behind a readiness check, because on the live database
 that cleanup drops legacy identity tables and columns. A fresh local database starts out failing
 that gate — it has no mapped account at all — which would leave the seed writing into a schema that
-still carries `tracker_clerk_user_id NOT NULL`. So `dev-seed/migrate-to-head.ts` satisfies the gate
-the way the cutover backfill does: it writes the seed account and that account's Clerk identity, the
-access bootstrap writes the matching active projection against the same issuer and subject, and only
-then does it ask for the cleanup. Those rows are the truthful phase-one shape of the account the
-seed is about to fill, not a stub built to pass a check. See
+still carries historical identity columns. So `dev-seed/migrate-to-head.ts` uses one synthetic
+local-only legacy identity to satisfy the unchanged cleanup readiness check, then the existing
+migration removes it with the historical columns. Existing databases with unresolved legacy users
+or API keys are refused and require the explicit access cutover process. After cleanup, the seed
+writes the fixed development Cloudflare projection through the adapter. See
 [`centralized-access-cutover.md`](centralized-access-cutover.md).
 
 ## Cloud Sessions

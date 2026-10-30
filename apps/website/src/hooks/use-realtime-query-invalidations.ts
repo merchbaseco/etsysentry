@@ -2,8 +2,6 @@ import { useEffect, useState } from 'react';
 import { createRealtimeEventHandler } from '@/hooks/realtime-handlers/handle-realtime-event';
 import { parseRealtimeMessage } from '@/lib/realtime-message-types';
 
-type AuthTokenGetter = () => Promise<string | null>;
-
 export const logsInvalidatedEventName = 'etsysentry:logs-invalidated';
 export const listingsInvalidatedEventName = 'etsysentry:listings-invalidated';
 
@@ -12,8 +10,7 @@ export type RealtimeWebsocketStatus =
     | 'connected'
     | 'disconnected'
     | 'error'
-    | 'reconnecting'
-    | 'waiting_for_auth';
+    | 'reconnecting';
 
 export interface RealtimeWebsocketState {
     lastConnectedAt: string | null;
@@ -22,23 +19,16 @@ export interface RealtimeWebsocketState {
     status: RealtimeWebsocketStatus;
 }
 
-const buildRealtimeWebsocketUrl = (token: string): string => {
-    const configuredOrigin = (
-        import.meta.env.VITE_ETSYSENTRY_SERVER_ORIGIN as string | undefined
-    )?.trim();
-    const origin = configuredOrigin?.length ? configuredOrigin : window.location.origin;
-    const url = new URL(origin);
+export const buildRealtimeWebsocketUrl = (): string => {
+    const url = new URL(window.location.origin);
     url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
     url.pathname = '/ws';
     url.search = '';
-    url.searchParams.set('token', token);
 
     return url.toString();
 };
 
-export const useRealtimeQueryInvalidations = (
-    getAuthToken: AuthTokenGetter
-): RealtimeWebsocketState => {
+export const useRealtimeQueryInvalidations = (): RealtimeWebsocketState => {
     const [state, setState] = useState<RealtimeWebsocketState>({
         lastConnectedAt: null,
         lastErrorAt: null,
@@ -72,7 +62,7 @@ export const useRealtimeQueryInvalidations = (
             }, delayMs);
         };
 
-        const connect = async () => {
+        const connect = () => {
             if (isStopped) {
                 return;
             }
@@ -81,18 +71,7 @@ export const useRealtimeQueryInvalidations = (
                 ...current,
                 status: reconnectAttempt > 0 ? 'reconnecting' : 'connecting',
             }));
-            const authToken = await getAuthToken();
-
-            if (!authToken) {
-                setState((current) => ({
-                    ...current,
-                    status: 'waiting_for_auth',
-                }));
-                scheduleReconnect();
-                return;
-            }
-
-            websocket = new WebSocket(buildRealtimeWebsocketUrl(authToken));
+            websocket = new WebSocket(buildRealtimeWebsocketUrl());
 
             websocket.onopen = () => {
                 reconnectAttempt = 0;
@@ -154,7 +133,7 @@ export const useRealtimeQueryInvalidations = (
                 status: 'disconnected',
             }));
         };
-    }, [getAuthToken]);
+    }, []);
 
     return state;
 };

@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import readline from 'node:readline';
-import { MERCHBASE_API_KEY_ENV } from '@merchbaseco/access';
+import { MERCHBASE_API_KEY_ENV } from './constants.js';
 import { failWith } from './errors.js';
 import type { CliSecureStore } from './secure-store.js';
 import { secureStore } from './secure-store.js';

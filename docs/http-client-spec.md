@@ -25,22 +25,27 @@ Canonical release process: `docs/release-runbook.md`.
 
 ## Client Surface
 
-- Primary entrypoint: `createEtsySentryClient({ baseUrl, apiKey, headers, batch })`
+- Primary entrypoint: `createEtsySentryClient({ baseUrl, apiKey, accessToken, headers, batch })`
 - Usage:
 
 ```ts
 import { createEtsySentryClient } from '@etsysentry/http-client';
 
 const client = createEtsySentryClient({
-    baseUrl: 'https://etsysentry.example.com',
-    apiKey: 'ak_...',
+    baseUrl: 'https://etsysentry-api.merchbase.co',
+    apiKey: 'mbk_v1.<canonical-base64url-json>',
 });
 
 const listings = await client.queryClient.fetchQuery(client.trpc.public.listings.list.queryOptions({}));
 ```
 
-The client sends the credential as `Authorization: Bearer <ak_...>`. The removed
-`x-api-key` header and EtsySentry-specific `esk_` credentials are not accepted.
+`apiKey` accepts only the bounded `mbk_v1.<canonical-base64url-json>` envelope containing exactly
+`clientId` and `clientSecret`; the client sends these as Cloudflare Access service headers. An
+opaque OAuth credential uses the distinct `accessToken` option and is sent as `Authorization:
+Bearer <value>` without examining its shape. Supplying both options is rejected. Requests omit
+ambient cookies and use manual redirect handling so Cloudflare service headers cannot follow a
+redirect. The client reads its `accessToken` option for each request; callers that refresh opaque
+OAuth tokens should update that option or recreate the client before its next request.
 
 ## Build + Publish
 

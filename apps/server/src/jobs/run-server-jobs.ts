@@ -17,7 +17,6 @@ import './sync-shop';
 import './sync-keyword';
 import './sync-stale-keywords';
 import './sync-stale-shops';
-import './refresh-access-projections';
 
 const defaultLogger = createJobsLogger({
     scope: 'jobs.runtime',

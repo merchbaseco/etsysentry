@@ -1,45 +1,20 @@
+import { createHash } from 'node:crypto';
 import type { AccessProjectionStore } from '@merchbaseco/access';
 import {
-    bootstrapDevAccessProjection,
-    DEV_SIGN_IN_CLERK_SUBJECT,
+    assertDevCloudflareAccessTarget,
+    createDevCloudflareAccess,
+    DEV_CLOUDFLARE_ISSUER,
     DEV_SIGN_IN_MERCHBASE_USER_ID,
-    type DevAccessProjectionBootstrapResult,
 } from '@merchbaseco/access/dev';
-import { sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import type { db as database } from '../db';
 import { runMigrations } from '../db/migrate';
+import { accounts } from '../db/schema';
 import { ETSYSENTRY_SERVICE } from '../services/access/etsysentry-access';
 
-/**
- * Brings a local database all the way to the current schema, and grants the
- * shared Merchbase Dev Sign-In user access to it.
- *
- * Two things have to happen here that a fresh database cannot do on its own.
- *
- * First, the Access Projection. Authorization is verified against a
- * webhook-synced projection held in this database, and a local or cloud
- * database receives no Clerk webhooks — so every request would fail before any
- * seeded data could be seen. `bootstrapDevAccessProjection` writes the row the
- * webhook would have written, through the very same `AccessProjectionStore`
- * the webhook handler uses. This repository writes no projection SQL of its
- * own; the access package owns that shape, its refusals, and its timestamps.
- *
- * Second, the phase-two gate. `runMigrations()` deliberately stops at the
- * central-access phase-one migration and gates the phase-two cleanup behind a
- * readiness check, because on the live database that cleanup drops legacy
- * identity tables and columns and must not run until every account has been
- * backfilled. A fresh local database has no legacy world to protect, but it
- * still starts out failing the gate — there is no mapped account at all — which
- * would leave the seed writing into a schema that still carries
- * `tracker_clerk_user_id NOT NULL`. So the seed satisfies the gate the way the
- * cutover backfill does rather than bypassing it: it writes its own account and
- * that account's Clerk identity, and the bootstrapped projection completes the
- * trio the readiness query looks for. Those rows are the truthful phase-one
- * shape of the account the seed is about to fill, not a stub built to fool the
- * check.
- */
-
 const CLEANUP_TAG = '0021_known_sandman';
+const LOCAL_LEGACY_ISSUER = 'https://etsysentry-local-cutover.invalid';
+const LOCAL_LEGACY_SUBJECT = 'etsysentry-dev-seed';
 
 type Database = typeof database;
 
@@ -47,35 +22,138 @@ export interface LocalDatabaseHeadParams {
     accountId: string;
     /** Credential-free DSN for the loopback target; proved by the access package. */
     databaseUrl: string;
-    /** Byte-identical to the issuer `createClerkAuthenticator` is configured with. */
-    issuer: string;
-    store: AccessProjectionStore;
+    projections: AccessProjectionStore;
 }
 
+export interface LocalDatabaseHeadResult {
+    issuer: string;
+    merchbaseUserId: string;
+    subject: string;
+}
+
+/**
+ * Migrates a guarded local database to the current schema and seeds its one
+ * fixed development principal through the same projection store as production.
+ * The old cleanup migration remains readiness-gated; a fresh local database
+ * gets only a temporary migration identity that is discarded with its legacy
+ * columns by that existing migration.
+ */
 export const migrateLocalDatabaseToHead = async (
     db: Database,
     params: LocalDatabaseHeadParams
-): Promise<DevAccessProjectionBootstrapResult> => {
+): Promise<LocalDatabaseHeadResult> => {
+    const runtimeEnv = { ...process.env };
+    assertDevCloudflareAccessTarget({ databaseUrl: params.databaseUrl, env: runtimeEnv });
+
     await runMigrations();
 
     const hasLegacyIdentities = await hasLegacyIdentityTable(db);
-
     if (hasLegacyIdentities) {
-        await backfillPhaseOneAccount(db, params);
-    }
-
-    const access = await bootstrapDevAccessProjection({
-        databaseUrl: params.databaseUrl,
-        issuer: params.issuer,
-        service: ETSYSENTRY_SERVICE,
-        store: params.store,
-    });
-
-    if (hasLegacyIdentities) {
+        await prepareLegacyCleanup(db, params);
         await runMigrations({ throughTag: CLEANUP_TAG });
     }
 
-    return access;
+    await createDevCloudflareAccess({
+        databaseUrl: params.databaseUrl,
+        env: runtimeEnv,
+        projections: params.projections,
+        resolveServicePrincipal: async ({ merchbaseUserId }) => ({ merchbaseUserId }),
+        service: ETSYSENTRY_SERVICE,
+    });
+
+    return {
+        issuer: DEV_CLOUDFLARE_ISSUER,
+        merchbaseUserId: DEV_SIGN_IN_MERCHBASE_USER_ID,
+        subject: 'person:development',
+    };
+};
+
+const prepareLegacyCleanup = async (
+    db: Database,
+    params: LocalDatabaseHeadParams
+): Promise<void> => {
+    const [counts] = await db.execute<{
+        accountCount: number;
+        apiKeyCount: number;
+        identityCount: number;
+    }>(sql`
+        SELECT
+            (SELECT count(*)::int FROM accounts) AS "accountCount",
+            (SELECT count(*)::int FROM clerk_identities) AS "identityCount",
+            (SELECT count(*)::int FROM api_keys) AS "apiKeyCount"
+    `);
+    if (!counts) {
+        throw new Error('Could not inspect the local legacy access data.');
+    }
+    if (counts.accountCount > 1 || counts.identityCount > 1 || counts.apiKeyCount > 0) {
+        throw new Error(
+            'The local database still has legacy access data. Complete its explicit access cutover before running the dev seed.'
+        );
+    }
+
+    const [existingAccount] = await db
+        .select({ merchbaseUserId: accounts.merchbaseUserId })
+        .from(accounts)
+        .where(eq(accounts.id, params.accountId))
+        .limit(1);
+    if (existingAccount && existingAccount.merchbaseUserId !== DEV_SIGN_IN_MERCHBASE_USER_ID) {
+        throw new Error('The existing local seed account belongs to a different Merchbase user.');
+    }
+
+    const [anotherAccount] = await db
+        .select({ id: accounts.id })
+        .from(accounts)
+        .where(eq(accounts.merchbaseUserId, DEV_SIGN_IN_MERCHBASE_USER_ID))
+        .limit(1);
+    if (anotherAccount && anotherAccount.id !== params.accountId) {
+        throw new Error('The development Merchbase user already belongs to another local account.');
+    }
+
+    if (!existingAccount) {
+        await db.insert(accounts).values({
+            id: params.accountId,
+            merchbaseUserId: DEV_SIGN_IN_MERCHBASE_USER_ID,
+        });
+    }
+
+    const legacyRows = await db.execute<{ issuer: string; subject: string }>(sql`
+        SELECT clerk_issuer AS issuer, clerk_subject AS subject
+        FROM clerk_identities
+        WHERE account_id = ${params.accountId}
+        ORDER BY clerk_issuer, clerk_subject
+        LIMIT 2
+    `);
+    let identity = legacyRows[0];
+    if (!identity) {
+        if (counts.identityCount !== 0) {
+            throw new Error('The local development account has no matching legacy identity.');
+        }
+        identity = { issuer: LOCAL_LEGACY_ISSUER, subject: LOCAL_LEGACY_SUBJECT };
+        await db.execute(sql`
+            INSERT INTO clerk_identities (account_id, clerk_issuer, clerk_subject)
+            VALUES (${params.accountId}, ${identity.issuer}, ${identity.subject})
+        `);
+    }
+    if (legacyRows.length > 1) {
+        throw new Error('The local development account has multiple legacy identities.');
+    }
+
+    const eventId = `etsysentry-local-${createHash('sha256')
+        .update(`${identity.issuer}\0${identity.subject}`)
+        .digest('hex')
+        .slice(0, 32)}`;
+    await params.projections.apply({
+        eventId,
+        projection: {
+            access: 'granted',
+            accessValidUntil: null,
+            issuer: identity.issuer,
+            merchbaseUserId: DEV_SIGN_IN_MERCHBASE_USER_ID,
+            sourceUpdatedAt: Date.now(),
+            subject: identity.subject,
+        },
+        type: 'upsert',
+    });
 };
 
 const hasLegacyIdentityTable = async (db: Database): Promise<boolean> => {
@@ -84,31 +162,4 @@ const hasLegacyIdentityTable = async (db: Database): Promise<boolean> => {
     );
 
     return Boolean(rows[0]?.present);
-};
-
-/**
- * The phase-one shape of one mapped account: the account row and the Clerk
- * identity that owned it. The active projection that replaces that identity is
- * written by the access package's bootstrap, against this exact issuer and
- * subject, which is what makes the readiness join resolve. Written with raw SQL
- * because `clerk_identities` is already gone from `schema.ts` — by the time the
- * seed writes data it is gone from the database too.
- */
-const backfillPhaseOneAccount = async (
-    db: Database,
-    params: LocalDatabaseHeadParams
-): Promise<void> => {
-    await db.transaction(async (tx) => {
-        await tx.execute(sql`
-            insert into accounts (id, merchbase_user_id)
-            values (${params.accountId}, ${DEV_SIGN_IN_MERCHBASE_USER_ID})
-            on conflict (id) do update set merchbase_user_id = excluded.merchbase_user_id
-        `);
-        await tx.execute(sql`
-            insert into clerk_identities (account_id, clerk_issuer, clerk_subject)
-            values (${params.accountId}, ${params.issuer}, ${DEV_SIGN_IN_CLERK_SUBJECT})
-            on conflict (clerk_issuer, clerk_subject) do update
-                set account_id = excluded.account_id
-        `);
-    });
 };
