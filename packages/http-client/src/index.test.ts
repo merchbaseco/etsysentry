@@ -1,15 +1,22 @@
 import { describe, expect, test } from 'bun:test';
 import { createRequestHeaders, DEFAULT_API_BASE_URL } from './index';
 
+const nativeApiKey = `mbk_v1.${Buffer.from(
+    JSON.stringify({
+        clientId: 'etsy-cli',
+        clientSecret: 'test-only-client-secret'.repeat(2),
+    })
+).toString('base64url')}`;
+
 describe('createRequestHeaders', () => {
     test('translates the strict native API key envelope to Cloudflare service headers', () => {
         expect(
             createRequestHeaders({
-                apiKey: 'mbk_v1.eyJjbGllbnRJZCI6ImV0c3ktY2xpIiwiY2xpZW50U2VjcmV0IjoiMDEyMzQ1Njc4OWFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6In0',
+                apiKey: nativeApiKey,
             })
         ).toEqual({
             'CF-Access-Client-Id': 'etsy-cli',
-            'CF-Access-Client-Secret': '0123456789abcdefghijklmnopqrstuvwxyz',
+            'CF-Access-Client-Secret': 'test-only-client-secrettest-only-client-secret',
         });
     });
 
@@ -33,7 +40,7 @@ describe('createRequestHeaders', () => {
         expect(() =>
             createRequestHeaders({
                 accessToken: 'oauth:opaque',
-                apiKey: 'mbk_v1.eyJjbGllbnRJZCI6ImV0c3ktY2xpIiwiY2xpZW50U2VjcmV0IjoiMDEyMzQ1Njc4OWFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6In0',
+                apiKey: nativeApiKey,
             })
         ).toThrow('Provide either an API key or an OAuth access token, not both.');
     });
