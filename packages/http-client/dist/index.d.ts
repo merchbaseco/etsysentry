@@ -1,5 +1,5 @@
 import { QueryClient } from '@tanstack/react-query';
-export declare const DEFAULT_API_BASE_URL = "http://localhost:8080";
+export declare const DEFAULT_API_BASE_URL = "https://etsysentry-api.merchbase.co";
 export interface KeywordItem {
     accountId: string;
     id: string;
@@ -211,6 +211,7 @@ export interface EtsySentryTrpcOptionsProxy {
     };
 }
 export interface EtsySentryClientOptions {
+    accessToken?: string;
     apiKey?: string;
     baseUrl?: string;
     batch?: boolean;
@@ -222,6 +223,7 @@ export interface EtsySentryClient {
     trpcClient: EtsySentryTrpcClient;
 }
 export declare const createRequestHeaders: (params: {
+    accessToken?: string;
     apiKey?: string;
     headers?: Record<string, string>;
 }) => Record<string, string>;
