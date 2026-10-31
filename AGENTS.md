@@ -1,5 +1,11 @@
 # AGENTS.md
 
+> **Retired 2026-10-31.** EtsySentry is shut down and must stay off: its
+> background jobs spend the Etsy API quota Handmade now owns (they share the
+> Etsy app in `Production/Etsy API - EtsySentry`, which Handmade still uses).
+> The Mac mini stack is removed and the deploy workflow is gone. Do not deploy,
+> restart, or migrate it; leave it out of fleet-wide changes.
+
 This file is the always-on guide for AI coding assistants in EtsySentry.
 
 ## Repository Snapshot
